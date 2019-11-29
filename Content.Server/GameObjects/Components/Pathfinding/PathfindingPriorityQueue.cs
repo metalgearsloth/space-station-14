@@ -22,22 +22,30 @@ namespace Content.Server.Pathfinding
 
         public void Enqueue(T item, double priority)
         {
-            _elements.Add(Tuple.Create(item, priority));
+            lock (_elements)
+            {
+                _elements.Add(Tuple.Create(item, priority));
+            }
         }
 
         public T Dequeue()
         {
-            int bestIndex = 0;
+            lock (_elements)
+            {
+                int bestIndex = 0;
 
-            for (int i = 0; i < _elements.Count; i++) {
-                if (_elements[i].Item2 < _elements[bestIndex].Item2) {
-                    bestIndex = i;
+                for (int i = 0; i < _elements.Count; i++)
+                {
+                    if (_elements[i].Item2 < _elements[bestIndex].Item2)
+                    {
+                        bestIndex = i;
+                    }
                 }
-            }
 
-            T bestItem = _elements[bestIndex].Item1;
-            _elements.RemoveAt(bestIndex);
-            return bestItem;
+                T bestItem = _elements[bestIndex].Item1;
+                _elements.RemoveAt(bestIndex);
+                return bestItem;
+            }
         }
 
         public void Clear()

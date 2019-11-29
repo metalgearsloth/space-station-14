@@ -6,6 +6,7 @@ using Robust.Server.AI;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Interfaces.Random;
 using Robust.Shared.IoC;
+using Robust.Shared.Log;
 
 namespace Content.Server.AI
 {
@@ -23,7 +24,7 @@ namespace Content.Server.AI
 #pragma warning restore 649
 
         // Routines
-        private MovementAiRoutine _mover = new MovementAiRoutine();
+        private MoveToEntityAiRoutine _mover = new MoveToEntityAiRoutine();
         private IdleRoutine _idle = new IdleRoutine();
         private MeleeAttackAiRoutine _attacker = new MeleeAttackAiRoutine();
         private AcquireWeaponAiRoutine _weaponGrabber = new AcquireWeaponAiRoutine();
@@ -39,6 +40,8 @@ namespace Content.Server.AI
             {
                 return;
             }
+
+            Logger.DebugS("ai", $"Set {this} AiRoutine to {routine}");
             _activeRoutine = routine;
         }
 
@@ -64,6 +67,24 @@ namespace Content.Server.AI
                 {
                     routine.InjectMover(_mover);
                 }
+            }
+
+            // If we die just idle
+            if (SelfEntity.TryGetComponent(out DamageableComponent damageableComponent))
+            {
+                damageableComponent.DamageThresholdPassed += (sender, args) =>
+                {
+                    if (args.DamageThreshold.ThresholdType == ThresholdType.Death)
+                    {
+                        SwitchRoutine(_idle);
+                        return;
+                    }
+
+                    if (args.DamageThreshold.ThresholdType != ThresholdType.Death && ActiveRoutine == _idle)
+                    {
+                        SwitchRoutine(_weaponGrabber);
+                    }
+                };
             }
         }
 
@@ -99,7 +120,12 @@ namespace Content.Server.AI
         /// </summary>
         private void ProcessLogic()
         {
-            // TODO: If dead just stop
+            // Should only idle when we die
+            if (ActiveRoutine == _idle)
+            {
+                return;
+            }
+
             // Get weapon if needed
             if (!_weaponGrabber.HasWeapon)
             {

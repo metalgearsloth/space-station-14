@@ -13,19 +13,22 @@ using Robust.Shared.Maths;
 
 namespace Content.Server.AI.Routines
 {
-    public sealed class MovementAiRoutine : AiRoutine
+    public class MoveToGridCoordsAiRoutine : AiRoutine
     {
         // Route handler
         public IReadOnlyCollection<TileRef> Route => _route;
         private Queue<TileRef> _route = new Queue<TileRef>();
         private GridCoordinates _nextGrid;
         private bool _availableRoute = true;
+        private DateTime _entityRouteThrottle = DateTime.Now - TimeSpan.FromSeconds(5.0f);
 
-        public bool RequiresMover => false;
+        public bool MovementAllowed { get; set; }
+
+        public override bool RequiresMover => false;
 
         // Stuck checkers
         private DateTime _lastStuckCheck = DateTime.Now;
-        private GridCoordinates _lastPosition = default;
+        private GridCoordinates _ourLastPosition = default;
 
         public bool Arrived => _arrived;
         private bool _arrived = true;
@@ -34,8 +37,9 @@ namespace Content.Server.AI.Routines
 
         private IMapManager _mapManager;
         private IPathfinder _pathfinder;
-        private IEntity _trackedEntity;
-        // As long as the target hasn't moved further than this away
+
+        private GridCoordinates _targetPosition;
+        // How close we need to get
         public float TargetTolerance
         {
             get;
@@ -52,6 +56,7 @@ namespace Content.Server.AI.Routines
         public override void Setup(IEntity owner)
         {
             base.Setup(owner);
+            MovementAllowed = true;
             if (!owner.HasComponent<AiControllerComponent>())
             {
                 Logger.FatalS("ai_routine", "MovementAiRoutine must have a valid controller on the owner");
@@ -76,7 +81,7 @@ namespace Content.Server.AI.Routines
             _lastStuckCheck = DateTime.Now;
 
             // Are we actually stuck
-            if ((_lastPosition.Position - _owner.Transform.GridPosition.Position).Length < TargetTolerance)
+            if ((_ourLastPosition.Position - _owner.Transform.GridPosition.Position).Length < TargetTolerance)
             {
                 // Move in a random direction
                 _owner.TryGetComponent(out AiControllerComponent mover);
@@ -92,9 +97,8 @@ namespace Content.Server.AI.Routines
         /// <param name="gridCoordinates"></param>
         public void GetRoute(GridCoordinates gridCoordinates)
         {
-            _route.Clear();
+            ClearRoute();
             _arrived = false;
-            _trackedEntity = null;
 
             foreach (var tile in _pathfinder.FindPath(_owner.Transform.GridPosition, gridCoordinates))
             {
@@ -103,65 +107,15 @@ namespace Content.Server.AI.Routines
 
             var nextTile = _route.Dequeue();
             _nextGrid = _mapManager.GetGrid(nextTile.GridIndex).GridTileToLocal(nextTile.GridIndices);
+            _targetPosition = gridCoordinates;
         }
 
         /// <summary>
-        /// Will try and get a route to the target entity. Will try adjacent tiles if necessary
-        /// If they move further than the tolerance it will get a new route.
+        /// Tells this routine we don't need to keep moving
         /// </summary>
-        /// <param name="entity"></param>
-        public void GetRoute(IEntity entity)
+        public void ClearRoute()
         {
             _route.Clear();
-            _arrived = false;
-            _trackedEntity = entity;
-            GridCoordinates targetGrid = default;
-
-            // If we can't get directly to the entity then try and go adjacent to it
-            var entityTile = _mapManager.GetGrid(entity.Transform.GridID).GetTileRef(entity.Transform.GridPosition);
-            if (_pathfinder.GetTileCost(entityTile) == 0)
-            {
-                // Try and get adjacent tiles
-                for (int x = -1; x < 2; x++)
-                {
-                    for (int y = -1; y < 2; y++)
-                    {
-                        var neighborTile = _mapManager
-                            .GetGrid(entity.Transform.GridID)
-                            .GetTileRef(new MapIndices(entityTile.X + x, entityTile.Y + y));
-                        if (_pathfinder.GetTileCost(neighborTile) > 0)
-                        {
-                            targetGrid = _mapManager.GetGrid(neighborTile.GridIndex).GridTileToLocal(neighborTile.GridIndices);
-                            break;
-                        }
-                    }
-
-                    if (targetGrid != default)
-                    {
-                        break;
-                    }
-                }
-            }
-
-            if (targetGrid == default)
-            {
-                targetGrid = entity.Transform.GridPosition;
-            }
-
-            foreach (var tile in _pathfinder.FindPath(_owner.Transform.GridPosition, targetGrid))
-            {
-                _route.Enqueue(tile);
-            }
-
-            if (_route.Count == 0)
-            {
-                // Couldn't find a route to target
-                _availableRoute = false;
-                return;
-            }
-
-            var nextTile = _route.Dequeue();
-            _nextGrid = _mapManager.GetGrid(nextTile.GridIndex).GridTileToLocal(nextTile.GridIndices);
         }
 
         /// <summary>
@@ -170,20 +124,18 @@ namespace Content.Server.AI.Routines
         /// </summary>
         public void HandleMovement()
         {
-            if (!_availableRoute)
+            Vector2 targetDiff;
+            if (!MovementAllowed ||
+                Arrived ||
+                _mapManager.GetGrid(_owner.Transform.GridID).GetTileRef(_owner.Transform.GridPosition).Tile.IsEmpty)
             {
                 return;
             }
-            // If tracking a target need to check if it's moved.
-            if (_trackedEntity != null)
+
+            if ((_owner.Transform.GridPosition.Position - _targetPosition.Position).Length <= TargetTolerance)
             {
-                // TODO: Compare entity's original position
-                if (_route.Count == 0 && (_trackedEntity.Transform.GridPosition.Position - _owner.Transform.GridPosition.Position)
-                    .Length > TargetTolerance)
-                {
-                    GetRoute(_trackedEntity);
-                    return;
-                }
+                _arrived = true;
+                return;
             }
 
             AntiStuck();
@@ -191,7 +143,7 @@ namespace Content.Server.AI.Routines
             // Fix getting stuck on corners
             // TODO: Potentially change this. This is just because the position doesn't match the aabb so we need to make sure corners don't fuck us
             _owner.TryGetComponent<ICollidableComponent>(out var collidableComponent);
-            var targetDiff = _nextGrid.Position - collidableComponent.WorldAABB.Center;
+            targetDiff = _nextGrid.Position - collidableComponent.WorldAABB.Center;
             // Check distance
             if (targetDiff.Length > _tileTolerance)
             {

@@ -1,6 +1,7 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Threading;
+using System.Linq;
 using System.Threading.Tasks;
 using Content.Server.Pathfinding;
 using JetBrains.Annotations;
@@ -11,6 +12,7 @@ using Robust.Shared.Interfaces.Map;
 using Robust.Shared.IoC;
 using Robust.Shared.Log;
 using Robust.Shared.Map;
+using YamlDotNet.Core.Tokens;
 
 namespace Content.Server.GameObjects.Components.Pathfinding
 {
@@ -30,6 +32,17 @@ namespace Content.Server.GameObjects.Components.Pathfinding
         }
     }
 
+    struct PathBlocker
+    {
+        public IEntity Entity { get; }
+        public GridCoordinates Position { get; }
+        public PathBlocker(IEntity entity)
+        {
+            Entity = entity;
+            Position = entity.Transform.GridPosition;
+        }
+    }
+
     [UsedImplicitly]
     public class AStarPathfinder : IPathfinder
     {
@@ -45,21 +58,15 @@ namespace Content.Server.GameObjects.Components.Pathfinding
 
         private float _timeout = 1.0f;
         private readonly IPathfindingPriorityQueue<TileRef> _openTiles = new PathfindingPriorityQueue<TileRef>();
-        private readonly IDictionary<TileRef, double> _closedTiles = new Dictionary<TileRef, double>();
+        private readonly IDictionary<TileRef, double> _closedTiles = new ConcurrentDictionary<TileRef, double>();
 
         // TODO: REMOVE ON PR
         private List<IEntity> _spawnedTiles = new List<IEntity>();
         public event Action<PathfindingRoute> FoundRoute;
 
-        // TODO
-        //public Task<IEnumerable<TileRef>> FindPath(TileRef start, TileRef end)
-        //{
-//
-        //}
-
         // Anything you can do to speedup performance goes here
         // - Anything that physically blocks movement
-        private IDictionary<TileRef, IEntity> _knownWalls = new Dictionary<TileRef, IEntity>();
+        private IDictionary<TileRef, PathBlocker> _knownBlockers = new ConcurrentDictionary<TileRef, PathBlocker>();
 
         public IEnumerable<TileRef> FindPath(GridCoordinates start, GridCoordinates end)
         {
@@ -85,12 +92,10 @@ namespace Content.Server.GameObjects.Components.Pathfinding
             _closedTiles.Clear();
             _openTiles.Enqueue(start, 0);
 
-            Dictionary<TileRef, TileRef> cameFrom = new Dictionary<TileRef, TileRef>
-            {
-                {start, start}
-            };
+            IDictionary<TileRef, TileRef> cameFrom = new ConcurrentDictionary<TileRef, TileRef>();
             TileRef currentTile = start;
             _closedTiles[currentTile] = 0;
+            var neighborTasks = new List<Task>(8);
 
             while (_openTiles.Count > 0)
             {
@@ -112,20 +117,28 @@ namespace Content.Server.GameObjects.Components.Pathfinding
 
                 foreach (var next in neighbors)
                 {
-                    var tileCost = GetTileCost(next);
-                    if (tileCost == 0)
+                    var tile = currentTile;
+                    neighborTasks.Add(Task.Run(() =>
                     {
-                        continue;
-                    }
-                    double newCost = _closedTiles[currentTile] + tileCost;
-                    if (!_closedTiles.ContainsKey(next) || newCost < _closedTiles[next])
-                    {
-                        _closedTiles[next] = newCost;
-                        double priority = newCost + Heurestic(next, end);
-                        _openTiles.Enqueue(next, priority);
-                        cameFrom[next] = currentTile;
-                    }
+                        var tileCost = GetTileCost(next);
+                        if (tileCost == 0)
+                        {
+                            return;
+                        }
+                        double newCost = _closedTiles[tile] + tileCost;
+                        if (!_closedTiles.ContainsKey(next) || newCost < _closedTiles[next])
+                        {
+                            _closedTiles[next] = newCost;
+                            //double priority = newCost + ManhattanDistance(next, end);
+                            double priority = newCost + EuclideanDistance(next, end);
+                            _openTiles.Enqueue(next, priority);
+                            cameFrom[next] = tile;
+                        }
+                    }));
                 }
+
+                Task.WaitAll(neighborTasks.ToArray());
+                neighborTasks.Clear();
             }
 
             Logger.DebugS("pathfinding", $"Found route in {cameFrom.Count} tiles");
@@ -149,54 +162,80 @@ namespace Content.Server.GameObjects.Components.Pathfinding
             return route;
         }
 
-        private static double Heurestic(TileRef start, TileRef end)
+        private static double DiagonalDistance(TileRef start, TileRef end)
         {
-            return Math.Abs(start.X - end.X) + Math.Abs(start.Y - end.Y);
+            const double diagonalCost = 1.41;
+            int dx = Math.Abs(start.X - end.X);
+            int dy = Math.Abs(start.Y - end.Y);
+            var result = dx + dy + (diagonalCost - 2 * 1) * Math.Min(dx, dy);
+            return result;
+        }
+
+        private static double EuclideanDistance(TileRef start, TileRef end)
+        {
+            int dx = Math.Abs(start.X - end.X);
+            int dy = Math.Abs(start.Y - end.Y);
+            return Math.Sqrt(dx * dx + dy * dy);
+        }
+
+        private static double ManhattanDistance(TileRef start, TileRef end)
+        {
+            return 1 * (Math.Abs(start.X - end.X) + Math.Abs(start.Y - end.Y));
         }
 
         public double GetTileCost(TileRef tile)
         {
             // TODO: This bitch expensive
-            double cost = 1;
-            // TODO: Abstract this out with cost profiles? Not sure on the least clusterfuck way to do it.
+            // TODO: If you can noclip just return 1
+
             if (tile.Tile.IsEmpty)
             {
                 return 0;
             }
 
-            // If we know there's a wall here already and it's not dead
-            if (_knownWalls.TryGetValue(tile, out var wall))
+            double cost = 1;
+
+            // If we know there's a known blocker (walls, tablets, etc) here already and it's not dead
+            if (_knownBlockers.TryGetValue(tile, out var blocker))
             {
-                if (!wall.Deleted)
+                // If blocker's still in the same spot
+                if (!blocker.Entity.Deleted && blocker.Position == blocker.Entity.Transform.GridPosition)
                 {
                     return 0;
                 }
+
+                // Entity's stale
+                _knownBlockers.Remove(tile);
             }
 
             var gridCoords = _mapManager.GetGrid(tile.GridIndex).GridTileToLocal(tile.GridIndices);
             foreach (var entity in _serverEntityManager.GetEntitiesIntersecting(gridCoords))
             {
-                if (entity.TryGetComponent(out CollidableComponent collidableComponent) &&
-                    collidableComponent.CollisionLayer == 1)
+                if (!entity.TryGetComponent(out CollidableComponent collidableComponent))
                 {
-                    // It's a wall; eventually some entities would be able to go through it (spoopy ghosts)
-                    _knownWalls[tile] = entity;
+                    continue;
+                }
+
+                // It's a wall
+                if (collidableComponent.CollisionLayer == 1) {
+                    _knownBlockers[tile] = new PathBlocker(entity);
                     return 0;
                 }
 
                 // Is table
                 if (collidableComponent?.CollisionMask == 19)
                 {
+                    _knownBlockers[tile] = new PathBlocker(entity);
                     return 0;
                 }
-                // TODO: Add cost here
                 // TODO: Add crates, lockers, for NOW
+                // TODO: Add cost stuff here eventually
             }
 
             return cost;
         }
 
-        private List<TileRef> GetNeighbors(TileRef tileRef, bool allowDiagonals = false)
+        private List<TileRef> GetNeighbors(TileRef tileRef, bool allowDiagonals = true)
         {
             List<TileRef> neighbors = new List<TileRef>(8);
             for (int x = -1; x < 2; x++)
@@ -224,7 +263,7 @@ namespace Content.Server.GameObjects.Components.Pathfinding
             return neighbors;
         }
 
-        private List<TileRef> ReconstructPath(Dictionary<TileRef, TileRef> cameFrom, TileRef current)
+        private List<TileRef> ReconstructPath(IDictionary<TileRef, TileRef> cameFrom, TileRef current)
         {
             var result = new List<TileRef> {current};
             TileRef previousCurrent;

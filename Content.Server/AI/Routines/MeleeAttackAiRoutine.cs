@@ -8,26 +8,42 @@ using Robust.Shared.IoC;
 namespace Content.Server.AI.Routines
 {
     /// <summary>
-    /// If in range will attack the target entity
+    /// Move to melee range and hit the target
     /// </summary>
     public class MeleeAttackAiRoutine : AiRoutine
     {
         // If you want to move in range first use the MovementAiRoutine
         private IEntity _owner;
         private IEntitySystemManager _entitySystemManager;
-        private MovementAiRoutine _mover;
+        private MoveToEntityAiRoutine _mover;
 
         public IEntity Target { get; set; }
 
         public float AttackRange
         {
-            get => _attackRange;
-            set => _attackRange = value;
+            get
+            {
+                if (!_owner.TryGetComponent(out HandsComponent handsComponent))
+                {
+                    return 1.0f;
+                }
+
+                if (handsComponent.GetActiveHand == null)
+                {
+                    return 1.0f;
+                }
+
+                if (handsComponent.GetActiveHand.Owner.TryGetComponent(out MeleeWeaponComponent meleeWeaponComponent))
+                {
+                    return meleeWeaponComponent.Range * 0.8f;
+                }
+
+                return 1.0f;
+            }
         }
 
         public override bool RequiresMover => true;
 
-        private float _attackRange = InteractionSystem.InteractionRange;
         public override void Setup(IEntity owner)
         {
             base.Setup(owner);
@@ -40,7 +56,7 @@ namespace Content.Server.AI.Routines
             _entitySystemManager = IoCManager.Resolve<IEntitySystemManager>();
         }
 
-        public override void InjectMover(MovementAiRoutine mover)
+        public override void InjectMover(MoveToEntityAiRoutine mover)
         {
             _mover = mover;
         }
@@ -79,31 +95,28 @@ namespace Content.Server.AI.Routines
 
             if (InRange(Target))
             {
+                _mover.ClearRoute();
+                _mover.MovementAllowed = false;
                 CheckAttack();
                 return;
             }
 
-            // Else, use movement routine
-            if (_mover == null)
-            {
-                return;
-            }
+            _mover.MovementAllowed = true;
 
-            if (_mover.Route.Count == 0)
+            // If we're not already tracking target or there's no route already and we're far away
+            if (_mover.TargetEntity != Target ||
+                (_mover.Route.Count == 0 && (_owner.Transform.GridPosition.Position - Target.Transform.GridPosition.Position).Length > 5.0f))
             {
                 _mover.GetRoute(Target);
             }
+
+            _mover.TargetTolerance = AttackRange;
             _mover.HandleMovement();
         }
 
         private void CheckAttack()
         {
             if (!HasWeapon())
-            {
-                return;
-            }
-
-            if (!InRange(Target))
             {
                 return;
             }

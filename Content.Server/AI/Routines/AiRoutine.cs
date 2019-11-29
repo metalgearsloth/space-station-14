@@ -11,6 +11,6 @@ namespace Content.Server.AI.Routines
         public virtual void Setup(IEntity owner) {}
         public virtual void Update() {}
         public virtual bool RequiresMover => false;
-        public virtual void InjectMover(MovementAiRoutine mover) {}
+        public virtual void InjectMover(MoveToEntityAiRoutine mover) {}
     }
 }

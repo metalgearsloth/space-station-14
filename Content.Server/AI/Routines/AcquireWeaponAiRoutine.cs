@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Content.Server.GameObjects;
+using Content.Server.GameObjects.EntitySystems;
 using Robust.Server.Interfaces.GameObjects;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.IoC;
@@ -14,7 +15,7 @@ namespace Content.Server.AI.Routines
     {
         // Dependencies
         private IServerEntityManager _serverEntityManager;
-        private MovementAiRoutine _mover;
+        private MoveToEntityAiRoutine _mover;
         private DateTime _lastCheckForWeapons = DateTime.Now - TimeSpan.FromSeconds(_timeBetweenWeaponChecks);
         private const double _timeBetweenWeaponChecks = 5.0;
 
@@ -29,7 +30,7 @@ namespace Content.Server.AI.Routines
         private IEntity _nearestWeapon;
 
         // TODO: DO THIS BETTER
-        public override void InjectMover(MovementAiRoutine mover)
+        public override void InjectMover(MoveToEntityAiRoutine mover)
         {
             _mover = mover;
         }
@@ -92,9 +93,8 @@ namespace Content.Server.AI.Routines
 
         private bool TryPickupWeapon(IEntity target)
         {
-            // TODO: Put in interaction range here
             if ((target.Transform.GridPosition.Position - _owner.Transform.GridPosition.Position).Length <
-                1.0f)
+                InteractionSystem.InteractionRange)
             {
                 _owner.TryGetComponent(out HandsComponent handsComponent);
                 target.TryGetComponent(out ItemComponent itemComponent);
@@ -144,6 +144,7 @@ namespace Content.Server.AI.Routines
 
             if (_mover.Route.Count == 0)
             {
+                _mover.TargetTolerance = InteractionSystem.InteractionRange - 0.01f;
                 _mover.GetRoute(_nearestWeapon);
             }
             _mover.HandleMovement();
