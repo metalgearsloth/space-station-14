@@ -96,6 +96,7 @@ namespace Content.Server.GameObjects.Components.Pathfinding
             TileRef currentTile = start;
             _closedTiles[currentTile] = 0;
             var neighborTasks = new List<Task>(8);
+            // var impassableTiles = GetImpassableTiles(start, end);
 
             while (_openTiles.Count > 0)
             {
@@ -130,7 +131,7 @@ namespace Content.Server.GameObjects.Components.Pathfinding
                         {
                             _closedTiles[next] = newCost;
                             //double priority = newCost + ManhattanDistance(next, end);
-                            double priority = newCost + EuclideanDistance(next, end);
+                            double priority = newCost + ManhattanDistance(next, end);
                             _openTiles.Enqueue(next, priority);
                             cameFrom[next] = tile;
                         }
@@ -183,6 +184,48 @@ namespace Content.Server.GameObjects.Components.Pathfinding
             return 1 * (Math.Abs(start.X - end.X) + Math.Abs(start.Y - end.Y));
         }
 
+        private IEnumerable<TileRef> GetImpassableTiles(TileRef start, TileRef end)
+        {
+            var startGrid = _mapManager.GetGrid(start.GridIndex).GridTileToLocal(start.GridIndices);
+            int dx = Math.Abs(end.X - start.X);
+            int dy = Math.Abs(end.Y - start.Y);
+            var range = (float) Math.Sqrt(dx * dx + dy * dy);
+            var results = new ConcurrentBag<TileRef>();
+            foreach (var entity in _serverEntityManager.GetEntitiesInRange(startGrid, range))
+            {
+                if (EntityCost(entity) == 0)
+                {
+                    var entityTile = _mapManager.GetGrid(entity.Transform.GridID)
+                        .GetTileRef(entity.Transform.GridPosition);
+                    results.Add(entityTile);
+                }
+            }
+
+            return results;
+        }
+
+        private double EntityCost(IEntity entity)
+        {
+            if (!entity.TryGetComponent(out CollidableComponent collidableComponent))
+            {
+                return 1.0;
+            }
+
+            // It's a wall
+            if (collidableComponent.CollisionLayer == 1) {
+                return 0;
+            }
+
+            // Is table
+            if (collidableComponent.CollisionMask == 19)
+            {
+                return 0;
+            }
+            // TODO: Add crates, lockers, for NOW
+            // TODO: Add cost stuff here eventually
+            return 1.0;
+        }
+
         public double GetTileCost(TileRef tile)
         {
             // TODO: This bitch expensive
@@ -211,31 +254,25 @@ namespace Content.Server.GameObjects.Components.Pathfinding
             var gridCoords = _mapManager.GetGrid(tile.GridIndex).GridTileToLocal(tile.GridIndices);
             foreach (var entity in _serverEntityManager.GetEntitiesIntersecting(gridCoords))
             {
-                if (!entity.TryGetComponent(out CollidableComponent collidableComponent))
+                var entityCost = EntityCost(entity);
+                if (entityCost == 0)
                 {
-                    continue;
-                }
-
-                // It's a wall
-                if (collidableComponent.CollisionLayer == 1) {
-                    _knownBlockers[tile] = new PathBlocker(entity);
                     return 0;
                 }
 
-                // Is table
-                if (collidableComponent?.CollisionMask == 19)
-                {
-                    _knownBlockers[tile] = new PathBlocker(entity);
-                    return 0;
-                }
-                // TODO: Add crates, lockers, for NOW
-                // TODO: Add cost stuff here eventually
+                cost += entityCost;
             }
 
             return cost;
         }
 
-        private List<TileRef> GetNeighbors(TileRef tileRef, bool allowDiagonals = true)
+        /// <summary>
+        /// Get adjacent tiles to this one
+        /// </summary>
+        /// <param name="tileRef"></param>
+        /// <param name="allowDiagonals"></param>
+        /// <returns></returns>
+        private List<TileRef> GetNeighbors(TileRef tileRef, bool allowDiagonals = false)
         {
             List<TileRef> neighbors = new List<TileRef>(8);
             for (int x = -1; x < 2; x++)
