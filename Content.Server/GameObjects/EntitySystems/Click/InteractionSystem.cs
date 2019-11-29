@@ -200,7 +200,7 @@ namespace Content.Server.GameObjects.EntitySystems
         {
             var inputSys = EntitySystemManager.GetEntitySystem<InputSystem>();
             inputSys.BindMap.BindFunction(EngineKeyFunctions.Use,
-                new PointerInputCmdHandler(HandleUseItemInHand));
+                new PointerInputCmdHandler(HandleClientUseItemInHand));
             inputSys.BindMap.BindFunction(ContentKeyFunctions.ActivateItemInWorld,
                 new PointerInputCmdHandler(HandleActivateItemInWorld));
         }
@@ -243,7 +243,27 @@ namespace Content.Server.GameObjects.EntitySystems
             activateComp.Activate(new ActivateEventArgs {User = user});
         }
 
-        private bool HandleUseItemInHand(ICommonSession session, GridCoordinates coords, EntityUid uid)
+        /// <summary>
+        /// Entity will try and use their active hand at the target location.
+        /// Don't use for players
+        /// </summary>
+        /// <param name="entity"></param>
+        /// <param name="coords"></param>
+        /// <param name="uid"></param>
+        public void UseItemInHand(IEntity entity, GridCoordinates coords, EntityUid uid)
+        {
+            // TODO: If player attached to entity throw that bitch
+            if (entity.TryGetComponent(out CombatModeComponent combatMode) && combatMode.IsInCombatMode)
+            {
+                DoAttack(entity, coords, uid);
+            }
+            else
+            {
+                UserInteraction(entity, coords, uid);
+            }
+        }
+
+        private bool HandleClientUseItemInHand(ICommonSession session, GridCoordinates coords, EntityUid uid)
         {
             // client sanitization
             if (!_mapManager.GridExists(coords.GridID))
@@ -266,14 +286,7 @@ namespace Content.Server.GameObjects.EntitySystems
                 return true;
             }
 
-            if (userEntity.TryGetComponent(out CombatModeComponent combatMode) && combatMode.IsInCombatMode)
-            {
-                DoAttack(userEntity, coords, uid);
-            }
-            else
-            {
-                UserInteraction(userEntity, coords, uid);
-            }
+            UseItemInHand(userEntity, coords, uid);
 
             return true;
         }

@@ -60,6 +60,7 @@ namespace Content.Server.GameObjects.EntitySystems
                     aiComp.Processor = CreateProcessor(aiComp.LogicName);
                     aiComp.Processor.SelfEntity = entity;
                     aiComp.Processor.VisionRadius = aiComp.VisionRadius;
+                    aiComp.Processor.Setup();
                 }
 
                 var processor = aiComp.Processor;

@@ -145,6 +145,8 @@ namespace Content.Server.GameObjects
                 item.Owner.Transform.LocalPosition = Vector2.Zero;
             }
 
+            item.IsEquipped = true;
+
             return success;
         }
 
@@ -195,6 +197,7 @@ namespace Content.Server.GameObjects
             }
 
             item.RemovedFromSlot();
+            item.IsEquipped = false;
 
             // TODO: The item should be dropped to the container our owner is in, if any.
             item.Owner.Transform.GridPosition = coords;
