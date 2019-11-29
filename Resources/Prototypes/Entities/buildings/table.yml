@@ -2,6 +2,8 @@
   id: table
   name: "worktop"
   components:
+  - type: Pathfinding
+    cost: 0
   - type: Clickable
   - type: PlaceableSurface
   - type: Sprite

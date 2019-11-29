@@ -7,6 +7,7 @@ using Content.Server.Pathfinding;
 using JetBrains.Annotations;
 using Robust.Server.GameObjects;
 using Robust.Server.Interfaces.GameObjects;
+using Robust.Shared.GameObjects;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Interfaces.Map;
 using Robust.Shared.IoC;
@@ -52,6 +53,7 @@ namespace Content.Server.GameObjects.Components.Pathfinding
 // Then you'd be able to get a high-level overview of which rooms you need to go to,
 // and you could probably run it asynchronously if the perf is better (connecting path from airlock to airlock).
 #pragma warning disable 649
+        [Dependency] protected readonly IEntityManager EntityManager;
         [Dependency] private readonly IMapManager _mapManager;
         [Dependency] private readonly IServerEntityManager _serverEntityManager;
 #pragma warning restore 649
@@ -60,6 +62,8 @@ namespace Content.Server.GameObjects.Components.Pathfinding
         private readonly IPathfindingPriorityQueue<TileRef> _openTiles = new PathfindingPriorityQueue<TileRef>();
         private readonly IDictionary<TileRef, double> _closedTiles = new ConcurrentDictionary<TileRef, double>();
 
+        // TODO: Add cached paths and interface it with rooms
+
         // TODO: REMOVE ON PR
         private List<IEntity> _spawnedTiles = new List<IEntity>();
         public event Action<PathfindingRoute> FoundRoute;
@@ -67,6 +71,7 @@ namespace Content.Server.GameObjects.Components.Pathfinding
         // Anything you can do to speedup performance goes here
         // - Anything that physically blocks movement
         private IDictionary<TileRef, PathBlocker> _knownBlockers = new ConcurrentDictionary<TileRef, PathBlocker>();
+        private IDictionary<TileRef, double> _knownCosts = new ConcurrentDictionary<TileRef, double>();
 
         public IEnumerable<TileRef> FindPath(GridCoordinates start, GridCoordinates end)
         {
@@ -88,6 +93,7 @@ namespace Content.Server.GameObjects.Components.Pathfinding
             DateTime pathTimeStart = DateTime.Now;
             // scabbed from https://www.redblobgames.com/pathfinding/a-star/implementation.html#csharp
             // TODO: Look at Sebastian Lague https://www.youtube.com/watch?v=mZfyt03LDH4
+            RefreshPaths();
             _openTiles.Clear();
             _closedTiles.Clear();
             _openTiles.Enqueue(start, 0);
@@ -130,7 +136,6 @@ namespace Content.Server.GameObjects.Components.Pathfinding
                         if (!_closedTiles.ContainsKey(next) || newCost < _closedTiles[next])
                         {
                             _closedTiles[next] = newCost;
-                            //double priority = newCost + ManhattanDistance(next, end);
                             double priority = newCost + ManhattanDistance(next, end);
                             _openTiles.Enqueue(next, priority);
                             cameFrom[next] = tile;
@@ -184,48 +189,41 @@ namespace Content.Server.GameObjects.Components.Pathfinding
             return 1 * (Math.Abs(start.X - end.X) + Math.Abs(start.Y - end.Y));
         }
 
-        private IEnumerable<TileRef> GetImpassableTiles(TileRef start, TileRef end)
+        /// <summary>
+        /// Will query all pathfinding entities and store their locations
+        /// </summary>
+        private void RefreshPaths()
         {
-            var startGrid = _mapManager.GetGrid(start.GridIndex).GridTileToLocal(start.GridIndices);
-            int dx = Math.Abs(end.X - start.X);
-            int dy = Math.Abs(end.Y - start.Y);
-            var range = (float) Math.Sqrt(dx * dx + dy * dy);
-            var results = new ConcurrentBag<TileRef>();
-            foreach (var entity in _serverEntityManager.GetEntitiesInRange(startGrid, range))
+            var entityQuery = new TypeEntityQuery(typeof(PathfindingComponent));
+            lock (_knownBlockers)
             {
-                if (EntityCost(entity) == 0)
+                _knownBlockers.Clear();
+                lock (_knownCosts)
                 {
-                    var entityTile = _mapManager.GetGrid(entity.Transform.GridID)
-                        .GetTileRef(entity.Transform.GridPosition);
-                    results.Add(entityTile);
+                    _knownCosts.Clear();
+                    foreach (var entity in EntityManager.GetEntities(entityQuery))
+                    {
+                        entity.TryGetComponent(out PathfindingComponent pathfindingComponent);
+                        var entityTile = _mapManager.GetGrid(entity.Transform.GridID)
+                            .GetTileRef(entity.Transform.GridPosition);
+                        if (!pathfindingComponent.Traversable)
+                        {
+                            _knownBlockers[entityTile] = new PathBlocker(entity);
+                            continue;
+                        }
+
+                        _knownCosts[entityTile] += pathfindingComponent.Cost;
+                    }
                 }
             }
-
-            return results;
         }
 
-        private double EntityCost(IEntity entity)
-        {
-            if (!entity.TryGetComponent(out CollidableComponent collidableComponent))
-            {
-                return 1.0;
-            }
-
-            // It's a wall
-            if (collidableComponent.CollisionLayer == 1) {
-                return 0;
-            }
-
-            // Is table
-            if (collidableComponent.CollisionMask == 19)
-            {
-                return 0;
-            }
-            // TODO: Add crates, lockers, for NOW
-            // TODO: Add cost stuff here eventually
-            return 1.0;
-        }
-
+        /// <summary>
+        /// Currently it finds out whether a tile is passable or not
+        /// It's also slow af.
+        /// </summary>
+        /// <param name="tile"></param>
+        /// <returns></returns>
         public double GetTileCost(TileRef tile)
         {
             // TODO: This bitch expensive
@@ -235,8 +233,6 @@ namespace Content.Server.GameObjects.Components.Pathfinding
             {
                 return 0;
             }
-
-            double cost = 1;
 
             // If we know there's a known blocker (walls, tablets, etc) here already and it's not dead
             if (_knownBlockers.TryGetValue(tile, out var blocker))
@@ -248,19 +244,21 @@ namespace Content.Server.GameObjects.Components.Pathfinding
                 }
 
                 // Entity's stale
-                _knownBlockers.Remove(tile);
+                RefreshPaths();
             }
 
-            var gridCoords = _mapManager.GetGrid(tile.GridIndex).GridTileToLocal(tile.GridIndices);
-            foreach (var entity in _serverEntityManager.GetEntitiesIntersecting(gridCoords))
+            var tileBounds = _mapManager.GetGrid(tile.GridIndex).WorldBounds;
+            double cost = 0.5;
+            lock (_knownCosts)
             {
-                var entityCost = EntityCost(entity);
-                if (entityCost == 0)
+                // TODO: Should probably store these by GridId
+                foreach (var costTile in _knownCosts)
                 {
-                    return 0;
+                    if (tileBounds.Intersects(_mapManager.GetGrid(costTile.Key.GridIndex).WorldBounds))
+                    {
+                        cost += costTile.Value;
+                    }
                 }
-
-                cost += entityCost;
             }
 
             return cost;

@@ -17,7 +17,13 @@ namespace Content.Server.Pathfinding
 
         public int Count
         {
-            get { return _elements.Count; }
+            get
+            {
+                lock (_elements)
+                {
+                    return _elements.Count;
+                }
+            }
         }
 
         public void Enqueue(T item, double priority)
@@ -50,7 +56,10 @@ namespace Content.Server.Pathfinding
 
         public void Clear()
         {
-            _elements.Clear();
+            lock (_elements)
+            {
+                _elements.Clear();
+            }
         }
     }
 }
