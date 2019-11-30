@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Content.Server.GameObjects.Components.Movement;
 using Content.Server.GameObjects.Components.Pathfinding;
+using Content.Server.GameObjects.EntitySystems;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Interfaces.GameObjects.Components;
 using Robust.Shared.Interfaces.Map;
@@ -35,8 +36,8 @@ namespace Content.Server.AI.Routines
 
         private IEntity _owner;
 
-        private IMapManager _mapManager;
-        private IPathfinder _pathfinder;
+        [Dependency] private IMapManager _mapManager;
+        [Dependency] private IPathfinder _pathfinder;
 
         private GridCoordinates _targetPosition;
         // How close we need to get
@@ -56,6 +57,7 @@ namespace Content.Server.AI.Routines
         public override void Setup(IEntity owner)
         {
             base.Setup(owner);
+            IoCManager.InjectDependencies(this);
             MovementAllowed = true;
             if (!owner.HasComponent<AiControllerComponent>())
             {
@@ -63,8 +65,6 @@ namespace Content.Server.AI.Routines
                 throw new InvalidOperationException();
             }
             _owner = owner;
-            _mapManager = IoCManager.Resolve<IMapManager>();
-            _pathfinder = IoCManager.Resolve<IPathfinder>();
             TargetTolerance = 2.0f;
         }
 

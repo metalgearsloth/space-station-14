@@ -5,7 +5,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Content.Server.Pathfinding;
 using JetBrains.Annotations;
-using Robust.Server.GameObjects;
 using Robust.Server.Interfaces.GameObjects;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Interfaces.GameObjects;
@@ -13,7 +12,6 @@ using Robust.Shared.Interfaces.Map;
 using Robust.Shared.IoC;
 using Robust.Shared.Log;
 using Robust.Shared.Map;
-using YamlDotNet.Core.Tokens;
 
 namespace Content.Server.GameObjects.Components.Pathfinding
 {
@@ -45,7 +43,7 @@ namespace Content.Server.GameObjects.Components.Pathfinding
     }
 
     [UsedImplicitly]
-    public class AStarPathfinder : IPathfinder
+    public class PathfindingManager : IPathfinder
     {
         // TODO: Handle client requests and return them in a separate pathfinding component
 
@@ -53,7 +51,7 @@ namespace Content.Server.GameObjects.Components.Pathfinding
 // Then you'd be able to get a high-level overview of which rooms you need to go to,
 // and you could probably run it asynchronously if the perf is better (connecting path from airlock to airlock).
 #pragma warning disable 649
-        [Dependency] protected readonly IEntityManager EntityManager;
+        [Dependency] private readonly IEntityManager _entityManager;
         [Dependency] private readonly IMapManager _mapManager;
         [Dependency] private readonly IServerEntityManager _serverEntityManager;
 #pragma warning restore 649
@@ -61,6 +59,7 @@ namespace Content.Server.GameObjects.Components.Pathfinding
         private float _timeout = 1.0f;
         private readonly IPathfindingPriorityQueue<TileRef> _openTiles = new PathfindingPriorityQueue<TileRef>();
         private readonly IDictionary<TileRef, double> _closedTiles = new ConcurrentDictionary<TileRef, double>();
+        private readonly HashSet<TileRef> _newClosedTiles = new HashSet<TileRef>();
 
         // TODO: Add cached paths and interface it with rooms
 
@@ -71,7 +70,7 @@ namespace Content.Server.GameObjects.Components.Pathfinding
         // Anything you can do to speedup performance goes here
         // - Anything that physically blocks movement
         private IDictionary<TileRef, PathBlocker> _knownBlockers = new ConcurrentDictionary<TileRef, PathBlocker>();
-        private IDictionary<TileRef, double> _knownCosts = new ConcurrentDictionary<TileRef, double>();
+        private IDictionary<TileRef, double> _knownPathCosts = new ConcurrentDictionary<TileRef, double>();
 
         public IEnumerable<TileRef> FindPath(GridCoordinates start, GridCoordinates end)
         {
@@ -96,6 +95,7 @@ namespace Content.Server.GameObjects.Components.Pathfinding
             RefreshPaths();
             _openTiles.Clear();
             _closedTiles.Clear();
+            _newClosedTiles.Clear();
             _openTiles.Enqueue(start, 0);
 
             IDictionary<TileRef, TileRef> cameFrom = new ConcurrentDictionary<TileRef, TileRef>();
@@ -127,16 +127,17 @@ namespace Content.Server.GameObjects.Components.Pathfinding
                     var tile = currentTile;
                     neighborTasks.Add(Task.Run(() =>
                     {
-                        var tileCost = GetTileCost(next);
-                        if (tileCost == 0)
+                        if (!IsTileTraversable(tile))
                         {
                             return;
                         }
+                        var tileCost = GetTileCost(next);
                         double newCost = _closedTiles[tile] + tileCost;
+                        var gScore = DiagonalDistance(start, next) + 1;
                         if (!_closedTiles.ContainsKey(next) || newCost < _closedTiles[next])
                         {
                             _closedTiles[next] = newCost;
-                            double priority = newCost + ManhattanDistance(next, end);
+                            double priority = newCost + DiagonalDistance(next, end);
                             _openTiles.Enqueue(next, priority);
                             cameFrom[next] = tile;
                         }
@@ -198,10 +199,10 @@ namespace Content.Server.GameObjects.Components.Pathfinding
             lock (_knownBlockers)
             {
                 _knownBlockers.Clear();
-                lock (_knownCosts)
+                lock (_knownPathCosts)
                 {
-                    _knownCosts.Clear();
-                    foreach (var entity in EntityManager.GetEntities(entityQuery))
+                    _knownPathCosts.Clear();
+                    foreach (var entity in _entityManager.GetEntities(entityQuery))
                     {
                         entity.TryGetComponent(out PathfindingComponent pathfindingComponent);
                         var entityTile = _mapManager.GetGrid(entity.Transform.GridID)
@@ -212,10 +213,35 @@ namespace Content.Server.GameObjects.Components.Pathfinding
                             continue;
                         }
 
-                        _knownCosts[entityTile] += pathfindingComponent.Cost;
+                        _knownPathCosts.TryGetValue(entityTile, out var tileCost);
+
+                        _knownPathCosts[entityTile] = tileCost + pathfindingComponent.Cost;
                     }
                 }
             }
+        }
+
+        public bool IsTileTraversable(TileRef tile)
+        {
+            if (tile.Tile.IsEmpty)
+            {
+                return false;
+            }
+
+            // If we know there's a known blocker (walls, tablets, etc) here already and it's not dead
+            if (_knownBlockers.TryGetValue(tile, out var blocker))
+            {
+                // If blocker's still in the same spot
+                if (!blocker.Entity.Deleted && blocker.Position == blocker.Entity.Transform.GridPosition)
+                {
+                    return false;
+                }
+
+                // Entity's stale
+                RefreshPaths();
+            }
+
+            return true;
         }
 
         /// <summary>
@@ -229,30 +255,12 @@ namespace Content.Server.GameObjects.Components.Pathfinding
             // TODO: This bitch expensive
             // TODO: If you can noclip just return 1
 
-            if (tile.Tile.IsEmpty)
-            {
-                return 0;
-            }
-
-            // If we know there's a known blocker (walls, tablets, etc) here already and it's not dead
-            if (_knownBlockers.TryGetValue(tile, out var blocker))
-            {
-                // If blocker's still in the same spot
-                if (!blocker.Entity.Deleted && blocker.Position == blocker.Entity.Transform.GridPosition)
-                {
-                    return 0;
-                }
-
-                // Entity's stale
-                RefreshPaths();
-            }
-
             var tileBounds = _mapManager.GetGrid(tile.GridIndex).WorldBounds;
-            double cost = 0.5;
-            lock (_knownCosts)
+            double cost = 1.0;
+            lock (_knownPathCosts)
             {
                 // TODO: Should probably store these by GridId
-                foreach (var costTile in _knownCosts)
+                foreach (var costTile in _knownPathCosts)
                 {
                     if (tileBounds.Intersects(_mapManager.GetGrid(costTile.Key.GridIndex).WorldBounds))
                     {
@@ -270,7 +278,7 @@ namespace Content.Server.GameObjects.Components.Pathfinding
         /// <param name="tileRef"></param>
         /// <param name="allowDiagonals"></param>
         /// <returns></returns>
-        private List<TileRef> GetNeighbors(TileRef tileRef, bool allowDiagonals = false)
+        private List<TileRef> GetNeighbors(TileRef tileRef, bool allowDiagonals = true)
         {
             List<TileRef> neighbors = new List<TileRef>(8);
             for (int x = -1; x < 2; x++)

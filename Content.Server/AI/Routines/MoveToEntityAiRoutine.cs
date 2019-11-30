@@ -19,7 +19,6 @@ namespace Content.Server.AI.Routines
         public IReadOnlyCollection<TileRef> Route => _route;
         private Queue<TileRef> _route = new Queue<TileRef>();
         private GridCoordinates _nextGrid;
-        private bool _availableRoute = true;
         private DateTime _entityRouteThrottle = DateTime.Now - TimeSpan.FromSeconds(5.0f);
 
         public bool MovementAllowed { get; set; }
@@ -35,8 +34,8 @@ namespace Content.Server.AI.Routines
 
         private IEntity _owner;
 
-        private IMapManager _mapManager;
-        private IPathfinder _pathfinder;
+        [Dependency] private IMapManager _mapManager;
+        [Dependency] private IPathfinder _pathfinder;
 
         public IEntity TargetEntity => _targetEntity;
         private IEntity _targetEntity;
@@ -59,6 +58,7 @@ namespace Content.Server.AI.Routines
         public override void Setup(IEntity owner)
         {
             base.Setup(owner);
+            IoCManager.InjectDependencies(this);
             MovementAllowed = true;
             if (!owner.HasComponent<AiControllerComponent>())
             {
@@ -66,8 +66,6 @@ namespace Content.Server.AI.Routines
                 throw new InvalidOperationException();
             }
             _owner = owner;
-            _mapManager = IoCManager.Resolve<IMapManager>();
-            _pathfinder = IoCManager.Resolve<IPathfinder>();
             TargetTolerance = 2.0f;
         }
 
@@ -146,7 +144,6 @@ namespace Content.Server.AI.Routines
             if (_route.Count == 0)
             {
                 // Couldn't find a route to target
-                _availableRoute = false;
                 return;
             }
 

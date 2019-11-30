@@ -5,6 +5,7 @@ namespace Content.Server.Pathfinding
 {
     public interface IPathfindingPriorityQueue<T>
     {
+        bool Contains(T key);
         int Count { get; }
         void Enqueue(T item, double priority);
         T Dequeue();
@@ -14,6 +15,22 @@ namespace Content.Server.Pathfinding
     public class PathfindingPriorityQueue<T> : IPathfindingPriorityQueue<T>
     {
         private readonly List<Tuple<T, double>> _elements = new List<Tuple<T, double>>();
+
+        public bool Contains(T key)
+        {
+            lock (_elements)
+            {
+                foreach (var element in _elements)
+                {
+                    if (element.Item1.Equals(key))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
 
         public int Count
         {

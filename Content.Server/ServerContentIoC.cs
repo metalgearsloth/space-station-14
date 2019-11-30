@@ -5,7 +5,6 @@ using Content.Server.GameTicking;
 using Content.Server.Interfaces;
 using Content.Server.Interfaces.Chat;
 using Content.Server.Interfaces.GameTicking;
-using Content.Server.Pathfinding;
 using Content.Server.Sandbox;
 using Content.Server.Utility;
 using Content.Shared.Interfaces;
@@ -26,7 +25,7 @@ namespace Content.Server
             IoCManager.Register<IGalacticBankManager, GalacticBankManager>();
             IoCManager.Register<ICargoOrderDataManager, CargoOrderDataManager>();
             IoCManager.Register<IModuleManager, ServerModuleManager>();
-            IoCManager.Register<IPathfinder, AStarPathfinder>();
+            IoCManager.Register<IPathfinder, PathfindingManager>();
         }
     }
 }

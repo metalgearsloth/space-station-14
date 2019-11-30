@@ -14,7 +14,7 @@ namespace Content.Server.AI.Routines
     {
         // If you want to move in range first use the MovementAiRoutine
         private IEntity _owner;
-        private IEntitySystemManager _entitySystemManager;
+        [Dependency] private IEntitySystemManager _entitySystemManager;
         private MoveToEntityAiRoutine _mover;
 
         public IEntity Target { get; set; }
@@ -47,13 +47,12 @@ namespace Content.Server.AI.Routines
         public override void Setup(IEntity owner)
         {
             base.Setup(owner);
+            IoCManager.InjectDependencies(this);
             _owner = owner;
             if (_owner.TryGetComponent(out CombatModeComponent combatModeComponent))
             {
                 combatModeComponent.IsInCombatMode = true;
             }
-
-            _entitySystemManager = IoCManager.Resolve<IEntitySystemManager>();
         }
 
         public override void InjectMover(MoveToEntityAiRoutine mover)

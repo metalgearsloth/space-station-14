@@ -14,7 +14,7 @@ namespace Content.Server.AI.Routines
     public class AcquireWeaponAiRoutine : AiRoutine
     {
         // Dependencies
-        private IServerEntityManager _serverEntityManager;
+        [Dependency] private IServerEntityManager _serverEntityManager;
         private MoveToEntityAiRoutine _mover;
         private DateTime _lastCheckForWeapons = DateTime.Now - TimeSpan.FromSeconds(_timeBetweenWeaponChecks);
         private const double _timeBetweenWeaponChecks = 5.0;
@@ -38,8 +38,8 @@ namespace Content.Server.AI.Routines
         public override void Setup(IEntity owner)
         {
             base.Setup(owner);
+            IoCManager.InjectDependencies(this);
             _owner = owner;
-            _serverEntityManager = IoCManager.Resolve<IServerEntityManager>();
         }
 
         private bool ValidWeapon(IEntity weapon)
