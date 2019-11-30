@@ -107,7 +107,7 @@ namespace Content.Server.AI.Routines
 
             // If we can't get directly to the entity then try and go adjacent to it
             var entityTile = _mapManager.GetGrid(entity.Transform.GridID).GetTileRef(entity.Transform.GridPosition);
-            if (_pathfinder.GetTileCost(entityTile) == 0)
+            if (!_pathfinder.IsTileTraversable(entityTile))
             {
                 // Try and get adjacent tiles
                 for (int x = -1; x < 2; x++)
@@ -117,7 +117,7 @@ namespace Content.Server.AI.Routines
                         var neighborTile = _mapManager
                             .GetGrid(entity.Transform.GridID)
                             .GetTileRef(new MapIndices(entityTile.X + x, entityTile.Y + y));
-                        if (_pathfinder.GetTileCost(neighborTile) > 0)
+                        if (_pathfinder.IsTileTraversable(neighborTile))
                         {
                             targetGrid = _mapManager.GetGrid(neighborTile.GridIndex).GridTileToLocal(neighborTile.GridIndices);
                             break;

@@ -20,6 +20,7 @@ namespace Content.Server.GameObjects.Components.Pathfinding
         IEnumerable<TileRef> FindPath(TileRef start, TileRef end);
         IEnumerable<TileRef> FindPath(GridCoordinates start, GridCoordinates end);
         double GetTileCost(TileRef tile);
+        bool IsTileTraversable(TileRef tile);
     }
 
     public struct PathfindingRoute
@@ -58,8 +59,9 @@ namespace Content.Server.GameObjects.Components.Pathfinding
 
         private float _timeout = 1.0f;
         private readonly IPathfindingPriorityQueue<TileRef> _openTiles = new PathfindingPriorityQueue<TileRef>();
-        private readonly IDictionary<TileRef, double> _closedTiles = new ConcurrentDictionary<TileRef, double>();
-        private readonly HashSet<TileRef> _newClosedTiles = new HashSet<TileRef>();
+        private readonly IDictionary<TileRef, double> _gScores = new Dictionary<TileRef, double>();
+        private readonly IDictionary<TileRef, TileRef> _cameFrom = new Dictionary<TileRef, TileRef>();
+        private readonly HashSet<TileRef> _closedTiles = new HashSet<TileRef>();
 
         // TODO: Add cached paths and interface it with rooms
 
@@ -69,8 +71,8 @@ namespace Content.Server.GameObjects.Components.Pathfinding
 
         // Anything you can do to speedup performance goes here
         // - Anything that physically blocks movement
-        private IDictionary<TileRef, PathBlocker> _knownBlockers = new ConcurrentDictionary<TileRef, PathBlocker>();
-        private IDictionary<TileRef, double> _knownPathCosts = new ConcurrentDictionary<TileRef, double>();
+        private IDictionary<TileRef, PathBlocker> _knownBlockers = new Dictionary<TileRef, PathBlocker>();
+        private IDictionary<TileRef, double> _knownPathCosts = new Dictionary<TileRef, double>();
 
         public IEnumerable<TileRef> FindPath(GridCoordinates start, GridCoordinates end)
         {
@@ -84,7 +86,7 @@ namespace Content.Server.GameObjects.Components.Pathfinding
             var route = new List<TileRef>();
 
             // Check if the tilecost of the destination is valid to end early
-            if (GetTileCost(end) == 0)
+            if (!IsTileTraversable(end))
             {
                 return route;
             }
@@ -92,18 +94,15 @@ namespace Content.Server.GameObjects.Components.Pathfinding
             DateTime pathTimeStart = DateTime.Now;
             // scabbed from https://www.redblobgames.com/pathfinding/a-star/implementation.html#csharp
             // TODO: Look at Sebastian Lague https://www.youtube.com/watch?v=mZfyt03LDH4
-            RefreshPaths();
+            RefreshPaths(); // TODO: Look at optimising this
             _openTiles.Clear();
+            _gScores.Clear();
             _closedTiles.Clear();
-            _newClosedTiles.Clear();
-            _openTiles.Enqueue(start, 0);
+            _cameFrom.Clear();
 
-            IDictionary<TileRef, TileRef> cameFrom = new ConcurrentDictionary<TileRef, TileRef>();
             TileRef currentTile = start;
-            _closedTiles[currentTile] = 0;
-            var neighborTasks = new List<Task>(8);
-            // var impassableTiles = GetImpassableTiles(start, end);
-
+            _openTiles.Enqueue(currentTile, 0);
+            _gScores[currentTile] = 0;
             while (_openTiles.Count > 0)
             {
                 // TODO: Disabled just for debugging
@@ -113,42 +112,35 @@ namespace Content.Server.GameObjects.Components.Pathfinding
                 //    _closedTiles.Clear();
                 //    return route;
                 //}
-                currentTile = _openTiles.Dequeue();
 
                 if (currentTile.Equals(end))
                 {
                     break;
                 }
 
-                var neighbors = GetNeighbors(currentTile);
+                currentTile = _openTiles.Dequeue();
 
-                foreach (var next in neighbors)
+                foreach (var next in GetNeighbors(currentTile))
                 {
-                    var tile = currentTile;
-                    neighborTasks.Add(Task.Run(() =>
+                    if (!IsTileTraversable(currentTile))
                     {
-                        if (!IsTileTraversable(tile))
-                        {
-                            return;
-                        }
-                        var tileCost = GetTileCost(next);
-                        double newCost = _closedTiles[tile] + tileCost;
-                        var gScore = DiagonalDistance(start, next) + 1;
-                        if (!_closedTiles.ContainsKey(next) || newCost < _closedTiles[next])
-                        {
-                            _closedTiles[next] = newCost;
-                            double priority = newCost + DiagonalDistance(next, end);
-                            _openTiles.Enqueue(next, priority);
-                            cameFrom[next] = tile;
-                        }
-                    }));
-                }
+                        continue;
+                    }
 
-                Task.WaitAll(neighborTasks.ToArray());
-                neighborTasks.Clear();
+                    var gScore = _gScores[currentTile] + GetTileCost(next); // TODO: Is the second half of this right?
+
+                    if (!_gScores.ContainsKey(next) || gScore < _gScores[next])
+                    {
+                        _cameFrom[next] = currentTile;
+                        _gScores[next] = gScore;
+                        double fScore = _gScores[next] + DiagonalDistance(next, end);
+                        _openTiles.Enqueue(next, fScore);
+
+                    }
+                }
             }
 
-            Logger.DebugS("pathfinding", $"Found route in {cameFrom.Count} tiles");
+            Logger.DebugS("pathfinding", $"Found route in {_cameFrom.Count} tiles");
             // Debugging;  TODO Need to find a cleaner way for this shite
             foreach (var entity in _spawnedTiles)
             {
@@ -158,13 +150,13 @@ namespace Content.Server.GameObjects.Components.Pathfinding
                 }
             }
             _spawnedTiles.Clear();
-            foreach (var tile in cameFrom.Keys)
+            foreach (var tile in _cameFrom.Keys)
             {
                 var tileGrid = _mapManager.GetGrid(tile.GridIndex).GridTileToLocal(tile.GridIndices);
                 _spawnedTiles.Add(_serverEntityManager.SpawnEntityAt("GreenPathfindTile", tileGrid));
             }
 
-            route = ReconstructPath(cameFrom, currentTile);
+            route = ReconstructPath(_cameFrom, currentTile);
             FoundRoute?.Invoke(new PathfindingRoute(route));
             return route;
         }
@@ -278,9 +270,8 @@ namespace Content.Server.GameObjects.Components.Pathfinding
         /// <param name="tileRef"></param>
         /// <param name="allowDiagonals"></param>
         /// <returns></returns>
-        private List<TileRef> GetNeighbors(TileRef tileRef, bool allowDiagonals = true)
+        private IEnumerable<TileRef> GetNeighbors(TileRef tileRef, bool allowDiagonals = true)
         {
-            List<TileRef> neighbors = new List<TileRef>(8);
             for (int x = -1; x < 2; x++)
             {
                 for (int y = -1; y < 2; y++)
@@ -299,11 +290,9 @@ namespace Content.Server.GameObjects.Components.Pathfinding
                         .GetGrid(tileRef.GridIndex)
                         .GetTileRef(new MapIndices(tileRef.GridIndices.X + x, tileRef.GridIndices.Y + y));
 
-                    neighbors.Add(neighborTile);
+                    yield return neighborTile;
                 }
             }
-
-            return neighbors;
         }
 
         private List<TileRef> ReconstructPath(IDictionary<TileRef, TileRef> cameFrom, TileRef current)
