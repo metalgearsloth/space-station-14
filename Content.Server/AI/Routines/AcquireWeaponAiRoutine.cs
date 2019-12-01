@@ -1,10 +1,14 @@
 using System;
 using System.Collections.Generic;
+using Content.Server.AI.Routines.Movers;
 using Content.Server.GameObjects;
 using Content.Server.GameObjects.EntitySystems;
+using Robust.Server.AI;
 using Robust.Server.Interfaces.GameObjects;
 using Robust.Shared.Interfaces.GameObjects;
+using Robust.Shared.Interfaces.Random;
 using Robust.Shared.IoC;
+using Robust.Shared.Log;
 
 namespace Content.Server.AI.Routines
 {
@@ -14,36 +18,32 @@ namespace Content.Server.AI.Routines
     public class AcquireWeaponAiRoutine : AiRoutine
     {
         // Dependencies
+#pragma warning disable 649
         [Dependency] private IServerEntityManager _serverEntityManager;
-        private MoveToEntityAiRoutine _mover;
-        private DateTime _lastCheckForWeapons = DateTime.Now - TimeSpan.FromSeconds(_timeBetweenWeaponChecks);
-        private const double _timeBetweenWeaponChecks = 5.0;
+#pragma warning restore 649
+
+        private MoveToEntityAiRoutine _mover = new MoveToEntityAiRoutine();
 
         public override bool RequiresMover => true;
-
-        private IEntity _owner;
 
         public AcquireWeaponType RequiredWeaponType = AcquireWeaponType.Melee;
         public bool HasWeapon => _hasWeapon;
         private bool _hasWeapon = false;
-        public IEntity NearestWeapon => _nearestWeapon;
-        private IEntity _nearestWeapon;
+        public IEntity TargetWeapon => _targetWeapon;
+        private IEntity _targetWeapon;
 
-        // TODO: DO THIS BETTER
-        public override void InjectMover(MoveToEntityAiRoutine mover)
-        {
-            _mover = mover;
-        }
+        protected override float ProcessCooldown { get; set; } = 1.0f;
 
         public override void Setup(IEntity owner)
         {
             base.Setup(owner);
             IoCManager.InjectDependencies(this);
-            _owner = owner;
+            _mover.Setup(owner);
         }
 
         private bool ValidWeapon(IEntity weapon)
         {
+            // TODO: Update this shite
             IDictionary<AcquireWeaponType, List<string>> weaponPrototypes =
                 new Dictionary<AcquireWeaponType, List<string>>
                 {
@@ -51,7 +51,27 @@ namespace Content.Server.AI.Routines
                     {
                         "Spear"
                     }},
+                    {AcquireWeaponType.Energy, new List<string>()
+                    {
+                        "LaserItem"
+                    }},
+                    {AcquireWeaponType.Smg, new List<string>()
+                    {
+
+                    }}
                 };
+
+            if (RequiredWeaponType == AcquireWeaponType.Any)
+            {
+                foreach (var category in weaponPrototypes)
+                {
+                    if (category.Value.Contains(weapon.Prototype.ID))
+                    {
+                        return true;
+                    }
+                }
+            }
+
             // TODO: Potentially use types instead?
             if (!weaponPrototypes[RequiredWeaponType].Contains(weapon.Prototype.ID))
             {
@@ -72,31 +92,37 @@ namespace Content.Server.AI.Routines
             return true;
         }
 
-        private void FindNearestWeapon()
+        private void FindRandomWeapon()
         {
-            _lastCheckForWeapons = DateTime.Now;
-            // First we'll try 10 tiles, otherwise just try the whole grid
-            // TODO: Try entity's vision range instead, and if nothing in range move to another spot
-            foreach (var entity in _serverEntityManager.GetEntitiesInRange(_owner, 50.0f))
+            var foundWeapons = new List<IEntity>();
+
+            foreach (var entity in _serverEntityManager.GetEntitiesInRange(Owner, Processor.VisionRadius))
             {
                 if (!ValidWeapon(entity))
                 {
                     continue;
                 }
 
-                _nearestWeapon = entity;
+                foundWeapons.Add(entity);
+            }
+
+            // Well shit
+            if (foundWeapons.Count == 0)
+            {
                 return;
             }
-            // Well shit
-            // TODO: Check whole grid
+
+            var random = IoCManager.Resolve<IRobustRandom>();
+            var randomWeapon = foundWeapons[random.Next(foundWeapons.Count - 1)];
+            _targetWeapon = randomWeapon;
         }
 
         private bool TryPickupWeapon(IEntity target)
         {
-            if ((target.Transform.GridPosition.Position - _owner.Transform.GridPosition.Position).Length <
+            if ((target.Transform.GridPosition.Position - Owner.Transform.GridPosition.Position).Length <
                 InteractionSystem.InteractionRange)
             {
-                _owner.TryGetComponent(out HandsComponent handsComponent);
+                Owner.TryGetComponent(out HandsComponent handsComponent);
                 target.TryGetComponent(out ItemComponent itemComponent);
                 handsComponent.PutInHand(itemComponent);
                 if (handsComponent.GetActiveHand != itemComponent)
@@ -120,49 +146,49 @@ namespace Content.Server.AI.Routines
             }
 
             // If we don't have a weapon or someone pinched it
-            if (_nearestWeapon == null ||
-                _nearestWeapon.TryGetComponent(out ItemComponent itemComponent) && itemComponent.IsEquipped)
+            // Checks frequency to avoid spamming searches
+            if ((DateTime.Now - LastProcess).TotalSeconds < ProcessCooldown && (_targetWeapon == null ||
+                _targetWeapon.TryGetComponent(out ItemComponent itemComponent) && itemComponent.IsEquipped))
             {
-                if ((DateTime.Now - _lastCheckForWeapons).TotalSeconds < _timeBetweenWeaponChecks)
-                {
-                    return;
-                }
-                FindNearestWeapon();
+                FindRandomWeapon();
             }
 
             // If we still didn't find anything
-            if (_nearestWeapon == null)
+            if (_targetWeapon == null)
             {
                 return;
             }
 
-            if (TryPickupWeapon(_nearestWeapon))
+            if (TryPickupWeapon(_targetWeapon))
             {
                 _hasWeapon = true;
                 return;
             }
 
-            if (_mover.Route.Count == 0)
+            if (_mover.Arrived)
             {
-                _mover.TargetTolerance = InteractionSystem.InteractionRange - 0.01f;
-                _mover.GetRoute(_nearestWeapon);
+                // Just to give some tolerance for the pathfinder
+                const float weaponProximity = InteractionSystem.InteractionRange - 0.5f;
+                _mover.TargetProximity = weaponProximity;
+                _mover.GetRoute(_targetWeapon, weaponProximity);
             }
-            _mover.HandleMovement();
         }
 
         public override void Update()
         {
             base.Update();
             AcquireWeapon();
+            _mover.HandleMovement();
         }
 
     }
 
     public enum AcquireWeaponType
     {
+        Any,
         Melee,
         // Ranged
         Energy,
-        Lmg,
+        Smg,
     }
 }

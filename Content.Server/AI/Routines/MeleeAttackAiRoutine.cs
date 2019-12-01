@@ -1,7 +1,11 @@
+using System;
+using Content.Server.AI.Routines.Movers;
 using Content.Server.GameObjects;
 using Content.Server.GameObjects.Components.Mobs;
+using Content.Server.GameObjects.Components.Movement;
 using Content.Server.GameObjects.Components.Weapon.Melee;
 using Content.Server.GameObjects.EntitySystems;
+using Content.Server.Interfaces.Chat;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.IoC;
 
@@ -13,17 +17,34 @@ namespace Content.Server.AI.Routines
     public class MeleeAttackAiRoutine : AiRoutine
     {
         // If you want to move in range first use the MovementAiRoutine
-        private IEntity _owner;
+#pragma warning disable 649
         [Dependency] private IEntitySystemManager _entitySystemManager;
-        private MoveToEntityAiRoutine _mover;
+#pragma warning restore 649
+        private MoveToEntityAiRoutine _mover = new MoveToEntityAiRoutine();
 
-        public IEntity Target { get; set; }
+        public IEntity Target => _target;
+        private IEntity _target;
+        private bool _targetAlive = true;
+
+        /// <summary>
+        /// Range from the target to start sprinting
+        /// </summary>
+        public float ChargeRange { get; set; } = 3.0f;
+
+        /// <summary>
+        /// How long in seconds until we can charge again
+        /// </summary>
+        public float ChargeCooldown { get; set; } = 3.0f;
+        private DateTime _lastCharge = DateTime.Now;
+
+        public bool Charging => _charging;
+        private bool _charging = false;
 
         public float AttackRange
         {
             get
             {
-                if (!_owner.TryGetComponent(out HandsComponent handsComponent))
+                if (!Owner.TryGetComponent(out HandsComponent handsComponent))
                 {
                     return 1.0f;
                 }
@@ -42,33 +63,82 @@ namespace Content.Server.AI.Routines
             }
         }
 
+        public void ChangeTarget(IEntity target)
+        {
+            if (target == _target)
+            {
+                return;
+            }
+            _target = target;
+
+            // If target can't be damaged should we even attack them? IDK
+            if (_target.TryGetComponent(out DamageableComponent damageableComponent))
+            {
+                damageableComponent.DamageThresholdPassed += (sender, args) =>
+                {
+                    if (args.DamageThreshold.ThresholdType == ThresholdType.Death)
+                    {
+                        _targetAlive = false;
+                        return;
+                    }
+
+                    _targetAlive = true;
+                };
+            }
+
+            _mover.GetRoute(target);
+        }
+
         public override bool RequiresMover => true;
 
         public override void Setup(IEntity owner)
         {
             base.Setup(owner);
             IoCManager.InjectDependencies(this);
-            _owner = owner;
-            if (_owner.TryGetComponent(out CombatModeComponent combatModeComponent))
+            Owner = owner;
+            if (Owner.TryGetComponent(out CombatModeComponent combatModeComponent))
             {
                 combatModeComponent.IsInCombatMode = true;
             }
+            _mover.Setup(owner);
         }
 
-        public override void InjectMover(MoveToEntityAiRoutine mover)
+        public bool InRange()
         {
-            _mover = mover;
-        }
-
-        public bool InRange(IEntity target)
-        {
-            var targetDiff = target.Transform.GridPosition.Position - _owner.Transform.GridPosition.Position;
+            var targetDiff = Target.Transform.GridPosition.Position - Owner.Transform.GridPosition.Position;
             return (targetDiff.Length <= AttackRange);
+        }
+
+        /// <summary>
+        /// Check if we need to start "charging" to target if they're nearby (but out of melee range)
+        /// </summary>
+        public void CheckCharge()
+        {
+            if ((DateTime.Now - _lastCharge).TotalSeconds < ChargeCooldown)
+            {
+                return;
+            }
+            var targetDiff = Target.Transform.GridPosition.Position - Owner.Transform.GridPosition.Position;
+            if (AttackRange < targetDiff.Length && targetDiff.Length <= ChargeRange && !_charging)
+            {
+                _lastCharge = DateTime.Now;
+                Owner.TryGetComponent(out AiControllerComponent mover);
+                mover.Sprinting = true;
+                _charging = true;
+                return;
+            }
+        }
+
+        private void StopCharging()
+        {
+            _charging = false;
+            Owner.TryGetComponent(out AiControllerComponent mover);
+            mover.Sprinting = false;
         }
 
         private bool HasWeapon()
         {
-            if (!_owner.TryGetComponent(out HandsComponent handsComponent))
+            if (!Owner.TryGetComponent(out HandsComponent handsComponent))
             {
                 return false;
             }
@@ -85,34 +155,6 @@ namespace Content.Server.AI.Routines
             return true;
         }
 
-        public void GoAttack()
-        {
-            if (Target == null)
-            {
-                return;
-            }
-
-            if (InRange(Target))
-            {
-                _mover.ClearRoute();
-                _mover.MovementAllowed = false;
-                CheckAttack();
-                return;
-            }
-
-            _mover.MovementAllowed = true;
-
-            // If we're not already tracking target or there's no route already and we're far away
-            if (_mover.TargetEntity != Target ||
-                (_mover.Route.Count == 0 && (_owner.Transform.GridPosition.Position - Target.Transform.GridPosition.Position).Length > 5.0f))
-            {
-                _mover.GetRoute(Target);
-            }
-
-            _mover.TargetTolerance = AttackRange;
-            _mover.HandleMovement();
-        }
-
         private void CheckAttack()
         {
             if (!HasWeapon())
@@ -121,14 +163,49 @@ namespace Content.Server.AI.Routines
             }
 
             // TODO: Try and swing a weapon if we're holding one
-            if (_owner.TryGetComponent(out HandsComponent handsComponent))
+            if (Owner.TryGetComponent(out HandsComponent handsComponent))
             {
                 // Sick we got hands, can we glass 'em
                 if (handsComponent.GetActiveHand.Owner.TryGetComponent(out MeleeWeaponComponent meleeWeaponComponent))
                 {
                     var interactionSystem = _entitySystemManager.GetEntitySystem<InteractionSystem>();
-                    interactionSystem.UseItemInHand(_owner, Target.Transform.GridPosition, Target.Uid);
+                    interactionSystem.UseItemInHand(Owner, Target.Transform.GridPosition, Target.Uid);
                 }
+            }
+        }
+
+        public void GoAttack()
+        {
+            if (Target == null || !_targetAlive)
+            {
+                return;
+            }
+
+            CheckCharge();
+
+            if (InRange())
+            {
+                StopCharging();
+
+                if (!_mover.Arrived)
+                {
+                    _mover.HaveArrived();
+                }
+                CheckAttack();
+                return;
+            }
+
+            if (!_mover.Arrived)
+            {
+                _mover.HandleMovement();
+                return;
+            }
+
+            // If we're not already tracking the target
+            if (_mover.TargetEntity != Target || _mover.Arrived)
+            {
+                _mover.TargetProximity = AttackRange - 0.5f;
+                _mover.GetRoute(Target);
             }
         }
 
@@ -136,6 +213,10 @@ namespace Content.Server.AI.Routines
         {
             base.Update();
             GoAttack();
+            if (!_mover.Arrived)
+            {
+                _mover.HandleMovement();
+            }
         }
     }
 }

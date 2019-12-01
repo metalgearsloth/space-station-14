@@ -7,14 +7,14 @@ namespace Content.Server.Pathfinding
     {
         bool Contains(T key);
         int Count { get; }
-        void Enqueue(T item, double priority);
+        void Enqueue(T item, float priority);
         T Dequeue();
         void Clear();
     }
 
     public class PathfindingPriorityQueue<T> : IPathfindingPriorityQueue<T>
     {
-        private readonly List<Tuple<T, double>> _elements = new List<Tuple<T, double>>();
+        private readonly List<Tuple<T, float>> _elements = new List<Tuple<T, float>>();
 
         public bool Contains(T key)
         {
@@ -43,7 +43,7 @@ namespace Content.Server.Pathfinding
             }
         }
 
-        public void Enqueue(T item, double priority)
+        public void Enqueue(T item, float priority)
         {
             lock (_elements)
             {
