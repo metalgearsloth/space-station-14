@@ -70,7 +70,46 @@ namespace Content.Server.AI
             ChangeActiveRoutine(_idle);
         }
 
-        public void CheckRandomTarget()
+        private void FindNearestTarget()
+        {
+            if (_target != null)
+            {
+                return;
+            }
+
+            var targetList = new List<IEntity>();
+            foreach (var species in _componentManager.GetAllComponents(typeof(SpeciesComponent)))
+            {
+                // No seppuku for u
+                if (species.Owner == SelfEntity)
+                {
+                    continue;
+                }
+                targetList.Add(species.Owner);
+            }
+
+            if (targetList.Count == 0)
+            {
+                return;
+            }
+
+            IEntity nearest = targetList[0];
+            var nearestDistance = (nearest.Transform.GridPosition.Position - SelfEntity.Transform.GridPosition.Position)
+                .Length;
+            foreach (var entity in targetList)
+            {
+                var entityDistance = (entity.Transform.GridPosition.Position - SelfEntity.Transform.GridPosition.Position)
+                    .Length;
+                if (entityDistance < nearestDistance)
+                {
+                    nearest = entity;
+                }
+            }
+
+            _target = nearest;
+        }
+
+        private void FindRandomTarget()
         {
             if (_target != null)
             {
@@ -103,7 +142,7 @@ namespace Content.Server.AI
         protected override void ProcessLogic()
         {
             base.ProcessLogic();
-            CheckRandomTarget();
+            FindNearestTarget();
             // Should only _idle when we die?
             if (_target == null)
             {
@@ -117,7 +156,7 @@ namespace Content.Server.AI
                 return;
             }
             // Find target
-            CheckRandomTarget();
+            FindRandomTarget();
             // ELIMINATE!
             if (_target == null)
             {

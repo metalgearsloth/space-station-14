@@ -32,6 +32,8 @@ namespace Content.Server.AI.Routines
         public IEntity TargetWeapon => _targetWeapon;
         private IEntity _targetWeapon;
 
+        public SearchRoutine SearchRoutine { get; set; } = SearchRoutine.Nearest;
+
         protected override float ProcessCooldown { get; set; } = 1.0f;
 
         public override void Setup(IEntity owner)
@@ -92,6 +94,56 @@ namespace Content.Server.AI.Routines
             return true;
         }
 
+        private void FindNearestWeapon()
+        {
+            var foundWeapons = new List<IEntity>();
+
+            foreach (var entity in _serverEntityManager.GetEntitiesInRange(Owner, Processor.VisionRadius))
+            {
+                if (!ValidWeapon(entity))
+                {
+                    continue;
+                }
+
+                foundWeapons.Add(entity);
+            }
+
+            // Well shit
+            if (foundWeapons.Count == 0)
+            {
+                return;
+            }
+
+            IEntity nearest = foundWeapons[0];
+            float nearestDistance = (nearest.Transform.GridPosition.Position - Owner.Transform.GridPosition.Position)
+                .Length;;
+            foreach (var weapon in foundWeapons)
+            {
+                var weaponDistance = (weapon.Transform.GridPosition.Position - Owner.Transform.GridPosition.Position)
+                    .Length;
+                if (weaponDistance < nearestDistance)
+                {
+                    nearest = weapon;
+                    nearestDistance = weaponDistance;
+                }
+            }
+            _targetWeapon = nearest;
+        }
+
+        private void FindAnyWeapon()
+        {
+            foreach (var entity in _serverEntityManager.GetEntitiesInRange(Owner, Processor.VisionRadius))
+            {
+                if (!ValidWeapon(entity))
+                {
+                    continue;
+                }
+
+                _targetWeapon = entity;
+                return;
+            }
+        }
+
         private void FindRandomWeapon()
         {
             var foundWeapons = new List<IEntity>();
@@ -150,7 +202,18 @@ namespace Content.Server.AI.Routines
             if ((DateTime.Now - LastProcess).TotalSeconds < ProcessCooldown && (_targetWeapon == null ||
                 _targetWeapon.TryGetComponent(out ItemComponent itemComponent) && itemComponent.IsEquipped))
             {
-                FindRandomWeapon();
+                switch (SearchRoutine)
+                {
+                    case SearchRoutine.Nearest:
+                        FindNearestWeapon();
+                        break;
+                    case SearchRoutine.Random:
+                        FindRandomWeapon();
+                        break;
+                    default:
+                        FindAnyWeapon();
+                        break;
+                }
             }
 
             // If we still didn't find anything
@@ -190,5 +253,12 @@ namespace Content.Server.AI.Routines
         // Ranged
         Energy,
         Smg,
+    }
+
+    public enum SearchRoutine
+    {
+        Any,
+        Nearest,
+        Random,
     }
 }

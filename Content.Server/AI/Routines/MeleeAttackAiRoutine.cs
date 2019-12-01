@@ -162,7 +162,6 @@ namespace Content.Server.AI.Routines
                 return;
             }
 
-            // TODO: Try and swing a weapon if we're holding one
             if (Owner.TryGetComponent(out HandsComponent handsComponent))
             {
                 // Sick we got hands, can we glass 'em
@@ -213,10 +212,6 @@ namespace Content.Server.AI.Routines
         {
             base.Update();
             GoAttack();
-            if (!_mover.Arrived)
-            {
-                _mover.HandleMovement();
-            }
         }
     }
 }

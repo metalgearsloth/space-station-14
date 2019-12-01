@@ -61,6 +61,10 @@ namespace Content.Server.AI.Routines.Movers
             }
 
             AntiStuck();
+            if (IsStuck)
+            {
+                return;
+            }
 
             // Fix getting stuck on corners
             // TODO: Potentially change this. This is just because the position doesn't match the aabb so we need to make sure corners don't fuck us

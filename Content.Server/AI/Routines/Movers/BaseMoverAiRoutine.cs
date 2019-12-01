@@ -44,9 +44,8 @@ namespace Content.Server.AI.Routines.Movers
 
         // Anti-stuck measures. See the AntiStuck() method for more details
         private DateTime _lastStuckTime;
-        private bool _isStuck = false;
-        private Vector2 _antiStuckDirection = Vector2.Zero;
-        protected AntiStuckMethods AntiStuckMethod = AntiStuckMethods.PhaseThrough;
+        protected bool IsStuck;
+        protected AntiStuckMethods AntiStuckMethod = AntiStuckMethods.Jiggle;
 
         /// <summary>
         /// Handles the big business, e.g. moving to the next node, re-assessing path, etc.
@@ -71,29 +70,34 @@ namespace Content.Server.AI.Routines.Movers
                 throw new InvalidOperationException();
             }
 
-            OurLastPosition = Owner.Transform.GridPosition;
+            // So the stuck checker doesn't immediately run
+            OurLastPosition = default;
         }
 
         /// <summary>
-        /// Will try and wiggle around if it seems like we're stuck
+        /// Will try and get around obstacles if stuck
         /// </summary>
         protected void AntiStuck()
         {
+            // TODO: More work because these are sketchy
+
             // First check if we're still in a stuck state
-            if (_isStuck)
+            if (IsStuck)
             {
                 switch (AntiStuckMethod)
                 {
                     case AntiStuckMethods.Jiggle:
-                        if ((DateTime.Now - _lastStuckTime).TotalSeconds < 1.0f)
+                        if ((DateTime.Now - _lastStuckTime).TotalSeconds > 1.0f)
                         {
+                            var randomRange = IoCManager.Resolve<IRobustRandom>().Next(0, 359);
+                            var angle = Angle.FromDegrees(randomRange);
                             Owner.TryGetComponent(out AiControllerComponent mover);
-                            mover.VelocityDir = _antiStuckDirection.Normalized;
+                            mover.VelocityDir = angle.ToVec().Normalized;
+                            _lastStuckTime = DateTime.Now;
                             break;
                         }
-                        // TODO: To do this or not to do this; clearly the old route is invalid...
-                        // Maybe just generate a route back to the original route?
-                        HaveArrived();
+
+                        IsStuck = false;
                         break;
                     case AntiStuckMethods.PhaseThrough:
                         if (Owner.TryGetComponent(out CollidableComponent collidableComponent))
@@ -101,6 +105,7 @@ namespace Content.Server.AI.Routines.Movers
                             // TODO: If something updates this this will fuck it
                             collidableComponent.IsHardCollidable = false;
                             Logger.DebugS("ai", $"{Owner} became stuck, turning off collidable temporarily");
+                            IsStuck = false;
                             Timer.Spawn(1000, () =>
                             {
                                 collidableComponent.IsHardCollidable = true;
@@ -111,17 +116,16 @@ namespace Content.Server.AI.Routines.Movers
                     case AntiStuckMethods.Teleport:
                         Owner.Transform.DetachParent();
                         Owner.Transform.GridPosition = NextGrid;
+                        IsStuck = false;
                         Logger.DebugS("ai", $"Teleported {Owner} to {NextGrid} for anti-stuck");
                         break;
                     default:
                         throw new InvalidOperationException();
                 }
-
-                _isStuck = false;
             }
 
             // Stuck check cooldown
-            if (!((DateTime.Now - _lastStuckCheck).TotalSeconds > 5.0f))
+            if ((DateTime.Now - _lastStuckCheck).TotalSeconds < 1.0f)
             {
                 return;
             }
@@ -132,9 +136,11 @@ namespace Content.Server.AI.Routines.Movers
             if ((OurLastPosition.Position - Owner.Transform.GridPosition.Position).Length < TileTolerance)
             {
                 _lastStuckTime = DateTime.Now;
-                _isStuck = true;
+                IsStuck = true;
                 Logger.DebugS("ai", $"{Owner} is stuck at {Owner.Transform.GridPosition}");
             }
+
+            // TODO: If we've been stuck say 5 seconds re-route?
 
             OurLastPosition = Owner.Transform.GridPosition;
         }
