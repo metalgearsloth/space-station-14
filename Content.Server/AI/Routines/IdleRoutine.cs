@@ -1,4 +1,7 @@
 namespace Content.Server.AI.Routines
 {
-    public class IdleRoutine : AiRoutine {}
+    /// <summary>
+    /// AI will do nothing at all
+    /// </summary>
+    public class IdleRoutine : AiRoutine {} // Here be dragons
 }

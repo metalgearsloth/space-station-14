@@ -1,16 +1,14 @@
-using System;
 using Content.Server.AI.Routines.Movers;
 using Content.Server.GameObjects;
 using Content.Server.GameObjects.Components.Mobs;
-using Content.Server.GameObjects.Components.Weapon.Melee;
 using Content.Server.GameObjects.Components.Weapon.Ranged;
-using Content.Server.GameObjects.Components.Weapon.Ranged.Hitscan;
 using Content.Server.GameObjects.EntitySystems;
+using Robust.Server.AI;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.IoC;
 using Robust.Shared.Map;
 
-namespace Content.Server.AI.Routines
+namespace Content.Server.AI.Routines.Combat
 {
     public class RangedAttackAiRoutine : AiRoutine
     {
@@ -52,9 +50,9 @@ namespace Content.Server.AI.Routines
             }
         }
 
-        public override void Setup(IEntity owner)
+        public override void Setup(IEntity owner, AiLogicProcessor processor)
         {
-            base.Setup(owner);
+            base.Setup(owner, processor);
             IoCManager.InjectDependencies(this); // TODO: Investigate removing this and using the base class
             _owner = owner;
             if (_owner.TryGetComponent(out CombatModeComponent combatModeComponent))
@@ -155,15 +153,11 @@ namespace Content.Server.AI.Routines
             }
         }
 
-        public override void Update()
+        public override void Update(float frameTime)
         {
-            base.Update();
             GoAttack();
-
-            if (!_mover.Arrived)
-            {
-                _mover.HandleMovement();
-            }
+            _mover.HandleMovement(frameTime);
+            base.Update(frameTime);
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Content.Server.GameObjects.Components.Movement;
 using Content.Server.GameObjects.EntitySystems;
@@ -13,7 +13,7 @@ using Robust.Shared.Maths;
 using Robust.Shared.Physics;
 using Robust.Shared.Utility;
 
-namespace Content.Server.AI
+namespace Content.Server.AI.Processors
 {
     /// <summary>
     ///     Designed to control a mob. The mob will wander around, then idle at a the destination for awhile.

@@ -1,10 +1,11 @@
 using System;
 using System.Collections.Generic;
-using System.Timers;
 using Content.Server.GameObjects.Components.Movement;
 using Content.Server.GameObjects.Components.Pathfinding;
+using Robust.Server.AI;
 using Robust.Server.GameObjects;
 using Robust.Shared.Interfaces.GameObjects;
+using Robust.Shared.Interfaces.GameObjects.Components;
 using Robust.Shared.Interfaces.Map;
 using Robust.Shared.Interfaces.Random;
 using Robust.Shared.IoC;
@@ -17,17 +18,45 @@ namespace Content.Server.AI.Routines.Movers
 {
     public abstract class BaseMoverAiRoutine : AiRoutine
     {
+        // Percentage of walk / sprint speed to move at.
+        // Should generally be 1.0 but some stuff like the idler might move slower.
+        public float Speed
+        {
+            get => _speed;
+            set
+            {
+                // TODO: Clamp
+                if (_speed > 1.0f)
+                {
+                    _speed = 1.0f;
+                    return;
+                }
+
+                // Not falling for that HL2 infinite negative speed
+                if (_speed < 0.0f)
+                {
+                    _speed = 0.0f;
+                    return;
+                }
+
+                _speed = value;
+            }
+        }
+
+        private float _speed = 1.0f;
+
         // These are to do with the tile-to-tile movement
         public IReadOnlyCollection<TileRef> Route => _route;
         protected readonly Queue<TileRef> _route = new Queue<TileRef>();
         protected GridCoordinates NextGrid;
 
         // How close to the route X / Y (centre of tile, at least currently) before good enough.
-        protected float TileTolerance = 0.1f;
+        protected float TileTolerance = 0.2f;
 
         // Stuck checkers
-        private DateTime _lastStuckCheck = DateTime.Now;
+        private float _stuckTimerRemaining = 2.0f;
         protected GridCoordinates OurLastPosition;
+        private float _antiStuckTryTimer = 0.2f;
 
         public bool Arrived => _arrived;
         protected bool _arrived = true;
@@ -43,14 +72,15 @@ namespace Content.Server.AI.Routines.Movers
         public float TargetProximity { get; set; } = 2.0f;
 
         // Anti-stuck measures. See the AntiStuck() method for more details
-        private DateTime _lastStuckTime;
-        protected bool IsStuck;
-        protected AntiStuckMethods AntiStuckMethod = AntiStuckMethods.Jiggle;
+        private bool _tryingAntiStuck = false;
+        public bool IsStuck => _isStuck;
+        protected bool _isStuck;
+        protected AntiStuckMethods AntiStuckMethod = AntiStuckMethods.PhaseThrough;
 
         /// <summary>
         /// Handles the big business, e.g. moving to the next node, re-assessing path, etc.
         /// </summary>
-        public abstract void HandleMovement();
+        public abstract void HandleMovement(float frameTime);
 
         // TODO: I R dumb with generics
         // public abstract void GetRoute<T>(T target, float proximity = 0.0f) where T : IEntity, GridCoordinates;
@@ -60,9 +90,9 @@ namespace Content.Server.AI.Routines.Movers
         /// </summary>
         /// <param name="owner"></param>
         /// <exception cref="InvalidOperationException"></exception>
-        public override void Setup(IEntity owner)
+        public override void Setup(IEntity owner, AiLogicProcessor processor)
         {
-            base.Setup(owner);
+            base.Setup(owner, processor);
             IoCManager.InjectDependencies(this);
             if (!owner.HasComponent<AiControllerComponent>())
             {
@@ -77,46 +107,57 @@ namespace Content.Server.AI.Routines.Movers
         /// <summary>
         /// Will try and get around obstacles if stuck
         /// </summary>
-        protected void AntiStuck()
+        protected void AntiStuck(float frameTime)
         {
             // TODO: More work because these are sketchy
 
-            // First check if we're still in a stuck state
+            // First check if we're still in a stuck state from last frame
             if (IsStuck)
             {
                 switch (AntiStuckMethod)
                 {
                     case AntiStuckMethods.Jiggle:
-                        if ((DateTime.Now - _lastStuckTime).TotalSeconds > 1.0f)
+                        if (!_tryingAntiStuck)
                         {
                             var randomRange = IoCManager.Resolve<IRobustRandom>().Next(0, 359);
                             var angle = Angle.FromDegrees(randomRange);
                             Owner.TryGetComponent(out AiControllerComponent mover);
-                            mover.VelocityDir = angle.ToVec().Normalized;
-                            _lastStuckTime = DateTime.Now;
+                            mover.VelocityDir = angle.ToVec().Normalized * Speed;
+                            _tryingAntiStuck = true;
+                        }
+
+                        if (_antiStuckTryTimer > 0)
+                        {
                             break;
                         }
 
-                        IsStuck = false;
+                        _isStuck = false;
                         break;
                     case AntiStuckMethods.PhaseThrough:
                         if (Owner.TryGetComponent(out CollidableComponent collidableComponent))
                         {
-                            // TODO: If something updates this this will fuck it
-                            collidableComponent.IsHardCollidable = false;
-                            Logger.DebugS("ai", $"{Owner} became stuck, turning off collidable temporarily");
-                            IsStuck = false;
-                            Timer.Spawn(1000, () =>
+                            // TODO Fix this because they are yeeting themselves when they charge
+                            if (!_tryingAntiStuck)
                             {
-                                collidableComponent.IsHardCollidable = true;
-                                Logger.DebugS("ai", $"Anti-stuck turning back on collidable for {Owner}");
-                            });
+                                // TODO: If something updates this this will fuck it
+                                collidableComponent.CollisionEnabled = false;
+                                Logger.DebugS("ai", $"{Owner} became stuck, turning off collidable temporarily");
+                                _tryingAntiStuck = true;
+                            }
+
+                            if (_antiStuckTryTimer > 0)
+                            {
+                                break;
+                            }
+                            Logger.DebugS("ai", $"Anti-stuck turning back on collidable for {Owner}");
+                            collidableComponent.CollisionEnabled = true;
+                            _isStuck = false;
                         }
                         break;
                     case AntiStuckMethods.Teleport:
                         Owner.Transform.DetachParent();
                         Owner.Transform.GridPosition = NextGrid;
-                        IsStuck = false;
+                        _isStuck = false;
                         Logger.DebugS("ai", $"Teleported {Owner} to {NextGrid} for anti-stuck");
                         break;
                     default:
@@ -124,19 +165,23 @@ namespace Content.Server.AI.Routines.Movers
                 }
             }
 
+            _stuckTimerRemaining -= frameTime;
+            _antiStuckTryTimer -= frameTime;
+
             // Stuck check cooldown
-            if ((DateTime.Now - _lastStuckCheck).TotalSeconds < 1.0f)
+            if (_stuckTimerRemaining > 0.0f)
             {
                 return;
             }
 
-            _lastStuckCheck = DateTime.Now;
+            _tryingAntiStuck = false;
+            _stuckTimerRemaining = 2.0f;
+            _antiStuckTryTimer = 0.5f;
 
             // Are we actually stuck
             if ((OurLastPosition.Position - Owner.Transform.GridPosition.Position).Length < TileTolerance)
             {
-                _lastStuckTime = DateTime.Now;
-                IsStuck = true;
+                _isStuck = true;
                 Logger.DebugS("ai", $"{Owner} is stuck at {Owner.Transform.GridPosition}");
             }
 
@@ -158,10 +203,32 @@ namespace Content.Server.AI.Routines.Movers
             Logger.DebugS("ai", $"AI {Owner} arrived at target");
         }
 
-        public override void Update()
+        /// <summary>
+        /// Will move the AI towards the next position
+        /// </summary>
+        /// <returns>true if movement to be done</returns>
+        protected bool TryMove()
         {
-            base.Update();
-            HandleMovement();
+            // Fix getting stuck on corners
+            // TODO: Potentially change this. This is just because the position doesn't match the aabb so we need to make sure corners don't fuck us
+            Owner.TryGetComponent<ICollidableComponent>(out var collidableComponent);
+            var targetDiff = NextGrid.Position - collidableComponent.WorldAABB.Center;
+            // Check distance
+            if (targetDiff.Length > TileTolerance)
+            {
+                // Move towards it
+                Owner.TryGetComponent(out AiControllerComponent mover);
+                mover.VelocityDir = targetDiff.Normalized * Speed;
+                return true;
+            }
+
+            return false;
+        }
+
+        public override void Update(float frameTime)
+        {
+            base.Update(frameTime);
+            HandleMovement(frameTime);
         }
     }
 

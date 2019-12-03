@@ -1,15 +1,4 @@
-using System;
-using System.Collections.Generic;
-using Content.Server.GameObjects.Components.Movement;
-using Content.Server.GameObjects.Components.Pathfinding;
-using Robust.Shared.Interfaces.GameObjects;
-using Robust.Shared.Interfaces.GameObjects.Components;
-using Robust.Shared.Interfaces.Map;
-using Robust.Shared.Interfaces.Random;
-using Robust.Shared.IoC;
-using Robust.Shared.Log;
 using Robust.Shared.Map;
-using Robust.Shared.Maths;
 
 namespace Content.Server.AI.Routines.Movers
 {
@@ -17,12 +6,8 @@ namespace Content.Server.AI.Routines.Movers
     {
 
         private GridCoordinates _targetPosition;
-        // How close we need to get
-        public float TargetTolerance
-        {
-            get;
-            set;
-        }
+        // How close we need to get. Would not recommend setting it too low or else you'll get back and forth
+        public float TargetTolerance { get; set; } = 0.5f;
 
         /// <summary>
         /// Gets a route to the specified target grid
@@ -38,6 +23,14 @@ namespace Content.Server.AI.Routines.Movers
                 _route.Enqueue(tile);
             }
 
+            if (_route.Count <= 1)
+            {
+                return;
+            }
+
+            // See MoveToEntityAiRoutine for why first tile is dropped
+            _route.Dequeue();
+
             var nextTile = _route.Dequeue();
             NextGrid = _mapManager.GetGrid(nextTile.GridIndex).GridTileToLocal(nextTile.GridIndices);
             _targetPosition = gridCoordinates;
@@ -47,7 +40,7 @@ namespace Content.Server.AI.Routines.Movers
         /// Will move the owner to the next tile until close enough, then proceed to next tile.
         /// If it seems like we're stuck will move to a random close spot and keep trying to push on.
         /// </summary>
-        public override void HandleMovement()
+        public override void HandleMovement(float frameTime)
         {
             if (_arrived)
             {
@@ -60,22 +53,14 @@ namespace Content.Server.AI.Routines.Movers
                 return;
             }
 
-            AntiStuck();
+            AntiStuck(frameTime);
             if (IsStuck)
             {
                 return;
             }
 
-            // Fix getting stuck on corners
-            // TODO: Potentially change this. This is just because the position doesn't match the aabb so we need to make sure corners don't fuck us
-            Owner.TryGetComponent<ICollidableComponent>(out var collidableComponent);
-            var targetDiff = NextGrid.Position - collidableComponent.WorldAABB.Center;
-            // Check distance
-            if (targetDiff.Length > TileTolerance)
+            if (TryMove())
             {
-                // Move towards it
-                Owner.TryGetComponent(out AiControllerComponent mover);
-                mover.VelocityDir = targetDiff.Normalized;
                 return;
             }
 
@@ -90,10 +75,10 @@ namespace Content.Server.AI.Routines.Movers
             NextGrid = _mapManager.GetGrid(nextTile.GridIndex).GridTileToLocal(nextTile.GridIndices);
         }
 
-        public override void Update()
+        public override void Update(float frameTime)
         {
-            base.Update();
-            HandleMovement();
+            HandleMovement(frameTime);
+            base.Update(frameTime);
         }
     }
 }

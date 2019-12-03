@@ -24,7 +24,7 @@ namespace Content.Server.GameObjects.Components.Pathfinding
         /// <param name="end"></param>
         /// <param name="proximity">How close before good enough</param>
         /// <returns></returns>
-        IEnumerable<TileRef> FindPath(TileRef start, TileRef end, float proximity = 0.0f, PathHeuristic heuristic = PathHeuristic.Octile);
+        List<TileRef> FindPath(TileRef start, TileRef end, float proximity = 0.0f, PathHeuristic heuristic = PathHeuristic.Octile);
         /// <summary>
         ///  Find a tile path from start to end.
         /// Is normally a wrapper around the other method.
@@ -33,7 +33,7 @@ namespace Content.Server.GameObjects.Components.Pathfinding
         /// <param name="end"></param>
         /// <param name="proximity">How close before good enough</param>
         /// <returns></returns>
-        IEnumerable<TileRef> FindPath(GridCoordinates start, GridCoordinates end, float proximity = 0.0f, PathHeuristic heuristic = PathHeuristic.Octile);
+        List<TileRef> FindPath(GridCoordinates start, GridCoordinates end, float proximity = 0.0f, PathHeuristic heuristic = PathHeuristic.Octile);
     }
 
     public struct PathfindingRoute
@@ -111,14 +111,14 @@ namespace Content.Server.GameObjects.Components.Pathfinding
 
         public event Action<PathfindingRoute> FoundRoute;
 
-        public IEnumerable<TileRef> FindPath(GridCoordinates start, GridCoordinates end, float proximity = 0.0f, PathHeuristic heuristic = PathHeuristic.Octile)
+        public List<TileRef> FindPath(GridCoordinates start, GridCoordinates end, float proximity = 0.0f, PathHeuristic heuristic = PathHeuristic.Octile)
         {
             var startTile = _mapManager.GetGrid(start.GridID).GetTileRef(start);
             var endTile = _mapManager.GetGrid(start.GridID).GetTileRef(end);
             return FindPath(startTile, endTile, proximity, heuristic);
         }
 
-        public IEnumerable<TileRef> FindPath(TileRef start, TileRef end, float proximity = 0.0f, PathHeuristic heuristic = PathHeuristic.Octile)
+        public List<TileRef> FindPath(TileRef start, TileRef end, float proximity = 0.0f, PathHeuristic heuristic = PathHeuristic.Octile)
         {
             // I considered making the heuristics an arg but it's probably better to just hardcode it in
             // given the basic implementations (e.g. manhattan distance) are so simple.

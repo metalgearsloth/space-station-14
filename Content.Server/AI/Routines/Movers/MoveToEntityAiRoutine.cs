@@ -1,15 +1,5 @@
-using System;
-using System.Collections.Generic;
-using Content.Server.GameObjects.Components.Movement;
-using Content.Server.GameObjects.Components.Pathfinding;
 using Robust.Shared.Interfaces.GameObjects;
-using Robust.Shared.Interfaces.GameObjects.Components;
-using Robust.Shared.Interfaces.Map;
-using Robust.Shared.Interfaces.Random;
-using Robust.Shared.IoC;
-using Robust.Shared.Log;
 using Robust.Shared.Map;
-using Robust.Shared.Maths;
 
 namespace Content.Server.AI.Routines.Movers
 {
@@ -17,7 +7,7 @@ namespace Content.Server.AI.Routines.Movers
     {
         public IEntity TargetEntity => _targetEntity;
         private IEntity _targetEntity;
-        private DateTime _entityRouteThrottle = DateTime.Now - TimeSpan.FromSeconds(5.0f);
+        private float _entityRouteThrottle = 2.0f;
 
         private GridCoordinates _lastTargetPosition;
 
@@ -52,11 +42,16 @@ namespace Content.Server.AI.Routines.Movers
                 _route.Enqueue(tile);
             }
 
-            if (_route.Count == 0)
+            if (_route.Count <= 1)
             {
                 // Couldn't find a route to target
                 return;
             }
+
+            // Because the entity may be half on 2 tiles we'll just cut out the first tile.
+            // This may not be the best solution but sometimes if the AI is chasing for example it will
+            // stutter backwards to the first tile again.
+            _route.Dequeue();
 
             var nextTile = _route.Dequeue();
             NextGrid = _mapManager.GetGrid(nextTile.GridIndex).GridTileToLocal(nextTile.GridIndices);
@@ -67,7 +62,7 @@ namespace Content.Server.AI.Routines.Movers
         /// If it seems like we're stuck will move to a random close spot and keep trying to push on.
         /// Other routines should call GetRoute first
         /// </summary>
-        public override void HandleMovement()
+        public override void HandleMovement(float frameTime)
         {
             if (_targetEntity == null || _arrived)
             {
@@ -82,10 +77,12 @@ namespace Content.Server.AI.Routines.Movers
                 return;
             }
 
+            _entityRouteThrottle -= frameTime;
+
             // Throttler - Check if we need to re-assess the route.
-            if ((DateTime.Now - _entityRouteThrottle).TotalSeconds > 2.0f)
+            if (_entityRouteThrottle <= 0)
             {
-                _entityRouteThrottle = DateTime.Now;
+                _entityRouteThrottle = 1.0f;
 
                 if (_mapManager.GetGrid(_targetEntity.Transform.GridID).GetTileRef(_targetEntity.Transform.GridPosition)
                     .Tile.IsEmpty)
@@ -101,22 +98,14 @@ namespace Content.Server.AI.Routines.Movers
                 }
             }
 
-            AntiStuck();
+            AntiStuck(frameTime);
             if (IsStuck)
             {
                 return;
             }
 
-            // Fix getting stuck on corners
-            // TODO: Potentially change this. This is just because the position doesn't match the aabb so we need to make sure corners don't fuck us
-            Owner.TryGetComponent<ICollidableComponent>(out var collidableComponent);
-            var targetDiff = NextGrid.Position - collidableComponent.WorldAABB.Center;
-            // Check distance
-            if (targetDiff.Length > TileTolerance)
+            if (TryMove())
             {
-                // Move towards it
-                Owner.TryGetComponent(out AiControllerComponent mover);
-                mover.VelocityDir = targetDiff.Normalized;
                 return;
             }
 
@@ -131,10 +120,10 @@ namespace Content.Server.AI.Routines.Movers
             NextGrid = _mapManager.GetGrid(nextTile.GridIndex).GridTileToLocal(nextTile.GridIndices);
         }
 
-        public override void Update()
+        public override void Update(float frameTime)
         {
-            base.Update();
-            HandleMovement();
+            HandleMovement(frameTime);
+            base.Update(frameTime);
         }
     }
 }

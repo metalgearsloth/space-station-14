@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Content.Server.Interfaces.GameObjects.Components.Movement;
 using Content.Shared.Physics;
@@ -11,7 +11,7 @@ using Robust.Shared.Interfaces.Timing;
 using Robust.Shared.IoC;
 using Robust.Shared.Maths;
 
-namespace Content.Server.AI
+namespace Content.Server.AI.Processors
 {
     /// <summary>
     ///     The object stays stationary. The object will periodically scan for *any* life forms in its radius, and engage them.

@@ -1,4 +1,5 @@
 using Content.Server.AI.Routines.Movers;
+using Robust.Server.AI;
 using Robust.Shared.Interfaces.GameObjects;
 
 namespace Content.Server.AI.Routines
@@ -12,16 +13,16 @@ namespace Content.Server.AI.Routines
         public IEntity FollowTarget { get; set; }
         public float MaxDistance { get; set; } = 2.0f;
 
-        public override void Setup(IEntity owner)
+        public override void Setup(IEntity owner, AiLogicProcessor processor)
         {
-            base.Setup(owner);
-            _mover.Setup(owner);
+            base.Setup(owner, Processor);
+            _mover.Setup(owner, Processor);
         }
 
-        public override void Update()
+        public override void Update(float frameTime)
         {
             // TODO: Throttle if no route
-            base.Update();
+            base.Update(frameTime);
             if (FollowTarget == null)
             {
                 return;
@@ -29,7 +30,7 @@ namespace Content.Server.AI.Routines
 
             if (!_mover.Arrived)
             {
-                _mover.HandleMovement();
+                _mover.HandleMovement(frameTime);
                 return;
             }
 

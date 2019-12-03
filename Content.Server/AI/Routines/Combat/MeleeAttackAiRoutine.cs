@@ -5,11 +5,11 @@ using Content.Server.GameObjects.Components.Mobs;
 using Content.Server.GameObjects.Components.Movement;
 using Content.Server.GameObjects.Components.Weapon.Melee;
 using Content.Server.GameObjects.EntitySystems;
-using Content.Server.Interfaces.Chat;
+using Robust.Server.AI;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.IoC;
 
-namespace Content.Server.AI.Routines
+namespace Content.Server.AI.Routines.Combat
 {
     /// <summary>
     /// Move to melee range and hit the target
@@ -24,6 +24,7 @@ namespace Content.Server.AI.Routines
 
         public IEntity Target => _target;
         private IEntity _target;
+        public bool TargetAlive => _targetAlive;
         private bool _targetAlive = true;
 
         /// <summary>
@@ -89,18 +90,16 @@ namespace Content.Server.AI.Routines
             _mover.GetRoute(target);
         }
 
-        public override bool RequiresMover => true;
-
-        public override void Setup(IEntity owner)
+        public override void Setup(IEntity owner, AiLogicProcessor processor)
         {
-            base.Setup(owner);
+            base.Setup(owner, processor);
             IoCManager.InjectDependencies(this);
             Owner = owner;
             if (Owner.TryGetComponent(out CombatModeComponent combatModeComponent))
             {
                 combatModeComponent.IsInCombatMode = true;
             }
-            _mover.Setup(owner);
+            _mover.Setup(owner, Processor);
         }
 
         public bool InRange()
@@ -114,6 +113,15 @@ namespace Content.Server.AI.Routines
         /// </summary>
         public void CheckCharge()
         {
+            if (_mover.IsStuck)
+            {
+                Owner.TryGetComponent(out AiControllerComponent mover);
+                mover.Sprinting = false;
+                _charging = false;
+                return;
+            }
+
+            // TODO: Use frametime and keep looking for DateTime.Now
             if ((DateTime.Now - _lastCharge).TotalSeconds < ChargeCooldown)
             {
                 return;
@@ -196,22 +204,23 @@ namespace Content.Server.AI.Routines
 
             if (!_mover.Arrived)
             {
-                _mover.HandleMovement();
                 return;
             }
 
             // If we're not already tracking the target
             if (_mover.TargetEntity != Target || _mover.Arrived)
             {
-                _mover.TargetProximity = AttackRange - 0.5f;
+                _mover.TargetProximity = AttackRange - 0.5f; // How close to get
+                _mover.TargetMovementTolerance = AttackRange; // How far they're allowed to move before we re-route
                 _mover.GetRoute(Target);
             }
         }
 
-        public override void Update()
+        public override void Update(float frameTime)
         {
-            base.Update();
             GoAttack();
+            _mover.HandleMovement(frameTime);
+            base.Update(frameTime);
         }
     }
 }

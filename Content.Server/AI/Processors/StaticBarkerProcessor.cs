@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Content.Server.Interfaces.Chat;
 using Robust.Server.AI;
@@ -6,7 +6,7 @@ using Robust.Shared.Interfaces.Timing;
 using Robust.Shared.IoC;
 using Robust.Shared.Utility;
 
-namespace Content.Server.AI
+namespace Content.Server.AI.Processors
 {
     /// <summary>
     /// Designed for a a stationary entity that regularly advertises things (vending machine).
