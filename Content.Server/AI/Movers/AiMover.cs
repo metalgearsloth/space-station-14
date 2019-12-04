@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Content.Server.GameObjects.Components.Movement;
 using Content.Server.GameObjects.Components.Pathfinding;
+using Content.Server.GameObjects.EntitySystems;
 using Robust.Server.AI;
 using Robust.Server.GameObjects;
 using Robust.Shared.Interfaces.GameObjects;
@@ -12,12 +14,23 @@ using Robust.Shared.IoC;
 using Robust.Shared.Log;
 using Robust.Shared.Map;
 using Robust.Shared.Maths;
+using Robust.Shared.Utility;
 using Timer = Robust.Shared.Timers.Timer;
 
 namespace Content.Server.AI.Routines.Movers
 {
-    public abstract class BaseAiMover
+    /// <summary>
+    /// Pathfinds to target entity / grid and handles movement there
+    /// </summary>
+    public class AiMover
     {
+#pragma warning disable 649
+        [Dependency] protected readonly IMapManager _mapManager;
+        [Dependency] protected readonly IPathfinder _pathfinder;
+#pragma warning restore 649
+
+        // General settings
+
         // Percentage of walk / sprint speed to move at.
         // Should generally be 1.0 but some stuff like the idler might move slower.
         public float Speed
@@ -44,7 +57,6 @@ namespace Content.Server.AI.Routines.Movers
         }
 
         private float _speed = 1.0f;
-
         public IEntity Owner { get; }
 
         // These are to do with the tile-to-tile movement
@@ -59,37 +71,40 @@ namespace Content.Server.AI.Routines.Movers
         private float _stuckTimerRemaining = 2.0f;
         protected GridCoordinates OurLastPosition;
         private float _antiStuckTryTimer = 0.2f;
-
-        public bool Arrived => _arrived;
-        protected bool _arrived = true;
-
-#pragma warning disable 649
-        [Dependency] protected readonly IMapManager _mapManager;
-        [Dependency] protected readonly IPathfinder _pathfinder;
-#pragma warning restore 649
-
-        /// <summary>
-        /// How close we need to be to the target position
-        /// </summary>
-        public float Range { get; set; } = 2.0f;
-
-        /// <summary>
-        /// How close the pathfinder has to get. Generally this shouldn't need to be overridden.
-        /// </summary>
-        protected float PathfinderRange = 0.5f;
-
         // Anti-stuck measures. See the AntiStuck() method for more details
         private bool _tryingAntiStuck = false;
         public bool IsStuck => _isStuck;
         protected bool _isStuck;
         protected AntiStuckMethods AntiStuckMethod = AntiStuckMethods.PhaseThrough;
 
-        /// <summary>
-        /// Handles the big business, e.g. moving to the next node, re-assessing path, etc.
-        /// </summary>
-        public abstract void HandleMovement(float frameTime);
+        public bool Arrived => _arrived;
+        protected bool _arrived = true;
 
-        public BaseAiMover(IEntity owner)
+        /// <summary>
+        /// How close we need to be to the target position
+        /// Doesn't affect the pathfinder
+        /// </summary>
+        public float Range { get; set; } = InteractionSystem.InteractionRange - 0.5f;
+
+        /// <summary>
+        /// How close the pathfinder has to get before it returns a route.
+        /// Generally this may need to be overridden if the desired item is on a table for example and we
+        /// just want to get into interaction range.
+        /// </summary>
+        public float PathfinderRange = InteractionSystem.InteractionRange - 0.5f; // Should get all 8 adjacent tiles
+
+        // Entity movement related
+        public IEntity TargetEntity { get; set; }
+        private float _entityRouteThrottle = 2.0f;
+        /// <summary>
+        /// How close the target is allowed to move around before we get a new route
+        /// </summary>
+        public float TargetMovementTolerance = 2.0f;
+
+        // Grid movement related
+        private GridCoordinates? _targetGrid = null;
+
+        public AiMover(IEntity owner)
         {
             Owner = owner;
             IoCManager.InjectDependencies(this);
@@ -187,8 +202,7 @@ namespace Content.Server.AI.Routines.Movers
         }
 
         /// <summary>
-        /// Tells this routine we don't need to keep moving
-        /// Other routines can have their own criteria for movement so they can tell this to stop as well
+        /// Tells this we don't need to keep moving and resets everything
         /// </summary>
         public void HaveArrived()
         {
@@ -196,7 +210,6 @@ namespace Content.Server.AI.Routines.Movers
             _arrived = true;
             Owner.TryGetComponent(out AiControllerComponent mover);
             mover.VelocityDir = Vector2.Zero;
-            Logger.DebugS("ai", $"AI {Owner} arrived at target");
         }
 
         /// <summary>
@@ -221,9 +234,161 @@ namespace Content.Server.AI.Routines.Movers
             return false;
         }
 
-        public virtual void Update(float frameTime)
+        /// <summary>
+        /// Will try and get a route to the target grid. Will try adjacent tiles if necessary
+        /// If they move further than the tolerance it will get a new route.
+        /// </summary>
+        /// <param name="entity"></param>
+        /// <param name="proximity">If the entity's tile is untraversable then should we get close to it</param>
+        public void GetRoute()
         {
+            HaveArrived();
+            _arrived = false;
+
+            DebugTools.Assert(_targetGrid != null, nameof(_targetGrid) + " != null");
+            var route = _pathfinder.FindPath(Owner.Transform.GridPosition, _targetGrid.Value, PathfinderRange);
+
+            foreach (var tile in route)
+            {
+                _route.Enqueue(tile);
+            }
+
+            if (_route.Count <= 1)
+            {
+                // Couldn't find a route to target
+                return;
+            }
+
+            // Because the entity may be half on 2 tiles we'll just cut out the first tile.
+            // This may not be the best solution but sometimes if the AI is chasing for example it will
+            // stutter backwards to the first tile again.
+            _route.Dequeue();
+
+            var nextTile = _route.Dequeue();
+            NextGrid = _mapManager.GetGrid(nextTile.GridIndex).GridTileToLocal(nextTile.GridIndices);
+        }
+
+        /// <summary>
+        /// Tries and moves to the target grid. Gets a route if one needed
+        /// </summary>
+        /// <param name="entity"></param>
+        /// <param name="frameTime"></param>
+        /// <returns>true if in range</returns>
+        public bool TryMoveToGrid(GridCoordinates grid, float frameTime)
+        {
+            TargetEntity = null;
+
+            if ((Owner.Transform.GridPosition.Position - grid.Position).Length < Range)
+            {
+                return true;
+            }
+
+            _targetGrid = grid;
+
+            // If no route and entity is out of range
+            if (Arrived)
+            {
+                GetRoute();
+            }
+
             HandleMovement(frameTime);
+            return false;
+        }
+
+        /// <summary>
+        /// Tries and moves to the target entity. Gets a route if one needed
+        /// </summary>
+        /// <param name="entity"></param>
+        /// <param name="frameTime"></param>
+        /// <returns>true if in range</returns>
+        public bool TryMoveToEntity(IEntity entity, float frameTime)
+        {
+            if ((Owner.Transform.GridPosition.Position - entity.Transform.GridPosition.Position).Length < Range)
+            {
+                return true;
+            }
+
+            TargetEntity = entity;
+
+            DebugTools.Assert(_targetGrid != null, nameof(_targetGrid) + " != null");
+            if (!Arrived && (TargetEntity.Transform.GridPosition.Position - _targetGrid.Value.Position).Length >
+                TargetMovementTolerance)
+            {
+                _targetGrid = TargetEntity.Transform.GridPosition;
+                GetRoute();
+            }
+
+            // If no route and entity is out of range
+            if (Arrived)
+            {
+                GetRoute();
+            }
+
+            HandleMovement(frameTime);
+            return false;
+        }
+
+        /// <summary>
+        /// Will move the owner to the next tile until close enough, then proceed to next tile.
+        /// If it seems like we're stuck will move to a random close spot and keep trying to push on.
+        /// Other routines should call GetRoute first
+        /// </summary>
+        public void HandleMovement(float frameTime)
+        {
+            if (_targetGrid == null || _arrived)
+            {
+                return;
+            }
+
+            // If the entity's moving we may run into it so check that
+            if ((TargetEntity.Transform.GridPosition.Position - Owner.Transform.GridPosition.Position).Length <
+                Range)
+            {
+                HaveArrived();
+                return;
+            }
+
+            _entityRouteThrottle -= frameTime;
+
+            // Throttler - Check if we need to re-assess the route.
+            if (_entityRouteThrottle <= 0)
+            {
+                _entityRouteThrottle = 1.0f;
+
+                if (_mapManager.GetGrid(TargetEntity.Transform.GridID).GetTileRef(TargetEntity.Transform.GridPosition)
+                    .Tile.IsEmpty)
+                {
+                    // TODO: No path. Maybe use an event?
+                    return;
+                }
+
+                if ((_targetGrid.Value.Position - TargetEntity.Transform.GridPosition.Position).Length > TargetMovementTolerance)
+                {
+                    GetRoute();
+                    return;
+                }
+            }
+
+            AntiStuck(frameTime);
+            if (IsStuck)
+            {
+                return;
+            }
+
+            if (TryMove())
+            {
+                return;
+            }
+
+            // If we've expended the route and gotten this far that must mean we're close?
+            if (_route.Count == 0)
+            {
+                NextGrid = TargetEntity.Transform.GridPosition;
+                return;
+            }
+
+            var nextTile = _route.Dequeue();
+            NextGrid = _mapManager.GetGrid(nextTile.GridIndex).GridTileToLocal(nextTile.GridIndices);
         }
     }
 

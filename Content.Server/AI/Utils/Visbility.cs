@@ -4,9 +4,9 @@ using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.IoC;
 using Robust.Shared.Map;
 
-namespace Content.Server.AI
+namespace Content.Server.AI.Utils
 {
-    public static class Utils
+    public static class Visbility
     {
         // TODO: Should this be in robust or something?
         public static IEnumerable<IEntity> GetComponentOwnersInRange(GridCoordinates grid, Type component, float range)

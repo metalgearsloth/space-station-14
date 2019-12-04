@@ -24,8 +24,8 @@ namespace Content.Server.AI
         /// <param name="worldState"></param>
         /// <param name="goal"></param>
         /// <returns>null if no solution found, otherwise a queue of actions to do</returns>
-        public Queue<GoapAction> Plan(GoapAgent agent, HashSet<GoapAction> availableActions, HashSet<KeyValuePair<AiState, bool>> worldState,
-            HashSet<KeyValuePair<AiState, bool>> goal)
+        public Queue<GoapAction> Plan(IEntity entity, HashSet<GoapAction> availableActions, HashSet<KeyValuePair<string, bool>> worldState,
+            HashSet<KeyValuePair<string, bool>> goal)
         {
             foreach (var action in availableActions)
             {
@@ -35,7 +35,7 @@ namespace Content.Server.AI
             var usableActions = new HashSet<GoapAction>();
             foreach (var action in availableActions)
             {
-                if (action.CheckProceduralPreconditions(agent))
+                if (action.CheckProceduralPreconditions(entity))
                 {
                     usableActions.Add(action);
                 }
@@ -97,7 +97,7 @@ namespace Content.Server.AI
         /// <param name="usableActions"></param>
         /// <param name="goal"></param>
         /// <returns></returns>
-        private bool BuildGraph(GoapNode parent, List<GoapNode> leaves, HashSet<GoapAction> usableActions, HashSet<KeyValuePair<AiState, bool>> goal)
+        private bool BuildGraph(GoapNode parent, List<GoapNode> leaves, HashSet<GoapAction> usableActions, HashSet<KeyValuePair<string, bool>> goal)
         {
 
             foreach (var action in usableActions)
@@ -107,7 +107,7 @@ namespace Content.Server.AI
                     continue;
                 }
 
-                HashSet<KeyValuePair<AiState, bool>> currentState = PopulateState(parent.State, action.Effects);
+                HashSet<KeyValuePair<string, bool>> currentState = PopulateState(parent.State, action.Effects);
                 var node = new GoapNode(parent, parent.RunningCost + action.Cost(), currentState, action);
 
                 if (InState(goal, currentState))
@@ -155,7 +155,7 @@ namespace Content.Server.AI
         /// <param name="test"></param>
         /// <param name="state"></param>
         /// <returns></returns>
-        private bool InState(HashSet<KeyValuePair<AiState, bool>> test, HashSet<KeyValuePair<AiState, bool>> state)
+        private bool InState(HashSet<KeyValuePair<string, bool>> test, HashSet<KeyValuePair<string, bool>> state)
         {
             foreach (var t in test)
             {
@@ -185,14 +185,14 @@ namespace Content.Server.AI
         /// <param name="currentState"></param>
         /// <param name="stateChange"></param>
         /// <returns></returns>
-        private HashSet<KeyValuePair<AiState, bool>> PopulateState(HashSet<KeyValuePair<AiState, bool>> currentState,
-            HashSet<KeyValuePair<AiState, bool>> stateChange)
+        private HashSet<KeyValuePair<string, bool>> PopulateState(HashSet<KeyValuePair<string, bool>> currentState,
+            HashSet<KeyValuePair<string, bool>> stateChange)
         {
-            HashSet<KeyValuePair<AiState, bool>> state = new HashSet<KeyValuePair<AiState, bool>>();
+            HashSet<KeyValuePair<string, bool>> state = new HashSet<KeyValuePair<string, bool>>();
             // Copy the KVPs over as new objects
             foreach (var s in currentState)
             {
-                state.Add(new KeyValuePair<AiState, bool>(s.Key, s.Value));
+                state.Add(new KeyValuePair<string, bool>(s.Key, s.Value));
             }
 
             foreach (var change in stateChange)
@@ -211,12 +211,12 @@ namespace Content.Server.AI
                 if (exists)
                 {
                     state.RemoveWhere(kvp => { return kvp.Key.Equals(change.Key);});
-                    var updated = new KeyValuePair<AiState, bool>(change.Key, change.Value);
+                    var updated = new KeyValuePair<string, bool>(change.Key, change.Value);
                     state.Add(updated);
                 }
                 else
                 {
-                    state.Add(new KeyValuePair<AiState, bool>(change.Key, change.Value));
+                    state.Add(new KeyValuePair<string, bool>(change.Key, change.Value));
                 }
             }
 
@@ -234,10 +234,10 @@ namespace Content.Server.AI
     {
         public GoapNode Parent;
         public float RunningCost;
-        public HashSet<KeyValuePair<AiState, bool>> State;
+        public HashSet<KeyValuePair<string, bool>> State;
         public GoapAction Action;
 
-        public GoapNode(GoapNode parent, float runningCost, HashSet<KeyValuePair<AiState, bool>> state,
+        public GoapNode(GoapNode parent, float runningCost, HashSet<KeyValuePair<string, bool>> state,
             GoapAction action)
         {
             Parent = parent;
@@ -245,12 +245,5 @@ namespace Content.Server.AI
             State = state;
             Action = action;
         }
-    }
-
-    public enum GoapState
-    {
-        Idle,
-        MoveTo,
-        PerformAction,
     }
 }

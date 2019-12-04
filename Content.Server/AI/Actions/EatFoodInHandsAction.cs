@@ -11,15 +11,15 @@ namespace Content.Server.AI.Actions
     /// <summary>
     /// Eats equipped / in inventory food
     /// </summary>
-    public class EatFoodAction : GoapAction
+    public class EatFoodInHandsAction : GoapAction
     {
         public override bool RequiresInRange { get; set; } = false;
         private IEntity _targetEntity;
 
-        public EatFoodAction()
+        public EatFoodInHandsAction()
         {
-            PreConditions.Add(new KeyValuePair<AiState, bool>(AiState.Hungry, true));
-            Effects.Add(new KeyValuePair<AiState, bool>(AiState.Hungry, false));
+            PreConditions.Add(new KeyValuePair<string, bool>("Hungry", true));
+            Effects.Add(new KeyValuePair<string, bool>("Hungry", false));
         }
 
         public override void Reset()
@@ -42,11 +42,12 @@ namespace Content.Server.AI.Actions
 
             foreach (var item in handsComponent.GetAllHeldItems())
             {
-                if (item.Owner.HasComponent<FoodComponent>())
+                if (!item.Owner.HasComponent<FoodComponent>())
                 {
-                    _targetEntity = item.Owner;
-                    return true;
+                    continue;
                 }
+                _targetEntity = item.Owner;
+                return true;
             }
 
             return false;
@@ -57,17 +58,9 @@ namespace Content.Server.AI.Actions
             var entitySystemManager = IoCManager.Resolve<IEntitySystemManager>();
             var interactionSystem = entitySystemManager.GetEntitySystem<InteractionSystem>();
 
-            if (!entity.TryGetComponent(out HandsComponent handsComponent))
-            {
-                return false;
-            }
+            interactionSystem.UseInteraction(entity, _targetEntity);
 
-            if (handsComponent.GetActiveHand?.Owner == _targetEntity)
-            {
-                interactionSystem.UseItemInHand(entity);
-            }
-
-            return false;
+            return true;
         }
     }
 }

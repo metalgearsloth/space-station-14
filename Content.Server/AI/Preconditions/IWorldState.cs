@@ -1,10 +1,9 @@
 using System.Collections.Generic;
-using Content.Server.AI.Preconditions;
 
-namespace Content.Server.AI
+namespace Content.Server.AI.Preconditions
 {
     public interface IWorldState
     {
-        HashSet<KeyValuePair<AiState, bool>> GetState();
+        HashSet<KeyValuePair<string, bool>> GetState();
     }
 }

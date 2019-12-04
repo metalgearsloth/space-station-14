@@ -3,14 +3,20 @@ using Content.Server.GameObjects;
 using Content.Server.GameObjects.Components.Nutrition;
 using Content.Server.GameObjects.EntitySystems;
 using Robust.Server.AI;
+using Robust.Server.Interfaces.GameObjects;
 using Robust.Shared.Interfaces.GameObjects;
+using Robust.Shared.IoC;
 
 namespace Content.Server.AI.Actions
 {
     public class PickupFood : GoapAction
     {
-        private List<IEntity> _nearbyFood = new List<IEntity>();
-        public override float Cost { get; set; } = 5.0f;
+        private IEntity _targetEntity;
+
+        public override float Cost()
+        {
+            return 5.0f;
+        }
 
         public override float Range { get; set; } = InteractionSystem.InteractionRange - 0.01f;
         // TODO: We need a range for search radius and a range for how close to get
@@ -18,7 +24,7 @@ namespace Content.Server.AI.Actions
         public override void Reset()
         {
             base.Reset();
-            _nearbyFood.Clear();
+            _targetEntity = null;
         }
 
         // TODO: Use entity ailogic vision
@@ -29,9 +35,10 @@ namespace Content.Server.AI.Actions
                 return false;
             }
 
-            foreach (var _ in Utils.GetComponentOwnersInRange(entity.Transform.GridPosition, typeof(FoodComponent),
+            foreach (var food in Utils.Visbility.GetComponentOwnersInRange(entity.Transform.GridPosition, typeof(FoodComponent),
                 processor.VisionRadius))
             {
+                _targetEntity = food;
                 // TODO: Setup what we're tracking here?
                 return true;
             }
@@ -39,34 +46,30 @@ namespace Content.Server.AI.Actions
             return false;
         }
 
-        public override bool InRange(IEntity entity)
+        public override bool TryPerformAction(IEntity entity)
         {
-            if (Target == null)
+            // If out of range for w/e reason
+            if (!((entity.Transform.GridPosition.Position - _targetEntity.Transform.GridPosition.Position).Length <
+                  InteractionSystem.InteractionRange))
             {
                 return false;
             }
 
-            return (Target.Transform.GridPosition.Position - entity.Transform.GridPosition.Position).Length <= Range;
-        }
-
-        public override bool TryPerformAction(IEntity entity)
-        {
-            // TODO: Interact with it instead of putting it straight in
-            if ((entity.Transform.GridPosition.Position - Target.Transform.GridPosition.Position).Length <=
-                InteractionSystem.InteractionRange)
+            if (!entity.TryGetComponent(out HandsComponent handsComponent))
             {
-                entity.TryGetComponent(out HandsComponent handsComponent);
-                // TODO: Interact with item instead
-                Target.TryGetComponent(out ItemComponent itemComponent);
-                handsComponent.PutInHand(itemComponent);
-                if (handsComponent.GetActiveHand != itemComponent)
-                {
-                    handsComponent.SwapHands();
-                }
-                return true;
+                return false;
             }
 
-            return false;
+            var entitySystemManager = IoCManager.Resolve<IEntitySystemManager>();
+            if (!entitySystemManager.TryGetEntitySystem(out InteractionSystem interactionSystem))
+            {
+                return false;
+            }
+
+            interactionSystem.Interaction(entity, _targetEntity);
+
+            return true;
+
         }
     }
 }

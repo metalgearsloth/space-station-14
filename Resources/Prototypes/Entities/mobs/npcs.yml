@@ -7,7 +7,7 @@
   - type: Pathfinding
     cost: 5.0
   - type: AiController
-    logic: Swarm
+    logic: NPC
   - type: Hands
     hands:
     - left
