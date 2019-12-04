@@ -35,6 +35,7 @@ namespace Content.Server.AI
             var usableActions = new HashSet<GoapAction>();
             foreach (var action in availableActions)
             {
+                // If there's no procedural it should just be true
                 if (action.CheckProceduralPreconditions(entity))
                 {
                     usableActions.Add(action);
@@ -99,7 +100,6 @@ namespace Content.Server.AI
         /// <returns></returns>
         private bool BuildGraph(GoapNode parent, List<GoapNode> leaves, HashSet<GoapAction> usableActions, HashSet<KeyValuePair<string, bool>> goal)
         {
-
             foreach (var action in usableActions)
             {
                 if (!InState(action.PreConditions, parent.State))
@@ -117,7 +117,9 @@ namespace Content.Server.AI
                     return true;
                 }
 
-                HashSet<GoapAction> subset = ActionSubset(usableActions, action);
+                var subset = new HashSet<GoapAction>(usableActions);
+                subset.Remove(action);
+
                 var found = BuildGraph(node, leaves, subset, goal);
                 if (found)
                 {
@@ -128,27 +130,7 @@ namespace Content.Server.AI
             return false;
         }
 
-        /// <summary>
-        /// Creates a subset of actions excluding the specified action
-        /// </summary>
-        /// <param name="actions"></param>
-        /// <param name="remove"></param>
-        /// <returns></returns>
-        private HashSet<GoapAction> ActionSubset(HashSet<GoapAction> actions, GoapAction remove)
-        {
-            HashSet<GoapAction> subset = new HashSet<GoapAction>();
-
-            foreach (var action in actions)
-            {
-                if (action.Equals(remove))
-                {
-                    subset.Add(action);
-                }
-            }
-
-            return subset;
-        }
-
+        // TODO: Same with this one, there's simpler ways
         /// <summary>
         /// Checks if all items in the test state are in the target state
         /// </summary>
@@ -179,6 +161,7 @@ namespace Content.Server.AI
             return true;
         }
 
+        // TODO wtf the original author do this, fix this
         /// <summary>
         /// Gets the current state again with the given state changes
         /// </summary>
@@ -188,7 +171,7 @@ namespace Content.Server.AI
         private HashSet<KeyValuePair<string, bool>> PopulateState(HashSet<KeyValuePair<string, bool>> currentState,
             HashSet<KeyValuePair<string, bool>> stateChange)
         {
-            HashSet<KeyValuePair<string, bool>> state = new HashSet<KeyValuePair<string, bool>>();
+            var state = new HashSet<KeyValuePair<string, bool>>();
             // Copy the KVPs over as new objects
             foreach (var s in currentState)
             {
@@ -208,9 +191,10 @@ namespace Content.Server.AI
                     }
                 }
 
+                // If an existing, known state being updated or not
                 if (exists)
                 {
-                    state.RemoveWhere(kvp => { return kvp.Key.Equals(change.Key);});
+                    state.RemoveWhere(kvp => kvp.Key.Equals(change.Key));
                     var updated = new KeyValuePair<string, bool>(change.Key, change.Value);
                     state.Add(updated);
                 }

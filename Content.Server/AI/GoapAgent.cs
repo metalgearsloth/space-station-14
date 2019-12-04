@@ -53,7 +53,7 @@ namespace Content.Server.AI
         private bool HasNextAction(out GoapAction nextAction)
         {
             nextAction = CurrentActions.Peek();
-            return _currentActions.Count > 0;
+            return CurrentActions.Count > 0;
         }
 
         public void Setup(IEntity owner)
@@ -90,12 +90,22 @@ namespace Content.Server.AI
                 return;
             }
 
+            // Why change course?
+            if (_currentGoal == highestGoal && _currentActions.Count > 0)
+            {
+                if (State == GoapState.Idle)
+                {
+                    _state = GoapState.PerformAction;
+                }
+                return;
+            }
+
             _currentGoal = highestGoal;
             _availableActions = highestGoal.Actions;
 
             // If we've run out of stuff to do in our last plan. TODO: reassess this at some frequency
             // TODO: Should this if be here?
-            if (_currentActions.Count == 0)
+            if (CurrentActions.Count == 0)
             {
                 var actions = _planner.Plan(Owner, AvailableActions, _worldState.GetState(), highestGoal.GoalState);
                 if (actions == null)
@@ -110,7 +120,7 @@ namespace Content.Server.AI
             }
 
             // Plan failed
-            if (_currentActions == null)
+            if (CurrentActions == null)
             {
                 _state = GoapState.Idle;
                 PlanChange?.Invoke(PlanOutcome.PlanFailed);
@@ -128,27 +138,35 @@ namespace Content.Server.AI
         /// <returns>true if we're not in range</returns>
         private void MoveTo(float frameTime)
         {
-            if (State != GoapState.MoveTo)
+            if (!HasNextAction(out var action))
             {
+                _state = GoapState.Idle;
+                _mover.HaveArrived();
                 return;
             }
 
-            if (!HasNextAction(out var action) || !action.RequiresInRange || action.InRange)
+            if (!action.RequiresInRange || action.InRange(Owner))
             {
+                _state = GoapState.PerformAction;
+                _mover.HaveArrived();
                 return;
             }
 
             if (action.TargetEntity != null)
             {
-                _mover.TryMoveToEntity(action.TargetEntity, frameTime);
+                _mover.MoveToEntity(action.TargetEntity, frameTime);
                 return;
             }
 
-            _mover.TryMoveToGrid(action.TargetGrid, frameTime);
+            _mover.MoveToGrid(action.TargetGrid, frameTime);
 
             return;
         }
 
+        /// <summary>
+        /// Will try and perform the specified action (duh)
+        /// </summary>
+        /// <param name="frameTime"></param>
         private void PerformAction(float frameTime)
         {
             if (!HasNextAction(out var action))
@@ -165,11 +183,11 @@ namespace Content.Server.AI
                 _currentActions.Dequeue();
             }
 
-            if (_currentActions.Count > 0)
+            if (CurrentActions.Count > 0)
             {
-                action = _currentActions.Peek();
+                action = CurrentActions.Peek();
 
-                if (action.RequiresInRange && !action.InRange)
+                if (action.RequiresInRange && !action.InRange(Owner))
                 {
                     _state = GoapState.MoveTo;
                     return;
@@ -177,14 +195,17 @@ namespace Content.Server.AI
 
                 if (action.TryPerformAction(Owner))
                 {
+                    action.IsDone = true;
                     return;
                 }
 
                 PlanChange?.Invoke(PlanOutcome.PlanAborted);
                 _state = GoapState.Idle;
+                _currentActions.Clear();
                 return;
             }
 
+            _currentActions.Clear(); // Shouldn't need this clear...
             _state = GoapState.Idle;
             PlanChange?.Invoke(PlanOutcome.ActionsFinished);
         }

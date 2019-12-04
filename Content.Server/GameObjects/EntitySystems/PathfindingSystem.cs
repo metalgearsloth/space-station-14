@@ -43,6 +43,7 @@ namespace Content.Server.GameObjects.EntitySystems
             var tempKnownEntities = new List<IEntity>();
             foreach (var entity in RelevantEntities)
             {
+                // TODO Look at bypasing TryGetComponent as it's probably cheaper just to store it directly
                 entity.TryGetComponent(out PathfindingComponent pathfindingComponent);
 
                 // First check if exact position has changed, then check if the tile position has changed

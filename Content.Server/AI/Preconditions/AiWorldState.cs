@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Content.Server.GameObjects;
 using Content.Server.GameObjects.Components.Nutrition;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Utility;
@@ -52,6 +53,11 @@ namespace Content.Server.AI.Preconditions
         /// </summary>
         public void RefreshWorldState()
         {
+            if (_owner.HasComponent<HandsComponent>())
+            {
+                UpdateState("HasHands", true);
+            }
+
             if (_owner.TryGetComponent(out HungerComponent hungerComponent))
             {
                 if (hungerComponent.CurrentHungerThreshold == HungerThreshold.Peckish ||

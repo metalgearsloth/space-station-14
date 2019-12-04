@@ -4,7 +4,7 @@ using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.IoC;
 using Robust.Shared.Map;
 
-namespace Content.Server.AI.Utils
+namespace AIUtils
 {
     public static class Visbility
     {

@@ -102,7 +102,7 @@ namespace Content.Server.AI.Routines.Movers
         public float TargetMovementTolerance = 2.0f;
 
         // Grid movement related
-        private GridCoordinates? _targetGrid = null;
+        private GridCoordinates _targetGrid;
 
         public AiMover(IEntity owner)
         {
@@ -245,8 +245,7 @@ namespace Content.Server.AI.Routines.Movers
             HaveArrived();
             _arrived = false;
 
-            DebugTools.Assert(_targetGrid != null, nameof(_targetGrid) + " != null");
-            var route = _pathfinder.FindPath(Owner.Transform.GridPosition, _targetGrid.Value, PathfinderRange);
+            var route = _pathfinder.FindPath(Owner.Transform.GridPosition, _targetGrid, PathfinderRange);
 
             foreach (var tile in route)
             {
@@ -271,16 +270,17 @@ namespace Content.Server.AI.Routines.Movers
         /// <summary>
         /// Tries and moves to the target grid. Gets a route if one needed
         /// </summary>
-        /// <param name="entity"></param>
+        /// <param name="grid"></param>
         /// <param name="frameTime"></param>
+        /// <param name="entity"></param>
         /// <returns>true if in range</returns>
-        public bool TryMoveToGrid(GridCoordinates grid, float frameTime)
+        public void MoveToGrid(GridCoordinates grid, float frameTime)
         {
             TargetEntity = null;
 
             if ((Owner.Transform.GridPosition.Position - grid.Position).Length < Range)
             {
-                return true;
+                return;
             }
 
             _targetGrid = grid;
@@ -292,7 +292,6 @@ namespace Content.Server.AI.Routines.Movers
             }
 
             HandleMovement(frameTime);
-            return false;
         }
 
         /// <summary>
@@ -301,17 +300,21 @@ namespace Content.Server.AI.Routines.Movers
         /// <param name="entity"></param>
         /// <param name="frameTime"></param>
         /// <returns>true if in range</returns>
-        public bool TryMoveToEntity(IEntity entity, float frameTime)
+        public void MoveToEntity(IEntity entity, float frameTime)
         {
             if ((Owner.Transform.GridPosition.Position - entity.Transform.GridPosition.Position).Length < Range)
             {
-                return true;
+                return;
             }
 
             TargetEntity = entity;
 
-            DebugTools.Assert(_targetGrid != null, nameof(_targetGrid) + " != null");
-            if (!Arrived && (TargetEntity.Transform.GridPosition.Position - _targetGrid.Value.Position).Length >
+            if (_targetGrid == null)
+            {
+                _targetGrid = TargetEntity.Transform.GridPosition;
+            }
+
+            if (!Arrived && (TargetEntity.Transform.GridPosition.Position - _targetGrid.Position).Length >
                 TargetMovementTolerance)
             {
                 _targetGrid = TargetEntity.Transform.GridPosition;
@@ -325,7 +328,6 @@ namespace Content.Server.AI.Routines.Movers
             }
 
             HandleMovement(frameTime);
-            return false;
         }
 
         /// <summary>
@@ -335,7 +337,7 @@ namespace Content.Server.AI.Routines.Movers
         /// </summary>
         public void HandleMovement(float frameTime)
         {
-            if (_targetGrid == null || _arrived)
+            if (_arrived)
             {
                 return;
             }
@@ -362,7 +364,7 @@ namespace Content.Server.AI.Routines.Movers
                     return;
                 }
 
-                if ((_targetGrid.Value.Position - TargetEntity.Transform.GridPosition.Position).Length > TargetMovementTolerance)
+                if ((_targetGrid.Position - TargetEntity.Transform.GridPosition.Position).Length > TargetMovementTolerance)
                 {
                     GetRoute();
                     return;

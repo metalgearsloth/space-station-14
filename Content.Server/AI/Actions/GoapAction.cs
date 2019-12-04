@@ -28,9 +28,7 @@ namespace Content.Server.AI.Actions
         /// <summary>
         /// This should be set if TryPerformAction succeeds
         /// </summary>
-        public bool IsDone => _isDone;
-        protected bool _isDone = false;
-        public bool InRange { get; set; } = false;
+        public bool IsDone { get; set; }
 
         // Robust specific items
         // If TargetEntity is set that will take priority
@@ -51,14 +49,19 @@ namespace Content.Server.AI.Actions
         /// </summary>
         public virtual float Range { get; set; } = 0.0f;
 
+        public virtual bool InRange(IEntity entity)
+        {
+            return !RequiresInRange;
+        }
+
         public virtual void Reset()
         {
             TargetEntity = null;
-            InRange = false;
+            IsDone = false;
         }
 
         /// <summary>
-        /// This should check anything that's dynamic at runtime
+        /// Checks if the preconditions for this action are met
         /// </summary>
         /// <param name="entity"></param>
         /// <returns></returns>
