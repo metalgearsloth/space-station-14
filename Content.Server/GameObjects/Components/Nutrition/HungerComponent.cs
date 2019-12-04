@@ -35,6 +35,8 @@ namespace Content.Server.GameObjects.Components.Nutrition
         public float CurrentHunger => _currentHunger;
         [ViewVariables] private float _currentHunger;
 
+        public event Action<HungerThreshold> HungerThresholdChange;
+
         public Dictionary<HungerThreshold, float> HungerThresholds => _hungerThresholds;
         private Dictionary<HungerThreshold, float> _hungerThresholds = new Dictionary<HungerThreshold, float>
         {
@@ -53,6 +55,12 @@ namespace Content.Server.GameObjects.Components.Nutrition
 
         public void HungerThresholdEffect(bool force = false)
         {
+            // If it's forced we don't want to call the event again
+            if (_currentHungerThreshold != _lastHungerThreshold)
+            {
+                HungerThresholdChange?.Invoke(_currentHungerThreshold);
+            }
+
             if (_currentHungerThreshold != _lastHungerThreshold || force) {
                 Logger.InfoS("hunger", $"Updating hunger state for {Owner.Name}");
 

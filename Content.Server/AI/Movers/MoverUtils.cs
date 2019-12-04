@@ -4,7 +4,7 @@ using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.IoC;
 using Robust.Shared.Map;
 
-namespace Content.Server.AI.Routines.Movers
+namespace Content.Server.AI.Movers
 {
     public static class MoverUtils
     {

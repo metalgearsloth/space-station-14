@@ -25,8 +25,8 @@ namespace Content.Server.AI.Routines.Movers
     public class AiMover
     {
 #pragma warning disable 649
-        [Dependency] protected readonly IMapManager _mapManager;
-        [Dependency] protected readonly IPathfinder _pathfinder;
+        [Dependency] private readonly IMapManager _mapManager;
+        [Dependency] private readonly IPathfinder _pathfinder;
 #pragma warning restore 649
 
         // General settings
@@ -61,24 +61,24 @@ namespace Content.Server.AI.Routines.Movers
 
         // These are to do with the tile-to-tile movement
         public IReadOnlyCollection<TileRef> Route => _route;
-        protected readonly Queue<TileRef> _route = new Queue<TileRef>();
-        protected GridCoordinates NextGrid;
+        private readonly Queue<TileRef> _route = new Queue<TileRef>();
+        private GridCoordinates NextGrid;
 
         // How close to the route X / Y (centre of tile, at least currently) before good enough.
-        protected float TileTolerance = 0.2f;
+        private float TileTolerance = 0.2f;
 
         // Stuck checkers
         private float _stuckTimerRemaining = 2.0f;
-        protected GridCoordinates OurLastPosition;
+        private GridCoordinates OurLastPosition;
         private float _antiStuckTryTimer = 0.2f;
         // Anti-stuck measures. See the AntiStuck() method for more details
         private bool _tryingAntiStuck = false;
         public bool IsStuck => _isStuck;
-        protected bool _isStuck;
-        protected AntiStuckMethods AntiStuckMethod = AntiStuckMethods.PhaseThrough;
+        private bool _isStuck;
+        private AntiStuckMethods AntiStuckMethod = AntiStuckMethods.PhaseThrough;
 
         public bool Arrived => _arrived;
-        protected bool _arrived = true;
+        private bool _arrived = true;
 
         /// <summary>
         /// How close we need to be to the target position
@@ -118,7 +118,7 @@ namespace Content.Server.AI.Routines.Movers
         /// <summary>
         /// Will try and get around obstacles if stuck
         /// </summary>
-        protected void AntiStuck(float frameTime)
+        private void AntiStuck(float frameTime)
         {
             // TODO: More work because these are sketchy
 
@@ -216,7 +216,7 @@ namespace Content.Server.AI.Routines.Movers
         /// Will move the AI towards the next position
         /// </summary>
         /// <returns>true if movement to be done</returns>
-        protected bool TryMove()
+        private bool TryMove()
         {
             // Fix getting stuck on corners
             // TODO: Potentially change this. This is just because the position doesn't match the aabb so we need to make sure corners don't fuck us

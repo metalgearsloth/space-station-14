@@ -35,6 +35,8 @@ namespace Content.Server.GameObjects.Components.Nutrition
         public float CurrentThirst => _currentThirst;
         [ViewVariables] private float _currentThirst;
 
+        public event Action<ThirstThreshold> ThirstThresholdChange;
+
         public Dictionary<ThirstThreshold, float> ThirstThresholds => _thirstThresholds;
         private Dictionary<ThirstThreshold, float> _thirstThresholds = new Dictionary<ThirstThreshold, float>
         {
@@ -53,6 +55,12 @@ namespace Content.Server.GameObjects.Components.Nutrition
 
         public void ThirstThresholdEffect(bool force = false)
         {
+            // If it's forced we don't want to call the event again
+            if (_currentThirstThreshold != _lastThirstThreshold)
+            {
+                ThirstThresholdChange?.Invoke(_currentThirstThreshold);
+            }
+
             if (_currentThirstThreshold != _lastThirstThreshold || force) {
                 Logger.InfoS("thirst", $"Updating Thirst state for {Owner.Name}");
 

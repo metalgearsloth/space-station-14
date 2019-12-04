@@ -31,6 +31,9 @@ namespace Content.Server.GameObjects
         [ViewVariables]
         private readonly Dictionary<Slots, ContainerSlot> SlotContainers = new Dictionary<Slots, ContainerSlot>();
 
+        // Events
+        public event Action<EquippedClothingEventArgs> EquippedClothing;
+
         public override void Initialize()
         {
             base.Initialize();
@@ -118,6 +121,7 @@ namespace Content.Server.GameObjects
             clothing.EquippedToSlot();
 
             Dirty();
+            EquippedClothing?.Invoke(new EquippedClothingEventArgs(slot, clothing));
             return true;
         }
 
@@ -332,6 +336,18 @@ namespace Content.Server.GameObjects
                 }
             }
             return new InventoryComponentState(list);
+        }
+    }
+
+    public struct EquippedClothingEventArgs
+    {
+        public Slots Slot;
+        public ClothingComponent Clothing;
+
+        public EquippedClothingEventArgs(Slots slot, ClothingComponent clothing)
+        {
+            Slot = slot;
+            Clothing = clothing;
         }
     }
 }
