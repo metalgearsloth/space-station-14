@@ -32,4 +32,8 @@
   <ItemGroup>
     <Reference Condition="'$(UseNetCore)' != 'true'" Include="System.Net.Http" />
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="AI\Goals" />
+    <Folder Include="AI\MoveTo" />
+  </ItemGroup>
 </Project>
