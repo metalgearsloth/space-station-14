@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using Content.Server.GameObjects.Components.Pathfinding.Heuristics;
 using Content.Server.Pathfinding;
 using JetBrains.Annotations;
-using Robust.Server.Interfaces.GameObjects;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Interfaces.Map;
 using Robust.Shared.IoC;
@@ -13,8 +12,6 @@ using Robust.Shared.Maths;
 
 namespace Content.Server.GameObjects.Components.Pathfinding
 {
-    // TODO: Look at adding an IHeuristic so FindPath callers could insert their own
-
     public interface IPathfinder
     {
         /// <summary>
@@ -23,8 +20,10 @@ namespace Content.Server.GameObjects.Components.Pathfinding
         /// <param name="start"></param>
         /// <param name="end"></param>
         /// <param name="proximity">How close before good enough</param>
+        /// <param name="heuristic">Overwrite the heuristic to be used</param>
         /// <returns></returns>
         List<TileRef> FindPath(TileRef start, TileRef end, float proximity = 0.0f, PathHeuristic heuristic = PathHeuristic.Octile);
+
         /// <summary>
         ///  Find a tile path from start to end.
         /// Is normally a wrapper around the other method.
@@ -32,28 +31,9 @@ namespace Content.Server.GameObjects.Components.Pathfinding
         /// <param name="start"></param>
         /// <param name="end"></param>
         /// <param name="proximity">How close before good enough</param>
+        /// <param name="heuristic">Overwrite the heuristic to be used</param>
         /// <returns></returns>
         List<TileRef> FindPath(GridCoordinates start, GridCoordinates end, float proximity = 0.0f, PathHeuristic heuristic = PathHeuristic.Octile);
-    }
-
-    public struct PathfindingRoute
-    {
-        private List<TileRef> Route { get; }
-        public PathfindingRoute(List<TileRef> route)
-        {
-            Route = route;
-        }
-    }
-
-    struct PathBlocker
-    {
-        public IEntity Entity { get; }
-        public GridCoordinates Position { get; }
-        public PathBlocker(IEntity entity)
-        {
-            Entity = entity;
-            Position = entity.Transform.GridPosition;
-        }
     }
 
     [UsedImplicitly]
@@ -103,6 +83,7 @@ namespace Content.Server.GameObjects.Components.Pathfinding
 
         // TODO: Add cached paths and interface it with rooms
 
+        public event Action<DebugPathfindingRoute> DebugRoute;
         public event Action<PathfindingRoute> FoundRoute;
 
         public List<TileRef> FindPath(GridCoordinates start, GridCoordinates end, float proximity = 0.0f, PathHeuristic heuristic = PathHeuristic.Octile)
@@ -148,7 +129,7 @@ namespace Content.Server.GameObjects.Components.Pathfinding
             if (!endIsValid)
             {
                 Logger.DebugS("pathfinding", $"End tile {end} is not traversable");
-                return route;
+                return null;
             }
 
             IPathfindingHeuristic pathHeuristic;
@@ -162,8 +143,8 @@ namespace Content.Server.GameObjects.Components.Pathfinding
                     throw new InvalidOperationException();
             }
 
-            // TODO: PauseManager
-            DateTime pathTimeStart = DateTime.Now;
+            // TODO: PauseManager for timeout
+            // DateTime pathTimeStart = DateTime.Now;
 
             // TODO: Look at Sebastian Lague https://www.youtube.com/watch?v=mZfyt03LDH4
             var openTiles = new PathfindingPriorityQueue<TileRef>();
@@ -213,14 +194,44 @@ namespace Content.Server.GameObjects.Components.Pathfinding
             if (!routeFound)
             {
                 Logger.DebugS("pathfinding", $"No route from {start} to {end}");
-                return route;
+                return null;
             }
 
             Logger.DebugS("pathfinding", $"Found route in {cameFrom.Count} tiles");
 
             route = PathUtils.ReconstructPath(cameFrom, currentTile);
             FoundRoute?.Invoke(new PathfindingRoute(route));
+            DebugRoute?.Invoke(new DebugPathfindingRoute(route, cameFrom, gScores, closedTiles));
             return route;
+        }
+    }
+
+    public struct DebugPathfindingRoute
+    {
+        public IEnumerable<TileRef> Route { get; }
+        public IDictionary<TileRef, TileRef> CameFrom { get; }
+        public IDictionary<TileRef, float> GScores { get; }
+        public HashSet<TileRef> ClosedTiles { get; }
+
+        public DebugPathfindingRoute(
+            IEnumerable<TileRef> route,
+            IDictionary<TileRef, TileRef> cameFrom,
+            IDictionary<TileRef, float> gScores,
+            HashSet<TileRef> closedTiles)
+        {
+            Route = route;
+            CameFrom = cameFrom;
+            GScores = gScores;
+            ClosedTiles = closedTiles;
+        }
+    }
+
+    public struct PathfindingRoute
+    {
+        private List<TileRef> Route { get; }
+        public PathfindingRoute(List<TileRef> route)
+        {
+            Route = route;
         }
     }
 

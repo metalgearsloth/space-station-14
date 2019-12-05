@@ -1,11 +1,13 @@
 using Content.Server.AI.Goals;
 using Content.Server.AI.Preconditions;
+using JetBrains.Annotations;
 using Robust.Server.AI;
 using Robust.Shared.Utility;
 using Logger = Robust.Shared.Log.Logger;
 
 namespace Content.Server.AI.Processors
 {
+    [UsedImplicitly]
     [AiLogicProcessor("NPC")]
     public class GoapProcessor : AiLogicProcessor
     {
@@ -71,10 +73,6 @@ namespace Content.Server.AI.Processors
                     default:
                         break;
                 }
-            }
-            else
-            {
-
             }
 
             if (goalAdded == null)

@@ -4,6 +4,7 @@ using Robust.Shared.Utility;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Content.Server.AI.Processors;
 using Content.Server.GameObjects.EntitySystems;
 using Content.Shared.GameObjects;
 using Robust.Server.GameObjects.Components.Container;
@@ -30,9 +31,6 @@ namespace Content.Server.GameObjects
 
         [ViewVariables]
         private readonly Dictionary<Slots, ContainerSlot> SlotContainers = new Dictionary<Slots, ContainerSlot>();
-
-        public event Action<EquippedClothingEventArgs> EquippedClothing;
-        public event Action<EquippedClothingEventArgs> UnequippedClothing;
 
         public override void Initialize()
         {
@@ -121,7 +119,9 @@ namespace Content.Server.GameObjects
             clothing.EquippedToSlot();
 
             Dirty();
-            EquippedClothing?.Invoke(new EquippedClothingEventArgs(slot, clothing));
+
+            UpdateAi(slot, true);
+
             return true;
         }
 
@@ -161,16 +161,7 @@ namespace Content.Server.GameObjects
             var itemTransform = item.Owner.GetComponent<ITransformComponent>();
             itemTransform.GridPosition = Owner.GetComponent<ITransformComponent>().GridPosition;
             Dirty();
-
-            if (UnequippedClothing == null)
-            {
-                return true;
-            }
-
-            if (item.Owner.TryGetComponent(out ClothingComponent clothingComponent))
-            {
-                UnequippedClothing?.Invoke(new EquippedClothingEventArgs(slot, clothingComponent));
-            }
+            UpdateAi(slot, false);
 
             return true;
         }
@@ -348,17 +339,67 @@ namespace Content.Server.GameObjects
             }
             return new InventoryComponentState(list);
         }
-    }
 
-    public struct EquippedClothingEventArgs
-    {
-        public Slots Slot;
-        public ClothingComponent Clothing;
-
-        public EquippedClothingEventArgs(Slots slot, ClothingComponent clothing)
+        private void UpdateAi(Slots slot, bool result)
         {
-            Slot = slot;
-            Clothing = clothing;
+            if (!Owner.TryGetComponent(out GoapProcessor processor))
+            {
+                return;
+            }
+
+            switch (slot)
+            {
+                case Slots.NONE:
+                    break;
+                case Slots.HEAD:
+                    processor.WorldState.UpdateState("EquippedHead", result);
+                    break;
+                case Slots.EYES:
+                    processor.WorldState.UpdateState("EquippedEyes", result);
+                    break;
+                case Slots.EARS:
+                    processor.WorldState.UpdateState("EquippedEars", result);
+                    break;
+                case Slots.MASK:
+                    processor.WorldState.UpdateState("EquippedMask", result);
+                    break;
+                case Slots.OUTERCLOTHING:
+                    processor.WorldState.UpdateState("EquippedOuterClothing", result);
+                    break;
+                case Slots.INNERCLOTHING:
+                    processor.WorldState.UpdateState("EquippedInnerClothing", result);
+                    break;
+                case Slots.BACKPACK:
+                    processor.WorldState.UpdateState("EquippedBackpack", result);
+                    break;
+                case Slots.BELT:
+                    processor.WorldState.UpdateState("EquippedBelt", result);
+                    break;
+                case Slots.GLOVES:
+                    processor.WorldState.UpdateState("EquippedGloves", result);
+                    break;
+                case Slots.SHOES:
+                    processor.WorldState.UpdateState("EquippedShoes", result);
+                    break;
+                case Slots.IDCARD:
+                    processor.WorldState.UpdateState("EquippedIDCard", result);
+                    break;
+                // TODO
+                case Slots.POCKET1:
+                    break;
+                case Slots.POCKET2:
+                    break;
+                case Slots.POCKET3:
+                    break;
+                case Slots.POCKET4:
+                    break;
+                case Slots.EXOSUITSLOT1:
+                    break;
+                case Slots.EXOSUITSLOT2:
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(slot), slot, null);
+            }
         }
     }
 }

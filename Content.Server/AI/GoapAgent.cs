@@ -45,8 +45,8 @@ namespace Content.Server.AI
         private AiMover _mover;
 
         public IEntity Owner;
-        public AiWorldState WorldState => _worldState;
-        private AiWorldState _worldState;
+        public IWorldState WorldState => _worldState;
+        private IWorldState _worldState = new AiWorldState();
 
         /// <summary>
         /// Gets the next action in the plan if we have one
@@ -63,7 +63,6 @@ namespace Content.Server.AI
         {
             Owner = owner;
             _mover = new AiMover(Owner);
-            _worldState = new AiWorldState(Owner);
             PlanChange += (outcome, goal) =>
             {
                 Logger.DebugS("ai", $"AI {Owner} goal {goal} had outcome {outcome}");
@@ -89,10 +88,10 @@ namespace Content.Server.AI
             // Generally if it fails apply some sort of cooldown
             switch (outcome)
             {
-                case PlanOutcome.ActionsFinished:
+                case PlanOutcome.Finished:
                     Goals.Remove(goal);
                     break;
-                case PlanOutcome.PlanAborted:
+                case PlanOutcome.Aborted:
                     // We got really close but couldn't do it
                     Goals[goal] = 0;
                     Timer.Spawn(10000, () =>
@@ -103,9 +102,9 @@ namespace Content.Server.AI
                         }
                     });
                     break;
-                case PlanOutcome.PlanFound:
+                case PlanOutcome.Found:
                     break;
-                case PlanOutcome.PlanFailed:
+                case PlanOutcome.Failed:
                     // Couldn't plan at all
                     Goals[goal] = 0;
                     Timer.Spawn(30000, () =>
@@ -173,14 +172,14 @@ namespace Content.Server.AI
 
                 _currentActions = actions;
                 _state = GoapState.PerformAction;
-                PlanChange?.Invoke(PlanOutcome.PlanFound, CurrentGoal);
+                PlanChange?.Invoke(PlanOutcome.Found, CurrentGoal);
             }
 
             // Plan failed
             if (CurrentActions == null)
             {
                 _state = GoapState.Idle;
-                PlanChange?.Invoke(PlanOutcome.PlanFailed, CurrentGoal);
+                PlanChange?.Invoke(PlanOutcome.Failed, CurrentGoal);
                 // TODO: Have cooldown on failed plans
                 return;
             }
@@ -230,7 +229,7 @@ namespace Content.Server.AI
             {
                 // No actions left to do
                 _state = GoapState.Idle;
-                PlanChange?.Invoke(PlanOutcome.ActionsFinished, CurrentGoal);
+                PlanChange?.Invoke(PlanOutcome.Finished, CurrentGoal);
                 return;
             }
 
@@ -256,7 +255,7 @@ namespace Content.Server.AI
                     return;
                 }
 
-                PlanChange?.Invoke(PlanOutcome.PlanAborted, CurrentGoal);
+                PlanChange?.Invoke(PlanOutcome.Aborted, CurrentGoal);
                 _state = GoapState.Idle;
                 _currentActions.Clear();
                 return;
@@ -264,7 +263,7 @@ namespace Content.Server.AI
 
             _currentActions.Clear(); // Shouldn't need this clear...
             _state = GoapState.Idle;
-            PlanChange?.Invoke(PlanOutcome.ActionsFinished, CurrentGoal);
+            PlanChange?.Invoke(PlanOutcome.Finished, CurrentGoal);
         }
 
         public virtual void Update(float frameTime)
@@ -298,10 +297,10 @@ namespace Content.Server.AI
 
     public enum PlanOutcome
     {
-        PlanAborted,
-        PlanFound,
-        PlanFailed,
-        ActionsFinished,
+        Aborted,
+        Found,
+        Failed,
+        Finished,
     }
 
     public enum GoapState

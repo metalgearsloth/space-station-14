@@ -22,8 +22,8 @@ namespace Content.Server.AI.Actions
         /// <summary>
         /// This should only include known world states. If this isn't added to an IWorldState implementation then use CheckProceduralConditions
         /// </summary>
-        public HashSet<KeyValuePair<string, bool>> PreConditions = new HashSet<KeyValuePair<string, bool>>();
-        public HashSet<KeyValuePair<string, bool>> Effects = new HashSet<KeyValuePair<string, bool>>();
+        public IDictionary<string, bool> PreConditions = new Dictionary<string, bool>();
+        public IDictionary<string, bool> Effects = new Dictionary<string, bool>();
 
         /// <summary>
         /// This should be set if TryPerformAction succeeds

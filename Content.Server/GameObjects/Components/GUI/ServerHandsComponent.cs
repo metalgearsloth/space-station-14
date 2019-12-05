@@ -3,9 +3,11 @@
 using Robust.Shared.Utility;
 using System;
 using System.Collections.Generic;
+using Content.Server.AI.Processors;
 using Content.Server.GameObjects.EntitySystems;
 using Content.Server.Interfaces.GameObjects;
 using Content.Shared.GameObjects;
+using Content.Shared.GameObjects.Components.Inventory;
 using Robust.Server.GameObjects;
 using Robust.Server.GameObjects.Components.Container;
 using Robust.Server.GameObjects.EntitySystemMessages;
@@ -50,9 +52,6 @@ namespace Content.Server.GameObjects
 
         [ViewVariables] private Dictionary<string, ContainerSlot> hands = new Dictionary<string, ContainerSlot>();
         [ViewVariables] private List<string> orderedHands = new List<string>();
-
-        public event Action<IEntity> PickedUp;
-        public event Action<IEntity> Dropped;
 
         // Mostly arbitrary.
         public const float PICKUP_RANGE = 2;
@@ -126,7 +125,6 @@ namespace Content.Server.GameObjects
             {
                 if (PutInHand(item, hand, fallback: false))
                 {
-                    PickedUp?.Invoke(item.Owner);
                     return true;
                 }
             }
@@ -151,6 +149,7 @@ namespace Content.Server.GameObjects
 
             item.IsEquipped = true;
             item.Holder = Owner;
+            UpdateAi();
 
             return success;
         }
@@ -209,7 +208,7 @@ namespace Content.Server.GameObjects
             item.Owner.Transform.GridPosition = coords;
 
             Dirty();
-            Dropped?.Invoke(item.Owner);
+            UpdateAi();
             return true;
         }
 
@@ -253,6 +252,7 @@ namespace Content.Server.GameObjects
             }
 
             Dirty();
+            UpdateAi();
             return true;
         }
 
@@ -314,6 +314,8 @@ namespace Content.Server.GameObjects
             }
 
             Dirty();
+            UpdateAi();
+
             return true;
         }
 
@@ -366,6 +368,7 @@ namespace Content.Server.GameObjects
             }
 
             Dirty();
+            UpdateAi();
         }
 
         public void RemoveHand(string index)
@@ -392,6 +395,7 @@ namespace Content.Server.GameObjects
             }
 
             Dirty();
+            UpdateAi();
         }
 
         public bool HasHand(string index)
@@ -541,6 +545,27 @@ namespace Content.Server.GameObjects
                 physics.LinearVelocity = Vector2.Zero;
                 return;
             }
+        }
+
+        void UpdateAi()
+        {
+            if (!Owner.TryGetComponent(out GoapProcessor processor))
+            {
+                return;
+            }
+
+            bool freeHand = false;
+
+            foreach (var slot in hands.Values)
+            {
+                if (slot.ContainedEntity == null)
+                {
+                    freeHand = true;
+                    break;
+                }
+            }
+
+            processor.WorldState.UpdateState("FreeHand", freeHand);
         }
     }
 }

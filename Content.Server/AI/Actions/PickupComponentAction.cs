@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Content.Server.AI.Processors;
 using Content.Server.GameObjects;
 using Content.Server.GameObjects.Components.Movement;
 using Content.Server.GameObjects.EntitySystems;
@@ -15,7 +16,7 @@ namespace Content.Server.AI.Actions
     /// </summary>
     public class PickupComponentAction : GoapAction
     {
-        private Type _component;
+        protected Type Component;
         public override bool RequiresInRange { get; set; } = true;
 
         public override float Range { get; set; } = InteractionSystem.InteractionRange - 0.01f;
@@ -28,17 +29,24 @@ namespace Content.Server.AI.Actions
                 Logger.FatalS("ai", $"PickupComponent needs a valid Component");
                 throw new InvalidOperationException();
             }
-            _component = component;
+            Component = component;
 
             PreConditions.Add(new KeyValuePair<string, bool>("HasHands", true));
 
-            if (effects == null)
+            if (preConditions != null)
             {
-                return;
+                foreach (var precon in preConditions)
+                {
+                    Effects.Add(precon);
+                }
             }
-            foreach (var effect in effects)
+
+            if (effects != null)
             {
-                Effects.Add(effect);
+                foreach (var effect in effects)
+                {
+                    Effects.Add(effect);
+                }
             }
         }
 
@@ -61,17 +69,17 @@ namespace Content.Server.AI.Actions
         // TODO: Use entity ailogic vision
         public override bool CheckProceduralPreconditions(IEntity entity)
         {
-            if (!entity.HasComponent<AiControllerComponent>())
+            if (!entity.TryGetComponent(out GoapProcessor processor))
             {
                 return false;
             }
 
             // TODO: Add AiLogicProcessor VisionRange
-            foreach (var comp in AIUtils.Visbility.GetComponentOwnersInRange(entity.Transform.GridPosition, _component,
-                10.0f))
+            // TODO: PickNearest
+            foreach (var comp in AIUtils.Visibility.GetEntitiesInRange(entity.Transform.GridPosition, Component,
+                processor.VisionRadius))
             {
                 TargetEntity = comp;
-                // TODO: Setup what we're tracking here?
                 return true;
             }
 

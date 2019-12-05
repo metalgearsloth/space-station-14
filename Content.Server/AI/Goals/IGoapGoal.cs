@@ -8,6 +8,6 @@ namespace Content.Server.AI.Goals
     {
         string Name { get; }
         HashSet<GoapAction> Actions { get;}
-        HashSet<KeyValuePair<string, bool>> GoalState { get;}
+        IDictionary<string, bool> GoalState { get;}
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Content.Server.AI.Processors;
 using Content.Server.GameObjects.Components.Mobs;
 using Content.Server.GameObjects.Components.Movement;
 using Content.Shared.GameObjects;
@@ -35,8 +36,6 @@ namespace Content.Server.GameObjects.Components.Nutrition
         public float CurrentHunger => _currentHunger;
         [ViewVariables] private float _currentHunger;
 
-        public event Action<HungerThreshold> HungerThresholdChange;
-
         public Dictionary<HungerThreshold, float> HungerThresholds => _hungerThresholds;
         private Dictionary<HungerThreshold, float> _hungerThresholds = new Dictionary<HungerThreshold, float>
         {
@@ -58,7 +57,29 @@ namespace Content.Server.GameObjects.Components.Nutrition
             // If it's forced we don't want to call the event again
             if (_currentHungerThreshold != _lastHungerThreshold)
             {
-                HungerThresholdChange?.Invoke(_currentHungerThreshold);
+                if (Owner.TryGetComponent(out GoapProcessor processor))
+                {
+                    switch (_currentHungerThreshold)
+                    {
+                        case HungerThreshold.Overfed:
+                            processor.WorldState.UpdateState("Hungry", false);
+                            break;
+                        case HungerThreshold.Okay:
+                            processor.WorldState.UpdateState("Hungry", false);
+                            break;
+                        case HungerThreshold.Peckish:
+                            processor.WorldState.UpdateState("Hungry", true);
+                            break;
+                        case HungerThreshold.Starving:
+                            processor.WorldState.UpdateState("Hungry", true);
+                            break;
+                        case HungerThreshold.Dead:
+                            processor.WorldState.UpdateState("Hungry", true);
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+                }
             }
 
             if (_currentHungerThreshold != _lastHungerThreshold || force) {

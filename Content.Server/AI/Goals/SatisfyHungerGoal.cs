@@ -18,9 +18,9 @@ namespace Content.Server.AI.Goals
             new Dictionary<string, bool>{{"Hungry", false}}),
         };
 
-        public HashSet<KeyValuePair<string, bool>> GoalState { get; } = new HashSet<KeyValuePair<string, bool>>
+        public IDictionary<string, bool> GoalState { get; } = new Dictionary<string, bool>
         {
-            new KeyValuePair<string, bool>("Hungry", false)
+            {"Hungry", false}
         };
     }
 }

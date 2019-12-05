@@ -40,11 +40,7 @@ namespace Content.Server.GameObjects.Components.Pathfinding
             base.ExposeData(serializer);
             var cost = 0.0f;
             serializer.DataField(ref cost, "cost", 1.0f);
-            // TODO: Clamping
-            if (cost < 0.0f)
-            {
-                cost = 0.0f;
-            }
+            cost = Math.Max(cost, 0.0f);
             Cost = cost; // TODO: Surely there's an easier way to do this?
         }
 

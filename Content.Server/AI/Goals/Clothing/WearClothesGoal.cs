@@ -11,6 +11,9 @@ namespace Content.Server.AI.Goals.Clothing
         {
 
         };
-        public HashSet<KeyValuePair<string, bool>> GoalState { get;}
+        public IDictionary<string, bool> GoalState { get; } = new Dictionary<string, bool>
+        {
+            {"EquippedHat", true}
+        };
     }
 }

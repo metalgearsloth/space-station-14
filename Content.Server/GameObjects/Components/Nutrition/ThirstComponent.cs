@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Content.Server.AI.Processors;
 using Content.Server.GameObjects.Components.Mobs;
 using Content.Server.GameObjects.Components.Movement;
 using Content.Shared.GameObjects;
@@ -35,8 +36,6 @@ namespace Content.Server.GameObjects.Components.Nutrition
         public float CurrentThirst => _currentThirst;
         [ViewVariables] private float _currentThirst;
 
-        public event Action<ThirstThreshold> ThirstThresholdChange;
-
         public Dictionary<ThirstThreshold, float> ThirstThresholds => _thirstThresholds;
         private Dictionary<ThirstThreshold, float> _thirstThresholds = new Dictionary<ThirstThreshold, float>
         {
@@ -58,7 +57,29 @@ namespace Content.Server.GameObjects.Components.Nutrition
             // If it's forced we don't want to call the event again
             if (_currentThirstThreshold != _lastThirstThreshold)
             {
-                ThirstThresholdChange?.Invoke(_currentThirstThreshold);
+                if (Owner.TryGetComponent(out GoapProcessor processor))
+                {
+                    switch (_currentThirstThreshold)
+                    {
+                        case ThirstThreshold.OverHydrated:
+                            processor.WorldState.UpdateState("Thirsty", false);
+                            break;
+                        case ThirstThreshold.Okay:
+                            processor.WorldState.UpdateState("Thirsty", false);
+                            break;
+                        case ThirstThreshold.Thirsty:
+                            processor.WorldState.UpdateState("Thirsty", true);
+                            break;
+                        case ThirstThreshold.Parched:
+                            processor.WorldState.UpdateState("Thirsty", true);
+                            break;
+                        case ThirstThreshold.Dead:
+                            processor.WorldState.UpdateState("Thirsty", true);
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+                }
             }
 
             if (_currentThirstThreshold != _lastThirstThreshold || force) {

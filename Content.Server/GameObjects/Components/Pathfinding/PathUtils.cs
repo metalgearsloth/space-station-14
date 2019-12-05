@@ -22,18 +22,6 @@ namespace Content.Server.GameObjects.Components.Pathfinding
         }
 
         /// <summary>
-        /// Currently it finds out whether a tile is passable or not
-        /// It's also slow af.
-        /// </summary>
-        /// <param name="tile"></param>
-        /// <returns></returns>
-        public static float GetTileCost(TileRef tile)
-        {
-            PathfindingSystem.TileCosts.TryGetValue(tile, out var tileCost);
-            return 1.0f + tileCost;
-        }
-
-        /// <summary>
         /// Get adjacent tiles to this one, duh
         /// </summary>
         /// <param name="tileRef"></param>
@@ -41,7 +29,6 @@ namespace Content.Server.GameObjects.Components.Pathfinding
         /// <returns></returns>
         public static IEnumerable<TileRef> GetNeighbors(TileRef tileRef, bool allowDiagonals = true)
         {
-            // TODO: Potentially pre-compute this in the PathfindingSystem
             var mapManger = IoCManager.Resolve<IMapManager>();
             for (int x = -1; x < 2; x++)
             {
