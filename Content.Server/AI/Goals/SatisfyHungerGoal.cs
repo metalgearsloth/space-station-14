@@ -6,6 +6,7 @@ namespace Content.Server.AI.Goals
 {
     public class SatisfyHungerGoal : IGoapGoal
     {
+        public string Name => "SatisfyHunger";
         public HashSet<GoapAction> Actions { get; } = new HashSet<GoapAction>()
         {
             new PickupComponentAction(typeof(FoodComponent),

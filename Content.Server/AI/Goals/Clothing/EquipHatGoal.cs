@@ -5,8 +5,9 @@ using Content.Server.GameObjects.Components.Nutrition;
 
 namespace Content.Server.AI.Goals.Clothing
 {
-    public class WearHat : IGoapGoal
+    public class EquipHatGoal : IGoapGoal
     {
+        public string Name => "EquipHat";
         public HashSet<GoapAction> Actions { get; } = new HashSet<GoapAction>()
         {
             new PickupComponentAction(typeof(ClothingComponent),
@@ -15,12 +16,12 @@ namespace Content.Server.AI.Goals.Clothing
 
             new UseItemInHandsAction(typeof(ClothingComponent),
                 new Dictionary<string, bool>{{"HasHat", true}},
-                new Dictionary<string, bool>{{"WearingHat", true}}),
+                new Dictionary<string, bool>{{"EquippedHat", true}}),
         };
 
         public HashSet<KeyValuePair<string, bool>> GoalState { get; } = new HashSet<KeyValuePair<string, bool>>
         {
-            new KeyValuePair<string, bool>("WearingHat", true)
+            new KeyValuePair<string, bool>("EquippedHat", true)
         };
     }
 }

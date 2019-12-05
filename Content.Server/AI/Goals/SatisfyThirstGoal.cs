@@ -4,15 +4,16 @@ using Content.Server.GameObjects.Components.Nutrition;
 
 namespace Content.Server.AI.Goals
 {
-    public class SatisfyThirst
+    public class SatisfyThirstGoal : IGoapGoal
     {
+        public string Name => "SatisfyThirst";
         public HashSet<GoapAction> Actions { get; } = new HashSet<GoapAction>()
         {
-            new PickupComponentAction(typeof(FoodComponent),
+            new PickupComponentAction(typeof(DrinkComponent),
                 null,
                 new Dictionary<string, bool>{{"HasDrink", true}}),
 
-            new UseItemInHandsAction(typeof(FoodComponent),
+            new UseItemInHandsAction(typeof(DrinkComponent),
                 new Dictionary<string, bool>{{"HasDrink", true}},
                 new Dictionary<string, bool>{{"Thirsty", false}}),
         };

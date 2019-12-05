@@ -57,6 +57,7 @@ namespace Content.Server.AI.Actions
 
         public override bool CheckProceduralPreconditions(IEntity entity)
         {
+
             // TODO: Add ActionBlocker
             // Default WorldState for HasFood should be false so don't need to check if we have it
             if (!entity.TryGetComponent(out HandsComponent handsComponent))
@@ -80,7 +81,7 @@ namespace Content.Server.AI.Actions
             // Need to find the item in slots
             foreach (var item in handsComponent.GetAllHeldItems())
             {
-                if (item.Owner.GetComponent(_component) != null)
+                if (item.Owner.GetComponent(_component) == null)
                 {
                     continue;
                 }

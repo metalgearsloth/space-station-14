@@ -31,8 +31,8 @@ namespace Content.Server.GameObjects
         [ViewVariables]
         private readonly Dictionary<Slots, ContainerSlot> SlotContainers = new Dictionary<Slots, ContainerSlot>();
 
-        // Events
         public event Action<EquippedClothingEventArgs> EquippedClothing;
+        public event Action<EquippedClothingEventArgs> UnequippedClothing;
 
         public override void Initialize()
         {
@@ -161,6 +161,17 @@ namespace Content.Server.GameObjects
             var itemTransform = item.Owner.GetComponent<ITransformComponent>();
             itemTransform.GridPosition = Owner.GetComponent<ITransformComponent>().GridPosition;
             Dirty();
+
+            if (UnequippedClothing == null)
+            {
+                return true;
+            }
+
+            if (item.Owner.TryGetComponent(out ClothingComponent clothingComponent))
+            {
+                UnequippedClothing?.Invoke(new EquippedClothingEventArgs(slot, clothingComponent));
+            }
+
             return true;
         }
 

@@ -12,6 +12,11 @@
     hands:
     - left
     - right
+  - type: Hunger
+  - type: Thirst
+  # Organs
+  - type: Stomach
+
   - type: Inventory
   - type: Clickable
   - type: Sprite

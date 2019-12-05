@@ -17,6 +17,8 @@ namespace Content.Server.AI.Preconditions
         private IEntity _owner;
         private HashSet<KeyValuePair<string, bool>> _aiStates = new HashSet<KeyValuePair<string, bool>>();
 
+        public event Action<string, bool> StateUpdate;
+
         public HashSet<KeyValuePair<string, bool>> GetState()
         {
             return _aiStates;
@@ -31,23 +33,13 @@ namespace Content.Server.AI.Preconditions
 
         public void UpdateState(string state, bool result)
         {
-            _aiStates.Add(new KeyValuePair<string, bool>(state, result));
-        }
-
-        public bool TryGetState(string state, out bool? result)
-        {
-            result = null;
-            foreach (var (knownState, knownResult) in _aiStates)
+            var newState = new KeyValuePair<string, bool>(state, result);
+            if (_aiStates.Contains(newState))
             {
-                if (knownState != state)
-                {
-                    continue;
-                }
-                result = knownResult;
-                return true;
+                return;
             }
-
-            return false;
+            _aiStates.Add(newState);
+            StateUpdate?.Invoke(state, result);
         }
 
         /// <summary>
@@ -97,6 +89,31 @@ namespace Content.Server.AI.Preconditions
         /// </summary>
         public void SetupListeners()
         {
+            if (_owner.TryGetComponent(out HandsComponent handsComponent))
+            {
+                // TODO: What if food's in both hands genius
+                handsComponent.PickedUp += entity =>
+                {
+                    if (entity.HasComponent<FoodComponent>())
+                    {
+                        UpdateState("HasFood", true);
+                    }
+                };
+
+                handsComponent.Dropped += entity =>
+                {
+                    foreach (var item in handsComponent.GetAllHeldItems())
+                    {
+                        if (item.Owner.HasComponent<FoodComponent>())
+                        {
+                            UpdateState("HasFood", true);
+                            return;
+                        }
+                        UpdateState("HasFood", false);
+                    }
+                };
+            }
+
             // TODO: Stomach Add / Removal
             // Nutrition
             if (_owner.TryGetComponent(out HungerComponent hungerComponent))
@@ -125,6 +142,10 @@ namespace Content.Server.AI.Preconditions
                     }
                 };
             }
+            else
+            {
+                UpdateState("Hungry", false);
+            }
 
             if (_owner.TryGetComponent(out ThirstComponent thirstComponent))
             {
@@ -145,12 +166,16 @@ namespace Content.Server.AI.Preconditions
                             UpdateState("Thirsty", true);
                             break;
                         case ThirstThreshold.Dead:
-                            UpdateState("Hungry", true);
+                            UpdateState("Thirsty", true);
                             break;
                         default:
                             throw new ArgumentOutOfRangeException();
                     }
                 };
+            }
+            else
+            {
+                UpdateState("Thirsty", false);
             }
 
             if (_owner.TryGetComponent(out InventoryComponent inventoryComponent))
@@ -166,7 +191,7 @@ namespace Content.Server.AI.Preconditions
                         case EquipmentSlotDefines.Slots.NONE:
                             break;
                         case EquipmentSlotDefines.Slots.HEAD:
-                            UpdateState("EquippedHead", true);
+                            UpdateState("EquippedHat", true);
                             break;
                         case EquipmentSlotDefines.Slots.EYES:
                             UpdateState("EquippedEyes", true);
@@ -190,20 +215,48 @@ namespace Content.Server.AI.Preconditions
                             UpdateState("EquippedGloves", true);
                             break;
                         case EquipmentSlotDefines.Slots.SHOES:
+                            UpdateState("EquippedShoes", true);
                             break;
-                        case EquipmentSlotDefines.Slots.IDCARD:
+                        default:
                             break;
-                        case EquipmentSlotDefines.Slots.POCKET1:
+                    }
+                };
+                inventoryComponent.UnequippedClothing += args =>
+                {
+                    switch (args.Slot)
+                    {
+                        case EquipmentSlotDefines.Slots.BELT:
+                            UpdateState("EquippedBelt", false);
                             break;
-                        case EquipmentSlotDefines.Slots.POCKET2:
+                        // Given there's so many equipment slots probs don't throw
+                        case EquipmentSlotDefines.Slots.NONE:
                             break;
-                        case EquipmentSlotDefines.Slots.POCKET3:
+                        case EquipmentSlotDefines.Slots.HEAD:
+                            UpdateState("EquippedHat", false);
                             break;
-                        case EquipmentSlotDefines.Slots.POCKET4:
+                        case EquipmentSlotDefines.Slots.EYES:
+                            UpdateState("EquippedEyes", false);
                             break;
-                        case EquipmentSlotDefines.Slots.EXOSUITSLOT1:
+                        case EquipmentSlotDefines.Slots.EARS:
+                            UpdateState("EquippedEars", false);
                             break;
-                        case EquipmentSlotDefines.Slots.EXOSUITSLOT2:
+                        case EquipmentSlotDefines.Slots.MASK:
+                            UpdateState("EquippedMasks", false);
+                            break;
+                        case EquipmentSlotDefines.Slots.OUTERCLOTHING:
+                            UpdateState("EquippedOuterClothing", false);
+                            break;
+                        case EquipmentSlotDefines.Slots.INNERCLOTHING:
+                            UpdateState("EquippedInnerClothing", false);
+                            break;
+                        case EquipmentSlotDefines.Slots.BACKPACK:
+                            UpdateState("EquippedBackpack", false);
+                            break;
+                        case EquipmentSlotDefines.Slots.GLOVES:
+                            UpdateState("EquippedGloves", false);
+                            break;
+                        case EquipmentSlotDefines.Slots.SHOES:
+                            UpdateState("EquippedShoes", false);
                             break;
                         default:
                             break;

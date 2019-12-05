@@ -51,6 +51,9 @@ namespace Content.Server.GameObjects
         [ViewVariables] private Dictionary<string, ContainerSlot> hands = new Dictionary<string, ContainerSlot>();
         [ViewVariables] private List<string> orderedHands = new List<string>();
 
+        public event Action<IEntity> PickedUp;
+        public event Action<IEntity> Dropped;
+
         // Mostly arbitrary.
         public const float PICKUP_RANGE = 2;
 
@@ -123,6 +126,7 @@ namespace Content.Server.GameObjects
             {
                 if (PutInHand(item, hand, fallback: false))
                 {
+                    PickedUp?.Invoke(item.Owner);
                     return true;
                 }
             }
@@ -146,6 +150,7 @@ namespace Content.Server.GameObjects
             }
 
             item.IsEquipped = true;
+            item.Holder = Owner;
 
             return success;
         }
@@ -198,11 +203,13 @@ namespace Content.Server.GameObjects
 
             item.RemovedFromSlot();
             item.IsEquipped = false;
+            item.Holder = null;
 
             // TODO: The item should be dropped to the container our owner is in, if any.
             item.Owner.Transform.GridPosition = coords;
 
             Dirty();
+            Dropped?.Invoke(item.Owner);
             return true;
         }
 

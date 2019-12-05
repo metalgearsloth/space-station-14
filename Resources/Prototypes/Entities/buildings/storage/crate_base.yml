@@ -3,6 +3,8 @@
   name: Crate
   description: A large container for items.
   components:
+  - type: Pathfinding
+    cost: 0
   - type: Sprite
     netsync: false
     sprite: Buildings/crate.rsi

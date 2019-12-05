@@ -6,6 +6,7 @@ namespace Content.Server.AI.Goals
 {
     public interface IGoapGoal
     {
+        string Name { get; }
         HashSet<GoapAction> Actions { get;}
         HashSet<KeyValuePair<string, bool>> GoalState { get;}
     }

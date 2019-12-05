@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Timers;
 using Content.Server.AI.Actions;
 using Content.Server.AI.Goals;
 using Content.Server.AI.Preconditions;
 using Content.Server.AI.Routines.Movers;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Log;
+using Timer = Robust.Shared.Timers.Timer;
 
 namespace Content.Server.AI
 {
@@ -19,7 +21,7 @@ namespace Content.Server.AI
         public IGoapGoal CurrentGoal => _currentGoal;
         private IGoapGoal _currentGoal;
 
-        public event Action<PlanOutcome> PlanChange;
+        public event Action<PlanOutcome, IGoapGoal> PlanChange;
 
         /// <summary>
         /// The actions the current goal lets us use
@@ -43,6 +45,7 @@ namespace Content.Server.AI
         private AiMover _mover;
 
         public IEntity Owner;
+        public AiWorldState WorldState => _worldState;
         private AiWorldState _worldState;
 
         /// <summary>
@@ -61,7 +64,61 @@ namespace Content.Server.AI
             Owner = owner;
             _mover = new AiMover(Owner);
             _worldState = new AiWorldState(Owner);
-            PlanChange += outcomes => { Logger.DebugS("ai", $"{outcomes}"); };
+            PlanChange += (outcome, goal) =>
+            {
+                Logger.DebugS("ai", $"AI {Owner} goal {goal} had outcome {outcome}");
+                HandlePlanOutcome(outcome, goal);
+            };
+        }
+
+        /// <summary>
+        /// If something unexpected happens how do we handle it
+        /// </summary>
+        /// <param name="outcome"></param>
+        /// <param name="goal"></param>
+        /// <exception cref="ArgumentOutOfRangeException"></exception>
+        protected virtual void HandlePlanOutcome(PlanOutcome outcome, IGoapGoal goal)
+        {
+            if (!Goals.ContainsKey(goal))
+            {
+                return;
+            }
+
+            var previousPriority = Goals[goal];
+
+            // Generally if it fails apply some sort of cooldown
+            switch (outcome)
+            {
+                case PlanOutcome.ActionsFinished:
+                    Goals.Remove(goal);
+                    break;
+                case PlanOutcome.PlanAborted:
+                    // We got really close but couldn't do it
+                    Goals[goal] = 0;
+                    Timer.Spawn(10000, () =>
+                    {
+                        if (Goals.ContainsKey(goal))
+                        {
+                            Goals[goal] = previousPriority;
+                        }
+                    });
+                    break;
+                case PlanOutcome.PlanFound:
+                    break;
+                case PlanOutcome.PlanFailed:
+                    // Couldn't plan at all
+                    Goals[goal] = 0;
+                    Timer.Spawn(30000, () =>
+                    {
+                        if (Goals.ContainsKey(goal))
+                        {
+                            Goals[goal] = previousPriority;
+                        }
+                    });
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(outcome), outcome, null);
+            }
         }
 
         /// <summary>
@@ -116,14 +173,14 @@ namespace Content.Server.AI
 
                 _currentActions = actions;
                 _state = GoapState.PerformAction;
-                PlanChange?.Invoke(PlanOutcome.PlanFound);
+                PlanChange?.Invoke(PlanOutcome.PlanFound, CurrentGoal);
             }
 
             // Plan failed
             if (CurrentActions == null)
             {
                 _state = GoapState.Idle;
-                PlanChange?.Invoke(PlanOutcome.PlanFailed);
+                PlanChange?.Invoke(PlanOutcome.PlanFailed, CurrentGoal);
                 // TODO: Have cooldown on failed plans
                 return;
             }
@@ -173,7 +230,7 @@ namespace Content.Server.AI
             {
                 // No actions left to do
                 _state = GoapState.Idle;
-                PlanChange?.Invoke(PlanOutcome.ActionsFinished);
+                PlanChange?.Invoke(PlanOutcome.ActionsFinished, CurrentGoal);
                 return;
             }
 
@@ -199,7 +256,7 @@ namespace Content.Server.AI
                     return;
                 }
 
-                PlanChange?.Invoke(PlanOutcome.PlanAborted);
+                PlanChange?.Invoke(PlanOutcome.PlanAborted, CurrentGoal);
                 _state = GoapState.Idle;
                 _currentActions.Clear();
                 return;
@@ -207,7 +264,7 @@ namespace Content.Server.AI
 
             _currentActions.Clear(); // Shouldn't need this clear...
             _state = GoapState.Idle;
-            PlanChange?.Invoke(PlanOutcome.ActionsFinished);
+            PlanChange?.Invoke(PlanOutcome.ActionsFinished, CurrentGoal);
         }
 
         public virtual void Update(float frameTime)

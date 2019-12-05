@@ -3,6 +3,8 @@
   name: Locker
   description: A standard-issue Nanotrasen storage unit.
   components:
+  - type: Pathfinding
+    cost: 0
   - type: Sprite
     netsync: false
     sprite: Buildings/closet.rsi

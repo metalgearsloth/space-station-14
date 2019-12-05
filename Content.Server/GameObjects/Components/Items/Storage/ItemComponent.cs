@@ -22,6 +22,7 @@ namespace Content.Server.GameObjects
         public override string Name => "Item";
         public override uint? NetID => ContentNetIDs.ITEM;
         public override Type StateType => typeof(ItemComponentState);
+        public IEntity Holder { get; set; }
         public bool IsEquipped { get; set; }
 
         #pragma warning disable 649

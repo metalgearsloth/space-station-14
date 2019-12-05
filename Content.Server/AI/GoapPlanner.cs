@@ -1,11 +1,31 @@
-using System;
 using System.Collections.Generic;
 using Content.Server.AI.Actions;
-using Content.Server.AI.Preconditions;
-using Content.Shared.GameObjects.Components.Power;
-using Robust.Server.AI;
 using Robust.Shared.Interfaces.GameObjects;
-using Robust.Shared.Map;
+
+// This planner was derived from https://github.com/sploreg/goap/tree/d1cea0728fb4733266affea8049da1e373d618f7
+/*
+ The MIT License (MIT)
+
+Copyright (c) 2015 Brent Anthony Owens
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+ */
 
 namespace Content.Server.AI
 {
@@ -20,6 +40,7 @@ namespace Content.Server.AI
         /// Works through the available actions in a goal and comes up with a plan to complete it
         /// </summary>
         /// <param name="agent"></param>
+        /// <param name="entity"></param>
         /// <param name="availableActions"></param>
         /// <param name="worldState"></param>
         /// <param name="goal"></param>
@@ -44,7 +65,7 @@ namespace Content.Server.AI
 
             var leaves = new List<GoapNode>();
 
-            GoapNode start = new GoapNode(null, 0, worldState, null);
+            var start = new GoapNode(null, 0, worldState, null);
             bool success = BuildGraph(start, leaves, usableActions, goal);
 
             if (!success)
@@ -130,7 +151,7 @@ namespace Content.Server.AI
             return false;
         }
 
-        // TODO: Same with this one, there's simpler ways
+        // TODO: Built-in way of this + PopulateState?
         /// <summary>
         /// Checks if all items in the test state are in the target state
         /// </summary>
@@ -161,7 +182,6 @@ namespace Content.Server.AI
             return true;
         }
 
-        // TODO wtf the original author do this, fix this
         /// <summary>
         /// Gets the current state again with the given state changes
         /// </summary>
@@ -205,12 +225,6 @@ namespace Content.Server.AI
             }
 
             return state;
-        }
-
-        private void MoveTo(GridCoordinates gridCoordinates)
-        {
-            // Mover move
-            return;
         }
     }
 

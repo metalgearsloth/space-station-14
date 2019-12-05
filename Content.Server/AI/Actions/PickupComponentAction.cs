@@ -86,15 +86,34 @@ namespace Content.Server.AI.Actions
             }
 
             // If out of range for w/e reason
-            if (!((entity.Transform.GridPosition.Position - TargetEntity.Transform.GridPosition.Position).Length <
-                  InteractionSystem.InteractionRange))
+            if ((entity.Transform.GridPosition.Position - TargetEntity.Transform.GridPosition.Position).Length >=
+                  InteractionSystem.InteractionRange)
             {
                 return false;
             }
 
-            if (!entity.TryGetComponent(out HandsComponent handsComponent))
+            if (!entity.TryGetComponent(out HandsComponent handsComponent) ||
+                !TargetEntity.TryGetComponent(out ItemComponent itemComponent))
             {
                 return false;
+            }
+
+            // Someone else got it
+            if (itemComponent.IsEquipped && itemComponent.Holder != entity)
+            {
+                return false;
+            }
+
+            // Need to get a free hand
+            if (!handsComponent.CanPutInHand(itemComponent))
+            {
+                return false;
+            }
+
+            // TODO: If someone got 3 hands?
+            if (handsComponent.GetActiveHand != null)
+            {
+                handsComponent.SwapHands();
             }
 
             var entitySystemManager = IoCManager.Resolve<IEntitySystemManager>();
