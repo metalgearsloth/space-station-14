@@ -212,6 +212,7 @@ namespace Content.Server.AI
 
         public virtual void Update(float frameTime)
         {
+            // BIG TODO: THROTTLE PLANNING
             _planCooldown -= frameTime;
 
             if (Goals.Count == 0 || (State == GoapState.Idle && _planCooldown > 0))

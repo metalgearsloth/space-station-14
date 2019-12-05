@@ -1,13 +1,11 @@
+using System.Collections;
 using System.Collections.Generic;
 using Content.Server.GameObjects.Components.Pathfinding;
 using JetBrains.Annotations;
-using Robust.Shared.GameObjects;
 using Robust.Shared.GameObjects.Systems;
-using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Interfaces.Map;
 using Robust.Shared.IoC;
 using Robust.Shared.Map;
-using Robust.Shared.Utility;
 
 namespace Content.Server.GameObjects.EntitySystems
 {
@@ -23,83 +21,93 @@ namespace Content.Server.GameObjects.EntitySystems
 
         // Use an int to tracker how many entities are blocking this tile
         // TODO: Really only PathfindingComponent should be calling this during init
-        internal static IDictionary<TileRef, int> BlockedTiles = new Dictionary<TileRef, int>();
-        internal static IDictionary<TileRef, float> TileCosts = new Dictionary<TileRef, float>();
-        private List<IEntity> _knownEntities = new List<IEntity>();
+        internal static readonly IDictionary<TileRef, int> BlockedTiles = new Dictionary<TileRef, int>();
+        internal static readonly IDictionary<TileRef, float> TileCosts = new Dictionary<TileRef, float>();
 
-        public override void Initialize()
+        /// <summary>
+        /// Updates the relevant tile positions as required
+        /// </summary>
+        /// <param name="pathfindingComponent"></param>
+        public void HandleEntityChange(PathfindingComponent pathfindingComponent)
         {
-            base.Initialize();
-            EntityQuery = new TypeEntityQuery(typeof(PathfindingComponent));
+            var oldTile = _mapManager.GetGrid(pathfindingComponent.LastGrid.GridID).GetTileRef(pathfindingComponent.LastGrid);
+            var newTile = _mapManager.GetGrid(pathfindingComponent.Owner.Transform.GridID).GetTileRef(pathfindingComponent.Owner.Transform.GridPosition);
+
+            if (oldTile == newTile)
+            {
+                return;
+            }
+
+            if (!pathfindingComponent.Traversable)
+            {
+                BlockedTiles[oldTile]--;
+                if (BlockedTiles[oldTile] <= 0)
+                {
+                    BlockedTiles.Remove(oldTile);
+                }
+
+                BlockedTiles.TryGetValue(newTile, out var newBlockValue);
+                BlockedTiles[newTile] = newBlockValue + 1;
+                return;
+            }
+            TileCosts[oldTile] -= pathfindingComponent.Cost;
+            if (TileCosts[oldTile] <= 0)
+            {
+                TileCosts.Remove(oldTile);
+            }
+
+            TileCosts.TryGetValue(newTile, out var newTileValue);
+            TileCosts[newTile] = newTileValue + pathfindingComponent.Cost;
         }
 
-        // TODO: I'd prefer to do everything in the system but it seems easier to
-        // handle the entity startup and shutdowns in the component itself, currently this spaghetti is separate.
-        public override void Update(float frameTime)
+        internal void HandleEntityAdd(PathfindingComponent pathfindingComponent)
         {
-            // Essentially we check which entities relevant to pathfinding have changed their positions and if so update the pre-calculated stuff.
-            // If we don't pre-calculate to some degreethere's a stutter every time we pathfind from grabbing all the entities.
-            base.Update(frameTime);
-            var tempKnownEntities = new List<IEntity>();
-            foreach (var entity in RelevantEntities)
+            var tile = _mapManager.GetGrid(pathfindingComponent.Owner.Transform.GridID)
+                .GetTileRef(pathfindingComponent.Owner.Transform.GridPosition);
+
+            switch (pathfindingComponent.Traversable)
             {
-                // TODO Look at bypasing TryGetComponent as it's probably cheaper just to store it directly
-                entity.TryGetComponent(out PathfindingComponent pathfindingComponent);
+                case true:
+                    TileCosts.TryGetValue(tile, out var costValue);
+                    TileCosts[tile] = costValue;
+                    return;
+                case false:
+                    BlockedTiles.TryGetValue(tile, out var blockValue);
+                    BlockedTiles[tile] = blockValue;
+                    return;
+            }
+        }
 
-                // First check if exact position has changed, then check if the tile position has changed
-                if (entity.Transform.GridPosition != pathfindingComponent.LastGrid)
-                {
-                    var entityTile = _mapManager
-                        .GetGrid(entity.Transform.GridID)
-                        .GetTileRef(entity.Transform.GridPosition);
+        internal void HandleEntityRemove(PathfindingComponent pathfindingComponent)
+        {
+            var tile = _mapManager.GetGrid(pathfindingComponent.Owner.Transform.GridID)
+                .GetTileRef(pathfindingComponent.Owner.Transform.GridPosition);
 
-                    var lastTile = _mapManager
-                        .GetGrid(entity.Transform.GridID)
-                        .GetTileRef(entity.Transform.GridPosition);
-
-                    if (entityTile != lastTile)
+            switch (pathfindingComponent.Traversable)
+            {
+                case true:
+                    if (!TileCosts.ContainsKey(tile))
                     {
-                        // If it's already been seen update its old tile
-                        if (_knownEntities.Contains(entity))
-                        {
-                            if (pathfindingComponent.Traversable)
-                            {
-                                BlockedTiles[lastTile] -= 1;
-                            }
-                            else
-                            {
-                                TileCosts[lastTile] -= pathfindingComponent.Cost;
-                            }
-                        }
-
-                        if (pathfindingComponent.Traversable)
-                        {
-                            TileCosts.TryGetValue(entityTile, out var currentCost);
-                            TileCosts[entityTile] = currentCost + pathfindingComponent.Cost;
-                        }
-                        else
-                        {
-
-                            BlockedTiles[lastTile] += 1;
-                        }
+                        return;
                     }
-                }
-
-                tempKnownEntities.Add(entity);
+                    TileCosts[tile] -= pathfindingComponent.Cost;
+                    if (TileCosts[tile] <= 0)
+                    {
+                        TileCosts.Remove(tile);
+                    }
+                    return;
+                case false:
+                    if (!BlockedTiles.ContainsKey(tile))
+                    {
+                        return;
+                    }
+                    BlockedTiles[tile] -= 1;
+                    if (BlockedTiles[tile] <= 0)
+                    {
+                        BlockedTiles.Remove(tile);
+                    }
+                    return;
             }
-
-            // Cleanup
-            var tempNewBlockers = new Dictionary<TileRef, int>();
-            foreach (var (tile, refCount) in BlockedTiles)
-            {
-                if (refCount > 0)
-                {
-                    tempNewBlockers.Add(tile, refCount);
-                }
-            }
-
-            _knownEntities = tempKnownEntities;
-            BlockedTiles = tempNewBlockers;
         }
 
         /// <summary>

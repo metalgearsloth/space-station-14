@@ -98,12 +98,6 @@ namespace Content.Server.GameObjects.Components.Pathfinding
         [Dependency] private readonly IMapManager _mapManager;
 #pragma warning restore 649
 
-        private float _timeout = 1.0f;
-        private readonly IPathfindingPriorityQueue<TileRef> _openTiles = new PathfindingPriorityQueue<TileRef>();
-        private readonly IDictionary<TileRef, float> _gScores = new Dictionary<TileRef, float>();
-        private readonly IDictionary<TileRef, TileRef> _cameFrom = new Dictionary<TileRef, TileRef>();
-        private readonly HashSet<TileRef> _closedTiles = new HashSet<TileRef>();
-
         // Implemented heuristics
         private readonly IPathfindingHeuristic _octileHeuristic = new SimpleOctileHeuristic();
 
@@ -168,55 +162,50 @@ namespace Content.Server.GameObjects.Components.Pathfinding
                     throw new InvalidOperationException();
             }
 
+            // TODO: PauseManager
             DateTime pathTimeStart = DateTime.Now;
-            // scabbed from https://www.redblobgames.com/pathfinding/a-star/implementation.html#csharp
+
             // TODO: Look at Sebastian Lague https://www.youtube.com/watch?v=mZfyt03LDH4
-            _openTiles.Clear();
-            _gScores.Clear();
-            _closedTiles.Clear();
-            _cameFrom.Clear();
+            var openTiles = new PathfindingPriorityQueue<TileRef>();
+            var gScores = new Dictionary<TileRef, float>();
+            var cameFrom = new Dictionary<TileRef, TileRef>();
+            var closedTiles = new HashSet<TileRef>();
 
             // See http://theory.stanford.edu/~amitp/GameProgramming/Heuristics.html#S7;
             // Helps to breaks ties?
             const float pFactor = 1 + 1 / 1000;
 
             TileRef currentTile = start;
-            _openTiles.Enqueue(currentTile, 0);
-            _gScores[currentTile] = 0;
+            openTiles.Enqueue(currentTile, 0);
+            gScores[currentTile] = 0;
             bool routeFound = false;
-            while (_openTiles.Count > 0)
+            while (openTiles.Count > 0)
             {
-                if ((DateTime.Now - pathTimeStart).TotalSeconds > _timeout)
-                {
-                    Logger.DebugS("pathfinding", $"Path from {start} to {end} timed out; checked {_cameFrom.Count} tiles");
-                    return route;
-                }
-
                 if (currentTile.Equals(end))
                 {
                     routeFound = true;
                     break;
                 }
 
-                currentTile = _openTiles.Dequeue();
-                _closedTiles.Add(currentTile);
+                currentTile = openTiles.Dequeue();
+                closedTiles.Add(currentTile);
 
                 foreach (var next in PathUtils.GetNeighbors(currentTile))
                 {
-                    if (!PathUtils.IsTileTraversable(currentTile) || _closedTiles.Contains(next))
+                    if (!PathUtils.IsTileTraversable(next) || closedTiles.Contains(next))
                     {
                         continue;
                     }
 
-                    var gScore = _gScores[currentTile] + pathHeuristic.GetTileCost(next, currentTile);
+                    var gScore = gScores[currentTile] + pathHeuristic.GetTileCost(next, currentTile);
 
-                    if (!_gScores.ContainsKey(next) || gScore < _gScores[next])
+                    if (!gScores.ContainsKey(next) || gScore < gScores[next])
                     {
-                        _cameFrom[next] = currentTile;
-                        _gScores[next] = gScore;
+                        cameFrom[next] = currentTile;
+                        gScores[next] = gScore;
                         // pFactor is tie-breaker. Not implemented in the heuristic itself
-                        float fScore = _gScores[next] + (pathHeuristic.GetTileCost(next, end) * pFactor);
-                        _openTiles.Enqueue(next, fScore);
+                        float fScore = gScores[next] + (pathHeuristic.GetTileCost(next, end) * pFactor);
+                        openTiles.Enqueue(next, fScore);
                     }
                 }
             }
@@ -227,9 +216,9 @@ namespace Content.Server.GameObjects.Components.Pathfinding
                 return route;
             }
 
-            Logger.DebugS("pathfinding", $"Found route in {_cameFrom.Count} tiles");
+            Logger.DebugS("pathfinding", $"Found route in {cameFrom.Count} tiles");
 
-            route = PathUtils.ReconstructPath(_cameFrom, currentTile);
+            route = PathUtils.ReconstructPath(cameFrom, currentTile);
             FoundRoute?.Invoke(new PathfindingRoute(route));
             return route;
         }

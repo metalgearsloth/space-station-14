@@ -18,12 +18,7 @@ namespace Content.Server.GameObjects.Components.Pathfinding
             }
 
             // If we know there's a known blocker (walls, tablets, etc) here already and it's not dead
-            if (PathfindingSystem.BlockedTiles.TryGetValue(tile, out var blocker))
-            {
-                return false;
-            }
-
-            return true;
+            return !PathfindingSystem.BlockedTiles.ContainsKey(tile);
         }
 
         /// <summary>

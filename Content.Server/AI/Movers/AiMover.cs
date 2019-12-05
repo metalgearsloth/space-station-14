@@ -247,15 +247,15 @@ namespace Content.Server.AI.Routines.Movers
 
             var route = _pathfinder.FindPath(Owner.Transform.GridPosition, _targetGrid, PathfinderRange);
 
-            foreach (var tile in route)
-            {
-                _route.Enqueue(tile);
-            }
-
-            if (_route.Count <= 1)
+            if (route.Count <= 1)
             {
                 // Couldn't find a route to target
                 return;
+            }
+
+            foreach (var tile in route)
+            {
+                _route.Enqueue(tile);
             }
 
             // Because the entity may be half on 2 tiles we'll just cut out the first tile.
@@ -309,22 +309,23 @@ namespace Content.Server.AI.Routines.Movers
 
             TargetEntity = entity;
 
-            if (_targetGrid == null)
+            if (_targetGrid == default)
             {
                 _targetGrid = TargetEntity.Transform.GridPosition;
             }
 
-            if (!Arrived && (TargetEntity.Transform.GridPosition.Position - _targetGrid.Position).Length >
+            if (Arrived)
+            {
+                GetRoute();
+                return;
+            }
+
+            if ((TargetEntity.Transform.GridPosition.Position - _targetGrid.Position).Length >
                 TargetMovementTolerance)
             {
                 _targetGrid = TargetEntity.Transform.GridPosition;
                 GetRoute();
-            }
-
-            // If no route and entity is out of range
-            if (Arrived)
-            {
-                GetRoute();
+                return;
             }
 
             HandleMovement(frameTime);
@@ -337,7 +338,7 @@ namespace Content.Server.AI.Routines.Movers
         /// </summary>
         public void HandleMovement(float frameTime)
         {
-            if (_arrived)
+            if (Arrived)
             {
                 return;
             }
