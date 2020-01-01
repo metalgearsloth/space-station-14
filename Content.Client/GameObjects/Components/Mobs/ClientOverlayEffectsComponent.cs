@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
+using Content.Client.GameObjects.Components.PathfindingComponent;
 using Content.Client.Graphics.Overlays;
+using Content.Client.Parallax;
 using Content.Shared.GameObjects.Components.Mobs;
 using Robust.Client.GameObjects;
 using Robust.Client.Graphics.Overlays;
@@ -49,7 +51,9 @@ namespace Content.Client.GameObjects
             _effectsDictionary = new Dictionary<ScreenEffects, Overlay>()
             {
                 { ScreenEffects.CircleMask, new CircleMaskOverlay() },
-                { ScreenEffects.GradientCircleMask, new GradientCircleMask() }
+                { ScreenEffects.GradientCircleMask, new GradientCircleMask() },
+                { ScreenEffects.PathfindingOverlay, new DebugPathfindingOverlay()},
+                { ScreenEffects.MapChunkOverlay, new MapChunkOverlay()}
             };
         }
 

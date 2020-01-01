@@ -156,6 +156,7 @@ namespace Content.Server.GameObjects.Components.Nutrition
             }
 
             Owner.Delete();
+            Owner.TryGetComponent(out ItemComponent ownerComponent);
 
             if (_finishPrototype != null)
             {

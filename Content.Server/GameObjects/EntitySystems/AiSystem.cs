@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using Content.Server.AI.HTN;
+using Content.Server.AI.HTN.Agents;
 using Content.Server.GameObjects.Components.Movement;
 using Content.Server.Interfaces.GameObjects.Components.Movement;
 using Robust.Server.AI;
@@ -54,13 +56,8 @@ namespace Content.Server.GameObjects.EntitySystems
                     continue;
                 }
 
-                var aiComp = entity.GetComponent<AiControllerComponent>();
-                if (aiComp.Processor == null)
-                {
-                    aiComp.Processor = CreateProcessor(aiComp.LogicName);
-                    aiComp.Processor.SelfEntity = entity;
-                    aiComp.Processor.VisionRadius = aiComp.VisionRadius;
-                }
+                entity.TryGetComponent(out AiControllerComponent aiComp);
+                ProcessorInitialize(aiComp);
 
                 var processor = aiComp.Processor;
 
@@ -68,11 +65,24 @@ namespace Content.Server.GameObjects.EntitySystems
             }
         }
 
-        private AiLogicProcessor CreateProcessor(string name)
+        /// <summary>
+        /// Will start up the controller's processor if not already done so
+        /// </summary>
+        /// <param name="controller"></param>
+        public void ProcessorInitialize(AiControllerComponent controller)
+        {
+            if (controller.Processor != null) return;
+            controller.Processor = CreateProcessor(controller.LogicName);
+            controller.Processor.SelfEntity = controller.Owner;
+            controller.Processor.VisionRadius = controller.VisionRadius;
+            controller.Processor.Setup();
+        }
+
+        private AiAgent CreateProcessor(string name)
         {
             if (_processorTypes.TryGetValue(name, out var type))
             {
-                return (AiLogicProcessor)_typeFactory.CreateInstance(type);
+                return (AiAgent)_typeFactory.CreateInstance(type);
             }
 
             // processor needs to inherit AiLogicProcessor, and needs an AiLogicProcessorAttribute to define the YAML name

@@ -3,6 +3,8 @@
   name: BaseWall
   description: Keeps the air in and the greytide out.
   components:
+  - type: Pathfinding
+    cost: 0
   - type: Clickable
   - type: InteractionOutline
   - type: Sprite

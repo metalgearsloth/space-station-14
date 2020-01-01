@@ -11,6 +11,7 @@ using Robust.Shared.IoC;
 using Robust.Shared.Maths;
 using Robust.Shared.Random;
 using Robust.Shared.Serialization;
+using Robust.Shared.ViewVariables;
 
 namespace Content.Server.GameObjects
 {
@@ -20,6 +21,17 @@ namespace Content.Server.GameObjects
     {
         public override string Name => "Item";
         public override uint? NetID => ContentNetIDs.ITEM;
+        public IEntity Holder { get; set; }
+        [ViewVariables]
+        public bool IsEquipped { get => _isEquipped;
+            set
+            {
+                _isEquipped = value;
+                Equipped?.Invoke(value);
+            }
+        }
+        private bool _isEquipped;
+        public event Action<bool> Equipped;
 
         #pragma warning disable 649
         [Dependency] private readonly IRobustRandom _robustRandom;

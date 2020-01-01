@@ -6,6 +6,7 @@ using Robust.Shared.Map;
 using Robust.Shared.Maths;
 using Robust.Shared.Serialization;
 using Robust.Shared.ViewVariables;
+using AiAgent = Content.Server.AI.HTN.Agents.AiAgent;
 
 namespace Content.Server.GameObjects.Components.Movement
 {
@@ -28,7 +29,7 @@ namespace Content.Server.GameObjects.Components.Movement
             }
         }
 
-        public AiLogicProcessor Processor { get; set; }
+        public AiAgent Processor { get; set; }
 
         [ViewVariables(VVAccess.ReadWrite)]
         public float VisionRadius

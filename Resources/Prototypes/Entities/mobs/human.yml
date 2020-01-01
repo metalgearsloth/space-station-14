@@ -4,6 +4,9 @@
   id: HumanMob_Content
   description: A miserable pile of secrets
   components:
+  - type: PathfindingDebugger
+  - type: Pathfinding
+    cost: 5.0
   - type: Hands
     hands:
     - left

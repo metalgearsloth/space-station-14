@@ -2,6 +2,8 @@
   id: computerBase
   name: Computer
   components:
+  - type: Pathfinding
+    cost: 0
   - type: Physics
     mass: 25
     Anchored: true

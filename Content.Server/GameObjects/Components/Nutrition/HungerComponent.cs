@@ -45,10 +45,12 @@ namespace Content.Server.GameObjects.Components.Nutrition
             {HungerThreshold.Dead, 0.0f},
         };
 
+        private bool _cachedHungry = false;
+
         public override void ExposeData(ObjectSerializer serializer)
         {
             base.ExposeData(serializer);
-            serializer.DataField(ref _baseDecayRate, "base_decay_rate", 0.1f);
+            serializer.DataField(ref _baseDecayRate, "base_decay_rate", 5.0f);
         }
 
         public void HungerThresholdEffect(bool force = false)

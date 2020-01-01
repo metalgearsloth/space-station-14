@@ -45,10 +45,12 @@ namespace Content.Server.GameObjects.Components.Nutrition
             {ThirstThreshold.Dead, 0.0f},
         };
 
+        private bool _cachedThirsty = false;
+
         public override void ExposeData(ObjectSerializer serializer)
         {
             base.ExposeData(serializer);
-            serializer.DataField(ref _baseDecayRate, "base_decay_rate", 0.1f);
+            serializer.DataField(ref _baseDecayRate, "base_decay_rate", 5.0f);
         }
 
         public void ThirstThresholdEffect(bool force = false)
@@ -169,6 +171,7 @@ namespace Content.Server.GameObjects.Components.Nutrition
         public void ResetThirst()
         {
             _currentThirst = ThirstThresholds[ThirstThreshold.Okay];
+            ThirstThresholdEffect();
         }
     }
 

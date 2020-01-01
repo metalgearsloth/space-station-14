@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Content.Server.AI.HTN.Blackboard;
 using Content.Server.GameObjects.EntitySystems;
 using Content.Shared.GameObjects;
 using Robust.Server.GameObjects.Components.Container;
@@ -112,6 +113,7 @@ namespace Content.Server.GameObjects
             item.EquippedToSlot();
 
             Dirty();
+
             return true;
         }
 
@@ -171,6 +173,7 @@ namespace Content.Server.GameObjects
             var itemTransform = item.Owner.GetComponent<ITransformComponent>();
             itemTransform.GridPosition = Owner.GetComponent<ITransformComponent>().GridPosition;
             Dirty();
+
             return true;
         }
 

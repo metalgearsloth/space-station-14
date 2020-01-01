@@ -2,6 +2,8 @@
   id: BaseLathe
   name: "Lathe"
   components:
+  - type: Pathfinding
+    cost: 0
   - type: Clickable
   - type: InteractionOutline
   - type: Collidable

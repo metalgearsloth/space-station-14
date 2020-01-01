@@ -61,7 +61,6 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged.Hitscan
             var rangedWeapon = Owner.GetComponent<RangedWeaponComponent>();
             capacitorComponent = Owner.GetComponent<HitscanWeaponCapacitorComponent>();
             rangedWeapon.FireHandler = Fire;
-
         }
 
         public bool AttackBy(AttackByEventArgs eventArgs)
