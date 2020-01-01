@@ -50,6 +50,7 @@ namespace Content.Server.AI.HTN
             blackboard.Save(tasksToProcess, finalPlan, 0, null);
 
             // Decomposition logger
+            // TODO: This shit still needs tweaking
 
             while (tasksToProcess.Count > 0)
             {
@@ -71,6 +72,11 @@ namespace Content.Server.AI.HTN
                         compound.SetupMethods(blackboard.RunningState);
                         depth++;
                         methodTraversalRecord.Add(depth);
+
+                        if (!compound.PreconditionsMet(blackboard.RunningState))
+                        {
+                            continue;
+                        }
 
                         var methodFound = false;
 

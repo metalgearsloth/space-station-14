@@ -1,5 +1,8 @@
 using Content.Server.AI.HTN.Tasks.Primitive.Operators.Movement;
+using Content.Server.GameObjects.Components.Weapon.Ranged.Hitscan;
+using Content.Server.GameObjects.EntitySystems;
 using Robust.Shared.Interfaces.GameObjects;
+using Robust.Shared.IoC;
 
 namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Combat.Ranged.Laser
 {
@@ -9,10 +12,12 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Combat.Ranged.Laser
         private MoveToEntity _movementHandler;
 
         private IEntity _owner;
-        private IEntity _laserWeapon;
+        private HitscanWeaponComponent _laserWeapon;
         private IEntity _charger;
 
-        public ChargeLaserWeaponOperator(IEntity owner, IEntity laserWeapon, IEntity charger)
+        private bool _waitingForCharger = false;
+
+        public ChargeLaserWeaponOperator(IEntity owner, HitscanWeaponComponent laserWeapon, IEntity charger)
         {
             _owner = owner;
             _laserWeapon = laserWeapon;
@@ -30,8 +35,14 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Combat.Ranged.Laser
                 return Outcome.Continuing;
             }
 
-            // TODO: Put item in charger, wait for it, then get it
-            return Outcome.Failed;
+            if (!_waitingForCharger)
+            {
+                var interactionSystem = IoCManager.Resolve<IEntitySystemManager>().GetEntitySystem<InteractionSystem>();
+                interactionSystem.UseItemInHand(_owner, _charger.Transform.GridPosition, _charger.Uid);
+                _waitingForCharger = true;
+            }
+
+            return _laserWeapon.CapacitorComponent.Full ? Outcome.Success : Outcome.Continuing;
         }
     }
 }

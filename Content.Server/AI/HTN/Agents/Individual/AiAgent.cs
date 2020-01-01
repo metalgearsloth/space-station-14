@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Content.Server.AI.HTN.Tasks;
+using Content.Server.AI.HTN.Tasks.Compound.Clothing;
 using Content.Server.AI.HTN.Tasks.Compound.Combat;
 using Content.Server.AI.HTN.Tasks.Compound.Nutrition;
 using Content.Server.AI.HTN.Tasks.Primitive;
@@ -57,7 +58,7 @@ namespace Content.Server.AI.HTN.Agents.Individual
 
         protected virtual void SetupListeners()
         {
-            _rootTasks.Push(new KillNearestPlayer(SelfEntity));
+            _rootTasks.Push(new EquipUniform(SelfEntity));
         }
 
         /// <summary>
@@ -71,16 +72,7 @@ namespace Content.Server.AI.HTN.Agents.Individual
             {
                 case null:
                     return;
-                case EatFood _:
-                    return;
-                case KillNearestPlayer _:
-                    return;
                 default:
-                    if (planOutcome == PlanOutcome.Success)
-                    {
-                        _rootTasks.Pop();
-                    }
-
                     return;
             }
         }

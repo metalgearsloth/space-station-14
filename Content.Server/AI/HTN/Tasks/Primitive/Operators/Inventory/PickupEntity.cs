@@ -22,6 +22,7 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Inventory
             _movementHandler = new MoveToEntity(_owner, _target);
         }
 
+        // TODO: When I spawn new entities they seem to duplicate clothing or something?
         public Outcome Execute(float frameTime)
         {
             if (_target.Deleted ||

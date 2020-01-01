@@ -34,7 +34,7 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Combat
 
         public override void SetupOperator()
         {
-            TaskOperator = new ChargeLaserWeaponOperator(Owner, _equippedWeapon.Owner, _nearbyCharger);
+            TaskOperator = new ChargeLaserWeaponOperator(Owner, _equippedWeapon, _nearbyCharger);
         }
     }
 }

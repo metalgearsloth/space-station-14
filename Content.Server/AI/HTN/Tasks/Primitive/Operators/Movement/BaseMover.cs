@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Content.Server.AI.HTN.Blackboard;
 using Content.Server.GameObjects.Components.Movement;
 using Content.Server.GameObjects.Components.Pathfinding;
@@ -177,6 +178,7 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Movement
         protected void GetRoute()
         {
             Route.Clear();
+            // TODO: Look at using a task
             var route = _pathfinder.FindPath(Owner.Transform.GridPosition, TargetGrid, 1.5f);
 
             if (route == null || route.Count <= 1)
