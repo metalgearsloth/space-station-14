@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Content.Server.AI.HTN.Tasks.Primitive.Operators;
 using Content.Server.AI.HTN.Tasks.Primitive.Operators.Inventory;
 using Content.Server.AI.HTN.WorldState;
 using Content.Server.GameObjects;
@@ -25,8 +26,8 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Nutrition.Thirst
                 return false;
             }
 
-            // Find any food in hands
-            foreach (var hand in handsComponent.GetHandIndices())
+            // Find any Drink in hands
+            foreach (var hand in handsComponent.ActivePriorityEnumerable())
             {
                 var item = handsComponent.GetHand(hand);
                 if (item == null) continue;
@@ -41,14 +42,30 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Nutrition.Thirst
 
         public override HashSet<IStateData> ProceduralEffects => new HashSet<IStateData>
         {
-            // new ThirstyState(false)
+            // new HungryState(false)
         };
-
-        // TODO: Copy from UseFoodInInventory when it's gucci
 
         public override void SetupOperator()
         {
             TaskOperator = new UseItemOnPerson(Owner, _targetDrink);
+        }
+
+        public override Outcome Execute(float frameTime)
+        {
+
+            var outcome = base.Execute(frameTime);
+            if (outcome == Outcome.Failed)
+            {
+                return outcome;
+            }
+
+            if (_targetDrink.Deleted)
+            {
+                // TODO: Drop trash
+            }
+
+            // TODO: Keep eating it until stomach full
+            return !_targetDrink.Deleted ? Outcome.Continuing : Outcome.Success;
         }
     }
 }

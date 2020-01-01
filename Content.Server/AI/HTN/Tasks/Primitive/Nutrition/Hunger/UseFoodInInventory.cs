@@ -27,7 +27,7 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Nutrition.Hunger
             }
 
             // Find any food in hands
-            foreach (var hand in handsComponent.GetHandIndices())
+            foreach (var hand in handsComponent.ActivePriorityEnumerable())
             {
                 var item = handsComponent.GetHand(hand);
                 if (item == null) continue;
@@ -57,6 +57,11 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Nutrition.Hunger
             if (outcome == Outcome.Failed)
             {
                 return outcome;
+            }
+
+            if (_targetFood.Deleted)
+            {
+                // TODO: Drop trash
             }
 
             // TODO: Keep eating it until stomach full

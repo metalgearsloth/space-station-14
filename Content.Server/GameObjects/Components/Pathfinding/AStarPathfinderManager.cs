@@ -88,14 +88,14 @@ namespace Content.Server.GameObjects.Components.Pathfinding
 
         public event Action<PathfindingRoute> DebugRoute;
 
-        public List<TileRef> FindPath(GridCoordinates start, GridCoordinates end, float proximity = 0.0f, PathHeuristic heuristic = PathHeuristic.Octile)
+        public List<TileRef> FindPath(GridCoordinates start, GridCoordinates end, float proximity = 0.0f, PathHeuristic heuristic = PathHeuristic.Manhattan)
         {
             var startTile = _mapManager.GetGrid(start.GridID).GetTileRef(start);
             var endTile = _mapManager.GetGrid(start.GridID).GetTileRef(end);
             return FindPath(startTile, endTile, proximity, heuristic);
         }
 
-        public List<TileRef> FindPath(TileRef start, TileRef end, float proximity = 0.0f, PathHeuristic heuristic = PathHeuristic.Octile)
+        public List<TileRef> FindPath(TileRef start, TileRef end, float proximity = 0.0f, PathHeuristic heuristic = PathHeuristic.Manhattan)
         {
             if (_mapManager.GetGrid(start.GridIndex) != _mapManager.GetGrid(end.GridIndex))
             {
@@ -178,7 +178,7 @@ namespace Content.Server.GameObjects.Components.Pathfinding
                 currentTile = openTiles.Dequeue();
                 closedTiles.Add(currentTile);
 
-                foreach (var next in PathUtils.GetNeighbors(currentTile, true))
+                foreach (var next in PathUtils.GetNeighbors(currentTile, false))
                 {
                     if (!PathUtils.IsTileTraversable(next) || closedTiles.Contains(next))
                     {

@@ -80,14 +80,6 @@ namespace Content.Server.GameObjects
             }
         }
 
-        public IEnumerable<string> GetHandIndices()
-        {
-            foreach (var slot in hands.Keys)
-            {
-                yield return slot;
-            }
-        }
-
         public bool IsHolding(IEntity entity)
         {
             foreach (var slot in hands.Values)
@@ -111,7 +103,7 @@ namespace Content.Server.GameObjects
         /// <summary>
         ///     Enumerates over the hand keys, returning the active hand first.
         /// </summary>
-        private IEnumerable<string> ActivePriorityEnumerable()
+        public IEnumerable<string> ActivePriorityEnumerable()
         {
             yield return ActiveIndex;
             foreach (var hand in hands.Keys)
@@ -150,6 +142,7 @@ namespace Content.Server.GameObjects
             var success = slot.Insert(item.Owner);
             if (success)
             {
+                item.IsEquipped = true;
                 item.Owner.Transform.LocalPosition = Vector2.Zero;
             }
 
@@ -205,6 +198,7 @@ namespace Content.Server.GameObjects
             }
 
             item.RemovedFromSlot();
+            item.IsEquipped = false;
 
             // TODO: The item should be dropped to the container our owner is in, if any.
             item.Owner.Transform.GridPosition = coords;

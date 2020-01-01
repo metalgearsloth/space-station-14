@@ -179,6 +179,8 @@
   name: WirelessMachine
   description: A terrifying monstrosity that sucks up power from the wireless transmitters, Tesla would be proud
   components:
+  - type: Pathfinding
+    cost: 0
   - type: Clickable
   - type: InteractionOutline
   - type: Collidable

@@ -5,7 +5,7 @@ using Robust.Shared.Map;
 
 namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Movement
 {
-    public class MoveToEntity : BaseMover
+    public sealed class MoveToEntity : BaseMover
     {
         // Instance
         private GridCoordinates _lastTargetPosition;
@@ -24,8 +24,9 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Movement
 
         public override Outcome Execute(float frameTime)
         {
-            if (Target == null || Target.Transform.MapID != Owner.Transform.MapID)
+            if (Target == null || Target.Deleted || Target.Transform.MapID != Owner.Transform.MapID)
             {
+                HaveArrived();
                 return Outcome.Failed;
             }
 
@@ -61,7 +62,7 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Movement
 
             if (Route.Count == 0)
             {
-                return Outcome.Continuing;
+                return Outcome.Success;
             }
 
             var nextTile = Route.Dequeue();

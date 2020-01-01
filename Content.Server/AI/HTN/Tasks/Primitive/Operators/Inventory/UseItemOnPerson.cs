@@ -28,7 +28,7 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Inventory
             _owner.TryGetComponent(out HandsComponent hands);
             _target.TryGetComponent(out ItemComponent itemComponent);
 
-            foreach (var slot in hands.GetHandIndices())
+            foreach (var slot in hands.ActivePriorityEnumerable())
             {
                 if (hands.GetHand(slot) != itemComponent) continue;
                 hands.ActiveIndex = slot;

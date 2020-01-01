@@ -68,6 +68,7 @@ namespace Content.Server.AI.HTN
                 {
                     // TODO: There needs to be some way to track world state while plan running, which means each task can then verify the preconditions are met
                     case CompoundTask compound:
+                        compound.SetupMethods();
                         depth++;
                         methodTraversalRecord.Add(depth);
 
@@ -80,6 +81,7 @@ namespace Content.Server.AI.HTN
                                 methodIndex++;
                                 continue;
                             }
+
 
                             // Need to save: Current world state, that's it I think?
                             foreach (var subTask in method.Methods)

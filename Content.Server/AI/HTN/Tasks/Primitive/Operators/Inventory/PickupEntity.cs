@@ -1,4 +1,5 @@
 using Content.Server.AI.HTN.Tasks.Primitive.Operators.Movement;
+using Content.Server.GameObjects;
 using Content.Server.GameObjects.EntitySystems;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.IoC;
@@ -11,7 +12,7 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Inventory
         private IEntity _owner;
         private IEntity _target;
 
-        // Just to avoid continiously chaining movement operators with other operators we'll just add it in where needed.
+        // Just to avoid continuously chaining movement operators with other operators we'll just add it in where needed.
         private MoveToEntity _movementHandler;
 
         public PickupEntity(IEntity owner, IEntity target)
@@ -23,7 +24,12 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Inventory
 
         public Outcome Execute(float frameTime)
         {
-            // TODO: Check if it's available to be picked up
+            if (_target.Deleted ||
+                !_target.TryGetComponent(out ItemComponent itemComponent) || itemComponent.IsEquipped)
+            {
+                _movementHandler.HaveArrived();
+                return Outcome.Failed;
+            }
 
             var movementOutcome = _movementHandler.Execute(frameTime);
 

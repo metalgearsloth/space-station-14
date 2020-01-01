@@ -26,10 +26,13 @@ namespace Content.Server.AI.HTN.Tasks.Compound.Nutrition
             return _nearestDrink != null;
         }
 
-        public override List<IAiTask> Methods => new List<IAiTask>()
+        public override void SetupMethods()
         {
-            new UseDrinkInInventory(Owner),
-            new PickupNearestDrink(Owner),
-        };
+            Methods = new List<IAiTask>
+            {
+                new UseDrinkInInventory(Owner),
+                new PickupNearestDrink(Owner),
+            };
+        }
     }
 }

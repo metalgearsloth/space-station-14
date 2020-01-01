@@ -21,7 +21,7 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Movement
         protected Queue<TileRef> Route = new Queue<TileRef>();
         protected GridCoordinates TargetGrid;
         protected GridCoordinates NextGrid;
-        private const float TileTolerance = 0.02f;
+        private const float TileTolerance = 0.2f;
 
         // Stuck checkers
         private float _stuckTimerRemaining = 2.0f;
@@ -167,7 +167,7 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Movement
         /// <summary>
         /// Tells this we don't need to keep moving and resets everything
         /// </summary>
-        protected void HaveArrived()
+        public void HaveArrived()
         {
             Route.Clear();
             Owner.TryGetComponent(out AiControllerComponent mover);
@@ -177,7 +177,7 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Movement
         protected void GetRoute()
         {
             Route.Clear();
-            var route = _pathfinder.FindPath(Owner.Transform.GridPosition, TargetGrid);
+            var route = _pathfinder.FindPath(Owner.Transform.GridPosition, TargetGrid, 1.5f);
 
             if (route.Count <= 1)
             {
@@ -196,7 +196,7 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Movement
             // stutter backwards to the first tile again.
             Route.Dequeue();
 
-            var nextTile = Route.Dequeue();
+            var nextTile = Route.Peek();
             NextGrid = _mapManager.GetGrid(nextTile.GridIndex).GridTileToLocal(nextTile.GridIndices);
         }
 
