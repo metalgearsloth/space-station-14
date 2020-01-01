@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Content.Server.AI.HTN;
 using Content.Server.AI.HTN.Agents;
+using Content.Server.AI.HTN.Agents.Individual;
 using Content.Server.GameObjects.Components.Movement;
 using Content.Server.Interfaces.GameObjects.Components.Movement;
 using Robust.Server.AI;

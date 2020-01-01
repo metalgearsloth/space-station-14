@@ -26,7 +26,7 @@ namespace Content.Server.GameObjects.Components.Pathfinding
         /// <param name="proximity">How close before good enough</param>
         /// <param name="heuristic">Overwrite the heuristic to be used</param>
         /// <returns></returns>
-        List<TileRef> FindPath(TileRef start, TileRef end, float proximity = 0.0f, PathHeuristic heuristic = PathHeuristic.Octile);
+        List<TileRef> FindPath(TileRef start, TileRef end, float proximity = 0.0f, PathHeuristic heuristic = PathHeuristic.Manhattan);
 
         /// <summary>
         ///  Find a tile path from start to end.
@@ -54,11 +54,13 @@ namespace Content.Server.GameObjects.Components.Pathfinding
         // Gateways
         // Dead-ends
 
-        // Other searches to try besides A*:
+        // Other searches to try besides A* in order of likely best:
         // JPS
+        // Parallel Ripple Search
         // Theta*
         // D*
         // Bi-Directional A*
+        // HPS(?)
 
 // Ideally you'd store each room on the station and which room(s) it connects to.
 // Then you'd be able to get a high-level overview of which rooms you need to go to,
@@ -86,14 +88,14 @@ namespace Content.Server.GameObjects.Components.Pathfinding
 
         public event Action<PathfindingRoute> DebugRoute;
 
-        public List<TileRef> FindPath(GridCoordinates start, GridCoordinates end, float proximity = 0.0f, PathHeuristic heuristic = PathHeuristic.Manhattan)
+        public List<TileRef> FindPath(GridCoordinates start, GridCoordinates end, float proximity = 0.0f, PathHeuristic heuristic = PathHeuristic.Octile)
         {
             var startTile = _mapManager.GetGrid(start.GridID).GetTileRef(start);
             var endTile = _mapManager.GetGrid(start.GridID).GetTileRef(end);
             return FindPath(startTile, endTile, proximity, heuristic);
         }
 
-        public List<TileRef> FindPath(TileRef start, TileRef end, float proximity = 0.0f, PathHeuristic heuristic = PathHeuristic.Manhattan)
+        public List<TileRef> FindPath(TileRef start, TileRef end, float proximity = 0.0f, PathHeuristic heuristic = PathHeuristic.Octile)
         {
             if (_mapManager.GetGrid(start.GridIndex) != _mapManager.GetGrid(end.GridIndex))
             {
@@ -176,7 +178,7 @@ namespace Content.Server.GameObjects.Components.Pathfinding
                 currentTile = openTiles.Dequeue();
                 closedTiles.Add(currentTile);
 
-                foreach (var next in PathUtils.GetNeighbors(currentTile, false))
+                foreach (var next in PathUtils.GetNeighbors(currentTile, true))
                 {
                     if (!PathUtils.IsTileTraversable(next) || closedTiles.Contains(next))
                     {

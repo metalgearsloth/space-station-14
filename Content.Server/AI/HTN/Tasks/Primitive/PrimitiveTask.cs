@@ -6,14 +6,25 @@ using Robust.Shared.Interfaces.GameObjects;
 namespace Content.Server.AI.HTN.Tasks.Primitive
 {
     // 3 ways planner gets new plan: Current finishes / fails, NPC doesnt have one, or world state changes
+    /// <summary>
+    /// Essentially a wrapper around an Operator which makes them reusable.
+    /// e.g. PickupNearestMeleeWeapon, PickupNearestGun, PickupNearestLaser could all use the same operator.
+    /// All Plans get decomposed into a series of Primitive tasks.
+    /// </summary>
     public abstract class PrimitiveTask : IAiTask
     {
+        /// <summary>
+        /// Checks whether the primitive task can be run. Also sets up variables needed
+        /// </summary>
+        /// <param name="context"></param>
+        /// <returns></returns>
         public abstract bool PreconditionsMet(AiWorldState context);
-        public virtual IEntity Owner { get; }
 
-        public PrimitiveTask() {}
+        public virtual PrimitiveTaskType TaskType { get; } = PrimitiveTaskType.Default;
 
-        public PrimitiveTask(IEntity owner)
+        protected IEntity Owner { get; }
+
+        protected PrimitiveTask(IEntity owner)
         {
             Owner = owner;
         }
@@ -29,11 +40,16 @@ namespace Content.Server.AI.HTN.Tasks.Primitive
 
         public abstract void SetupOperator();
 
-        // Call the task's operate with Execute and get the outcome
+        // Call the task's operator with Execute and get the outcome
         public virtual Outcome Execute(float frameTime)
         {
             return TaskOperator.Execute(frameTime);
         }
     }
 
+    public enum PrimitiveTaskType
+    {
+        Default, // Default
+        Interaction,
+    }
 }

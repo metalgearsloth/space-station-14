@@ -1,21 +1,21 @@
-using Content.Server.AI.HTN.Tasks.Primitive.Operators.Movement;
+using Content.Server.AI.HTN.Tasks.Primitive.Operators.Inventory;
 using Content.Server.AI.HTN.WorldState;
-using Content.Server.AI.HTN.WorldState.States;
+using Content.Server.AI.HTN.WorldState.States.Nutrition;
 using Robust.Shared.Interfaces.GameObjects;
 
 namespace Content.Server.AI.HTN.Tasks.Primitive.Nutrition
 {
-    public sealed class MoveToNearestFood : PrimitiveTask
+    public sealed class PickupNearestDrink : PrimitiveTask
     {
         private IEntity _nearestFood;
-        public MoveToNearestFood(IEntity owner) : base(owner)
+        public PickupNearestDrink(IEntity owner) : base(owner)
         {
 
         }
 
         public override bool PreconditionsMet(AiWorldState context)
         {
-            var nearbyFood = context.GetState<NearbyFood>();
+            var nearbyFood = context.GetState<NearbyDrink>();
 
             foreach (var entity in nearbyFood.GetValue())
             {
@@ -28,7 +28,7 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Nutrition
 
         public override void SetupOperator()
         {
-            TaskOperator = new MoveToEntity(Owner, _nearestFood);
+            TaskOperator = new PickupEntity(Owner, _nearestFood);
         }
     }
 }

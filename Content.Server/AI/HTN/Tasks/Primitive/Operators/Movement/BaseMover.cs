@@ -21,11 +21,11 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Movement
         protected Queue<TileRef> Route = new Queue<TileRef>();
         protected GridCoordinates TargetGrid;
         protected GridCoordinates NextGrid;
-        private const float TileTolerance = 0.1f;
+        private const float TileTolerance = 0.02f;
 
         // Stuck checkers
         private float _stuckTimerRemaining = 2.0f;
-        private GridCoordinates OurLastPosition;
+        private GridCoordinates _ourLastPosition;
         private float _antiStuckTryTimer = 0.2f;
         // Anti-stuck measures. See the AntiStuck() method for more details
         private bool _tryingAntiStuck = false;
@@ -35,6 +35,7 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Movement
         // Instance variables
         private IMapManager _mapManager;
         private IPathfinder _pathfinder;
+        private ICollidableComponent _ownerCollidable;
 
         // Input
         protected IEntity Owner;
@@ -45,6 +46,12 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Movement
             Owner = owner;
             _mapManager = IoCManager.Resolve<IMapManager>();
             _pathfinder = IoCManager.Resolve<IPathfinder>();
+            if (!Owner.TryGetComponent<ICollidableComponent>(out var collidableComponent))
+            {
+                throw new InvalidOperationException();
+            }
+
+            _ownerCollidable = collidableComponent;
         }
 
         /// <summary>
@@ -53,8 +60,9 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Movement
         /// <returns>true if movement to be done</returns>
         protected bool TryMove()
         {
-            // Fix getting stuck on corners
-            var targetDiff = NextGrid.Position - Owner.Transform.GridPosition.Position;
+            // Use collidable just so we don't get stuck on corners as much
+            var targetDiff = NextGrid.Position - _ownerCollidable.WorldAABB.Center;
+
             // Check distance
             if (targetDiff.Length < TileTolerance)
             {
@@ -145,7 +153,7 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Movement
             _antiStuckTryTimer = 0.5f;
 
             // Are we actually stuck
-            if ((OurLastPosition.Position - Owner.Transform.GridPosition.Position).Length < TileTolerance)
+            if ((_ourLastPosition.Position - Owner.Transform.GridPosition.Position).Length < TileTolerance)
             {
                 IsStuck = true;
                 Logger.DebugS("ai", $"{Owner} is stuck at {Owner.Transform.GridPosition}");
@@ -153,7 +161,7 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Movement
 
             // TODO: If we've been stuck say 5 seconds re-route?
 
-            OurLastPosition = Owner.Transform.GridPosition;
+            _ourLastPosition = Owner.Transform.GridPosition;
         }
 
         /// <summary>

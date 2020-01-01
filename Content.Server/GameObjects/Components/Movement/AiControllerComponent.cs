@@ -6,7 +6,7 @@ using Robust.Shared.Map;
 using Robust.Shared.Maths;
 using Robust.Shared.Serialization;
 using Robust.Shared.ViewVariables;
-using AiAgent = Content.Server.AI.HTN.Agents.AiAgent;
+using AiAgent = Content.Server.AI.HTN.Agents.Individual.AiAgent;
 
 namespace Content.Server.GameObjects.Components.Movement
 {

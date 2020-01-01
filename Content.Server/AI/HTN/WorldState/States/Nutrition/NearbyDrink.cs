@@ -5,11 +5,11 @@ using Content.Server.GameObjects.Components.Movement;
 using Content.Server.GameObjects.Components.Nutrition;
 using Robust.Shared.Interfaces.GameObjects;
 
-namespace Content.Server.AI.HTN.WorldState.States
+namespace Content.Server.AI.HTN.WorldState.States.Nutrition
 {
-    public class NearbyFood : IStateData
+    public sealed class NearbyDrink: IStateData
     {
-        public string Name => "NearbyFood";
+        public string Name => "NearbyDrink";
         private IEntity _owner;
         public void Setup(IEntity owner)
         {
@@ -24,7 +24,7 @@ namespace Content.Server.AI.HTN.WorldState.States
             }
 
             foreach (var result in Visibility
-                .GetNearestEntities(_owner.Transform.GridPosition, typeof(FoodComponent), controller.VisionRadius)
+                .GetNearestEntities(_owner.Transform.GridPosition, typeof(DrinkComponent), controller.VisionRadius)
                 .ToList())
             {
                 yield return result;

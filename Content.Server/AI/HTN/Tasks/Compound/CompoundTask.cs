@@ -4,6 +4,11 @@ using Robust.Shared.Interfaces.GameObjects;
 
 namespace Content.Server.AI.HTN.Tasks.Compound
 {
+    /// <summary>
+    /// Contains a list of methods (compound task or primitive task) available to achieve this compound task
+    /// The first achieveable entry (where the preconditions are met) will be used for the plan
+    /// Compound tasks get decomposed until eventually all that remains are primitive tasks
+    /// </summary>
     public abstract class CompoundTask : IAiTask
     {
         public abstract string Name { get; }
@@ -20,6 +25,11 @@ namespace Content.Server.AI.HTN.Tasks.Compound
         /// </summary>
         public abstract List<IAiTask> Methods { get; }
 
+        /// <summary>
+        /// Checks whether the compound task can be run. Also sets up variables needed
+        /// </summary>
+        /// <param name="context"></param>
+        /// <returns></returns>
         public abstract bool PreconditionsMet(AiWorldState context);
 
         public CompoundTask(IEntity owner)

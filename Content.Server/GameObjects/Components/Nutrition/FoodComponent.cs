@@ -155,24 +155,25 @@ namespace Content.Server.GameObjects.Components.Nutrition
 
             }
 
-            Owner.Delete();
-            Owner.TryGetComponent(out ItemComponent ownerComponent);
-
+            // If we replace the item with trash or the likes
             if (_finishPrototype != null)
             {
+
                 var finisher = Owner.EntityManager.SpawnEntity(_finishPrototype, Owner.Transform.GridPosition);
-                if (user.TryGetComponent(out HandsComponent handsComponent) && finisher.TryGetComponent(out ItemComponent itemComponent))
+                if (user.TryGetComponent(out HandsComponent handsComponent) &&
+                    finisher.TryGetComponent(out ItemComponent itemComponent))
                 {
                     if (handsComponent.CanPutInHand(itemComponent))
                     {
                         handsComponent.PutInHand(itemComponent);
-                        return;
                     }
                 }
 
                 finisher.Transform.GridPosition = user.Transform.GridPosition;
-                return;
             }
+
+            Owner.Delete();
+            return;
         }
     }
 }

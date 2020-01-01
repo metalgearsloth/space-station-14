@@ -3,18 +3,31 @@ using System.Collections.Generic;
 using Content.Server.AI.HTN.Tasks;
 using Content.Server.AI.HTN.Tasks.Compound;
 using Content.Server.AI.HTN.Tasks.Primitive;
+using Content.Server.AI.HTN.WorldState;
 
-namespace Content.Server.AI.HTN.WorldState
+namespace Content.Server.AI.HTN
 {
-    public class Planner
+    public class HtnPlanner
     {
+        // Reading material on how HTN works:
+        // http://www.gameaipro.com/GameAIPro/GameAIPro_Chapter12_Exploring_HTN_Planners_through_Example.pdf
+        // TODO: Other ones I saw
+
+        // Games that use HTN Planners:
+        // Transformers Fall of Cybertron (Previously they used GOAP in War for Cybertron)
+        // Guerilla Games (Horizon: Zero Dawn, Killzone, etc.)
+
+        // Depending where you read there will be slight implementation differences,
+        // i.e. are operators and primitive tasks separate things.
+        // This implementation is very loosely based on FluidHTN's interpretation of the GameAIPro article
+
         /// <summary>
-        /// Will try and compe up with a plan to achieve the compound task desired effects
+        /// Tries to decompose the root task into a series of primitive tasks to do.
         /// </summary>
         /// <param name="worldState"></param>
-        /// <param name="compoundTask">The final outcome we're trying to achieve</param>
+        /// <param name="rootTask">The final outcome we're trying to achieve</param>
         /// <returns></returns>
-        public HtnPlan GetPlan(AiWorldState worldState, IAiTask compoundTask)
+        public static HtnPlan GetPlan(AiWorldState worldState, IAiTask rootTask)
         {
             // Debugging
             var startTime = DateTime.Now;
@@ -29,10 +42,10 @@ namespace Content.Server.AI.HTN.WorldState
             }
 
             var tasksToProcess = new Stack<IAiTask>();
-            tasksToProcess.Push(compoundTask);
+            tasksToProcess.Push(rootTask);
             var finalPlan = new Queue<PrimitiveTask>();
-            int depth = -1; // TODO: This in decomposition logger
-            bool reset = false;
+            var depth = -1; // TODO: This in decomposition logger
+            var reset = false;
 
             blackboard.Save(tasksToProcess, finalPlan, 0, null);
 
@@ -117,7 +130,7 @@ namespace Content.Server.AI.HTN.WorldState
             }
 
             var runTime = (DateTime.Now - startTime).TotalSeconds;
-            return new HtnPlan(compoundTask, finalPlan, methodTraversalRecord, runTime);
+            return new HtnPlan(rootTask, finalPlan, methodTraversalRecord, runTime);
         }
     }
 
