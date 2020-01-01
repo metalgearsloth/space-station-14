@@ -23,7 +23,9 @@ namespace Content.Server.AI.HTN.Tasks.Compound
         /// <summary>
         /// The available compound / primitive tasks that can be run to fulfil this compound task
         /// </summary>
-        public abstract List<IAiTask> Methods { get; }
+        public List<IAiTask> Methods { get; protected set; }
+
+        public abstract void SetupMethods();
 
         /// <summary>
         /// Checks whether the compound task can be run. Also sets up variables needed

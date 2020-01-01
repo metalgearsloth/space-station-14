@@ -1,5 +1,6 @@
 using Content.Server.AI.HTN.Tasks.Primitive.Operators.Inventory;
 using Content.Server.AI.HTN.WorldState;
+using Content.Server.AI.HTN.WorldState.States.Inventory;
 using Content.Server.AI.HTN.WorldState.States.Nutrition;
 using Content.Server.GameObjects;
 using Robust.Shared.Interfaces.GameObjects;
@@ -17,6 +18,12 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Nutrition.Hunger
         public override bool PreconditionsMet(AiWorldState context)
         {
             var nearbyFood = context.GetState<NearbyFood>();
+            var freeHands = context.GetState<FreeHands>();
+
+            if (freeHands.GetValue() == 0)
+            {
+                return false;
+            }
 
             foreach (var entity in nearbyFood.GetValue())
             {

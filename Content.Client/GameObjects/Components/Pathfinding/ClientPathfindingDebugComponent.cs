@@ -77,6 +77,7 @@ namespace Content.Client.GameObjects.Components.Pathfinding
             if (_routes.Contains(route))
             {
                 _routes.Remove(route);
+                return;
             }
             Logger.WarningS("pathfinding", "Not a valid route for overlay removal");
         }
@@ -101,9 +102,9 @@ namespace Content.Client.GameObjects.Components.Pathfinding
 
                     worldHandle.DrawRect(box, new Color(
                         0.0f,
-                        1.0f - (score / highestgScore),
                         score / highestgScore,
-                        0.1f));
+                        1.0f - (score / highestgScore),
+                        0.25f));
                 }
 
                 // Draw box on each tile of route

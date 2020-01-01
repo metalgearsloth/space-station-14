@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Content.Server.AI.HTN.Tasks.Primitive.Inventory;
 using Content.Server.AI.HTN.Tasks.Primitive.Nutrition;
 using Content.Server.AI.HTN.Tasks.Primitive.Nutrition.Hunger;
 using Content.Server.AI.HTN.WorldState;
@@ -27,10 +28,14 @@ namespace Content.Server.AI.HTN.Tasks.Compound.Nutrition
             return _nearestFood != null;
         }
 
-        public override List<IAiTask> Methods => new List<IAiTask>()
+        public override void SetupMethods()
         {
-            new UseFoodInInventory(Owner),
-            new PickupNearestFood(Owner),
-        };
+            Methods = new List<IAiTask>
+            {
+                new UseFoodInInventory(Owner),
+                new PickupNearestFood(Owner),
+                new ClearHands(Owner),
+            };
+        }
     }
 }

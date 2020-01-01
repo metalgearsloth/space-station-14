@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Content.Server.AI.HTN.Tasks.Primitive.Inventory;
 using Content.Server.AI.HTN.Tasks.Primitive.Nutrition.Thirst;
 using Content.Server.AI.HTN.WorldState;
 using Content.Server.AI.HTN.WorldState.States.Nutrition;
@@ -32,6 +33,7 @@ namespace Content.Server.AI.HTN.Tasks.Compound.Nutrition
             {
                 new UseDrinkInInventory(Owner),
                 new PickupNearestDrink(Owner),
+                new ClearHands(Owner),
             };
         }
     }
