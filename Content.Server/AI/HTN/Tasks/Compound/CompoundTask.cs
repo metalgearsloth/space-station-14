@@ -25,7 +25,10 @@ namespace Content.Server.AI.HTN.Tasks.Compound
         /// </summary>
         public List<IAiTask> Methods { get; protected set; }
 
-        public abstract void SetupMethods();
+        /// <summary>
+        /// Setup all method variables required and also instantiate the methods
+        /// </summary>
+        public abstract void SetupMethods(AiWorldState context);
 
         /// <summary>
         /// Checks whether the compound task can be run. Also sets up variables needed

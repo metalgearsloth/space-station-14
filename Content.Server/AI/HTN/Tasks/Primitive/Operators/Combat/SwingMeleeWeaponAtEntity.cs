@@ -8,7 +8,7 @@ using Robust.Shared.Map;
 
 namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Combat
 {
-    public class SwingMeleeWeapon : IOperator
+    public class SwingMeleeWeaponAtEntity : IOperator
     {
         // Out variables
 
@@ -16,9 +16,9 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Combat
 
         // Input variables
         private readonly IEntity _owner;
-        private readonly GridCoordinates _target;
+        private readonly IEntity _target;
 
-        public SwingMeleeWeapon(IEntity owner, GridCoordinates target)
+        public SwingMeleeWeaponAtEntity(IEntity owner, IEntity target)
         {
             _owner = owner;
             _target = target;
@@ -40,18 +40,20 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Combat
             {
                 return Outcome.Failed;
             }
+
             var meleeWeapon = hands.GetActiveHand.Owner;
             meleeWeapon.TryGetComponent(out MeleeWeaponComponent meleeWeaponComponent);
 
-            if ((_target.Position - _owner.Transform.GridPosition.Position).Length >
+            if ((_target.Transform.GridPosition.Position - _owner.Transform.GridPosition.Position).Length >
                 meleeWeaponComponent.Range)
             {
-                // Didn't even hit them once!
-                return Outcome.Failed;
+                // Not necessarily a hard fail, more of a soft fail
+                return Outcome.Success;
             }
 
             var interactionSystem = IoCManager.Resolve<IEntitySystemManager>().GetEntitySystem<InteractionSystem>();
-            //interactionSystem.UseItemInHand(_owner, _target, _target.Uid); // TODO
+
+            interactionSystem.UseItemInHand(_owner, _target.Transform.GridPosition, _target.Uid); // TODO
             return Outcome.Success;
         }
     }

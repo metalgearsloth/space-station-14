@@ -179,7 +179,7 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Movement
             Route.Clear();
             var route = _pathfinder.FindPath(Owner.Transform.GridPosition, TargetGrid, 1.5f);
 
-            if (route.Count <= 1)
+            if (route == null || route.Count <= 1)
             {
                 Route = null;
                 // Couldn't find a route to target

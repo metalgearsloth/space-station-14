@@ -7,22 +7,22 @@ using Robust.Shared.Interfaces.GameObjects;
 
 namespace Content.Server.AI.HTN.Tasks.Primitive.Combat
 {
-    public sealed class PickupNearestMeleeWeapon : PrimitiveTask
+    public sealed class PickupNearestLaserWeapon : PrimitiveTask
     {
         private IEntity _nearestWeapon;
-        public PickupNearestMeleeWeapon(IEntity owner) : base(owner)
+        public PickupNearestLaserWeapon(IEntity owner) : base(owner)
         {
 
         }
 
         public override bool PreconditionsMet(AiWorldState context)
         {
-            var equippedWeapon = context.GetState<EquippedMeleeWeapon>().GetValue();
+            var equippedWeapon = context.GetState<EquippedLaserWeapon>().GetValue();
             if (equippedWeapon != null)
             {
                 return false;
             }
-            var nearbyWeapons = context.GetState<NearbyMeleeWeapons>();
+            var nearbyWeapons = context.GetState<NearbyLaserWeapons>();
 
             foreach (var entity in nearbyWeapons.GetValue())
             {

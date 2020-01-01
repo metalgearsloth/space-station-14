@@ -68,7 +68,7 @@ namespace Content.Server.AI.HTN
                 {
                     // TODO: There needs to be some way to track world state while plan running, which means each task can then verify the preconditions are met
                     case CompoundTask compound:
-                        compound.SetupMethods();
+                        compound.SetupMethods(blackboard.RunningState);
                         depth++;
                         methodTraversalRecord.Add(depth);
 
@@ -82,7 +82,8 @@ namespace Content.Server.AI.HTN
                                 continue;
                             }
 
-
+                            // TODO: Preconditions are being double-checked if they're primitives so need to fix that somehow
+                            // TODO: Don't even need the primitive case do we?
                             // Need to save: Current world state, that's it I think?
                             foreach (var subTask in method.Methods)
                             {

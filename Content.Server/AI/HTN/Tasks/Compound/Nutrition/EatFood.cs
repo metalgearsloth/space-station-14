@@ -18,17 +18,10 @@ namespace Content.Server.AI.HTN.Tasks.Compound.Nutrition
         public override string Name => "EatFood";
         public override bool PreconditionsMet(AiWorldState context)
         {
-            var nearbyFood = context.GetState<NearbyFood>();
-
-            foreach (var entity in nearbyFood.GetValue())
-            {
-                _nearestFood = entity;
-            }
-
-            return _nearestFood != null;
+            return true;
         }
 
-        public override void SetupMethods()
+        public override void SetupMethods(AiWorldState context)
         {
             Methods = new List<IAiTask>
             {

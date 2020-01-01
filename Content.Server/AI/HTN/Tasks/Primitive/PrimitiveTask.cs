@@ -51,5 +51,7 @@ namespace Content.Server.AI.HTN.Tasks.Primitive
     {
         Default, // Default
         Interaction,
+        MeleeAttack,
+        RangedAttack,
     }
 }

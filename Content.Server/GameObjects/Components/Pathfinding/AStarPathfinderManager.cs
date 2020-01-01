@@ -204,8 +204,6 @@ namespace Content.Server.GameObjects.Components.Pathfinding
                 return null;
             }
 
-            Logger.DebugS("pathfinding", $"Found route in {cameFrom.Count} tiles");
-
             var route = PathUtils.ReconstructPath(cameFrom, currentTile);
             DebugRoute?.Invoke(new PathfindingRoute(
                 route,

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Content.Server.AI.HTN.Tasks;
+using Content.Server.AI.HTN.Tasks.Compound.Combat;
 using Content.Server.AI.HTN.Tasks.Compound.Nutrition;
 using Content.Server.AI.HTN.Tasks.Primitive;
 using Content.Server.AI.HTN.Tasks.Primitive.Operators;
@@ -19,6 +20,9 @@ namespace Content.Server.AI.HTN.Agents.Individual
 
         private float InteractionCooldown { get; } = 0.5f;
         private float _interactionCooldownRemaining;
+
+        private float MeleeAttackCooldown { get; } = 0.2f;
+        private float _meleeAttackCooldownRemaining;
 
         private readonly Stack<IAiTask> _rootTasks = new Stack<IAiTask>();
 
@@ -53,7 +57,7 @@ namespace Content.Server.AI.HTN.Agents.Individual
 
         protected virtual void SetupListeners()
         {
-            _rootTasks.Push(new EatFood(SelfEntity));
+            _rootTasks.Push(new KillNearestPlayer(SelfEntity));
         }
 
         /// <summary>
@@ -65,9 +69,11 @@ namespace Content.Server.AI.HTN.Agents.Individual
         {
             switch (rootTask)
             {
+                case null:
+                    return;
                 case EatFood _:
                     return;
-                case (null):
+                case KillNearestPlayer _:
                     return;
                 default:
                     if (planOutcome == PlanOutcome.Success)
@@ -81,8 +87,10 @@ namespace Content.Server.AI.HTN.Agents.Individual
 
         public override void Update(float frameTime)
         {
+            // Cooldown;
             _planCooldownRemaining -= frameTime;
             _interactionCooldownRemaining -= frameTime;
+            _meleeAttackCooldownRemaining -= frameTime;
 
             if (_planCooldownRemaining <= 0)
             {
@@ -105,13 +113,30 @@ namespace Content.Server.AI.HTN.Agents.Individual
             }
 
             // So the AI doesn't have godmode
-            if (activeTask.TaskType == PrimitiveTaskType.Interaction &&
-                _interactionCooldownRemaining > 0)
+            switch (activeTask.TaskType)
             {
-                return;
+                case PrimitiveTaskType.Default:
+                    break;
+                case PrimitiveTaskType.Interaction:
+                    if (_interactionCooldownRemaining > 0)
+                    {
+                        return;
+                    }
+                    break;
+                case PrimitiveTaskType.MeleeAttack:
+                    if (_meleeAttackCooldownRemaining > 0)
+                    {
+                        return;
+                    }
+                    break;
+                case PrimitiveTaskType.RangedAttack:
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
             }
 
             _interactionCooldownRemaining = InteractionCooldown;
+            _meleeAttackCooldownRemaining = MeleeAttackCooldown;
 
             var outcome = activeTask.Execute(frameTime);
 
