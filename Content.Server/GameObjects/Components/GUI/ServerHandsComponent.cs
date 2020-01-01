@@ -80,6 +80,14 @@ namespace Content.Server.GameObjects
             }
         }
 
+        public IEnumerable<string> GetHandIndices()
+        {
+            foreach (var slot in hands.Keys)
+            {
+                yield return slot;
+            }
+        }
+
         public bool IsHolding(IEntity entity)
         {
             foreach (var slot in hands.Values)

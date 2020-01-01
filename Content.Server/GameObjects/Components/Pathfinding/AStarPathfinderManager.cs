@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Content.Server.GameObjects.Components.Pathfinding.Heuristics;
 using Content.Server.GameObjects.Components.Pathfinding.PathfindingQueue;
@@ -98,8 +98,7 @@ namespace Content.Server.GameObjects.Components.Pathfinding
 
         public List<TileRef> FindPath(TileRef start, TileRef end, float proximity = 0.0f, PathHeuristic heuristic = PathHeuristic.Octile)
         {
-            if (_mapManager.GetGrid(end.GridIndex).GridTileToLocal(end.GridIndices) ==
-                GridCoordinates.Nullspace || _mapManager.GetGrid(start.GridIndex) != _mapManager.GetGrid(end.GridIndex))
+            if (_mapManager.GetGrid(start.GridIndex) != _mapManager.GetGrid(end.GridIndex))
             {
                 return null;
             }

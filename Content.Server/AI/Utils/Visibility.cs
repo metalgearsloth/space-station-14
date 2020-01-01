@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Content.Server.GameObjects;
@@ -27,7 +27,7 @@ namespace Content.Server.AI.Utils
             var compManager = IoCManager.Resolve<IComponentManager>();
             foreach (var comp in compManager.GetAllComponents(component))
             {
-                if (comp.Owner.Transform.GridPosition.GridID != grid.GridID || grid == GridCoordinates.Nullspace)
+                if (comp.Owner.Transform.GridPosition.GridID != grid.GridID)
                 {
                     continue;
                 }

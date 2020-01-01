@@ -45,8 +45,6 @@ namespace Content.Server.GameObjects.Components.Nutrition
             {ThirstThreshold.Dead, 0.0f},
         };
 
-        private bool _cachedThirsty = false;
-
         public override void ExposeData(ObjectSerializer serializer)
         {
             base.ExposeData(serializer);
