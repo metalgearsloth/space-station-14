@@ -16,7 +16,7 @@ namespace Content.Server.GameObjects.Components.Pathfinding
     public interface IPathfinder
     {
         event Action<PathfindingRoute> DebugRoute;
-
+        // TODO: Add in struct for path args, e.g. allowdiagonals, heuristic to use
 
         /// <summary>
         ///  Find a tile path from start to end
@@ -82,21 +82,18 @@ namespace Content.Server.GameObjects.Components.Pathfinding
         [Dependency] private readonly IMapManager _mapManager;
 #pragma warning restore 649
 
-        // Implemented heuristics
-        private readonly IPathfindingHeuristic _octileHeuristic = new SimpleOctileHeuristic();
-
-        // TODO: Add cached paths and interface it with rooms
+        // TODO: Add cached paths and interface it with rooms?
 
         public event Action<PathfindingRoute> DebugRoute;
 
-        public List<TileRef> FindPath(GridCoordinates start, GridCoordinates end, float proximity = 0.0f, PathHeuristic heuristic = PathHeuristic.Octile)
+        public List<TileRef> FindPath(GridCoordinates start, GridCoordinates end, float proximity = 0.0f, PathHeuristic heuristic = PathHeuristic.Manhattan)
         {
             var startTile = _mapManager.GetGrid(start.GridID).GetTileRef(start);
             var endTile = _mapManager.GetGrid(start.GridID).GetTileRef(end);
             return FindPath(startTile, endTile, proximity, heuristic);
         }
 
-        public List<TileRef> FindPath(TileRef start, TileRef end, float proximity = 0.0f, PathHeuristic heuristic = PathHeuristic.Octile)
+        public List<TileRef> FindPath(TileRef start, TileRef end, float proximity = 0.0f, PathHeuristic heuristic = PathHeuristic.Manhattan)
         {
             if (_mapManager.GetGrid(start.GridIndex) != _mapManager.GetGrid(end.GridIndex))
             {
@@ -141,7 +138,10 @@ namespace Content.Server.GameObjects.Components.Pathfinding
             switch (heuristic)
             {
                 case PathHeuristic.Octile:
-                    pathHeuristic = _octileHeuristic;
+                    pathHeuristic = new SimpleOctileHeuristic();
+                    break;
+                case PathHeuristic.Manhattan:
+                    pathHeuristic = new ManhattanHeuristic();
                     break;
                 default:
                     Logger.FatalS("pathfinding", $"No heuristic implementation for {heuristic}");
@@ -176,7 +176,7 @@ namespace Content.Server.GameObjects.Components.Pathfinding
                 currentTile = openTiles.Dequeue();
                 closedTiles.Add(currentTile);
 
-                foreach (var next in PathUtils.GetNeighbors(currentTile))
+                foreach (var next in PathUtils.GetNeighbors(currentTile, false))
                 {
                     if (!PathUtils.IsTileTraversable(next) || closedTiles.Contains(next))
                     {
@@ -219,5 +219,6 @@ namespace Content.Server.GameObjects.Components.Pathfinding
     public enum PathHeuristic
     {
         Octile,
+        Manhattan,
     }
 }

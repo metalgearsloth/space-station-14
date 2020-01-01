@@ -7,28 +7,23 @@ using Robust.Client.Graphics.Overlays;
 using Robust.Client.Graphics.Shaders;
 using Robust.Client.Interfaces.Graphics.ClientEye;
 using Robust.Client.Interfaces.Graphics.Overlays;
-using Robust.Client.Interfaces.UserInterface;
-using Robust.Client.UserInterface.Controls;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Interfaces.GameObjects;
-using Robust.Shared.Interfaces.Map;
 using Robust.Shared.Interfaces.Network;
 using Robust.Shared.IoC;
 using Robust.Shared.Log;
-using Robust.Shared.Map;
 using Robust.Shared.Maths;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Timers;
-using Robust.Shared.Utility;
 
-namespace Content.Client.GameObjects.Components.PathfindingComponent
+namespace Content.Client.GameObjects.Components.Pathfinding
 {
     // Component to receive the route data and an overlay to show it
     [RegisterComponent]
     internal sealed class ClientPathfindingSharedComponent : SharedPathfindingComponent
     {
         private DebugPathfindingOverlay _overlay;
-        private float _routeDuration = 10.0f; // How long before we remove it from the overlay
+        private float _routeDuration = 2.0f; // How long before we remove it from the overlay
 
         public override void HandleMessage(ComponentMessage message, INetChannel netChannel = null, IComponent component = null)
         {
@@ -41,10 +36,22 @@ namespace Content.Client.GameObjects.Components.PathfindingComponent
             }
         }
 
-        void ReceivedRoute(PathfindingRoute route)
+        public override void Initialize()
+        {
+            base.Initialize();
+            var overlayManager = IoCManager.Resolve<IOverlayManager>();
+            _overlay = new DebugPathfindingOverlay();
+            overlayManager.AddOverlay(_overlay);
+        }
+
+        private void ReceivedRoute(PathfindingRoute route)
         {
             _overlay.AddRoute(route);
-            Timer.Spawn(TimeSpan.FromSeconds(_routeDuration), () => {_overlay.RemoveRoute(route);});
+            Timer.Spawn(TimeSpan.FromSeconds(_routeDuration), () =>
+            {
+                if (_overlay == null) return;
+                _overlay.RemoveRoute(route);
+            });
         }
     }
 
@@ -96,7 +103,7 @@ namespace Content.Client.GameObjects.Components.PathfindingComponent
                         0.0f,
                         1.0f - (score / highestgScore),
                         score / highestgScore,
-                        0.25f));
+                        0.1f));
                 }
 
                 // Draw box on each tile of route
@@ -113,22 +120,6 @@ namespace Content.Client.GameObjects.Components.PathfindingComponent
                 }
                 // TODO: Draw remaining stuff
             }
-        }
-    }
-
-    internal sealed class MapChunkOverlay : Overlay
-    {
-        public override OverlaySpace Space => OverlaySpace.WorldSpace;
-
-        public MapChunkOverlay() : base(nameof(MapChunkOverlay))
-        {
-            Shader = IoCManager.Resolve<IPrototypeManager>().Index<ShaderPrototype>("unshaded").Instance();
-        }
-
-        protected override void Draw(DrawingHandleBase handle)
-        {
-            var viewport = IoCManager.Resolve<IEyeManager>().GetWorldViewport();
-            var worldHandle = (DrawingHandleWorld) handle;
         }
     }
 }

@@ -24,20 +24,22 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Movement
 
         public override Outcome Execute(float frameTime)
         {
-            if (Target == null)
+            if (Target == null || Target.Transform.MapID != Owner.Transform.MapID)
             {
                 return Outcome.Failed;
             }
 
             // If they move near us
-            if ((Target.Transform.GridPosition.Position - Owner.Transform.GridPosition.Position).Length <= 2.0f)
+            if ((Target.Transform.GridPosition.Position - Owner.Transform.GridPosition.Position).Length <= 1.5f)
             {
+                HaveArrived();
                 return Outcome.Success;
             }
 
             // If they move too far or no route
             if (_lastTargetPosition == default ||
-                (Target.Transform.GridPosition.Position - _lastTargetPosition.Position).Length > 2.0f)
+                (Target.Transform.GridPosition.Position - _lastTargetPosition.Position).Length > 2.0f ||
+                Route.Count == 0)
             {
                 _lastTargetPosition = Target.Transform.GridPosition;
                 TargetGrid = Target.Transform.GridPosition;
@@ -59,7 +61,7 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Movement
 
             if (Route.Count == 0)
             {
-                return Outcome.Success;
+                return Outcome.Continuing;
             }
 
             var nextTile = Route.Dequeue();

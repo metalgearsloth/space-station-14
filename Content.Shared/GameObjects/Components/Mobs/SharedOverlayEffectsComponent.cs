@@ -19,7 +19,6 @@ namespace Content.Shared.GameObjects.Components.Mobs
         CircleMask,
         GradientCircleMask,
         PathfindingOverlay,
-        MapChunkOverlay,
     }
 
     [Serializable, NetSerializable]

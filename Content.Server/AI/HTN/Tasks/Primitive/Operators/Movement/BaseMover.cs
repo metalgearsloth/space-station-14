@@ -21,7 +21,7 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Movement
         protected Queue<TileRef> Route = new Queue<TileRef>();
         protected GridCoordinates TargetGrid;
         protected GridCoordinates NextGrid;
-        private const float TileTolerance = 0.2f;
+        private const float TileTolerance = 0.1f;
 
         // Stuck checkers
         private float _stuckTimerRemaining = 2.0f;
@@ -54,11 +54,12 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Movement
         protected bool TryMove()
         {
             // Fix getting stuck on corners
-            // TODO: Potentially change this. This is just because the position doesn't match the aabb so we need to make sure corners don't fuck us
-            Owner.TryGetComponent<ICollidableComponent>(out var collidableComponent);
-            var targetDiff = NextGrid.Position - collidableComponent.WorldAABB.Center;
+            var targetDiff = NextGrid.Position - Owner.Transform.GridPosition.Position;
             // Check distance
-            if (targetDiff.Length <= TileTolerance) return false;
+            if (targetDiff.Length < TileTolerance)
+            {
+                return false;
+            }
             // Move towards it
             Owner.TryGetComponent(out AiControllerComponent mover);
             mover.VelocityDir = targetDiff.Normalized;
@@ -167,7 +168,7 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Movement
 
         protected void GetRoute()
         {
-
+            Route.Clear();
             var route = _pathfinder.FindPath(Owner.Transform.GridPosition, TargetGrid);
 
             if (route.Count <= 1)

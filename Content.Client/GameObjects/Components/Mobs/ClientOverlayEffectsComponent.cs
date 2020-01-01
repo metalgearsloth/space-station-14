@@ -1,5 +1,5 @@
 ﻿using System.Collections.Generic;
-using Content.Client.GameObjects.Components.PathfindingComponent;
+using Content.Client.GameObjects.Components.Pathfinding;
 using Content.Client.Graphics.Overlays;
 using Content.Client.Parallax;
 using Content.Shared.GameObjects.Components.Mobs;
@@ -52,8 +52,6 @@ namespace Content.Client.GameObjects
             {
                 { ScreenEffects.CircleMask, new CircleMaskOverlay() },
                 { ScreenEffects.GradientCircleMask, new GradientCircleMask() },
-                { ScreenEffects.PathfindingOverlay, new DebugPathfindingOverlay()},
-                { ScreenEffects.MapChunkOverlay, new MapChunkOverlay()}
             };
         }
 

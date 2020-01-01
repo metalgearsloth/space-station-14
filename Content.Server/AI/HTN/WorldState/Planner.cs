@@ -117,18 +117,20 @@ namespace Content.Server.AI.HTN.WorldState
             }
 
             var runTime = (DateTime.Now - startTime).TotalSeconds;
-            return new HtnPlan(finalPlan, methodTraversalRecord, runTime);
+            return new HtnPlan(compoundTask, finalPlan, methodTraversalRecord, runTime);
         }
     }
 
     public struct HtnPlan
     {
+        public IAiTask RootTask;
         public Queue<PrimitiveTask> PrimitiveTasks;
         public IEnumerable<int> MTR;
         public double PlanTime;
 
-        public HtnPlan(Queue<PrimitiveTask> primitiveTasks, IEnumerable<int> mtr, double planTime)
+        public HtnPlan(IAiTask rootTask, Queue<PrimitiveTask> primitiveTasks, IEnumerable<int> mtr, double planTime)
         {
+            RootTask = rootTask;
             PrimitiveTasks = primitiveTasks;
             MTR = mtr;
             PlanTime = planTime;

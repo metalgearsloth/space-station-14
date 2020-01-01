@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Content.Server.AI.HTN.Tasks;
 using Content.Server.AI.HTN.Tasks.Primitive;
@@ -14,9 +15,9 @@ namespace Content.Server.AI.HTN.Agents
         public AiWorldState State { get; private set; }
         private HtnPlan? RunPlan { get; set; }
         private readonly Planner _planner = new Planner();
-        private float PlanCooldown { get; } = 0.2f;
+        private float PlanCooldown { get; } = 0.5f;
         private float _planCooldownRemaining;
-        private Stack<IAiTask> _rootTasks = new Stack<IAiTask>();
+        private readonly Stack<IAiTask> _rootTasks = new Stack<IAiTask>();
 
         private bool TryActiveTask(out PrimitiveTask activeTask)
         {
@@ -48,26 +49,44 @@ namespace Content.Server.AI.HTN.Agents
         {
             _planCooldownRemaining -= frameTime;
 
-            if (!TryActiveTask(out var activeTask) && RunPlan.HasValue) return;
+            // TODO Refine this e.g. if we can get a better plan. Check the MTR for better plan
 
             if (_planCooldownRemaining <= 0)
             {
                 _planCooldownRemaining = PlanCooldown;
-                RunPlan = _planner.GetPlan(State, ActiveRootTask());
+                var activeRootTask = ActiveRootTask();
+                if (RunPlan.HasValue && RunPlan.Value.RootTask == activeRootTask) return;
+
+                RunPlan = _planner.GetPlan(State, activeRootTask);
+
                 return;
             }
 
-            // Oh noes
-            if (activeTask.Execute(frameTime) == Outcome.Failed)
+            if (!TryActiveTask(out var activeTask))
             {
-                _planCooldownRemaining = 0;
                 return;
             }
 
-            if (_planCooldownRemaining <= 0)
+            var outcome = activeTask.Execute(frameTime);
+
+            switch (outcome)
             {
-                _planCooldownRemaining = PlanCooldown;
-                // TODO: Plan
+                case Outcome.Success:
+                    RunPlan?.PrimitiveTasks.Dequeue();
+                    if (RunPlan?.PrimitiveTasks.Count > 0) return;
+                    // Plan success
+                    _rootTasks.Pop();
+                    RunPlan = null;
+                    return;
+
+                    return;
+                case Outcome.Continuing:
+                    return;
+                case Outcome.Failed:
+                    RunPlan = null;
+                    return;
+                default:
+                    throw new ArgumentOutOfRangeException();
             }
         }
     }

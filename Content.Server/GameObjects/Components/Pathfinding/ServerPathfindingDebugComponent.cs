@@ -14,17 +14,11 @@ namespace Content.Server.GameObjects.Components.Pathfinding
         public override void Initialize()
         {
             base.Initialize();
-            if (Owner.TryGetComponent(out ServerOverlayEffectsComponent overlayEffectsComponent))
+            var pathfinder = IoCManager.Resolve<IPathfinder>();
+            pathfinder.DebugRoute += route =>
             {
-                var pathfinder = IoCManager.Resolve<IPathfinder>();
-                pathfinder.DebugRoute += route =>
-                {
-                    SendNetworkMessage(route);
-                };
-
-                // TODO: Look at making overlays stacking and not mutually exclusive
-                overlayEffectsComponent.ChangeOverlay(ScreenEffects.PathfindingOverlay);
-            }
+                SendNetworkMessage(route);
+            };
         }
     }
 }
