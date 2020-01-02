@@ -27,7 +27,7 @@ namespace Content.Server.AI.HTN.Agents.Individual
 
         private readonly Stack<IAiTask> _rootTasks = new Stack<IAiTask>();
 
-        private bool TryActiveTask(out PrimitiveTask activeTask)
+        private bool TryActiveTask(out ConcreteTask activeTask)
         {
             activeTask = null;
             if (RunPlan == null || RunPlan?.PrimitiveTasks.Count <= 0) return false;

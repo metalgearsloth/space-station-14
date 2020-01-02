@@ -20,7 +20,7 @@ namespace Content.Server.AI.HTN.WorldState
             RunningState = worldState;
         }
 
-        public void ApplyEffects(PrimitiveTask task)
+        public void ApplyEffects(ConcreteTask task)
         {
             foreach (var effect in task.ProceduralEffects)
             {
@@ -28,7 +28,7 @@ namespace Content.Server.AI.HTN.WorldState
             }
         }
 
-        public void Save(Stack<IAiTask> tasksToProcess, Queue<PrimitiveTask> finalPlan, int method, CompoundTask owningTask)
+        public void Save(Stack<IAiTask> tasksToProcess, Queue<ConcreteTask> finalPlan, int method, SelectorTask owningTask)
         {
             _decompositionHistory.Push(new Decomposition(tasksToProcess, finalPlan, method, owningTask, RunningState));
         }
@@ -41,22 +41,22 @@ namespace Content.Server.AI.HTN.WorldState
         public struct Decomposition
         {
             public Stack<IAiTask> TasksToProcess { get; }
-            public Queue<PrimitiveTask> FinalPlan { get; }
+            public Queue<ConcreteTask> FinalPlan { get; }
             public int ChosenMethodIndex { get; }
-            public CompoundTask OwningCompoundTask { get; }
+            public SelectorTask OwningSelectorTask { get; }
             public AiWorldState WorldState { get; }
 
             public Decomposition(
                 Stack<IAiTask> tasksToProcess,
-                Queue<PrimitiveTask> finalPlan,
+                Queue<ConcreteTask> finalPlan,
                 int chosenMethodIndex,
-                CompoundTask owningCompoundTask,
+                SelectorTask owningSelectorTask,
                 AiWorldState worldState)
             {
                 TasksToProcess = tasksToProcess;
                 FinalPlan = finalPlan;
                 ChosenMethodIndex = chosenMethodIndex;
-                OwningCompoundTask = owningCompoundTask;
+                OwningSelectorTask = owningSelectorTask;
                 WorldState = worldState;
             }
         }
