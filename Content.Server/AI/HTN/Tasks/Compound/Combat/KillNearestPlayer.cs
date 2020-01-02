@@ -16,11 +16,6 @@ namespace Content.Server.AI.HTN.Tasks.Compound.Combat
         public override string Name => "MeleeAttackNearestPlayer";
         public override bool PreconditionsMet(AiWorldState context)
         {
-            return _nearestPlayer != null;
-        }
-
-        public override void SetupMethods(AiWorldState context)
-        {
             var nearbyPlayers = context.GetState<NearbyPlayers>();
             foreach (var entity in nearbyPlayers.GetValue())
             {
@@ -28,6 +23,11 @@ namespace Content.Server.AI.HTN.Tasks.Compound.Combat
                 break;
             }
 
+            return _nearestPlayer != null;
+        }
+
+        public override void SetupMethods(AiWorldState context)
+        {
             Methods = new List<IAiTask>
             {
                 new MeleeAttackTarget(Owner, _nearestPlayer),

@@ -19,10 +19,10 @@ namespace Content.Server.AI.HTN.Agents.Individual
         private float PlanCooldown { get; } = 0.5f;
         private float _planCooldownRemaining;
 
-        private float InteractionCooldown { get; } = 0.5f;
+        private float InteractionCooldown { get; } = 0.4f;
         private float _interactionCooldownRemaining;
 
-        private float MeleeAttackCooldown { get; } = 0.2f;
+        private float MeleeAttackCooldown { get; } = 0.4f;
         private float _meleeAttackCooldownRemaining;
 
         private readonly Stack<IAiTask> _rootTasks = new Stack<IAiTask>();
@@ -30,8 +30,8 @@ namespace Content.Server.AI.HTN.Agents.Individual
         private bool TryActiveTask(out PrimitiveTask activeTask)
         {
             activeTask = null;
-            if (!RunPlan.HasValue || RunPlan.Value.PrimitiveTasks.Count <= 0) return false;
-            activeTask = RunPlan.Value.PrimitiveTasks.Peek();
+            if (RunPlan == null || RunPlan?.PrimitiveTasks.Count <= 0) return false;
+            activeTask = RunPlan.PrimitiveTasks.Peek();
             return true;
 
         }
@@ -92,7 +92,7 @@ namespace Content.Server.AI.HTN.Agents.Individual
                 if (!TryActiveRootTask(out var activeRootTask)) return;
 
                 // If the root task hasn't changed and we already have a plan (TODO Change this so it may re-plan if the MTR is better)
-                if (RunPlan?.PrimitiveTasks.Count > 0 && RunPlan.Value.RootTask == activeRootTask) return;
+                if (RunPlan?.PrimitiveTasks.Count > 0 && RunPlan.RootTask == activeRootTask) return;
 
                 RunPlan = HtnPlanner.GetPlan(State, activeRootTask);
 

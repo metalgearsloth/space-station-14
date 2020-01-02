@@ -31,10 +31,10 @@ namespace Content.Server.AI.HTN
         {
             // Debugging
             var startTime = DateTime.Now;
-            var methodTraversalRecord = new List<int>();
+            var methodTraversalRecord = new Queue<int>();
 
             // Setup
-            var blackboard = new WorldState.Blackboard(worldState);
+            var blackboard = new PlanBlackboard(worldState);
 
             foreach (var state in worldState.States)
             {
@@ -49,70 +49,75 @@ namespace Content.Server.AI.HTN
 
             blackboard.Save(tasksToProcess, finalPlan, 0, null);
 
+            if (rootTask.GetType().IsSubclassOf(typeof(CompoundTask)))
+            {
+                var compoundRoot = (CompoundTask) rootTask;
+                compoundRoot.SetupMethods(blackboard.RunningState);
+            }
+
             // Decomposition logger
             // TODO: This shit still needs tweaking
 
-            while (tasksToProcess.Count > 0)
+            while (tasksToProcess.Count > 0 || reset)
             {
-                var currentTask = tasksToProcess.Pop();
-                var methodIndex = 0;
+                IAiTask currentTask;
+                int methodIndex;
                 if (reset)
                 {
                     blackboard.Reset();
                     tasksToProcess = blackboard.DecompositionHistory.Peek().TasksToProcess;
                     finalPlan = blackboard.DecompositionHistory.Peek().FinalPlan;
-                    methodIndex += blackboard.DecompositionHistory.Peek().ChosenMethodIndex;
+                    methodIndex = blackboard.DecompositionHistory.Peek().ChosenMethodIndex + 1;
                     currentTask = blackboard.DecompositionHistory.Peek().OwningCompoundTask;
+                    methodTraversalRecord.Dequeue();
+                    reset = false;
+                }
+                else
+                {
+                    currentTask = tasksToProcess.Pop();
+                    methodIndex = 0;
                 }
 
                 switch (currentTask)
                 {
-                    // TODO: There needs to be some way to track world state while plan running, which means each task can then verify the preconditions are met
                     case CompoundTask compound:
-                        compound.SetupMethods(blackboard.RunningState);
-                        depth++;
-                        methodTraversalRecord.Add(depth);
 
                         if (!compound.PreconditionsMet(blackboard.RunningState))
                         {
                             continue;
                         }
-
-                        var methodFound = false;
+// TODO: Need to reset and force this???
+                        IAiTask foundMethod = null;
 
                         foreach (var method in compound.Methods.GetRange(methodIndex, compound.Methods.Count - methodIndex))
                         {
-                            if (!method.PreconditionsMet(blackboard.RunningState))
-                            {
-                                methodIndex++;
-                                continue;
-                            }
-
-                            // TODO: Preconditions are being double-checked if they're primitives so need to fix that somehow
-                            // TODO: Don't even need the primitive case do we?
-                            // Need to save: Current world state, that's it I think?
-                            foreach (var subTask in method.Methods)
-                            {
-                                tasksToProcess.Push(subTask);
-                            }
-
-                            methodFound = true;
-                            methodTraversalRecord.Add(depth + 1);
-                            blackboard.Save(tasksToProcess, finalPlan, methodIndex, compound);
-                            // Save current tasksToProcess
-                            // Save current finalPlan
-                            // Save chosen method (as index?)
-                            // Save owning compound task -> I would push it to the top of the stack and continue on when restored
-                            // Rollback MTR
-                            // TODO: Also add TasksToProcess to blackboard
+                            if (!method.PreconditionsMet(blackboard.RunningState)) continue;
+                            foundMethod = method;
                             break;
                         }
 
-                        if (!methodFound)
+                        if (foundMethod == null)
                         {
                             reset = true;
+                            break;
                         }
 
+                        if (foundMethod.GetType().IsSubclassOf(typeof(CompoundTask)))
+                        {
+                            var foundCompound = (CompoundTask) foundMethod;
+                            foundCompound.SetupMethods(blackboard.RunningState);
+                        }
+
+                        // TODO: Preconditions are being double-checked (once in method and another again)
+                        // TODO: Don't even need the primitive case do we?
+                        // Need to save: Current world state, that's it I think?
+                        foreach (var subTask in foundMethod.Methods)
+                        {
+                            tasksToProcess.Push(subTask);
+                        }
+
+                        methodTraversalRecord.Enqueue(methodIndex);
+                        blackboard.Save(tasksToProcess, finalPlan, methodIndex, compound);
                         break;
                     case PrimitiveTask primitive:
                         // If conditions met
@@ -133,6 +138,12 @@ namespace Content.Server.AI.HTN
                 }
             }
 
+            // TODO: Probs don't want to do this
+            if (finalPlan.Count == 0)
+            {
+                return null;
+            }
+
             foreach (var task in finalPlan)
             {
                 task.SetupOperator();
@@ -143,7 +154,7 @@ namespace Content.Server.AI.HTN
         }
     }
 
-    public struct HtnPlan
+    public class HtnPlan
     {
         public IAiTask RootTask;
         public Queue<PrimitiveTask> PrimitiveTasks;

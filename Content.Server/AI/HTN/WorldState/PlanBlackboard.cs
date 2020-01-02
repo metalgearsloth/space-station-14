@@ -6,7 +6,7 @@ using Robust.Shared.Interfaces.GameObjects;
 
 namespace Content.Server.AI.HTN.WorldState
 {
-    public class Blackboard
+    public class PlanBlackboard
     {
 
         public AiWorldState RunningState { get; set; }
@@ -14,7 +14,7 @@ namespace Content.Server.AI.HTN.WorldState
         public Stack<Decomposition> DecompositionHistory => _decompositionHistory;
         private Stack<Decomposition> _decompositionHistory = new Stack<Decomposition>();
 
-        public Blackboard(AiWorldState worldState)
+        public PlanBlackboard(AiWorldState worldState)
         {
             // TODO: Check this
             RunningState = worldState;
