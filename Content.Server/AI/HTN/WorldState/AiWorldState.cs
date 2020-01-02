@@ -104,7 +104,6 @@ namespace Content.Server.AI.HTN.WorldState
                 return;
             }
             controller.Processor.State.UpdateState(state);
-            return;
         }
     }
 }

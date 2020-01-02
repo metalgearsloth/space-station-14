@@ -69,7 +69,10 @@ namespace Content.Server.AI.HTN
                     finalPlan = blackboard.DecompositionHistory.Peek().FinalPlan;
                     methodIndex = blackboard.DecompositionHistory.Peek().ChosenMethodIndex + 1;
                     currentTask = blackboard.DecompositionHistory.Peek().OwningCompoundTask;
-                    methodTraversalRecord.Dequeue();
+                    if (methodTraversalRecord.Count > 0)
+                    {
+                        methodTraversalRecord.Dequeue();
+                    }
                     reset = false;
                 }
                 else
@@ -111,7 +114,7 @@ namespace Content.Server.AI.HTN
                         // TODO: Preconditions are being double-checked (once in method and another again)
                         // TODO: Don't even need the primitive case do we?
                         // Need to save: Current world state, that's it I think?
-                        foreach (var subTask in foundMethod.Methods)
+                        foreach (var subTask in foundMethod.Methods) // TODO: Replace with subtasks
                         {
                             tasksToProcess.Push(subTask);
                         }
