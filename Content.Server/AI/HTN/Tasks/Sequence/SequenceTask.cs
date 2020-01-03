@@ -10,13 +10,19 @@ namespace Content.Server.AI.HTN.Tasks.Sequence
     /// </summary>
     public abstract class SequenceTask : IAiTask
     {
+        public abstract string Name { get; }
         protected IEntity Owner { get; }
+
+        /// <summary>
+        /// These should be in reverse order and should be set by SetupSubTasks.
+        /// This is so the precondition can cache any values needed
+        /// </summary>
+        public IEnumerable<IAiTask> SubTasks { get; protected set; }
+
         public SequenceTask(IEntity owner)
         {
             Owner = owner;
         }
-
-        public abstract string Name { get; }
 
         public virtual bool PreconditionsMet(AiWorldState context)
         {
@@ -24,14 +30,9 @@ namespace Content.Server.AI.HTN.Tasks.Sequence
         }
 
         /// <summary>
-        /// This should instantiate the SubTasks for this sequence, remembering that they should be in reverse-order
+        /// This should instantiate the SubTasks for this sequence in reverse-order.
         /// </summary>
         /// <param name="context"></param>
         public abstract void SetupSubTasks(AiWorldState context);
-
-        /// <summary>
-        /// These should be in reverse order
-        /// </summary>
-        public IEnumerable<IAiTask> SubTasks { get; protected set; }
     }
 }

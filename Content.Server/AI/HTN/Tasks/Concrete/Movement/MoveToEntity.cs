@@ -1,7 +1,9 @@
+using Content.Server.AI.HTN.Tasks.Concrete.Operators.Movement;
+using Content.Server.AI.HTN.Tasks.Primitive;
 using Content.Server.AI.HTN.WorldState;
 using Robust.Shared.Interfaces.GameObjects;
 
-namespace Content.Server.AI.HTN.Tasks.Primitive.Movement
+namespace Content.Server.AI.HTN.Tasks.Concrete.Movement
 {
     public sealed class MoveToEntity : ConcreteTask
     {
@@ -14,13 +16,12 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Movement
 
         public override bool PreconditionsMet(AiWorldState context)
         {
-            // TODO: CanMove
-            return true;
+            return Owner.Transform.GridID == _target.Transform.GridID;
         }
 
         public override void SetupOperator()
         {
-            TaskOperator = new Operators.Movement.MoveToEntity(Owner, _target);
+            TaskOperator = new MoveToEntityOperator(Owner, _target);
         }
     }
 }

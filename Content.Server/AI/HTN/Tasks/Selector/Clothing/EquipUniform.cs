@@ -1,10 +1,10 @@
 using System.Collections.Generic;
-using Content.Server.AI.HTN.Tasks.Sequence.Clothing;
+using Content.Server.AI.HTN.Tasks.Compound;
 using Content.Server.AI.HTN.WorldState;
 using Content.Server.GameObjects;
 using Robust.Shared.Interfaces.GameObjects;
 
-namespace Content.Server.AI.HTN.Tasks.Compound.Clothing
+namespace Content.Server.AI.HTN.Tasks.Sequence.Clothing
 {
     public class EquipUniform : SelectorTask
     {

@@ -1,16 +1,18 @@
-using Content.Server.AI.HTN.Tasks.Primitive;
-using Content.Server.AI.HTN.Tasks.Primitive.Operators.Inventory;
+using Content.Server.AI.HTN.Tasks.Concrete.Inventory;
+using Content.Server.AI.HTN.Tasks.Concrete.Movement;
+using Content.Server.AI.HTN.Tasks.Primitive.Movement;
 using Content.Server.AI.HTN.WorldState;
 using Content.Server.AI.HTN.WorldState.States.Clothing;
+using Content.Server.AI.HTN.WorldState.States.Hands;
 using Content.Server.AI.HTN.WorldState.States.Inventory;
 using Content.Server.GameObjects;
 using Content.Shared.GameObjects.Components.Inventory;
 using Robust.Shared.Interfaces.GameObjects;
 
-namespace Content.Server.AI.HTN.Tasks.Concrete.Clothing
+namespace Content.Server.AI.HTN.Tasks.Sequence.Clothing
 {
     // TODO: Make Sequence
-    public class PickupNearbyClothing : ConcreteTask
+    public class PickupNearbyClothing : SequenceTask
     {
         private IEntity _nearestClothing;
         private EquipmentSlotDefines.Slots _slot;
@@ -18,6 +20,8 @@ namespace Content.Server.AI.HTN.Tasks.Concrete.Clothing
         {
             _slot = slot;
         }
+
+        public override string Name => "PickupNearbyClothing";
 
         public override bool PreconditionsMet(AiWorldState context)
         {
@@ -48,9 +52,13 @@ namespace Content.Server.AI.HTN.Tasks.Concrete.Clothing
 
         }
 
-        public override void SetupOperator()
+        public override void SetupSubTasks(AiWorldState context)
         {
-            TaskOperator = new PickupEntity(Owner, _nearestClothing);
+            SubTasks = new IAiTask[]
+            {
+                new PickupItem(Owner, _nearestClothing),
+                new MoveToEntity(Owner, _nearestClothing),
+            };
         }
     }
 }

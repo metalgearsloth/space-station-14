@@ -54,6 +54,7 @@ namespace Content.Server.GameObjects
 
         public void RemovedFromSlot()
         {
+            IsEquipped = false;
             foreach (var component in Owner.GetAllComponents<ISpriteRenderableComponent>())
             {
                 component.Visible = true;
@@ -62,6 +63,7 @@ namespace Content.Server.GameObjects
 
         public void EquippedToSlot()
         {
+            IsEquipped = true;
             foreach (var component in Owner.GetAllComponents<ISpriteRenderableComponent>())
             {
                 component.Visible = false;

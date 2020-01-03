@@ -1,13 +1,13 @@
 - type: entity
   save: false
-  name: Swarm boy
-  id: HumanMob_Swarm
+  name: Civilian
+  id: HumanMob_Civilian
   description: A miserable pile of secrets
   components:
   - type: Pathfinding
     cost: 5.0
   - type: AiController
-    logic: NPC
+    logic: Civilian
   - type: Hands
     hands:
     - left

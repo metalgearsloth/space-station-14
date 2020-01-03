@@ -45,6 +45,8 @@ namespace Content.Server.GameObjects.Components.Nutrition
             {ThirstThreshold.Dead, 0.0f},
         };
 
+        public event Action<ThirstThreshold> ThresholdChange;
+
         public override void ExposeData(ObjectSerializer serializer)
         {
             base.ExposeData(serializer);
@@ -53,6 +55,11 @@ namespace Content.Server.GameObjects.Components.Nutrition
 
         public void ThirstThresholdEffect(bool force = false)
         {
+            if (_currentThirstThreshold != _lastThirstThreshold)
+            {
+                ThresholdChange?.Invoke(_currentThirstThreshold);
+            }
+
             if (_currentThirstThreshold != _lastThirstThreshold || force) {
                 Logger.InfoS("thirst", $"Updating Thirst state for {Owner.Name}");
 

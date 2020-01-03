@@ -1,28 +1,32 @@
-using Content.Server.AI.HTN.Tasks.Primitive.Operators.Inventory;
+using Content.Server.AI.HTN.Tasks.Concrete.Inventory;
+using Content.Server.AI.HTN.Tasks.Concrete.Movement;
+using Content.Server.AI.HTN.Tasks.Primitive.Movement;
 using Content.Server.AI.HTN.WorldState;
 using Content.Server.AI.HTN.WorldState.States;
 using Content.Server.AI.HTN.WorldState.States.Combat;
 using Content.Server.GameObjects;
 using Robust.Shared.Interfaces.GameObjects;
 
-namespace Content.Server.AI.HTN.Tasks.Primitive.Combat
+namespace Content.Server.AI.HTN.Tasks.Sequence.Combat
 {
-    public sealed class PickupNearestLaserWeapon : ConcreteTask
+    public sealed class PickupNearestMeleeWeapon : SequenceTask
     {
         private IEntity _nearestWeapon;
-        public PickupNearestLaserWeapon(IEntity owner) : base(owner)
+        public PickupNearestMeleeWeapon(IEntity owner) : base(owner)
         {
 
         }
 
+        public override string Name => "PickupNearestMeleeWeapon";
+
         public override bool PreconditionsMet(AiWorldState context)
         {
-            var equippedWeapon = context.GetState<EquippedLaserWeapon>().GetValue();
+            var equippedWeapon = context.GetState<EquippedMeleeWeapon>().GetValue();
             if (equippedWeapon != null)
             {
                 return false;
             }
-            var nearbyWeapons = context.GetState<NearbyLaserWeapons>();
+            var nearbyWeapons = context.GetState<NearbyMeleeWeapons>();
 
             foreach (var entity in nearbyWeapons.GetValue())
             {
@@ -36,9 +40,13 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Combat
 
         }
 
-        public override void SetupOperator()
+        public override void SetupSubTasks(AiWorldState context)
         {
-            TaskOperator = new PickupEntity(Owner, _nearestWeapon);
+            SubTasks = new IAiTask[]
+            {
+                new PickupItem(Owner, _nearestWeapon),
+                new MoveToEntity(Owner, _nearestWeapon),
+            };
         }
     }
 }

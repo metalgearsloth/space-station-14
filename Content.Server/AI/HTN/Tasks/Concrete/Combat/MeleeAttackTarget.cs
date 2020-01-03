@@ -1,3 +1,4 @@
+using Content.Server.AI.HTN.Tasks.Concrete.Operators.Movement;
 using Content.Server.AI.HTN.Tasks.Primitive.Operators;
 using Content.Server.AI.HTN.Tasks.Primitive.Operators.Combat;
 using Content.Server.AI.HTN.Tasks.Primitive.Operators.Movement;
@@ -9,12 +10,12 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Combat
 {
     public class MeleeAttackTarget : ConcreteTask
     {
-        private MoveToEntity _movementHandler;
+        private MoveToEntityOperator _movementHandler;
         private IEntity _target;
         public MeleeAttackTarget(IEntity owner, IEntity target) : base(owner)
         {
             _target = target;
-            _movementHandler = new MoveToEntity(Owner, _target);
+            _movementHandler = new MoveToEntityOperator(Owner, _target);
         }
 
         public override bool PreconditionsMet(AiWorldState context)

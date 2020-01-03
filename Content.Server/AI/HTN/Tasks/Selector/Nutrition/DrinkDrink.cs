@@ -1,13 +1,12 @@
 using System.Collections.Generic;
-using Content.Server.AI.HTN.Tasks.Primitive.Inventory;
-using Content.Server.AI.HTN.Tasks.Primitive.Nutrition.Thirst;
-using Content.Server.AI.HTN.Tasks.Primitive.Operators.Inventory;
+using Content.Server.AI.HTN.Tasks.Compound;
+using Content.Server.AI.HTN.Tasks.Concrete.Nutrition.Thirst;
+using Content.Server.AI.HTN.Tasks.Sequence.Nutrition;
 using Content.Server.AI.HTN.WorldState;
-using Content.Server.AI.HTN.WorldState.States.Nutrition;
 using Content.Server.GameObjects.Components.Nutrition;
 using Robust.Shared.Interfaces.GameObjects;
 
-namespace Content.Server.AI.HTN.Tasks.Compound.Nutrition
+namespace Content.Server.AI.HTN.Tasks.Selector.Nutrition
 {
     public class DrinkDrink : SelectorTask
     {
@@ -27,7 +26,6 @@ namespace Content.Server.AI.HTN.Tasks.Compound.Nutrition
             {
                 new UseDrinkInInventory(Owner),
                 new PickupNearestDrink(Owner),
-                new ClearHands(Owner),
             };
         }
     }

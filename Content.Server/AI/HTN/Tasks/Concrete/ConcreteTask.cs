@@ -13,6 +13,8 @@ namespace Content.Server.AI.HTN.Tasks.Primitive
     /// </summary>
     public abstract class ConcreteTask : IAiTask
     {
+        public string Name { get; }
+
         /// <summary>
         /// Checks whether the primitive task can be run. Also sets up variables needed
         /// </summary>

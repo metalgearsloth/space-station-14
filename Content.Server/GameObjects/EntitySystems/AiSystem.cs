@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using Content.Server.AI.HTN;
-using Content.Server.AI.HTN.Agents;
+using Content.Server.AI.HTN.Agents.Group;
 using Content.Server.AI.HTN.Agents.Individual;
 using Content.Server.GameObjects.Components.Movement;
 using Content.Server.Interfaces.GameObjects.Components.Movement;
@@ -26,6 +25,9 @@ namespace Content.Server.GameObjects.EntitySystems
 #pragma warning restore 649
 
         private readonly Dictionary<string, Type> _processorTypes = new Dictionary<string, Type>();
+        private readonly List<GroupAiManager> _aiManagers = new List<GroupAiManager>();
+
+        public event Action<AiAgent> RequestAiManager;
 
         /// <inheritdoc />
         public override void Initialize()
@@ -44,11 +46,25 @@ namespace Content.Server.GameObjects.EntitySystems
                     _processorTypes.Add(att.SerializeName, processor);
                 }
             }
+
+            SetupAiManagers();
+        }
+
+        private void SetupAiManagers()
+        {
+            // TODO: Make Ai changeover between managers event-based
+            _aiManagers.Add(new CivilianAiGroupManager());
+
+            foreach (var manager in _aiManagers)
+            {
+                manager.Setup();
+            }
         }
 
         /// <inheritdoc />
         public override void Update(float frameTime)
         {
+
             var entities = EntityManager.GetEntities(EntityQuery);
             foreach (var entity in entities)
             {
@@ -61,6 +77,11 @@ namespace Content.Server.GameObjects.EntitySystems
                 ProcessorInitialize(aiComp);
 
                 var processor = aiComp.Processor;
+
+                if (processor.AiManager == null)
+                {
+                    RequestAiManager?.Invoke(processor);
+                }
 
                 processor.Update(frameTime);
             }

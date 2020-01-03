@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using Content.Server.AI.HTN.Tasks.Concrete.Operators.Inventory;
+using Content.Server.AI.HTN.Tasks.Primitive;
 using Content.Server.AI.HTN.Tasks.Primitive.Operators;
 using Content.Server.AI.HTN.Tasks.Primitive.Operators.Inventory;
 using Content.Server.AI.HTN.WorldState;
@@ -6,7 +8,7 @@ using Content.Server.GameObjects;
 using Content.Server.GameObjects.Components.Nutrition;
 using Robust.Shared.Interfaces.GameObjects;
 
-namespace Content.Server.AI.HTN.Tasks.Primitive.Nutrition.Thirst
+namespace Content.Server.AI.HTN.Tasks.Concrete.Nutrition.Thirst
 {
     public sealed class UseDrinkInInventory : ConcreteTask
     {

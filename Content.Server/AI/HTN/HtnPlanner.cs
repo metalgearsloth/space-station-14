@@ -45,6 +45,8 @@ namespace Content.Server.AI.HTN
             // Setup
             var blackboard = new PlanBlackboard(worldState);
 
+            // TODO: For states use Value and GetValue; Value is the transient Value which can be reset and GetValue is the true value
+
             foreach (var state in worldState.States)
             {
                 blackboard.RunningState.UpdateState(state);
@@ -53,16 +55,10 @@ namespace Content.Server.AI.HTN
             var tasksToProcess = new Stack<IAiTask>();
             tasksToProcess.Push(rootTask);
             var finalPlan = new Queue<ConcreteTask>();
-            var depth = -1; // TODO: This in decomposition logger
             var reset = false;
+            var methodIndex = -1;
 
             blackboard.Save(tasksToProcess, finalPlan, 0, null);
-
-            if (rootTask.GetType().IsSubclassOf(typeof(SelectorTask)))
-            {
-                var compoundRoot = (SelectorTask) rootTask;
-                compoundRoot.SetupMethods(blackboard.RunningState);
-            }
 
             // Decomposition logger
             // TODO: This shit still needs tweaking
@@ -70,7 +66,6 @@ namespace Content.Server.AI.HTN
             while (tasksToProcess.Count > 0 || reset)
             {
                 IAiTask currentTask;
-                int methodIndex;
                 if (reset)
                 {
                     blackboard.Reset();
@@ -86,20 +81,21 @@ namespace Content.Server.AI.HTN
                 }
                 else
                 {
+                    methodIndex++;
                     currentTask = tasksToProcess.Pop();
-                    methodIndex = 0;
                 }
 
                 switch (currentTask)
                 {
                     case SelectorTask compound:
-
                         if (!compound.PreconditionsMet(blackboard.RunningState))
                         {
                             continue;
                         }
                         // TODO: Need to reset and force this???
                         IAiTask foundMethod = null;
+
+                        compound.SetupMethods(blackboard.RunningState);
 
                         foreach (var method in compound.Methods.GetRange(methodIndex, compound.Methods.Count - methodIndex))
                         {
@@ -122,6 +118,7 @@ namespace Content.Server.AI.HTN
                     case SequenceTask sequence:
                         if (sequence.PreconditionsMet(blackboard.RunningState))
                         {
+                            sequence.SetupSubTasks(blackboard.RunningState);
                             foreach (var task in sequence.SubTasks)
                             {
                                 tasksToProcess.Push(task);
@@ -130,7 +127,6 @@ namespace Content.Server.AI.HTN
 
                         break;
                     case ConcreteTask primitive:
-                        // If conditions met
                         if (primitive.PreconditionsMet(blackboard.RunningState))
                         {
                             blackboard.ApplyEffects(primitive);
@@ -142,6 +138,8 @@ namespace Content.Server.AI.HTN
                             reset = true;
                         }
 
+                        break;
+                    case null: // This should only happen if the root task couldn't select anything
                         break;
                     default:
                         throw new InvalidOperationException();

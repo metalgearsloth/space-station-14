@@ -1,19 +1,24 @@
-using Content.Server.AI.HTN.Tasks.Primitive.Operators.Inventory;
+using Content.Server.AI.HTN.Tasks.Concrete.Inventory;
+using Content.Server.AI.HTN.Tasks.Concrete.Movement;
+using Content.Server.AI.HTN.Tasks.Primitive.Movement;
 using Content.Server.AI.HTN.WorldState;
+using Content.Server.AI.HTN.WorldState.States.Hands;
 using Content.Server.AI.HTN.WorldState.States.Inventory;
 using Content.Server.AI.HTN.WorldState.States.Nutrition;
 using Content.Server.GameObjects;
 using Robust.Shared.Interfaces.GameObjects;
 
-namespace Content.Server.AI.HTN.Tasks.Primitive.Nutrition.Thirst
+namespace Content.Server.AI.HTN.Tasks.Sequence.Nutrition
 {
-    public sealed class PickupNearestDrink : ConcreteTask
+    public sealed class PickupNearestDrink : SequenceTask
     {
         private IEntity _nearestDrink;
         public PickupNearestDrink(IEntity owner) : base(owner)
         {
 
         }
+
+        public override string Name => "PickupNearestDrink";
 
         public override bool PreconditionsMet(AiWorldState context)
         {
@@ -37,9 +42,14 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Nutrition.Thirst
 
         }
 
-        public override void SetupOperator()
+        public override void SetupSubTasks(AiWorldState context)
         {
-            TaskOperator = new PickupEntity(Owner, _nearestDrink);
+            SubTasks = new IAiTask[]
+            {
+                new PickupItem(Owner, _nearestDrink),
+                new DropHandItems(Owner),
+                new MoveToEntity(Owner, _nearestDrink),
+            };
         }
     }
 }

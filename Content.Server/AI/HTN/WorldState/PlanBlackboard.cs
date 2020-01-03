@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using Content.Server.AI.HTN.Tasks;
 using Content.Server.AI.HTN.Tasks.Compound;
 using Content.Server.AI.HTN.Tasks.Primitive;
-using Robust.Shared.Interfaces.GameObjects;
 
 namespace Content.Server.AI.HTN.WorldState
 {

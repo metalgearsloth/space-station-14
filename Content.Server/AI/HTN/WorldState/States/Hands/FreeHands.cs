@@ -3,7 +3,7 @@ using Content.Server.GameObjects;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Utility;
 
-namespace Content.Server.AI.HTN.WorldState.States.Inventory
+namespace Content.Server.AI.HTN.WorldState.States.Hands
 {
     public class FreeHands : IStateData
     {

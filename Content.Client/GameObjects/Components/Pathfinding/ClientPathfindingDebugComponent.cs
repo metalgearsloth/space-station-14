@@ -23,7 +23,7 @@ namespace Content.Client.GameObjects.Components.Pathfinding
     internal sealed class ClientPathfindingSharedComponent : SharedPathfindingComponent
     {
         private DebugPathfindingOverlay _overlay;
-        private float _routeDuration = 2.0f; // How long before we remove it from the overlay
+        private float _routeDuration = 4.0f; // How long before we remove it from the overlay
 
         public override void HandleMessage(ComponentMessage message, INetChannel netChannel = null, IComponent component = null)
         {

@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using Content.Server.AI.HTN.Tasks.Concrete.Clothing;
-using Content.Server.AI.HTN.Tasks.Primitive.Clothing;
 using Content.Server.AI.HTN.WorldState;
 using Content.Server.GameObjects;
 using Content.Shared.GameObjects.Components.Inventory;

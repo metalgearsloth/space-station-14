@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
+using Content.Server.AI.HTN.Agents.Group;
 using Content.Server.AI.HTN.Tasks;
-using Content.Server.AI.HTN.Tasks.Compound.Clothing;
-using Content.Server.AI.HTN.Tasks.Compound.Combat;
-using Content.Server.AI.HTN.Tasks.Compound.Nutrition;
 using Content.Server.AI.HTN.Tasks.Primitive;
 using Content.Server.AI.HTN.Tasks.Primitive.Operators;
 using Content.Server.AI.HTN.WorldState;
@@ -11,9 +9,10 @@ using Robust.Server.AI;
 
 namespace Content.Server.AI.HTN.Agents.Individual
 {
-    [AiLogicProcessor("NPC")]
     public class AiAgent : AiLogicProcessor
     {
+        public GroupAiManager AiManager { get; set; }
+
         public AiWorldState State { get; private set; }
         private HtnPlan? RunPlan { get; set; }
         private float PlanCooldown { get; } = 0.5f;
@@ -25,7 +24,10 @@ namespace Content.Server.AI.HTN.Agents.Individual
         private float MeleeAttackCooldown { get; } = 0.4f;
         private float _meleeAttackCooldownRemaining;
 
-        private readonly Stack<IAiTask> _rootTasks = new Stack<IAiTask>();
+        protected IReadOnlyCollection<IAiTask> RootTasks => _rootTasks;
+        private readonly List<IAiTask> _rootTasks = new List<IAiTask>();
+
+        public event Action<PlanUpdate> PlanStatus;
 
         private bool TryActiveTask(out ConcreteTask activeTask)
         {
@@ -39,14 +41,39 @@ namespace Content.Server.AI.HTN.Agents.Individual
         private bool TryActiveRootTask(out IAiTask rootTask)
         {
             rootTask = null;
-            if (_rootTasks.Count == 0)
+            foreach (var task in RootTasks)
             {
-                return false;
+                rootTask = task;
+                return true;
+            }
+            return false;
+
+        }
+
+        public void PushRootTaskToBack()
+        {
+            if (RootTasks.Count <= 1) return;
+
+            IAiTask rootTask = null;
+
+            foreach (var task in RootTasks)
+            {
+                rootTask = task;
+                break;
             }
 
-            rootTask = _rootTasks.Peek();
-            return true;
+            _rootTasks.Remove(rootTask);
+            AddRootTask(rootTask);
+        }
 
+        private IAiTask GetRootTask()
+        {
+            foreach (var task in RootTasks)
+            {
+                return task;
+            }
+
+            return null;
         }
 
         public override void Setup()
@@ -58,22 +85,40 @@ namespace Content.Server.AI.HTN.Agents.Individual
 
         protected virtual void SetupListeners()
         {
-            _rootTasks.Push(new EquipUniform(SelfEntity));
+            return;
+        }
+
+        public void AddRootTask(IAiTask rootTask)
+        {
+            foreach (var task in _rootTasks)
+            {
+                if (task.GetType() == rootTask.GetType())
+                {
+                    return;
+                }
+            }
+
+            _rootTasks.Add(rootTask);
         }
 
         /// <summary>
-        ///  Default plan handler
+        ///  Will try and remove the root task if present; won't throw if not found
         /// </summary>
         /// <param name="rootTask"></param>
-        /// <param name="planOutcome"></param>
-        protected virtual void HandlePlanOutcome(IAiTask rootTask, PlanOutcome planOutcome)
+        public void RemoveRootTask(Type rootTask)
         {
-            switch (rootTask)
+            IAiTask found = null;
+            foreach (var item in RootTasks)
             {
-                case null:
-                    return;
-                default:
-                    return;
+                if (item.GetType() != rootTask) continue;
+
+                found = item;
+                break;
+            }
+
+            if (found != null)
+            {
+                _rootTasks.Remove(found);
             }
         }
 
@@ -95,6 +140,10 @@ namespace Content.Server.AI.HTN.Agents.Individual
                 if (RunPlan?.PrimitiveTasks.Count > 0 && RunPlan.RootTask == activeRootTask) return;
 
                 RunPlan = HtnPlanner.GetPlan(State, activeRootTask);
+                if (RunPlan == null)
+                {
+                    PlanStatus?.Invoke(new PlanUpdate(this, activeRootTask, PlanOutcome.PlanningFailed));
+                }
 
                 return;
             }
@@ -138,20 +187,34 @@ namespace Content.Server.AI.HTN.Agents.Individual
                     RunPlan?.PrimitiveTasks.Dequeue();
                     if (RunPlan?.PrimitiveTasks.Count > 0) return;
                     // Plan success
-                    HandlePlanOutcome(RunPlan?.RootTask, PlanOutcome.Success);
-                    RunPlan = null;
+                    PlanStatus?.Invoke(new PlanUpdate(this, GetRootTask(), PlanOutcome.Success));
                     return;
                 case Outcome.Continuing:
                     return;
                 case Outcome.Failed:
                     RunPlan = null;
+                    PlanStatus?.Invoke(new PlanUpdate(this, GetRootTask(), PlanOutcome.PlanAborted));
                     return;
                 default:
                     throw new ArgumentOutOfRangeException();
             }
         }
 
-        protected enum PlanOutcome
+        public struct PlanUpdate
+        {
+            public AiAgent Agent { get; }
+            public IAiTask RootTask { get; }
+            public PlanOutcome Outcome { get; }
+
+            public PlanUpdate(AiAgent agent, IAiTask rootTask, PlanOutcome outcome)
+            {
+                Agent = agent;
+                RootTask = rootTask;
+                Outcome = outcome;
+            }
+        }
+
+        public enum PlanOutcome
         {
             PlanningFailed,
             PlanAborted,

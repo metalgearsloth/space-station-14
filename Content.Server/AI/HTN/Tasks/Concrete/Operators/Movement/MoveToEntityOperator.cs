@@ -1,11 +1,13 @@
+using Content.Server.AI.HTN.Tasks.Primitive.Operators;
+using Content.Server.AI.HTN.Tasks.Primitive.Operators.Movement;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Interfaces.Map;
 using Robust.Shared.IoC;
 using Robust.Shared.Map;
 
-namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Movement
+namespace Content.Server.AI.HTN.Tasks.Concrete.Operators.Movement
 {
-    public sealed class MoveToEntity : BaseMover
+    public sealed class MoveToEntityOperator : BaseMover
     {
         // Instance
         private GridCoordinates _lastTargetPosition;
@@ -14,7 +16,7 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Movement
         // Input
         public IEntity Target { get; set; }
 
-        public MoveToEntity(IEntity owner, IEntity target)
+        public MoveToEntityOperator(IEntity owner, IEntity target)
         {
             base.Setup(owner);
             Target = target;

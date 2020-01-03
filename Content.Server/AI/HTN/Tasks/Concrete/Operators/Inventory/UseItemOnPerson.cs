@@ -1,7 +1,8 @@
+using Content.Server.AI.HTN.Tasks.Primitive.Operators;
 using Content.Server.GameObjects;
 using Robust.Shared.Interfaces.GameObjects;
 
-namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Inventory
+namespace Content.Server.AI.HTN.Tasks.Concrete.Operators.Inventory
 {
     /// <summary>
     /// Will find the item in storage, put it in an active hand, then use it
@@ -24,6 +25,10 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Inventory
 
         public Outcome Execute(float frameTime)
         {
+            if (_target == null)
+            {
+                return Outcome.Failed;
+            }
             // TODO: Also have this check storage a la backpack etc.
             _owner.TryGetComponent(out HandsComponent hands);
             _target.TryGetComponent(out ItemComponent itemComponent);

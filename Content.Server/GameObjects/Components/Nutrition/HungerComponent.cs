@@ -45,7 +45,7 @@ namespace Content.Server.GameObjects.Components.Nutrition
             {HungerThreshold.Dead, 0.0f},
         };
 
-        private bool _cachedHungry = false;
+        public event Action<HungerThreshold> ThresholdChange;
 
         public override void ExposeData(ObjectSerializer serializer)
         {
@@ -55,6 +55,11 @@ namespace Content.Server.GameObjects.Components.Nutrition
 
         public void HungerThresholdEffect(bool force = false)
         {
+            if (_currentHungerThreshold != _lastHungerThreshold)
+            {
+                ThresholdChange?.Invoke(_currentHungerThreshold);
+            }
+
             if (_currentHungerThreshold != _lastHungerThreshold || force) {
                 Logger.InfoS("hunger", $"Updating hunger state for {Owner.Name}");
 

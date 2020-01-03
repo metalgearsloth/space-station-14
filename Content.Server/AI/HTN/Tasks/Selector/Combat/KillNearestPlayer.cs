@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Content.Server.AI.HTN.Tasks.Primitive.Combat;
+using Content.Server.AI.HTN.Tasks.Sequence.Combat;
 using Content.Server.AI.HTN.WorldState;
 using Content.Server.AI.HTN.WorldState.States;
 using Robust.Shared.Interfaces.GameObjects;

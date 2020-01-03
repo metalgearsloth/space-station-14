@@ -27,6 +27,8 @@ namespace Content.Server.AI.HTN.WorldState.States.Clothing
                 .GetNearestEntities(_owner.Transform.GridPosition, typeof(ClothingComponent), controller.VisionRadius)
                 .ToList())
             {
+                var itemComponent = result.GetComponent<ItemComponent>();
+                if (itemComponent.IsEquipped) continue;
                 yield return result;
             }
         }
