@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Content.Server.AI.HTN.WorldState.States.Nutrition;
 using Content.Server.GameObjects.Components.Movement;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Interfaces.Reflection;
@@ -9,9 +10,9 @@ namespace Content.Server.AI.HTN.WorldState
 {
     public sealed class AiWorldState
     {
-        public event Action<IStateData> StateUpdate;
-        public IReadOnlyCollection<IStateData> States => _states;
-        private List<IStateData> _states = new List<IStateData>();
+        public event Action<StateData> StateUpdate;
+        public IReadOnlyCollection<StateData> States => _states;
+        private List<StateData> _states = new List<StateData>();
         private HashSet<Type> _registeredStates = new HashSet<Type>();
 
         private IEntity _owner;
@@ -34,11 +35,11 @@ namespace Content.Server.AI.HTN.WorldState
         {
             _owner = owner;
             var typeFactory = IoCManager.Resolve<IDynamicTypeFactory>();
-            var states = IoCManager.Resolve<IReflectionManager>().GetAllChildren<IStateData>();
+            var states = IoCManager.Resolve<IReflectionManager>().GetAllChildren<StateData>();
             foreach (var state in states)
             {
                 _registeredStates.Add(state);
-                _states.Add((IStateData)typeFactory.CreateInstance(state));
+                _states.Add((StateData)typeFactory.CreateInstance(state));
             }
 
             foreach (var state in _states)
@@ -51,26 +52,23 @@ namespace Content.Server.AI.HTN.WorldState
         //  TODO: Have each update specify how frequently to update
         private void Update(float frameTime)
         {
-            // TODO: Look at having the states as classes that can mark themselves as dirty etc.
-            foreach (var state in _states)
-            {
-            }
+            var state = GetState<HungryState>();
         }
 
-        public T GetState<T>() where T : IStateData
+        public IStateData<T> GetState<T>() where T : IStateData<T>
         {
             foreach (var knownState in _states)
             {
                 if (knownState.GetType() == typeof(T))
                 {
-                    return (T) knownState;
+                    return (IStateData<T>) knownState;
                 }
             }
 
-            return default;
+            throw new InvalidOperationException();
         }
 
-        public void UpdateState(IStateData stateUpdate)
+        public void UpdateState(StateData stateUpdate)
         {
             bool found = false;
             int idx = 0;
@@ -97,7 +95,7 @@ namespace Content.Server.AI.HTN.WorldState
             StateUpdate?.Invoke(stateUpdate);
         }
 
-        public static void UpdateState(IEntity entity, IStateData state)
+        public static void UpdateState(IEntity entity, StateData state)
         {
             if (!entity.TryGetComponent(out AiControllerComponent controller))
             {

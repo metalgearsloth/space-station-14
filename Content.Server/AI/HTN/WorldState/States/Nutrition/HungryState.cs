@@ -4,20 +4,13 @@ using Robust.Shared.Interfaces.GameObjects;
 
 namespace Content.Server.AI.HTN.WorldState.States.Nutrition
 {
-    public class HungryState : IStateData
+    public sealed class HungryState : StateData<bool>
     {
-        public string Name => "Hungry";
+        public override string Name => "Hungry";
 
-        private IEntity _owner;
-        public void Setup(IEntity owner)
+        public override bool GetValue()
         {
-            _owner = owner;
-        }
-
-        public bool GetValue()
-        {
-            // TODO: Make this event driven and cache the value; this was just a shortcut
-            if (!_owner.TryGetComponent(out HungerComponent hungerComponent))
+            if (!Owner.TryGetComponent(out HungerComponent hungerComponent))
             {
                 return false;
             }

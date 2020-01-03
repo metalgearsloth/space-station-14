@@ -8,29 +8,22 @@ using Robust.Shared.Interfaces.GameObjects;
 
 namespace Content.Server.AI.HTN.WorldState.States.Combat
 {
-    public sealed class NearbyLaserChargers : IStateData
+    public sealed class NearbyLaserChargers : EnumerableStateData<IEntity>
     {
-        public string Name => "NearbyLaserChargers";
-        private IEntity _owner;
-        public void Setup(IEntity owner)
-        {
-            _owner = owner;
-        }
+        public override string Name => "NearbyLaserChargers";
 
-        public IEnumerable<IEntity> GetValue()
+        public override IEnumerable<IEntity> GetValue()
         {
-            if (!_owner.TryGetComponent(out AiControllerComponent controller))
+            if (!Owner.TryGetComponent(out AiControllerComponent controller))
             {
-                yield return null;
+                yield break;
             }
 
             foreach (var result in Visibility
-                .GetNearestEntities(_owner.Transform.GridPosition, typeof(WeaponCapacitorChargerComponent), controller.VisionRadius)
-                .ToList())
+                .GetNearestEntities(Owner.Transform.GridPosition, typeof(WeaponCapacitorChargerComponent), controller.VisionRadius))
             {
                 yield return result;
             }
-
         }
     }
 }

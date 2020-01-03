@@ -38,7 +38,7 @@ namespace Content.Server.AI.HTN.Tasks.Primitive
 
         public List<IAiTask> Methods => new List<IAiTask> {this};
 
-        public virtual HashSet<IStateData> ProceduralEffects { get; } = new HashSet<IStateData>();
+        public virtual HashSet<StateData> ProceduralEffects { get; } = new HashSet<StateData>();
 
         public abstract void SetupOperator();
 

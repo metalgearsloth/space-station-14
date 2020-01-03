@@ -5,27 +5,14 @@ using Robust.Shared.Interfaces.GameObjects;
 
 namespace Content.Server.AI.HTN.WorldState.States.Inventory
 {
-    public sealed class Inventory : IStateData
+    public sealed class Inventory : EnumerableStateData<IEntity>
     {
-        public string Name => "Inventory";
-        private IEntity _owner;
+        public override string Name => "Inventory";
 
-        public IEnumerable<IEntity> Value { get; set; }
-
-        public void Setup(IEntity owner)
-        {
-            _owner = owner;
-        }
-
-        public void Reset()
-        {
-            Value = GetValue();
-        }
-
-        public IEnumerable<IEntity> GetValue()
+        public override IEnumerable<IEntity> GetValue()
         {
 
-            if (_owner.TryGetComponent(out HandsComponent handsComponent))
+            if (Owner.TryGetComponent(out HandsComponent handsComponent))
             {
                 foreach (var item in handsComponent.GetAllHeldItems())
                 {
@@ -33,7 +20,7 @@ namespace Content.Server.AI.HTN.WorldState.States.Inventory
                 }
             }
 
-            if (_owner.TryGetComponent(out InventoryComponent inventoryComponent))
+            if (Owner.TryGetComponent(out InventoryComponent inventoryComponent))
             {
                 foreach (var slot in EquipmentSlotDefines.SlotNames)
                 {

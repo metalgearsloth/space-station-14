@@ -7,25 +7,14 @@ using Robust.Shared.Interfaces.GameObjects;
 
 namespace Content.Server.AI.HTN.WorldState.States.Nutrition
 {
-    public sealed class NearbyFood : IStateData
+    public sealed class NearbyFood : EnumerableStateData<IEntity>
     {
-        public string Name => "NearbyFood";
-        private IEntity _owner;
-        public void Setup(IEntity owner)
-        {
-            _owner = owner;
-        }
+        public override string Name => "NearbyFood";
 
-        public IEnumerable<IEntity> GetValue()
+        public override IEnumerable<IEntity> GetValue()
         {
-            if (!_owner.TryGetComponent(out AiControllerComponent controller))
-            {
-                yield return null;
-            }
-
             foreach (var result in Visibility
-                .GetNearestEntities(_owner.Transform.GridPosition, typeof(FoodComponent), controller.VisionRadius)
-                .ToList())
+                .GetNearestEntities(Owner.Transform.GridPosition, typeof(FoodComponent), Controller.VisionRadius))
             {
                 yield return result;
             }

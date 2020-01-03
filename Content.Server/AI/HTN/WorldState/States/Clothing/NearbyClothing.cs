@@ -7,25 +7,19 @@ using Robust.Shared.Interfaces.GameObjects;
 
 namespace Content.Server.AI.HTN.WorldState.States.Clothing
 {
-    public class NearbyClothing : IStateData
+    public class NearbyClothing : EnumerableStateData<IEntity>
     {
-        public string Name => "NearbyClothing";
-        private IEntity _owner;
-        public void Setup(IEntity owner)
-        {
-            _owner = owner;
-        }
+        public override string Name => "NearbyClothing";
 
-        public IEnumerable<IEntity> GetValue()
+        public override IEnumerable<IEntity> GetValue()
         {
-            if (!_owner.TryGetComponent(out AiControllerComponent controller))
+            if (!Owner.TryGetComponent(out AiControllerComponent controller))
             {
-                yield return null;
+                yield break;
             }
 
             foreach (var result in Visibility
-                .GetNearestEntities(_owner.Transform.GridPosition, typeof(ClothingComponent), controller.VisionRadius)
-                .ToList())
+                .GetNearestEntities(Owner.Transform.GridPosition, typeof(ClothingComponent), controller.VisionRadius))
             {
                 var itemComponent = result.GetComponent<ItemComponent>();
                 if (itemComponent.IsEquipped) continue;

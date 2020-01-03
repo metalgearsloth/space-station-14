@@ -1,32 +1,26 @@
-using System.Linq;
+using System.Collections.Generic;
 using Content.Server.GameObjects;
-using Robust.Shared.Interfaces.GameObjects;
-using Robust.Shared.Utility;
 
 namespace Content.Server.AI.HTN.WorldState.States.Hands
 {
-    public class FreeHands : IStateData
+    public sealed class FreeHands : EnumerableStateData<string>
     {
-        public string Name => "FreeHands";
-        private IEntity _owner;
-        public void Setup(IEntity owner)
-        {
-            _owner = owner;
-        }
+        public override string Name => "FreeHands";
 
-        public int GetValue()
+        public override IEnumerable<string> GetValue()
         {
-            if (!_owner.TryGetComponent(out HandsComponent handsComponent))
+            if (!Owner.TryGetComponent(out HandsComponent handsComponent))
             {
-                return 0;
+                yield break;
             }
 
-            var freeHands = handsComponent.ActivePriorityEnumerable().ToList().Count -
-                            handsComponent.GetAllHeldItems().ToList().Count;
-
-            DebugTools.Assert(freeHands > 0);
-
-            return freeHands;
+            foreach (var hand in handsComponent.ActivePriorityEnumerable())
+            {
+                if (handsComponent.GetHand(hand) == null)
+                {
+                    yield return hand;
+                }
+            }
         }
     }
 }

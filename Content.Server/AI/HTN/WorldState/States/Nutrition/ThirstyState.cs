@@ -5,20 +5,13 @@ using ThirstComponent = Content.Server.GameObjects.Components.Nutrition.ThirstCo
 
 namespace Content.Server.AI.HTN.WorldState.States.Nutrition
 {
-    public class ThirstyState : IStateData
+    public class ThirstyState : StateData<bool>
     {
-        public string Name => "Thirsty";
+        public override string Name => "Thirsty";
 
-        private IEntity _owner;
-        public void Setup(IEntity owner)
+        public override bool GetValue()
         {
-            _owner = owner;
-        }
-
-        public bool GetValue()
-        {
-            // TODO: Make this event driven and cache the value; this was just a shortcut
-            if (!_owner.TryGetComponent(out ThirstComponent thirstComponent))
+            if (!Owner.TryGetComponent(out ThirstComponent thirstComponent))
             {
                 return false;
             }

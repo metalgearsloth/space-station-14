@@ -4,26 +4,25 @@ using Robust.Shared.Interfaces.GameObjects;
 
 namespace Content.Server.AI.HTN.WorldState.States.Hands
 {
-    public class HandItems : IStateData
+    public sealed class HeldItems : EnumerableStateData<IEntity>
     {
-        public string Name => "HandItems";
-        public IEnumerable<IEntity> Value { get; set; }
-        private IEntity _owner;
-        public void Setup(IEntity owner)
-        {
-            _owner = owner;
-        }
+        public override string Name => "HeldItems";
 
-        public IEnumerable<IEntity> GetValue()
+        public override IEnumerable<IEntity> GetValue()
         {
-            if (!_owner.TryGetComponent(out HandsComponent handsComponent))
+            if (!Owner.TryGetComponent(out HandsComponent handsComponent))
             {
                 yield break;
             }
 
-            foreach (var item in handsComponent.GetAllHeldItems())
+            foreach (var hand in handsComponent.ActivePriorityEnumerable())
             {
-                yield return item.Owner;
+                var heldItem = handsComponent.GetHand(hand);
+
+                if (heldItem != null)
+                {
+                    yield return heldItem.Owner;
+                }
             }
         }
     }

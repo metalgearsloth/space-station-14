@@ -4,18 +4,13 @@ using Robust.Shared.Interfaces.GameObjects;
 
 namespace Content.Server.AI.HTN.WorldState.States.Combat
 {
-    public sealed class EquippedLaserWeapon : IStateData
+    public sealed class EquippedLaserWeapon : StateData<HitscanWeaponComponent>
     {
-        public string Name => "EquippedLaserWeapon";
-        private IEntity _owner;
-        public void Setup(IEntity owner)
-        {
-            _owner = owner;
-        }
+        public override string Name => "EquippedLaserWeapon";
 
-        public HitscanWeaponComponent GetValue()
+        public override HitscanWeaponComponent GetValue()
         {
-            if (!_owner.TryGetComponent(out HandsComponent handsComponent))
+            if (!Owner.TryGetComponent(out HandsComponent handsComponent))
             {
                 return null;
             }

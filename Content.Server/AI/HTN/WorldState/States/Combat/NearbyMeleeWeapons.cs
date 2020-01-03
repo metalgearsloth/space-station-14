@@ -7,25 +7,19 @@ using Robust.Shared.Interfaces.GameObjects;
 
 namespace Content.Server.AI.HTN.WorldState.States.Combat
 {
-    public sealed class NearbyMeleeWeapons : IStateData
+    public sealed class NearbyMeleeWeapons : EnumerableStateData<IEntity>
     {
-        public string Name => "NearbyMeleeWeapons";
-        private IEntity _owner;
-        public void Setup(IEntity owner)
-        {
-            _owner = owner;
-        }
+        public override string Name => "NearbyMeleeWeapons";
 
-        public IEnumerable<IEntity> GetValue()
+        public override IEnumerable<IEntity> GetValue()
         {
-            if (!_owner.TryGetComponent(out AiControllerComponent controller))
+            if (!Owner.TryGetComponent(out AiControllerComponent controller))
             {
-                yield return null;
+                yield break;
             }
 
             foreach (var result in Visibility
-                .GetNearestEntities(_owner.Transform.GridPosition, typeof(MeleeWeaponComponent), controller.VisionRadius)
-                .ToList())
+                .GetNearestEntities(Owner.Transform.GridPosition, typeof(MeleeWeaponComponent), controller.VisionRadius))
             {
                 yield return result;
             }

@@ -42,7 +42,7 @@ namespace Content.Server.AI.HTN.Tasks.Concrete.Nutrition.Hunger
             return false;
         }
 
-        public override HashSet<IStateData> ProceduralEffects => new HashSet<IStateData>
+        public override HashSet<StateData> ProceduralEffects => new HashSet<StateData>
         {
             // new HungryState(false)
         };
