@@ -47,11 +47,6 @@ namespace Content.Server.AI.HTN
 
             // TODO: For states use Value and GetValue; Value is the transient Value which can be reset and GetValue is the true value
 
-            foreach (var state in worldState.States)
-            {
-                blackboard.RunningState.UpdateState(state);
-            }
-
             var tasksToProcess = new Stack<IAiTask>();
             tasksToProcess.Push(rootTask);
             var finalPlan = new Queue<ConcreteTask>();
@@ -129,7 +124,7 @@ namespace Content.Server.AI.HTN
                     case ConcreteTask primitive:
                         if (primitive.PreconditionsMet(blackboard.RunningState))
                         {
-                            blackboard.ApplyEffects(primitive);
+                            primitive.ProceduralEffects(blackboard.RunningState);
                             finalPlan.Enqueue(primitive);
                         }
                         else

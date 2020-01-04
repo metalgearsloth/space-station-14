@@ -93,7 +93,7 @@ namespace Content.Server.AI.HTN.Agents.Group
 
             if (agent.SelfEntity.HasComponent<InventoryComponent>())
             {
-                agent.AddRootTask(new EquipUniform(agent.SelfEntity));
+                // agent.AddRootTask(new EquipUniform(agent.SelfEntity));
             }
         }
 

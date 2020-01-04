@@ -4,11 +4,12 @@ using Robust.Shared.Interfaces.GameObjects;
 
 namespace Content.Server.AI.HTN.WorldState.States.Nutrition
 {
-    public sealed class HungryState : StateData<bool>
+    [AiState]
+    public sealed class HungryState : StateData<bool?>
     {
         public override string Name => "Hungry";
 
-        public override bool GetValue()
+        public override bool? GetValue()
         {
             if (!Owner.TryGetComponent(out HungerComponent hungerComponent))
             {

@@ -4,12 +4,14 @@ using Robust.Shared.Interfaces.GameObjects;
 
 namespace Content.Server.AI.HTN.WorldState.States
 {
+    [AiState]
     public sealed class EquippedMeleeWeapon : StateData<MeleeWeaponComponent>
     {
         public override string Name => "EquippedMeleeWeapon";
 
         public override MeleeWeaponComponent GetValue()
         {
+
             if (!Owner.TryGetComponent(out HandsComponent handsComponent))
             {
                 return null;

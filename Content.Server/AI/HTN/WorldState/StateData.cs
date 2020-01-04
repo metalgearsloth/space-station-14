@@ -1,50 +1,95 @@
 using System;
 using System.Collections.Generic;
-using Content.Server.GameObjects.Components.Movement;
 using Robust.Shared.Interfaces.GameObjects;
 
 namespace Content.Server.AI.HTN.WorldState
 {
-    public interface IStateData<T>
+    public interface IAiState
     {
-        T GetValue();
+        Type FuckGenerics { get; }
+        object Value { get; set; }
+        void Setup(IEntity owner);
     }
 
-    public abstract class StateData<T> : IStateData<T>
+    public interface IAiEnumerableState
+    {
+    }
+
+    public interface IRRetarded
+    {
+        Type NotAType { get; }
+    }
+
+    public abstract class StateData<T>
     {
         public abstract string Name { get; }
-        public IEntity Owner { get; private set; }
-        protected AiControllerComponent Controller;
+        protected IEntity Owner { get; private set; }
+
+        public T Value
+        {
+            get
+            {
+                if (_value == null)
+                {
+                    _value = GetValue();
+                }
+
+                return _value;
+            }
+            set => _value = value;
+        }
+
+        private T _value;
 
         public void Setup(IEntity owner)
         {
             Owner = owner;
-            if (!Owner.TryGetComponent(out AiControllerComponent controllerComponent))
-            {
-                throw new InvalidOperationException();
-            }
+        }
 
-            Controller = controllerComponent;
+        protected void Reset()
+        {
+            Value = default;
         }
 
         public abstract T GetValue();
     }
 
-    public abstract class EnumerableStateData<T>
+    public abstract class EnumerableStateData<T> : IAiEnumerableState
     {
         public abstract string Name { get; }
-        public IEntity Owner { get; private set; }
-        protected AiControllerComponent Controller;
+        protected IEntity Owner { get; private set; }
 
-        public void Setup(IEntity owner)
+        public virtual void Setup(IEntity owner)
         {
             Owner = owner;
-            if (!Owner.TryGetComponent(out AiControllerComponent controllerComponent))
-            {
-                throw new InvalidOperationException();
-            }
+        }
 
-            Controller = controllerComponent;
+        public IEnumerable<T> Value
+        {
+            get
+            {
+                if (_value == null)
+                {
+                    foreach (var item in GetValue())
+                    {
+                        yield return item;
+                    }
+                    yield break;
+                }
+
+                foreach (var item in _value)
+                {
+                    yield return item;
+                }
+            }
+            protected set => _value = value;
+        }
+
+        private IEnumerable<T> _value;
+
+        protected void Reset()
+        {
+            Value = default;
         }
 
         public abstract IEnumerable<T> GetValue();

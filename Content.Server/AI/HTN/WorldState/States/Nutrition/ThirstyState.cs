@@ -5,11 +5,12 @@ using ThirstComponent = Content.Server.GameObjects.Components.Nutrition.ThirstCo
 
 namespace Content.Server.AI.HTN.WorldState.States.Nutrition
 {
-    public class ThirstyState : StateData<bool>
+    [AiState]
+    public class ThirstyState : StateData<bool?>
     {
         public override string Name => "Thirsty";
 
-        public override bool GetValue()
+        public override bool? GetValue()
         {
             if (!Owner.TryGetComponent(out ThirstComponent thirstComponent))
             {

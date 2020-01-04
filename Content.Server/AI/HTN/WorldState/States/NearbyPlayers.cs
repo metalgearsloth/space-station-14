@@ -8,14 +8,20 @@ using Robust.Shared.IoC;
 
 namespace Content.Server.AI.HTN.WorldState.States
 {
+    [AiEnumerableState]
     public class NearbyPlayers : EnumerableStateData<IEntity>
     {
         public override string Name => "NearbyPlayers";
 
         public override IEnumerable<IEntity> GetValue()
         {
+            if (!Owner.TryGetComponent(out AiControllerComponent controller))
+            {
+                yield break;
+            }
+
             var playerManager = IoCManager.Resolve<IPlayerManager>();
-            var nearbyPlayers = playerManager.GetPlayersInRange(Owner.Transform.GridPosition, (int) Controller.VisionRadius);
+            var nearbyPlayers = playerManager.GetPlayersInRange(Owner.Transform.GridPosition, (int) controller.VisionRadius);
 
             foreach (var player in nearbyPlayers)
             {

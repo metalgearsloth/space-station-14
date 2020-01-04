@@ -5,13 +5,12 @@ using Robust.Shared.Interfaces.GameObjects;
 
 namespace Content.Server.AI.HTN.WorldState.States.Inventory
 {
-    public sealed class Inventory : EnumerableStateData<IEntity>
+    public sealed class InventoryState : EnumerableStateData<IEntity>
     {
         public override string Name => "Inventory";
 
         public override IEnumerable<IEntity> GetValue()
         {
-
             if (Owner.TryGetComponent(out HandsComponent handsComponent))
             {
                 foreach (var item in handsComponent.GetAllHeldItems())

@@ -25,7 +25,7 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Combat
             {
                 return false;
             }
-            var equippedWeapon = context.GetState<EquippedMeleeWeapon>().GetValue();
+            var equippedWeapon = context.GetStateValue<EquippedMeleeWeapon, MeleeWeaponComponent>();
             if (equippedWeapon == null) return false;
             _meleeWeapon = equippedWeapon;
             return true;

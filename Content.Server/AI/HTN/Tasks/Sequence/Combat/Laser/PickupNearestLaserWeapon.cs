@@ -4,6 +4,7 @@ using Content.Server.AI.HTN.Tasks.Primitive.Movement;
 using Content.Server.AI.HTN.WorldState;
 using Content.Server.AI.HTN.WorldState.States.Combat;
 using Content.Server.GameObjects;
+using Content.Server.GameObjects.Components.Weapon.Ranged.Hitscan;
 using Robust.Shared.Interfaces.GameObjects;
 
 namespace Content.Server.AI.HTN.Tasks.Sequence.Combat.Laser
@@ -20,14 +21,13 @@ namespace Content.Server.AI.HTN.Tasks.Sequence.Combat.Laser
 
         public override bool PreconditionsMet(AiWorldState context)
         {
-            var equippedWeapon = context.GetState<EquippedLaserWeapon>().GetValue();
+            var equippedWeapon = context.GetStateValue<EquippedLaserWeapon, HitscanWeaponComponent>();
             if (equippedWeapon != null)
             {
                 return false;
             }
-            var nearbyWeapons = context.GetState<NearbyLaserWeapons>();
 
-            foreach (var entity in nearbyWeapons.GetValue())
+            foreach (var entity in context.GetEnumerableStateValue<NearbyLaserWeapons, IEntity>())
             {
                 // If someone already has it then skip
                 if (!entity.TryGetComponent(out ItemComponent itemComponent) || itemComponent.IsEquipped) continue;

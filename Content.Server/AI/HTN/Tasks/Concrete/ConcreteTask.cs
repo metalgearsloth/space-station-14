@@ -38,7 +38,12 @@ namespace Content.Server.AI.HTN.Tasks.Primitive
 
         public List<IAiTask> Methods => new List<IAiTask> {this};
 
-        public virtual HashSet<StateData> ProceduralEffects { get; } = new HashSet<StateData>();
+        /// <summary>
+        ///  Apply the outcome of this task to the worldstate e.g. 1 less free hand, no longer hungry, etc.
+        /// For planning purposes only so it doesn't need to actually reflect reality.
+        /// </summary>
+        /// <param name="context"></param>
+        public virtual void ProceduralEffects(in AiWorldState context) {}
 
         public abstract void SetupOperator();
 

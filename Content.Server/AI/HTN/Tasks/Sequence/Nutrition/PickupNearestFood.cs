@@ -22,15 +22,20 @@ namespace Content.Server.AI.HTN.Tasks.Sequence.Nutrition
 
         public override bool PreconditionsMet(AiWorldState context)
         {
-            var nearbyFood = context.GetState<NearbyFood>();
-            var freeHands = context.GetState<FreeHands>();
+            bool freeHand = false;
 
-            if (freeHands.GetValue() == 0)
+            foreach (var hand in context.GetEnumerableStateValue<FreeHands, string>())
+            {
+                freeHand = true;
+                break;
+            }
+
+            if (!freeHand)
             {
                 return false;
             }
 
-            foreach (var entity in nearbyFood.GetValue())
+            foreach (var entity in context.GetEnumerableStateValue<NearbyFood, IEntity>())
             {
                 // If someone already has it then skip
                 if (!entity.TryGetComponent(out ItemComponent itemComponent) || itemComponent.IsEquipped) continue;

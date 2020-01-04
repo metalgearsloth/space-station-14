@@ -1,10 +1,10 @@
-using System.Collections.Generic;
 using Content.Server.AI.HTN.Tasks.Concrete.Operators.Movement;
+using Content.Server.AI.HTN.Tasks.Primitive;
 using Content.Server.AI.HTN.WorldState;
 using Content.Server.AI.HTN.WorldState.States;
 using Robust.Shared.Interfaces.GameObjects;
 
-namespace Content.Server.AI.HTN.Tasks.Primitive.Movement
+namespace Content.Server.AI.HTN.Tasks.Concrete.Movement
 {
     public sealed class MoveToNearestPlayer : ConcreteTask
     {
@@ -18,8 +18,7 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Movement
         public override bool PreconditionsMet(AiWorldState context)
         {
             // TODO: CanMove
-            var nearbyPlayers = context.GetState<NearbyPlayers>();
-            foreach (var entity in nearbyPlayers.GetValue())
+            foreach (var entity in context.GetEnumerableStateValue<NearbyPlayers, IEntity>())
             {
                 _nearestPlayer = entity;
                 return true;

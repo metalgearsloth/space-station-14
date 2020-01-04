@@ -19,14 +19,6 @@ namespace Content.Server.AI.HTN.WorldState
             RunningState = worldState;
         }
 
-        public void ApplyEffects(ConcreteTask task)
-        {
-            foreach (var effect in task.ProceduralEffects)
-            {
-                RunningState.UpdateState(effect);
-            }
-        }
-
         public void Save(Stack<IAiTask> tasksToProcess, Queue<ConcreteTask> finalPlan, int method, SelectorTask owningTask)
         {
             _decompositionHistory.Push(new Decomposition(tasksToProcess, finalPlan, method, owningTask, RunningState));

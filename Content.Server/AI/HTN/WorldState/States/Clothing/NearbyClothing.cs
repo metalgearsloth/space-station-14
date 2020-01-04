@@ -26,6 +26,5 @@ namespace Content.Server.AI.HTN.WorldState.States.Clothing
                 yield return result;
             }
         }
-
     }
 }

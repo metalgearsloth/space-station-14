@@ -21,7 +21,7 @@ namespace Content.Server.AI.HTN.Tasks.Sequence.Combat.Laser
         public override bool PreconditionsMet(AiWorldState context)
         {
 
-            foreach (var charger in context.GetState<NearbyLaserChargers>().GetValue())
+            foreach (var charger in context.GetEnumerableStateValue<NearbyLaserChargers, IEntity>())
             {
                 _laserCharger = charger;
                 return true;

@@ -1,11 +1,12 @@
 using System.Collections.Generic;
+using Content.Server.AI.HTN.Tasks.Compound;
 using Content.Server.AI.HTN.Tasks.Primitive.Combat;
 using Content.Server.AI.HTN.Tasks.Sequence.Combat;
 using Content.Server.AI.HTN.WorldState;
 using Content.Server.AI.HTN.WorldState.States;
 using Robust.Shared.Interfaces.GameObjects;
 
-namespace Content.Server.AI.HTN.Tasks.Compound.Combat
+namespace Content.Server.AI.HTN.Tasks.Selector.Combat
 {
     public class KillNearestPlayer : SelectorTask
     {
@@ -17,8 +18,7 @@ namespace Content.Server.AI.HTN.Tasks.Compound.Combat
         public override string Name => "MeleeAttackNearestPlayer";
         public override bool PreconditionsMet(AiWorldState context)
         {
-            var nearbyPlayers = context.GetState<NearbyPlayers>();
-            foreach (var entity in nearbyPlayers.GetValue())
+            foreach (var entity in context.GetEnumerableStateValue<NearbyPlayers, IEntity>())
             {
                 _nearestPlayer = entity;
                 break;

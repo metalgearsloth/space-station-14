@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Content.Server.AI.HTN.Tasks.Concrete.Inventory;
 using Content.Server.AI.HTN.Tasks.Concrete.Movement;
 using Content.Server.AI.HTN.Tasks.Primitive.Movement;
@@ -25,15 +26,20 @@ namespace Content.Server.AI.HTN.Tasks.Sequence.Clothing
 
         public override bool PreconditionsMet(AiWorldState context)
         {
-            var nearbyClothing = context.GetState<NearbyClothing>();
-            var freeHands = context.GetState<FreeHands>();
+            bool freeHand = false;
 
-            if (freeHands.GetValue() == 0)
+            foreach (var hand in context.GetEnumerableStateValue<FreeHands, string>())
+            {
+                freeHand = true;
+                break;
+            }
+
+            if (!freeHand)
             {
                 return false;
             }
 
-            foreach (var entity in nearbyClothing.GetValue())
+            foreach (var entity in context.GetEnumerableStateValue<NearbyClothing, IEntity>())
             {
                 // If someone already has it / not clothing / wrong slot
                 if (!entity.TryGetComponent(out ItemComponent itemComponent) || itemComponent.IsEquipped) continue;

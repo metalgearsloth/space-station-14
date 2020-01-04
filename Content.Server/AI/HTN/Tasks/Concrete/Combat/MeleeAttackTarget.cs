@@ -4,6 +4,7 @@ using Content.Server.AI.HTN.Tasks.Primitive.Operators.Combat;
 using Content.Server.AI.HTN.Tasks.Primitive.Operators.Movement;
 using Content.Server.AI.HTN.WorldState;
 using Content.Server.AI.HTN.WorldState.States;
+using Content.Server.GameObjects.Components.Weapon.Melee;
 using Robust.Shared.Interfaces.GameObjects;
 
 namespace Content.Server.AI.HTN.Tasks.Primitive.Combat
@@ -20,7 +21,7 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Combat
 
         public override bool PreconditionsMet(AiWorldState context)
         {
-            var equippedWeapon = context.GetState<EquippedMeleeWeapon>().GetValue();
+            var equippedWeapon = context.GetStateValue<EquippedMeleeWeapon, MeleeWeaponComponent>();
             return equippedWeapon != null;
         }
 

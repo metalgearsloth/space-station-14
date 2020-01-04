@@ -5,22 +5,14 @@ using Robust.Shared.Interfaces.GameObjects;
 
 namespace Content.Server.AI.HTN.WorldState.States.Clothing
 {
-    public class EquippedSlots
+    public class EquippedSlots : EnumerableStateData<EquipmentSlotDefines.Slots>
     {
-        public string Name => "EquippedSlots";
-        private IEntity _owner;
+        public override string Name => "EquippedSlots";
 
-        public IEnumerable<EquipmentSlotDefines.Slots> Value { get; set; }
-
-        public void Setup(IEntity owner)
-        {
-            _owner = owner;
-        }
-
-        public IEnumerable<EquipmentSlotDefines.Slots> GetValue()
+        public override IEnumerable<EquipmentSlotDefines.Slots> GetValue()
         {
 
-            if (!_owner.TryGetComponent(out InventoryComponent inventoryComponent)) yield break;
+            if (!Owner.TryGetComponent(out InventoryComponent inventoryComponent)) yield break;
 
             foreach (var slot in EquipmentSlotDefines.SlotNames)
             {

@@ -1,8 +1,10 @@
 using System.Collections.Generic;
 using Content.Server.GameObjects;
+using Robust.Shared.Interfaces.GameObjects;
 
 namespace Content.Server.AI.HTN.WorldState.States.Hands
 {
+    [AiEnumerableState]
     public sealed class FreeHands : EnumerableStateData<string>
     {
         public override string Name => "FreeHands";
