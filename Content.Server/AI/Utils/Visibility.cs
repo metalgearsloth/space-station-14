@@ -53,7 +53,7 @@ namespace Content.Server.AI.Utils
             foreach (var entity in GetNearestEntities(grid, typeof(ClothingComponent), range))
             {
                 entity.TryGetComponent(out ClothingComponent clothingComponent);
-                if ((clothingComponent.SlotFlags & EquipmentSlotDefines.SlotMasks[slot]) == 0)
+                if ((clothingComponent.SlotFlags & EquipmentSlotDefines.SlotMasks[slot]) != 0)
                 {
                     yield return entity;
                 }

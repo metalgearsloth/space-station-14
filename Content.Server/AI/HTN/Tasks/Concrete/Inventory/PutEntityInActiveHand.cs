@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Content.Server.AI.HTN.Tasks.Concrete.Operators.Inventory;
 using Content.Server.AI.HTN.Tasks.Primitive;
 using Content.Server.AI.HTN.WorldState;
@@ -17,7 +18,7 @@ namespace Content.Server.AI.HTN.Tasks.Concrete.Inventory
 
         public override bool PreconditionsMet(AiWorldState context)
         {
-            foreach (var item in context.GetEnumerableStateValue<InventoryState, IEntity>())
+            foreach (var item in context.GetStateValue<InventoryState, List<IEntity>>())
             {
                 if (item == _target)
                 {

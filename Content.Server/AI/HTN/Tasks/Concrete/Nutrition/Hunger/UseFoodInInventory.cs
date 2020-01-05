@@ -22,7 +22,7 @@ namespace Content.Server.AI.HTN.Tasks.Concrete.Nutrition.Hunger
 
         public override bool PreconditionsMet(AiWorldState context)
         {
-            foreach (var item in context.GetEnumerableStateValue<InventoryState, IEntity>())
+            foreach (var item in context.GetStateValue<InventoryState, List<IEntity>>())
             {
                 if (item.HasComponent<FoodComponent>())
                 {

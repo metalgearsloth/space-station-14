@@ -20,7 +20,7 @@ namespace Content.Client.GameObjects.Components.Pathfinding
 {
     // Component to receive the route data and an overlay to show it
     [RegisterComponent]
-    internal sealed class ClientPathfindingSharedComponent : SharedPathfindingComponent
+    internal sealed class ClientPathfindingDebugSharedComponent : SharedPathfindingDebugComponent
     {
         private DebugPathfindingOverlay _overlay;
         private float _routeDuration = 4.0f; // How long before we remove it from the overlay
@@ -36,12 +36,19 @@ namespace Content.Client.GameObjects.Components.Pathfinding
             }
         }
 
-        public override void Initialize()
+        public override void OnAdd()
         {
-            base.Initialize();
+            base.OnAdd();
             var overlayManager = IoCManager.Resolve<IOverlayManager>();
             _overlay = new DebugPathfindingOverlay();
             overlayManager.AddOverlay(_overlay);
+        }
+
+        public override void OnRemove()
+        {
+            base.OnRemove();
+            var overlaymanager = IoCManager.Resolve<IOverlayManager>();
+            overlaymanager.RemoveOverlay(nameof(DebugPathfindingOverlay));
         }
 
         private void ReceivedRoute(PathfindingRoute route)

@@ -52,7 +52,6 @@ namespace Content.Server.GameObjects.EntitySystems
 
         private void SetupAiManagers()
         {
-            // TODO: Make Ai changeover between managers event-based
             _aiManagers.Add(new CivilianAiGroupManager());
 
             foreach (var manager in _aiManagers)

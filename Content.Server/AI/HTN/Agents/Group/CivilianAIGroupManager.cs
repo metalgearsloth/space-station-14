@@ -1,6 +1,7 @@
 using System;
 using System.Reflection;
 using Content.Server.AI.HTN.Agents.Individual;
+using Content.Server.AI.HTN.Tasks.Selector.Clothing;
 using Content.Server.AI.HTN.Tasks.Selector.Nutrition;
 using Content.Server.AI.HTN.Tasks.Sequence.Clothing;
 using Content.Server.GameObjects;
@@ -45,25 +46,28 @@ namespace Content.Server.AI.HTN.Agents.Group
         /// <inheritdoc />
         protected override void HandlePlanOutcome(AiAgent.PlanUpdate update)
         {
+            var taskType = update.Task.GetType();
+
             switch (update.Outcome)
             {
                 case AiAgent.PlanOutcome.PlanningFailed:
                 {
-                    switch (update.RootTask)
+                    switch (update.Task)
                     {
-                        case EatFood _:
-                            update.Agent.PushRootTaskToBack();
-                            break;
-                        case DrinkDrink _:
-                            update.Agent.PushRootTaskToBack();
-                            break;
                         default:
+                            update.Agent.DeprioritiseRootTask(taskType);
                             break;
                     }
                     break;
                 }
 
                 case AiAgent.PlanOutcome.PlanAborted:
+                    switch (update.Task)
+                    {
+                        default:
+                            update.Agent.DeprioritiseRootTask(taskType);
+                            break;
+                    }
                     break;
                 case AiAgent.PlanOutcome.Continuing:
                     break;
@@ -93,7 +97,7 @@ namespace Content.Server.AI.HTN.Agents.Group
 
             if (agent.SelfEntity.HasComponent<InventoryComponent>())
             {
-                // agent.AddRootTask(new EquipUniform(agent.SelfEntity));
+                agent.AddRootTask(AiAgent.RootTaskPriority.Normal, new EquipUniform(agent.SelfEntity));
             }
         }
 
@@ -108,10 +112,10 @@ namespace Content.Server.AI.HTN.Agents.Group
                     agent.RemoveRootTask(typeof(EatFood));
                     break;
                 case HungerThreshold.Peckish:
-                    agent.AddRootTask(new EatFood(agent.SelfEntity));
+                    agent.AddRootTask(AiAgent.RootTaskPriority.Normal, new EatFood(agent.SelfEntity));
                     break;
                 case HungerThreshold.Starving:
-                    agent.AddRootTask(new EatFood(agent.SelfEntity));
+                    agent.AddRootTask(AiAgent.RootTaskPriority.High, new EatFood(agent.SelfEntity));
                     break;
                 case HungerThreshold.Dead:
                     agent.RemoveRootTask(typeof(EatFood));
@@ -132,10 +136,10 @@ namespace Content.Server.AI.HTN.Agents.Group
                     agent.RemoveRootTask(typeof(DrinkDrink));
                     break;
                 case ThirstThreshold.Thirsty:
-                    agent.AddRootTask(new DrinkDrink(agent.SelfEntity));
+                    agent.AddRootTask(AiAgent.RootTaskPriority.Normal, new DrinkDrink(agent.SelfEntity));
                     break;
                 case ThirstThreshold.Parched:
-                    agent.AddRootTask(new DrinkDrink(agent.SelfEntity));
+                    agent.AddRootTask(AiAgent.RootTaskPriority.High, new DrinkDrink(agent.SelfEntity));
                     break;
                 case ThirstThreshold.Dead:
                     agent.RemoveRootTask(typeof(DrinkDrink));

@@ -1,3 +1,5 @@
+using Content.Server.AI.HTN;
+using Content.Server.AI.HTN.Planner;
 using Content.Server.Cargo;
 using Content.Server.Chat;
 using Content.Server.GameObjects.Components.Pathfinding;
@@ -28,6 +30,7 @@ namespace Content.Server
             IoCManager.Register<IModuleManager, ServerModuleManager>();
             IoCManager.Register<IServerPreferencesManager, ServerPreferencesManager>();
             IoCManager.Register<IPathfinder, PathfindingManager>();
+            IoCManager.Register<IPlanner, HtnPlanner>();
         }
     }
 }

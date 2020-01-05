@@ -6,11 +6,10 @@ using Robust.Shared.IoC;
 using Robust.Shared.Map;
 using Robust.Shared.Maths;
 using Robust.Shared.Serialization;
-using Robust.Shared.Utility;
 
 namespace Content.Shared.GameObjects.Components.Pathfinding
 {
-    public abstract class SharedPathfindingComponent : Component
+    public abstract class SharedPathfindingDebugComponent : Component
     {
         public override string Name => "PathfindingDebugger";
         public override uint? NetID => ContentNetIDs.PATHFINDER_DEBUG;

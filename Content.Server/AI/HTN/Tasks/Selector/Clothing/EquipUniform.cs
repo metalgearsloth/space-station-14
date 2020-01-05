@@ -1,10 +1,11 @@
 using System.Collections.Generic;
 using Content.Server.AI.HTN.Tasks.Compound;
+using Content.Server.AI.HTN.Tasks.Sequence.Clothing;
 using Content.Server.AI.HTN.WorldState;
 using Content.Server.GameObjects;
 using Robust.Shared.Interfaces.GameObjects;
 
-namespace Content.Server.AI.HTN.Tasks.Sequence.Clothing
+namespace Content.Server.AI.HTN.Tasks.Selector.Clothing
 {
     public class EquipUniform : SelectorTask
     {
@@ -23,7 +24,7 @@ namespace Content.Server.AI.HTN.Tasks.Sequence.Clothing
         {
             Methods = new List<IAiTask>
             {
-                new EquipBackpack(Owner),
+                // new EquipBackpack(Owner), TODO: Add back in when it doesn't throw
                 new EquipBelt(Owner),
                 new EquipGloves(Owner),
                 new EquipHead(Owner),

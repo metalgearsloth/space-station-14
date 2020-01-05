@@ -4,34 +4,24 @@ using Robust.Shared.Interfaces.GameObjects;
 
 namespace Content.Server.AI.HTN.WorldState.States.Inventory
 {
-    public sealed class InventoryState : EnumerableStateData<IEntity>
+    public sealed class InventoryState : StateData<List<IEntity>>
     {
         public override string Name => "Inventory";
-
-        public override IEnumerable<IEntity> GetValue()
+        public override List<IEntity> GetValue()
         {
+            var inventory = new List<IEntity>();
+
             if (Owner.TryGetComponent(out HandsComponent handsComponent))
             {
                 foreach (var item in handsComponent.GetAllHeldItems())
                 {
-                    yield return item.Owner;
+                    inventory.Add(item.Owner);
                 }
             }
 
-            /* TODO: Get this working by not checking pockets unless available
-            if (Owner.TryGetComponent(out InventoryComponent inventoryComponent))
-            {
-                foreach (var slot in EquipmentSlotDefines.SlotNames)
-                {
-                    if (inventoryComponent.TryGetSlotItem(slot.Key, out ItemComponent slotItem))
-                    {
-                        yield return slotItem.Owner;
-                    }
-                }
-            }
-            */
+            // TODO: InventoryComponent (Pockets were throwing)
 
-            // TODO: Storage (backpack etc.)
+            return inventory;
         }
     }
 }

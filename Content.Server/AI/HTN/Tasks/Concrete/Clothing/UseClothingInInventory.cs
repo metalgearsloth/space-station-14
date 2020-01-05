@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Content.Server.AI.HTN.Tasks.Concrete.Operators.Inventory;
 using Content.Server.AI.HTN.Tasks.Primitive;
 using Content.Server.AI.HTN.WorldState;
@@ -20,15 +21,15 @@ namespace Content.Server.AI.HTN.Tasks.Concrete.Clothing
 
         public override bool PreconditionsMet(AiWorldState context)
         {
-            foreach (var item in context.GetEnumerableStateValue<InventoryState, IEntity>())
+            foreach (var item in context.GetStateValue<InventoryState, List<IEntity>>())
             {
                 if (!item.TryGetComponent(out ClothingComponent clothingComponent)) continue;
-                if ((clothingComponent.SlotFlags & EquipmentSlotDefines.SlotMasks[_slot]) != 0) continue;
+                if ((clothingComponent.SlotFlags & EquipmentSlotDefines.SlotMasks[_slot]) == 0) continue;
 
                 _clothing = item;
-                break;
+                return true;
             }
-            return true;
+            return false;
         }
 
         public override void SetupOperator()

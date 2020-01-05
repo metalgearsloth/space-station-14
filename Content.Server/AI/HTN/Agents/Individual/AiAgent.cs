@@ -1,40 +1,60 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using Content.Server.AI.HTN.Agents.Group;
+using Content.Server.AI.HTN.Planner;
 using Content.Server.AI.HTN.Tasks;
 using Content.Server.AI.HTN.Tasks.Concrete.Operators;
 using Content.Server.AI.HTN.Tasks.Primitive;
 using Content.Server.AI.HTN.Tasks.Primitive.Operators;
 using Content.Server.AI.HTN.WorldState;
+using Content.Server.Interfaces.Chat;
 using Robust.Server.AI;
+using Robust.Shared.IoC;
 
 namespace Content.Server.AI.HTN.Agents.Individual
 {
+    /// <summary>
+    /// This is the generic behavior handler for an AI.
+    /// It will use the planner to choose what primitive tasks to do based on what is the current highest priority task.
+    /// </summary>
     public class AiAgent : AiLogicProcessor
     {
         public GroupAiManager AiManager { get; set; }
 
         public AiWorldState State { get; private set; }
-        private HtnPlan? RunPlan { get; set; }
-        private float PlanCooldown { get; } = 0.5f;
+        private Queue<ConcreteTask>? RunPlan { get; set; }
+        protected virtual float PlanCooldown => 0.5f;
         private float _planCooldownRemaining;
 
-        private float InteractionCooldown { get; } = 0.4f;
+        protected virtual float InteractionCooldown => 0.4f;
         private float _interactionCooldownRemaining;
 
-        private float MeleeAttackCooldown { get; } = 0.4f;
+        protected virtual float MeleeAttackCooldown => 0.4f;
         private float _meleeAttackCooldownRemaining;
 
-        protected IReadOnlyCollection<IAiTask> RootTasks => _rootTasks;
-        private readonly List<IAiTask> _rootTasks = new List<IAiTask>();
+        private readonly List<KeyValuePair<RootTaskPriority, List<IAiTask>>> _rootTasks =
+            new List<KeyValuePair<RootTaskPriority, List<IAiTask>>>();
 
         public event Action<PlanUpdate> PlanStatus;
+
+        private IPlanner _planner;
+
+        public AiAgent()
+        {
+            foreach (RootTaskPriority entry in Enum.GetValues(typeof(RootTaskPriority)))
+            {
+                _rootTasks.Add(new KeyValuePair<RootTaskPriority, List<IAiTask>>(entry, new List<IAiTask>()));
+            }
+
+            _planner = IoCManager.Resolve<IPlanner>();
+        }
 
         private bool TryActiveTask(out ConcreteTask activeTask)
         {
             activeTask = null;
-            if (RunPlan == null || RunPlan?.PrimitiveTasks.Count <= 0) return false;
-            activeTask = RunPlan.PrimitiveTasks.Peek();
+            if (RunPlan == null || RunPlan?.Count <= 0) return false;
+            activeTask = RunPlan.Peek();
             return true;
 
         }
@@ -42,44 +62,63 @@ namespace Content.Server.AI.HTN.Agents.Individual
         private bool TryActiveRootTask(out IAiTask rootTask)
         {
             rootTask = null;
-            foreach (var task in RootTasks)
+
+            foreach (var (_, tasks) in _rootTasks)
             {
-                rootTask = task;
+                if (tasks.Count == 0) continue;
+                rootTask = tasks[0];
                 return true;
             }
+
             return false;
 
         }
 
         public void Bark(string message)
         {
-            
+            var chatManager = IoCManager.Resolve<IChatManager>();
+            chatManager.EntitySay(SelfEntity, message);
         }
 
-        public void PushRootTaskToBack()
+        /// <summary>
+        ///  Will knock the task down the priority list
+        /// </summary>
+        /// <param name="rootTask"></param>
+        public void DeprioritiseRootTask(Type rootTask)
         {
-            if (RootTasks.Count <= 1) return;
+            IAiTask foundTask = null;
 
-            IAiTask rootTask = null;
-
-            foreach (var task in RootTasks)
+            foreach (var (priority, tasks) in _rootTasks)
             {
-                rootTask = task;
-                break;
-            }
+                // If we're on the last priority then no point continuing anyway as we can't go lower
+                if (GetNextPriority(priority) == null && foundTask == null) return;
+                if (foundTask != null)
+                {
+                    tasks.Add(foundTask);
+                    return;
+                }
 
-            _rootTasks.Remove(rootTask);
-            AddRootTask(rootTask);
+                for (var i = 0; i < tasks.Count; i++)
+                {
+                    var task = tasks[i];
+                    if (task.GetType() != rootTask) continue;
+                    foundTask = task;
+                    tasks.RemoveAt(i);
+                    break;
+                }
+            }
         }
 
-        private IAiTask GetRootTask()
+        /// <summary>
+        /// Gets a lower priority than the specified one if it exists
+        /// </summary>
+        /// <param name="priority">null if no lower priority</param>
+        /// <returns></returns>
+        private RootTaskPriority? GetNextPriority(RootTaskPriority priority)
         {
-            foreach (var task in RootTasks)
-            {
-                return task;
-            }
-
-            return null;
+            var intPriority = (int) priority;
+            if (!Enum.IsDefined(typeof(RootTaskPriority), intPriority)) return null;
+            return (RootTaskPriority) (intPriority + 1);
         }
 
         public override void Setup()
@@ -94,17 +133,30 @@ namespace Content.Server.AI.HTN.Agents.Individual
             return;
         }
 
-        public void AddRootTask(IAiTask rootTask)
+        /// <summary>
+        /// Will add the task at the specified priority if it doesn't exist
+        /// If the new priority is higher it will bump it up, otherwise it will leave it
+        /// </summary>
+        /// <param name="rootTaskPriority"></param>
+        /// <param name="rootTask"></param>
+        public void AddRootTask(RootTaskPriority rootTaskPriority, IAiTask rootTask)
         {
-            foreach (var task in _rootTasks)
+            foreach (var (priority, tasks) in _rootTasks)
             {
-                if (task.GetType() == rootTask.GetType())
+                for (var i = 0; i < tasks.Count; i++)
                 {
-                    return;
+                    // Can't be duplicated tasks so need to check all tasks to see if it already exists
+                    if (tasks[i].GetType() != rootTask.GetType()) continue;
+                    if ((int) rootTaskPriority >= (int) priority) return;
+                    tasks.RemoveAt(i);
+                    break;
+                }
+
+                if (priority == rootTaskPriority)
+                {
+                    tasks.Add(rootTask);
                 }
             }
-
-            _rootTasks.Add(rootTask);
         }
 
         /// <summary>
@@ -113,18 +165,14 @@ namespace Content.Server.AI.HTN.Agents.Individual
         /// <param name="rootTask"></param>
         public void RemoveRootTask(Type rootTask)
         {
-            IAiTask found = null;
-            foreach (var item in RootTasks)
+            foreach (var (_, tasks) in _rootTasks)
             {
-                if (item.GetType() != rootTask) continue;
-
-                found = item;
-                break;
-            }
-
-            if (found != null)
-            {
-                _rootTasks.Remove(found);
+                for (var i = 0; i < tasks.Count; i++)
+                {
+                    if (tasks[i].GetType() != rootTask) continue;
+                    tasks.RemoveAt(i);
+                    return;
+                }
             }
         }
 
@@ -135,17 +183,15 @@ namespace Content.Server.AI.HTN.Agents.Individual
             _interactionCooldownRemaining -= frameTime;
             _meleeAttackCooldownRemaining -= frameTime;
 
-            if (_planCooldownRemaining <= 0)
+            // If there's no root task then when we do eventually get one it will immediately plan
+            if (TryActiveRootTask(out var activeRootTask) && _planCooldownRemaining <= 0)
             {
                 _planCooldownRemaining = PlanCooldown;
 
-                // If no task to do
-                if (!TryActiveRootTask(out var activeRootTask)) return;
-
                 // If the root task hasn't changed and we already have a plan (TODO Change this so it may re-plan if the MTR is better)
-                if (RunPlan?.PrimitiveTasks.Count > 0 && RunPlan.RootTask == activeRootTask) return;
+                if (RunPlan?.Count > 0) return;
 
-                RunPlan = HtnPlanner.GetPlan(State, activeRootTask);
+                RunPlan = _planner.GetPlan(State, activeRootTask);
                 if (RunPlan == null)
                 {
                     PlanStatus?.Invoke(new PlanUpdate(this, activeRootTask, PlanOutcome.PlanningFailed));
@@ -190,16 +236,16 @@ namespace Content.Server.AI.HTN.Agents.Individual
             switch (outcome)
             {
                 case Outcome.Success:
-                    RunPlan?.PrimitiveTasks.Dequeue();
-                    if (RunPlan?.PrimitiveTasks.Count > 0) return;
+                    RunPlan?.Dequeue();
+                    if (RunPlan?.Count > 0) return;
                     // Plan success
-                    PlanStatus?.Invoke(new PlanUpdate(this, GetRootTask(), PlanOutcome.Success));
+                    PlanStatus?.Invoke(new PlanUpdate(this, activeRootTask, PlanOutcome.Success));
                     return;
                 case Outcome.Continuing:
                     return;
                 case Outcome.Failed:
                     RunPlan = null;
-                    PlanStatus?.Invoke(new PlanUpdate(this, GetRootTask(), PlanOutcome.PlanAborted));
+                    PlanStatus?.Invoke(new PlanUpdate(this, activeRootTask, PlanOutcome.PlanAborted));
                     return;
                 default:
                     throw new ArgumentOutOfRangeException();
@@ -209,13 +255,13 @@ namespace Content.Server.AI.HTN.Agents.Individual
         public struct PlanUpdate
         {
             public AiAgent Agent { get; }
-            public IAiTask RootTask { get; }
+            public IAiTask Task { get; set; }
             public PlanOutcome Outcome { get; }
 
-            public PlanUpdate(AiAgent agent, IAiTask rootTask, PlanOutcome outcome)
+            public PlanUpdate(AiAgent agent, IAiTask task, PlanOutcome outcome)
             {
                 Agent = agent;
-                RootTask = rootTask;
+                Task = task;
                 Outcome = outcome;
             }
         }
@@ -226,6 +272,15 @@ namespace Content.Server.AI.HTN.Agents.Individual
             PlanAborted,
             Continuing,
             Success
+        }
+
+        public enum RootTaskPriority
+        {
+            Force,
+            High,
+            Normal,
+            Low,
+            VeryLow,
         }
     }
 }

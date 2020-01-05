@@ -1,14 +1,17 @@
 using System;
 using System.Collections.Generic;
+using Content.Server.AI.HTN.Planner;
 using Content.Server.AI.HTN.Tasks;
 using Content.Server.AI.HTN.Tasks.Compound;
 using Content.Server.AI.HTN.Tasks.Primitive;
 using Content.Server.AI.HTN.Tasks.Sequence;
 using Content.Server.AI.HTN.WorldState;
+using Content.Shared.GameObjects.Components.AI;
+using Logger = Robust.Shared.Log.Logger;
 
 namespace Content.Server.AI.HTN
 {
-    public class HtnPlanner
+    public class HtnPlanner : IPlanner
     {
         // Reading material on how HTN works:
         // http://www.gameaipro.com/GameAIPro/GameAIPro_Chapter12_Exploring_HTN_Planners_through_Example.pdf
@@ -30,16 +33,20 @@ namespace Content.Server.AI.HTN
         // i.e. are operators and primitive tasks separate things.
         // This implementation is very loosely based on FluidHTN's interpretation of the GameAIPro article
 
+        private const double PlanTimeout = 0.16;
+        public event Action<AiPlanMessage> FoundPlan;
+
         /// <summary>
         /// Tries to decompose the root task into a series of primitive tasks to do.
         /// </summary>
         /// <param name="worldState"></param>
         /// <param name="rootTask">The final outcome we're trying to achieve</param>
         /// <returns></returns>
-        public static HtnPlan GetPlan(AiWorldState worldState, IAiTask rootTask)
+        public Queue<ConcreteTask> GetPlan(AiWorldState worldState, IAiTask rootTask)
         {
             // Debugging
             var startTime = DateTime.Now;
+            var planningTime = 0.0;
             var methodTraversalRecord = new Queue<int>();
 
             // Setup
@@ -51,23 +58,30 @@ namespace Content.Server.AI.HTN
             tasksToProcess.Push(rootTask);
             var finalPlan = new Queue<ConcreteTask>();
             var reset = false;
-            var methodIndex = -1;
-
-            blackboard.Save(tasksToProcess, finalPlan, 0, null);
+            var methodIndex = 0;
 
             // Decomposition logger
-            // TODO: This shit still needs tweaking
+            // TODO: This still needs tweaking
 
             while (tasksToProcess.Count > 0 || reset)
             {
+                if (planningTime >= PlanTimeout)
+                {
+                    Logger.WarningS("ai", $"Planning timed out for {rootTask}");
+                    break;
+                }
+
+                planningTime = (DateTime.Now - startTime).TotalSeconds;
+
                 IAiTask currentTask;
                 if (reset)
                 {
-                    blackboard.Reset();
-                    tasksToProcess = blackboard.DecompositionHistory.Peek().TasksToProcess;
-                    finalPlan = blackboard.DecompositionHistory.Peek().FinalPlan;
-                    methodIndex = blackboard.DecompositionHistory.Peek().ChosenMethodIndex + 1;
-                    currentTask = blackboard.DecompositionHistory.Peek().OwningSelectorTask;
+                    if (blackboard.DecompositionHistory.Count == 0) break;
+                    var decomp = blackboard.DecompositionHistory.Pop();
+                    methodIndex = decomp.ChosenMethodIndex + 1;
+                    tasksToProcess = decomp.TasksToProcess;
+                    finalPlan = decomp.FinalPlan;
+                    currentTask = decomp.OwningSelectorTask;
                     if (methodTraversalRecord.Count > 0)
                     {
                         methodTraversalRecord.Dequeue();
@@ -76,7 +90,6 @@ namespace Content.Server.AI.HTN
                 }
                 else
                 {
-                    methodIndex++;
                     currentTask = tasksToProcess.Pop();
                 }
 
@@ -91,9 +104,11 @@ namespace Content.Server.AI.HTN
                         IAiTask foundMethod = null;
 
                         compound.SetupMethods(blackboard.RunningState);
+                        var indexOffset = -1;
 
                         foreach (var method in compound.Methods.GetRange(methodIndex, compound.Methods.Count - methodIndex))
                         {
+                            indexOffset += 1;
                             if (!method.PreconditionsMet(blackboard.RunningState)) continue;
                             foundMethod = method;
                             break;
@@ -105,10 +120,15 @@ namespace Content.Server.AI.HTN
                             break;
                         }
 
+                        // Save where we got up to so if this method doesn't pan out we can try the next one.
+                        // TODO: Copy world state
+                        blackboard.Save(
+                            new Stack<IAiTask>(finalPlan),
+                            new Queue<ConcreteTask>(finalPlan),
+                            methodIndex + indexOffset,
+                            compound);
                         tasksToProcess.Push(foundMethod);
-
                         methodTraversalRecord.Enqueue(methodIndex);
-                        blackboard.Save(tasksToProcess, finalPlan, methodIndex, compound);
                         break;
                     case SequenceTask sequence:
                         if (sequence.PreconditionsMet(blackboard.RunningState))
@@ -118,6 +138,10 @@ namespace Content.Server.AI.HTN
                             {
                                 tasksToProcess.Push(task);
                             }
+                        }
+                        else
+                        {
+                            reset = true;
                         }
 
                         break;
@@ -141,7 +165,6 @@ namespace Content.Server.AI.HTN
                 }
             }
 
-            // TODO: Probs don't want to do this
             if (finalPlan.Count == 0)
             {
                 return null;
@@ -152,24 +175,11 @@ namespace Content.Server.AI.HTN
                 task.SetupOperator();
             }
 
-            var runTime = (DateTime.Now - startTime).TotalSeconds;
-            return new HtnPlan(rootTask, finalPlan, methodTraversalRecord, runTime);
-        }
-    }
+            planningTime = (DateTime.Now - startTime).TotalSeconds;
+            var plan = new AiPlanMessage(rootTask.ToString()); //, finalPlan, methodTraversalRecord, planningTime); TODO
+            FoundPlan?.Invoke(plan);
 
-    public class HtnPlan
-    {
-        public IAiTask RootTask;
-        public Queue<ConcreteTask> PrimitiveTasks;
-        public IEnumerable<int> MTR;
-        public double PlanTime;
-
-        public HtnPlan(IAiTask rootTask, Queue<ConcreteTask> primitiveTasks, IEnumerable<int> mtr, double planTime)
-        {
-            RootTask = rootTask;
-            PrimitiveTasks = primitiveTasks;
-            MTR = mtr;
-            PlanTime = planTime;
+            return finalPlan;
         }
     }
 }
