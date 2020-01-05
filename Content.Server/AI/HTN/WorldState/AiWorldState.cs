@@ -5,34 +5,67 @@ using Content.Server.GameObjects.Components.Movement;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Interfaces.Reflection;
 using Robust.Shared.IoC;
+using Robust.Shared.Utility;
 
 namespace Content.Server.AI.HTN.WorldState
 {
     public sealed class AiWorldState
     {
-        private List<dynamic> _enumerableStates = new List<dynamic>();
-        private List<dynamic> _states = new List<dynamic>();
+        // Cache the known types
+        private static List<Type> _aiStates;
+        private static List<Type> _aiEnumerableStates;
+
+        private List<IAiState> _states = new List<IAiState>();
+        private List<IAiEnumerableState> _enumerableStates = new List<IAiEnumerableState>();
 
         public AiWorldState(IEntity owner)
         {
             Setup(owner);
         }
 
-        private void Setup(IEntity owner)
+        private void GetStates()
         {
-            var typeFactory = IoCManager.Resolve<IDynamicTypeFactory>();
-            var states = IoCManager.Resolve<IReflectionManager>().FindTypesWithAttribute<AiStateAttribute>();
+            _aiStates = new List<Type>();
+            _aiEnumerableStates = new List<Type>();
+            var reflectionManager = IoCManager.Resolve<IReflectionManager>();
+
+            var states = reflectionManager.GetAllChildren(typeof(IAiState));
 
             foreach (var state in states)
             {
-                _states.Add(typeFactory.CreateInstance(state));
+                _aiStates.Add(state);
             }
 
-            var enumerableStates = IoCManager.Resolve<IReflectionManager>().FindTypesWithAttribute<AiEnumerableStateAttribute>();
+            var enumerableStates = reflectionManager.GetAllChildren(typeof(IAiEnumerableState));
 
             foreach (var state in enumerableStates)
             {
-                _enumerableStates.Add(typeFactory.CreateInstance(state));
+                _aiEnumerableStates.Add(state);
+            }
+        }
+
+        private void Setup(IEntity owner)
+        {
+            if (_aiStates == null || _enumerableStates == null)
+            {
+                GetStates();
+            }
+
+            DebugTools.AssertNotNull(_aiStates);
+            var typeFactory = IoCManager.Resolve<IDynamicTypeFactory>();
+
+            foreach (var state in _aiStates)
+            {
+                var newState = (IAiState) typeFactory.CreateInstance(state);
+                newState.Setup(owner);
+                _states.Add(newState);
+            }
+
+            foreach (var state in _aiEnumerableStates)
+            {
+                var newState = (IAiEnumerableState) typeFactory.CreateInstance(state);
+                newState.Setup(owner);
+                _enumerableStates.Add(newState);
             }
 
         }

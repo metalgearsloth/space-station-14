@@ -2,15 +2,15 @@ using Content.Server.GameObjects;
 using Content.Shared.GameObjects.Components.Inventory;
 using Robust.Shared.Interfaces.GameObjects;
 
-namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Inventory
+namespace Content.Server.AI.HTN.Tasks.Concrete.Operators.Inventory
 {
-    public class PutEntityInActiveHand : IOperator
+    public class PutEntityInActiveHandOperator : IOperator
     {
         // Input variables
         private readonly IEntity _owner;
         private readonly IEntity _target;
 
-        public PutEntityInActiveHand(IEntity owner, IEntity target)
+        public PutEntityInActiveHandOperator(IEntity owner, IEntity target)
         {
             _owner = owner;
             _target = target;
@@ -28,7 +28,7 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Inventory
 
             foreach (var slot in EquipmentSlotDefines.SlotMasks.Keys)
             {
-                if (!inventory.TryGetSlotItem(slot, out ItemComponent foundItem) || item.Owner != _target) continue;
+                if (!inventory.TryGetSlotItem(slot, out ItemComponent foundItem) || foundItem.Owner != _target) continue;
                 item = foundItem;
                 itemSlot = slot;
                 found = true;

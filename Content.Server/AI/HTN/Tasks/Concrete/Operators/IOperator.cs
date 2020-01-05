@@ -1,6 +1,4 @@
-using Content.Server.AI.HTN.Blackboard;
-
-namespace Content.Server.AI.HTN.Tasks.Primitive.Operators
+namespace Content.Server.AI.HTN.Tasks.Concrete.Operators
 {
     public interface IOperator
     {

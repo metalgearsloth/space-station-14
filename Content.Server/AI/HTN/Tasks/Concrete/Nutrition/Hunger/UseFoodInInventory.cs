@@ -1,9 +1,12 @@
 using System.Collections.Generic;
+using Content.Server.AI.HTN.Tasks.Concrete.Operators;
 using Content.Server.AI.HTN.Tasks.Concrete.Operators.Inventory;
 using Content.Server.AI.HTN.Tasks.Primitive;
 using Content.Server.AI.HTN.Tasks.Primitive.Operators;
 using Content.Server.AI.HTN.Tasks.Primitive.Operators.Inventory;
 using Content.Server.AI.HTN.WorldState;
+using Content.Server.AI.HTN.WorldState.States.Inventory;
+using Content.Server.AI.HTN.WorldState.States.Nutrition;
 using Content.Server.GameObjects;
 using Content.Server.GameObjects.Components.Nutrition;
 using Robust.Shared.Interfaces.GameObjects;
@@ -15,30 +18,19 @@ namespace Content.Server.AI.HTN.Tasks.Concrete.Nutrition.Hunger
         private IEntity _targetFood;
         public override PrimitiveTaskType TaskType => PrimitiveTaskType.Interaction;
 
-        public UseFoodInInventory(IEntity owner) : base(owner)
-        {
-
-        }
+        public UseFoodInInventory(IEntity owner) : base(owner) {}
 
         public override bool PreconditionsMet(AiWorldState context)
         {
-            // TODO: Check hands then check inventory
-            if (!Owner.TryGetComponent(out HandsComponent handsComponent))
+            foreach (var item in context.GetEnumerableStateValue<InventoryState, IEntity>())
             {
-                return false;
+                if (item.HasComponent<FoodComponent>())
+                {
+                    _targetFood = item;
+                    return true;
+                }
             }
 
-            // Find any food in hands
-            foreach (var hand in handsComponent.ActivePriorityEnumerable())
-            {
-                var item = handsComponent.GetHand(hand);
-                if (item == null) continue;
-
-                if (!item.Owner.HasComponent<FoodComponent>()) continue;
-
-                _targetFood = item.Owner;
-                return true;
-            }
             return false;
         }
 

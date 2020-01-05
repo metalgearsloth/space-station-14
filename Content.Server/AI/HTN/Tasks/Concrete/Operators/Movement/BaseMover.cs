@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
-using Content.Server.AI.HTN.Blackboard;
 using Content.Server.GameObjects.Components.Movement;
 using Content.Server.GameObjects.Components.Pathfinding;
 using Robust.Server.GameObjects;
@@ -14,7 +12,7 @@ using Robust.Shared.Log;
 using Robust.Shared.Map;
 using Robust.Shared.Maths;
 
-namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Movement
+namespace Content.Server.AI.HTN.Tasks.Concrete.Operators.Movement
 {
     public abstract class BaseMover : IOperator
     {

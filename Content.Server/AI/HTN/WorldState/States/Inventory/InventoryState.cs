@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using Content.Server.GameObjects;
-using Content.Shared.GameObjects.Components.Inventory;
 using Robust.Shared.Interfaces.GameObjects;
 
 namespace Content.Server.AI.HTN.WorldState.States.Inventory
@@ -19,17 +18,18 @@ namespace Content.Server.AI.HTN.WorldState.States.Inventory
                 }
             }
 
+            /* TODO: Get this working by not checking pockets unless available
             if (Owner.TryGetComponent(out InventoryComponent inventoryComponent))
             {
                 foreach (var slot in EquipmentSlotDefines.SlotNames)
                 {
-                    var slotItem = inventoryComponent.GetSlotItem(slot.Key);
-                    if (slotItem != null)
+                    if (inventoryComponent.TryGetSlotItem(slot.Key, out ItemComponent slotItem))
                     {
                         yield return slotItem.Owner;
                     }
                 }
             }
+            */
 
             // TODO: Storage (backpack etc.)
         }

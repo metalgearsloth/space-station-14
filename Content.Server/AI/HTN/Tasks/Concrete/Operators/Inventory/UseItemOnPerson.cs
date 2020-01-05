@@ -29,6 +29,7 @@ namespace Content.Server.AI.HTN.Tasks.Concrete.Operators.Inventory
             {
                 return Outcome.Failed;
             }
+
             // TODO: Also have this check storage a la backpack etc.
             _owner.TryGetComponent(out HandsComponent hands);
             _target.TryGetComponent(out ItemComponent itemComponent);

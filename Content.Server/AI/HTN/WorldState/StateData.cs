@@ -6,13 +6,14 @@ namespace Content.Server.AI.HTN.WorldState
 {
     public interface IAiState
     {
-        Type FuckGenerics { get; }
         object Value { get; set; }
         void Setup(IEntity owner);
     }
 
     public interface IAiEnumerableState
     {
+        IEnumerable<object> Value { get; set; }
+        void Setup(IEntity owner);
     }
 
     public interface IRRetarded
@@ -20,12 +21,12 @@ namespace Content.Server.AI.HTN.WorldState
         Type NotAType { get; }
     }
 
-    public abstract class StateData<T>
+    public abstract class StateData<T> : IAiState
     {
         public abstract string Name { get; }
         protected IEntity Owner { get; private set; }
 
-        public T Value
+        public object Value
         {
             get
             {
@@ -39,7 +40,7 @@ namespace Content.Server.AI.HTN.WorldState
             set => _value = value;
         }
 
-        private T _value;
+        private object _value;
 
         public void Setup(IEntity owner)
         {
@@ -64,7 +65,7 @@ namespace Content.Server.AI.HTN.WorldState
             Owner = owner;
         }
 
-        public IEnumerable<T> Value
+        public IEnumerable<object> Value
         {
             get
             {
@@ -82,10 +83,10 @@ namespace Content.Server.AI.HTN.WorldState
                     yield return item;
                 }
             }
-            protected set => _value = value;
+            set => _value = value;
         }
 
-        private IEnumerable<T> _value;
+        private IEnumerable<object> _value;
 
         protected void Reset()
         {
