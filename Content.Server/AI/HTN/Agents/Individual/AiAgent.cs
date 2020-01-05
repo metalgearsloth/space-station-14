@@ -51,6 +51,11 @@ namespace Content.Server.AI.HTN.Agents.Individual
 
         }
 
+        public void Bark(string message)
+        {
+            
+        }
+
         public void PushRootTaskToBack()
         {
             if (RootTasks.Count <= 1) return;
