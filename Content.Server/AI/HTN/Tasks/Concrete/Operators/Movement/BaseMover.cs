@@ -177,7 +177,10 @@ namespace Content.Server.AI.HTN.Tasks.Concrete.Operators.Movement
         {
             Route.Clear();
             // TODO: Look at using a task
-            var route = _pathfinder.FindPath(Owner.Transform.GridPosition, TargetGrid, 1.5f);
+            var route = _pathfinder.FindPath(
+                Owner.Transform.GridPosition,
+                TargetGrid,
+                new PathfindingArgs(proximity: 1.4f));
 
             if (route == null || route.Count <= 1)
             {

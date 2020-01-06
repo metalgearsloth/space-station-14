@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using Content.Server.GameObjects.Components.Pathfinding.Heuristics;
 using Content.Server.GameObjects.Components.Pathfinding.PathfindingQueue;
+using Content.Server.GameObjects.EntitySystems;
 using Content.Shared.GameObjects.Components.Pathfinding;
 using JetBrains.Annotations;
-using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Interfaces.Map;
 using Robust.Shared.IoC;
 using Robust.Shared.Log;
@@ -16,17 +15,15 @@ namespace Content.Server.GameObjects.Components.Pathfinding
     public interface IPathfinder
     {
         event Action<PathfindingRoute> DebugRoute;
-        // TODO: Add in struct for path args, e.g. allowdiagonals, heuristic to use
 
         /// <summary>
         ///  Find a tile path from start to end
         /// </summary>
         /// <param name="start"></param>
         /// <param name="end"></param>
-        /// <param name="proximity">How close before good enough</param>
-        /// <param name="heuristic">Overwrite the heuristic to be used</param>
+        /// <param name="pathfindingArgs"></param>
         /// <returns></returns>
-        List<TileRef> FindPath(TileRef start, TileRef end, float proximity = 0.0f, PathHeuristic heuristic = PathHeuristic.Manhattan);
+        List<TileRef> FindPath(TileRef start, TileRef end, PathfindingArgs pathfindingArgs = new PathfindingArgs());
 
         /// <summary>
         ///  Find a tile path from start to end.
@@ -34,10 +31,33 @@ namespace Content.Server.GameObjects.Components.Pathfinding
         /// </summary>
         /// <param name="start"></param>
         /// <param name="end"></param>
-        /// <param name="proximity">How close before good enough</param>
-        /// <param name="heuristic">Overwrite the heuristic to be used</param>
+        /// <param name="pathfindingArgs"></param>
         /// <returns></returns>
-        List<TileRef> FindPath(GridCoordinates start, GridCoordinates end, float proximity = 0.0f, PathHeuristic heuristic = PathHeuristic.Octile);
+        List<TileRef> FindPath(GridCoordinates start, GridCoordinates end, PathfindingArgs pathfindingArgs = new PathfindingArgs());
+    }
+
+    public struct PathfindingArgs
+    {
+        // How close we need to get to the endpoint to be 'done'
+        public float Proximity { get; }
+        // Whether we use cardinal only or not
+        public bool AllowDiagonals { get; }
+        // Can we go through walls
+        public bool NoClip { get; }
+        // Can we traverse space tiles
+        public bool AllowSpace { get; }
+
+        public PathfindingArgs(
+            float proximity = 0.0f,
+            bool allowDiagonals = true,
+            bool noClip = false,
+            bool allowSpace = false)
+        {
+            Proximity = proximity;
+            AllowDiagonals = allowDiagonals;
+            NoClip = noClip;
+            AllowSpace = allowSpace;
+        }
     }
 
     [UsedImplicitly]
@@ -88,14 +108,14 @@ namespace Content.Server.GameObjects.Components.Pathfinding
 
         public event Action<PathfindingRoute> DebugRoute;
 
-        public List<TileRef> FindPath(GridCoordinates start, GridCoordinates end, float proximity = 0.0f, PathHeuristic heuristic = PathHeuristic.Manhattan)
+        public List<TileRef> FindPath(GridCoordinates start, GridCoordinates end, PathfindingArgs pathfindingArgs = new PathfindingArgs())
         {
             var startTile = _mapManager.GetGrid(start.GridID).GetTileRef(start);
             var endTile = _mapManager.GetGrid(start.GridID).GetTileRef(end);
-            return FindPath(startTile, endTile, proximity, heuristic);
+            return FindPath(startTile, endTile, pathfindingArgs);
         }
 
-        public List<TileRef> FindPath(TileRef start, TileRef end, float proximity = 0.0f, PathHeuristic heuristic = PathHeuristic.Manhattan)
+        public List<TileRef> FindPath(TileRef start, TileRef end, PathfindingArgs pathfindingArgs)
         {
             if (_mapManager.GetGrid(start.GridIndex) != _mapManager.GetGrid(end.GridIndex))
             {
@@ -110,12 +130,12 @@ namespace Content.Server.GameObjects.Components.Pathfinding
             if (!PathUtils.IsTileTraversable(end))
             {
                 endIsValid = false;
-                if (proximity > 0)
+                if (pathfindingArgs.Proximity > 0)
                 {
                     var grid = _mapManager.GetGrid(end.GridIndex);
                     var endPosition = _mapManager.GetGrid(end.GridIndex).GridTileToLocal(end.GridIndices).Position;
 
-                    foreach (var tile in grid.GetTilesIntersecting(new Circle(endPosition, proximity)))
+                    foreach (var tile in grid.GetTilesIntersecting(new Circle(endPosition, pathfindingArgs.Proximity)))
                     {
                         if (tile == end || !PathUtils.IsTileTraversable(tile))
                         {
@@ -136,20 +156,6 @@ namespace Content.Server.GameObjects.Components.Pathfinding
                 return null;
             }
 
-            IPathfindingHeuristic pathHeuristic;
-            switch (heuristic)
-            {
-                case PathHeuristic.Octile:
-                    pathHeuristic = new SimpleOctileHeuristic();
-                    break;
-                case PathHeuristic.Manhattan:
-                    pathHeuristic = new ManhattanHeuristic();
-                    break;
-                default:
-                    Logger.FatalS("pathfinding", $"No heuristic implementation for {heuristic}");
-                    throw new InvalidOperationException();
-            }
-
             // TODO: PauseManager for timeout
             DateTime pathTimeStart = DateTime.Now;
 
@@ -160,7 +166,7 @@ namespace Content.Server.GameObjects.Components.Pathfinding
             var closedTiles = new HashSet<TileRef>();
 
             // See http://theory.stanford.edu/~amitp/GameProgramming/Heuristics.html#S7;
-            // Helps to breaks ties?
+            // Helps to breaks ties
             const float pFactor = 1 + 1 / 1000;
 
             TileRef currentTile = start;
@@ -178,21 +184,29 @@ namespace Content.Server.GameObjects.Components.Pathfinding
                 currentTile = openTiles.Dequeue();
                 closedTiles.Add(currentTile);
 
-                foreach (var next in PathUtils.GetNeighbors(currentTile, false))
+                foreach (var next in PathUtils.GetNeighbors(currentTile, pathfindingArgs.AllowDiagonals))
                 {
-                    if (!PathUtils.IsTileTraversable(next) || closedTiles.Contains(next))
+                    if (closedTiles.Contains(next))
                     {
                         continue;
                     }
 
-                    var gScore = gScores[currentTile] + pathHeuristic.GetTileCost(next, currentTile);
+                    // If tile is untraversable it'll be null
+                    var tileCost = GetTileCost(pathfindingArgs, next, currentTile);
+
+                    if (tileCost == null)
+                    {
+                        continue;
+                    }
+
+                    var gScore = gScores[currentTile] + tileCost.Value;
 
                     if (!gScores.ContainsKey(next) || gScore < gScores[next])
                     {
                         cameFrom[next] = currentTile;
                         gScores[next] = gScore;
                         // pFactor is tie-breaker. Not implemented in the heuristic itself
-                        float fScore = gScores[next] + (pathHeuristic.GetTileCost(next, end) * pFactor);
+                        float fScore = gScores[next] + tileCost.Value * pFactor;
                         openTiles.Enqueue(next, fScore);
                     }
                 }
@@ -200,7 +214,7 @@ namespace Content.Server.GameObjects.Components.Pathfinding
 
             if (!routeFound)
             {
-                Logger.DebugS("pathfinding", $"No route from {start} to {end}");
+                Logger.WarningS("pathfinding", $"No route from {start} to {end}");
                 return null;
             }
 
@@ -213,6 +227,45 @@ namespace Content.Server.GameObjects.Components.Pathfinding
                 (DateTime.Now - pathTimeStart).TotalSeconds));
 
             return route;
+        }
+
+        private static float? GetTileCost(PathfindingArgs pathfindingArgs, TileRef start, TileRef end)
+        {
+            var cost = 1.0f;
+
+            switch (pathfindingArgs.AllowDiagonals)
+            {
+                case true:
+                    // "Fast Euclidean" / octile.
+                    // This implementation is written down in a few sources; it just saves doing sqrt.
+                    int dstX = Math.Abs(start.X - end.X);
+                    int dstY = Math.Abs(start.Y - end.Y);
+                    if (dstX > dstY)
+                    {
+                        cost *= 1.4f * dstY + (dstX - dstY);
+                    }
+                    else
+                    {
+                        cost *= 1.4f * dstX + (dstY - dstX);
+                    }
+                    break;
+                // Manhattan distance
+                case false:
+                    cost *= (Math.Abs(start.X - end.X) + Math.Abs(start.Y - end.Y));
+                    break;
+            }
+
+            if (!pathfindingArgs.NoClip && PathfindingSystem.BlockedTiles.ContainsKey(end))
+            {
+                return null;
+            }
+
+            if (!pathfindingArgs.AllowSpace && end.Tile.IsEmpty)
+            {
+                return null;
+            }
+
+            return cost;
         }
     }
 
