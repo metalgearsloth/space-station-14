@@ -31,24 +31,42 @@ namespace Content.Server.GameObjects.EntitySystems
         private readonly List<IEntity> _collidableRemoves = new List<IEntity>();
         private readonly Dictionary<IEntity, MoveEventArgs> _queuedMoveEvents = new Dictionary<IEntity, MoveEventArgs>();
 
-        public List<PathfindingChunk> GetChunks(GridId gridId)
+        public List<PathfindingChunk> GetOrCreateChunks(GridId gridId)
         {
             if (_graph.ContainsKey(gridId))
             {
                 return _graph[gridId];
             }
 
-            var newChunks = new List<PathfindingChunk>();
-
             var grid = _mapManager.GetGrid(gridId);
 
             foreach (var tile in grid.GetAllTiles())
             {
-                newChunks.Add(GetChunk(tile));
+                GetOrCreateChunk(tile);
             }
 
-            _graph.Add(gridId, newChunks);
-            return newChunks;
+            return _graph[gridId];
+        }
+
+
+        public PathfindingChunk GetOrCreateChunk(TileRef tile)
+        {
+            if (_graph.TryGetValue(tile.GridIndex, out var chunks))
+            {
+                foreach (var chunk in chunks)
+                {
+                    if (chunk.InBounds(tile))
+                    {
+                        return chunk;
+                    }
+                }
+            }
+
+            var chunkX = (int) (Math.Floor((float) tile.X / PathfindingChunk.ChunkSize) * PathfindingChunk.ChunkSize);
+            var chunkY = (int) (Math.Floor((float) tile.Y / PathfindingChunk.ChunkSize) * PathfindingChunk.ChunkSize);
+
+            var newChunk = CreateChunk(tile.GridIndex, new MapIndices(chunkX, chunkY));
+            return newChunk;
         }
 
         private PathfindingChunk CreateChunk(GridId gridId, MapIndices indices)
@@ -85,16 +103,28 @@ namespace Content.Server.GameObjects.EntitySystems
                 }
             }
 
-            newChunk.RefreshNodeNeighbors();
             _graph[gridId].Add(newChunk);
             return newChunk;
+        }
+
+        public PathfindingNode GetNode(TileRef tile)
+        {
+            foreach (var chunk in GetOrCreateChunks(tile.GridIndex))
+            {
+                if (chunk.TryGetNode(tile, out var node))
+                {
+                    return node;
+                }
+            }
+
+            return null;
         }
 
         private bool AreNeighbors(PathfindingChunk chunk1, PathfindingChunk chunk2)
         {
             if (chunk1.GridId != chunk2.GridId) return false;
-            if (Math.Abs(chunk1.Indices.X - chunk2.Indices.X) != PathfindingChunk.ChunkSize) return false;
-            if (Math.Abs(chunk1.Indices.Y - chunk2.Indices.Y) != PathfindingChunk.ChunkSize) return false;
+            if (Math.Abs(chunk1.Indices.X - chunk2.Indices.X) / PathfindingChunk.ChunkSize != 1) return false;
+            if (Math.Abs(chunk1.Indices.Y - chunk2.Indices.Y) / PathfindingChunk.ChunkSize != 1) return false;
             return true;
         }
 
@@ -105,11 +135,40 @@ namespace Content.Server.GameObjects.EntitySystems
         /// <param name="currentNode"></param>
         /// <param name="allowDiagonals"></param>
         /// <returns></returns>
-        public static IEnumerable<PathfindingNode> GetNeighbors(PathfindingNode currentNode, bool allowDiagonals = true)
+        public IEnumerable<PathfindingNode> GetNeighbors(PathfindingNode currentNode, bool allowDiagonals = true)
         {
-            foreach (var neighbor in currentNode.Neighbors)
+            var chunks = new List<PathfindingChunk>(4) {currentNode.ParentChunk};
+            // If we're in the middle only need this chunk
+            if (currentNode.ParentChunk.OnEdge(currentNode))
             {
-                yield return neighbor;
+                // TODO: Add neighbor checks for neighboring chunks
+                foreach (var neighbor in currentNode.ParentChunk.Neighbors)
+                {
+                    chunks.Add(neighbor);
+                }
+            }
+
+            var neighborMax = 8;
+            var foundNeighbors = 0;
+            if (!allowDiagonals)
+            {
+                neighborMax = 4;
+            }
+
+            foreach (var chunk in chunks)
+            {
+                if (foundNeighbors == neighborMax) yield break;
+                foreach (var node in chunk.Nodes)
+                {
+                    var xDiff = Math.Abs(currentNode.TileRef.X - node.TileRef.X);
+                    if (xDiff > 1) continue;
+                    var yDiff = Math.Abs(currentNode.TileRef.Y - node.TileRef.Y);
+                    if (yDiff > 1) continue;
+                    if (xDiff == 0 && yDiff == 0) continue;
+                    if (!allowDiagonals && xDiff == 1 && yDiff == 1) continue;
+                    foundNeighbors++;
+                    yield return node;
+                }
             }
         }
 
@@ -147,19 +206,17 @@ namespace Content.Server.GameObjects.EntitySystems
 
         private PathfindingNode GetNodeTile(TileRef tile)
         {
-            foreach (var chunk in GetChunks(tile.GridIndex))
+            var chunk = GetOrCreateChunk(tile);
+            if (chunk.TryGetNode(tile, out var node))
             {
-                if (chunk.TryGetNode(tile, out var node))
-                {
-                    return node;
-                }
+                return node;
             }
-            return null;
+            throw new InvalidOperationException();
         }
 
         private void UpdateNodeTile(TileRef tile)
         {
-            foreach (var chunk in GetChunks(tile.GridIndex))
+            foreach (var chunk in GetOrCreateChunks(tile.GridIndex))
             {
                 if (chunk.TryUpdateNode(tile))
                 {
@@ -188,26 +245,6 @@ namespace Content.Server.GameObjects.EntitySystems
             _mapManager.OnGridRemoved += RemovePathfindingGrid;
             _mapManager.GridChanged += (sender, args) => {_gridChanges.Push(args);};
             _mapManager.TileChanged += (sender, args) => { _tileChanges.Add(args); };
-        }
-
-        private PathfindingChunk GetChunk(TileRef tile)
-        {
-            if (_graph.TryGetValue(tile.GridIndex, out var chunks))
-            {
-                foreach (var chunk in chunks)
-                {
-                    if (chunk.InBounds(tile))
-                    {
-                        return chunk;
-                    }
-                }
-            }
-
-            var chunkX = tile.X / PathfindingChunk.ChunkSize;
-            var chunkY = tile.Y / PathfindingChunk.ChunkSize;
-
-            var newChunk = CreateChunk(tile.GridIndex, new MapIndices(chunkX, chunkY));
-            return newChunk;
         }
 
         /// <summary>
@@ -247,7 +284,7 @@ namespace Content.Server.GameObjects.EntitySystems
             foreach (var gridId in updateGridIds)
             {
                 var updates = collidableUpdates[gridId];
-                foreach (var chunk in GetChunks(gridId))
+                foreach (var chunk in GetOrCreateChunks(gridId))
                 {
                     for (var i = updates.Count - 1; i > 0; i--)
                     {
@@ -258,6 +295,12 @@ namespace Content.Server.GameObjects.EntitySystems
                             updates.RemoveAt(i);
                         }
                     }
+                }
+
+                // TODO: This probably shouldn't happen?
+                foreach (var update in updates)
+                {
+                    GetOrCreateChunk(update.Item1);
                 }
             }
         }
@@ -299,7 +342,7 @@ namespace Content.Server.GameObjects.EntitySystems
             foreach (var gridId in updateGridIds)
             {
                 var updates = collidableUpdates[gridId];
-                foreach (var chunk in GetChunks(gridId))
+                foreach (var chunk in GetOrCreateChunks(gridId))
                 {
                     for (var i = updates.Count - 1; i > 0; i--)
                     {

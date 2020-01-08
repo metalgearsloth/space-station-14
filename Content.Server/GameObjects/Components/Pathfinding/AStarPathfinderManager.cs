@@ -129,26 +129,9 @@ namespace Content.Server.GameObjects.Components.Pathfinding
 
             DateTime pathTimeStart = DateTime.Now;
             var entitySystems = IoCManager.Resolve<IEntitySystemManager>();
-            var pathChunks = entitySystems.GetEntitySystem<PathfindingSystem>().GetChunks(start.GridIndex);
-            PathfindingNode startNode = null;
-            PathfindingNode endNode = null;
-
-            foreach (var chunk in pathChunks)
-            {
-                if (startNode != null && endNode != null) break;
-
-                if (chunk.InBounds(start))
-                {
-                    chunk.TryGetNode(start, out var node);
-                    startNode = node;
-                }
-                if (chunk.InBounds(end))
-                {
-                    chunk.TryGetNode(start, out var node);
-                    endNode = node;
-                }
-            }
-
+            var pathfindingSystem = entitySystems.GetEntitySystem<PathfindingSystem>();
+            PathfindingNode startNode = pathfindingSystem.GetNode(start);
+            PathfindingNode endNode = pathfindingSystem.GetNode(end);
 
             if (startNode == null)
             {
@@ -190,7 +173,7 @@ namespace Content.Server.GameObjects.Components.Pathfinding
                 currentNode = openTiles.Dequeue();
                 closedTiles.Add(currentNode);
 
-                foreach (var next in PathfindingSystem.GetNeighbors(currentNode, pathfindingArgs.AllowDiagonals))
+                foreach (var next in pathfindingSystem.GetNeighbors(currentNode, pathfindingArgs.AllowDiagonals))
                 {
                     if (closedTiles.Contains(next))
                     {

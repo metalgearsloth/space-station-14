@@ -13,13 +13,10 @@ namespace Content.Server.GameObjects.EntitySystems.Pathfinding
         public List<int> CollisionLayers { get; }
         public int CollisionMask { get; private set; }
 
-        public List<PathfindingNode> Neighbors { get; set; }
-
-        public PathfindingNode(PathfindingChunk parent, TileRef tileRef, List<PathfindingNode> neighbors, List<int> collisionLayers = null)
+        public PathfindingNode(PathfindingChunk parent, TileRef tileRef, List<int> collisionLayers = null)
         {
             _parentChunk = parent;
             TileRef = tileRef;
-            Neighbors = neighbors;
             if (collisionLayers == null)
             {
                 CollisionLayers = new List<int>();
