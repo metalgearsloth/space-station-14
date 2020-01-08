@@ -1,13 +1,9 @@
-using System.Collections.Generic;
-using Content.Server.AI.HTN.Tasks.Concrete.Operators;
-using Content.Server.AI.HTN.Tasks.Concrete.Operators.Movement;
-using Content.Server.AI.HTN.WorldState;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Interfaces.Map;
 using Robust.Shared.IoC;
 using Robust.Shared.Map;
 
-namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Movement
+namespace Content.Server.AI.HTN.Tasks.Concrete.Operators.Movement
 {
     public class MoveToGrid : BaseMover
     {

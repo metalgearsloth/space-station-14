@@ -4,8 +4,6 @@
   id: HumanMob_Civilian
   description: A miserable pile of secrets
   components:
-  - type: Pathfinding
-    cost: 5.0
   - type: AiController
     logic: Civilian
   - type: Hands
@@ -18,7 +16,9 @@
   - type: Stomach
 
   - type: Inventory
+  - type: Constructor
   - type: Clickable
+  - type: InteractionOutline
   - type: Sprite
     netsync: false
     drawdepth: Mobs
@@ -56,7 +56,7 @@
   - type: Collidable
     shapes:
     - !type:PhysShapeAabb
-      bounds: "-0.5,-0.25,-0.05,0.25"
+      bounds: "-0.35,-0.35,0.35,0.35"
       mask: 30
       layer: 4
 
@@ -66,15 +66,15 @@
   - type: Species
     Template: Human
     HeatResistance: 323
-  #- type: StatusEffectsUI
-  #- type: OverlayEffectsUI
+  - type: StatusEffectsUI
+  - type: OverlayEffectsUI
   - type: HeatResistance
   - type: Damageable
 
-  #- type: Eye
-  #  zoom: 0.5, 0.5
+  - type: Eye
+    zoom: 0.5, 0.5
 
-  #- type: CameraRecoil
+  - type: CameraRecoil
   - type: Appearance
     visuals:
     - type: SpeciesVisualizer2D

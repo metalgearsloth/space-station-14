@@ -20,7 +20,7 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Movement
 
         public override void SetupOperator()
         {
-            TaskOperator = new Operators.Movement.MoveToGrid(Owner, _target);
+            TaskOperator = new Concrete.Operators.Movement.MoveToGrid(Owner, _target);
         }
     }
 

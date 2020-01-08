@@ -2,8 +2,6 @@
   id: VendingMachine
   name: vending machine
   components:
-  - type: Pathfinding
-    cost: 0
   - type: Physics
     Anchored: true
   - type: Rotatable

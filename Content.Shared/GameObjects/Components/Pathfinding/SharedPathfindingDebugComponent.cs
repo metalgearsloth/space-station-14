@@ -26,7 +26,7 @@ namespace Content.Shared.GameObjects.Components.Pathfinding
 
         public PathfindingRoute(
             IEnumerable<TileRef> route,
-            IDictionary<TileRef, TileRef> cameFrom,
+            //IDictionary<TileRef, TileRef> cameFrom,
             IDictionary<TileRef, float> gScores,
             IEnumerable<TileRef> closedTiles,
             double timeTaken)
@@ -40,6 +40,7 @@ namespace Content.Shared.GameObjects.Components.Pathfinding
                 Route.Add(mapManager.GetGrid(tile.GridIndex).LocalToWorld(tileGrid).Position);
             }
 
+            /*
             CameFrom = new Dictionary<Vector2, Vector2>();
             foreach (var (from, to) in cameFrom)
             {
@@ -49,6 +50,7 @@ namespace Content.Shared.GameObjects.Components.Pathfinding
                 var tileTwoWorld = mapManager.GetGrid(to.GridIndex).LocalToWorld(tileTwoGrid).Position;
                 CameFrom.Add(tileOneWorld, tileTwoWorld);
             }
+            */
 
             GScores = new Dictionary<Vector2, float>();
             foreach (var (tile, score) in gScores)

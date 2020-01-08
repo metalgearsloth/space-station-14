@@ -29,7 +29,7 @@ namespace Content.Server.AI.HTN.Tasks.Concrete.Operators.Movement
         // Anti-stuck measures. See the AntiStuck() method for more details
         private bool _tryingAntiStuck = false;
         public bool IsStuck;
-        private AntiStuckMethod _antiStuckMethod = AntiStuckMethod.PhaseThrough;
+        private AntiStuckMethod _antiStuckMethod = AntiStuckMethod.None;
 
         // Instance variables
         private IMapManager _mapManager;
@@ -60,7 +60,8 @@ namespace Content.Server.AI.HTN.Tasks.Concrete.Operators.Movement
         protected bool TryMove()
         {
             // Use collidable just so we don't get stuck on corners as much
-            var targetDiff = NextGrid.Position - _ownerCollidable.WorldAABB.Center;
+            // var targetDiff = NextGrid.Position - _ownerCollidable.WorldAABB.Center;
+            var targetDiff = NextGrid.Position - Owner.Transform.GridPosition.Position;
 
             // Check distance
             if (targetDiff.Length < TileTolerance)
@@ -86,6 +87,9 @@ namespace Content.Server.AI.HTN.Tasks.Concrete.Operators.Movement
             {
                 switch (_antiStuckMethod)
                 {
+                    case AntiStuckMethod.None:
+                        IsStuck = false;
+                        break;
                     case AntiStuckMethod.Jiggle:
                         if (!_tryingAntiStuck)
                         {
@@ -177,7 +181,17 @@ namespace Content.Server.AI.HTN.Tasks.Concrete.Operators.Movement
         {
             Route.Clear();
             // TODO: Look at using a task
+            int collisionMask;
+            if (!Owner.TryGetComponent(out CollidableComponent collidableComponent))
+            {
+                collisionMask = 0;
+            }
+            else
+            {
+                collisionMask = collidableComponent.CollisionMask;
+            }
             var route = _pathfinder.FindPath(
+                collisionMask,
                 Owner.Transform.GridPosition,
                 TargetGrid,
                 new PathfindingArgs(proximity: 1.4f));
@@ -208,6 +222,7 @@ namespace Content.Server.AI.HTN.Tasks.Concrete.Operators.Movement
 
     public enum AntiStuckMethod
     {
+        None,
         Jiggle, // Just pick a random direction for a bit and hope for the best
         Teleport, // The Half-Life 2 method
         PhaseThrough, // Just makes it non-collidable

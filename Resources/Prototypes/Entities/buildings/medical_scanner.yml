@@ -3,8 +3,6 @@
   name: Medical Scanner
   description: A bulky medical scanner.
   components:
-  - type: Pathfinding
-    cost: 0
   - type: Sprite
     netsync: false
     sprite: Buildings/medical_scanner.rsi
