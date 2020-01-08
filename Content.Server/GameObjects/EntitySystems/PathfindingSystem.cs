@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using Content.Server.GameObjects.EntitySystems.Pathfinding;
 using Robust.Server.GameObjects;
 using Robust.Shared.Enums;
 using Robust.Shared.GameObjects.Systems;
@@ -13,24 +14,7 @@ using Robust.Shared.Map;
 namespace Content.Server.GameObjects.EntitySystems
 {
     // TODO: Need to fix multiple collision layers and also cache each tile's neighbors (or alternatively use room chunking)
-    // TODO: Need to make the graph way more efficient
     // TODO: Look at storing different graphs for each mask
-    // TODO: Store the PathfindingNodes as a 2d array of [x, y]. also
-    // TODO, do I even need to store the X and Ys considering they're the indices...
-    // TODO: Use PathfindingChunks
-    public struct PathfindingNode
-    {
-        // TODO: Add access ID here
-        public TileRef TileRef { get; }
-        public IEnumerable<int> CollisionLayers { get; }
-        // TODO: Add a collision mask and every time a collision layer is added / removed update the mask
-
-        public PathfindingNode(TileRef tileRef, IEnumerable<int> collisionLayers)
-        {
-            TileRef = tileRef;
-            CollisionLayers = collisionLayers;
-        }
-    }
 
     public class PathfindingSystem : EntitySystem
     {
@@ -38,42 +22,105 @@ namespace Content.Server.GameObjects.EntitySystems
         [Dependency] private readonly IMapManager _mapManager;
 #pragma warning restore 649
 
-        private readonly List<List<PathfindingNode>> _graph = new List<List<PathfindingNode>>();
-        private readonly IDictionary<GridId, List<PathfindingNode>> _gridNodes = new ConcurrentDictionary<GridId, List<PathfindingNode>>();
+        private readonly Dictionary<GridId, List<PathfindingChunk>> _graph = new Dictionary<GridId, List<PathfindingChunk>>();
 
+        // Every frame we queue up all the changes and do them at once
         private readonly Stack<GridChangedEventArgs> _gridChanges = new Stack<GridChangedEventArgs>();
         private readonly List<TileChangedEventArgs> _tileChanges = new List<TileChangedEventArgs>();
         private readonly List<IEntity> _collidableAdds = new List<IEntity>();
         private readonly List<IEntity> _collidableRemoves = new List<IEntity>();
         private readonly Dictionary<IEntity, MoveEventArgs> _queuedMoveEvents = new Dictionary<IEntity, MoveEventArgs>();
 
-        // Need to store last known position of entities so that when they move the graph can be updated.
-        private readonly IDictionary<IEntity, TileRef> _entityPositions = new Dictionary<IEntity, TileRef>();
-        private bool _initialized;
-
-        public List<PathfindingNode> GetNodes(GridId gridId)
+        public List<PathfindingChunk> GetChunks(GridId gridId)
         {
-            // TODO: Is this retarded with concurrentdictionary, need to make a copy
-            return _gridNodes[gridId];
+            if (_graph.ContainsKey(gridId))
+            {
+                return _graph[gridId];
+            }
+
+            var newChunks = new List<PathfindingChunk>();
+
+            var grid = _mapManager.GetGrid(gridId);
+
+            foreach (var tile in grid.GetAllTiles())
+            {
+                newChunks.Add(GetChunk(tile));
+            }
+
+            _graph.Add(gridId, newChunks);
+            return newChunks;
+        }
+
+        private PathfindingChunk CreateChunk(GridId gridId, MapIndices indices)
+        {
+            var newChunk = new PathfindingChunk(gridId, indices);
+            // Need to add neighbor references
+            if (_graph.TryGetValue(gridId, out var chunks))
+            {
+                foreach (var chunk in chunks)
+                {
+                    if (AreNeighbors(newChunk, chunk))
+                    {
+                        newChunk.AddNeighbor(chunk);
+                        chunk.AddNeighbor(newChunk);
+                    }
+                }
+            }
+            else
+            {
+                _graph.Add(gridId, new List<PathfindingChunk>());
+            }
+
+            var grid = _mapManager.GetGrid(gridId);
+
+            // TODO: Add nodes
+            for (var x = 0; x < PathfindingChunk.ChunkSize; x++)
+            {
+                for (var y = 0; y < PathfindingChunk.ChunkSize; y++)
+                {
+                    var trueX = x + indices.X;
+                    var trueY = y + indices.Y;
+                    var tileRef = grid.GetTileRef(new MapIndices(trueX, trueY));
+                    newChunk.AddTile(tileRef);
+                }
+            }
+
+            newChunk.RefreshNodeNeighbors();
+            _graph[gridId].Add(newChunk);
+            return newChunk;
+        }
+
+        private bool AreNeighbors(PathfindingChunk chunk1, PathfindingChunk chunk2)
+        {
+            if (chunk1.GridId != chunk2.GridId) return false;
+            if (Math.Abs(chunk1.Indices.X - chunk2.Indices.X) != PathfindingChunk.ChunkSize) return false;
+            if (Math.Abs(chunk1.Indices.Y - chunk2.Indices.Y) != PathfindingChunk.ChunkSize) return false;
+            return true;
+        }
+
+        // TODO: Each node should really cache their edges
+        /// <summary>
+        /// Get adjacent tiles to this one, duh
+        /// </summary>
+        /// <param name="currentNode"></param>
+        /// <param name="allowDiagonals"></param>
+        /// <returns></returns>
+        public static IEnumerable<PathfindingNode> GetNeighbors(PathfindingNode currentNode, bool allowDiagonals = true)
+        {
+            foreach (var neighbor in currentNode.Neighbors)
+            {
+                yield return neighbor;
+            }
         }
 
         public override void Update(float frameTime)
         {
             base.Update(frameTime);
-            if (!_initialized)
-            {
-                _initialized = true;
-                foreach (var grid in _mapManager.GetAllGrids())
-                {
-                    TryInitializeGrid(grid.Index);
-                }
-            }
 
-            foreach (var change in _gridChanges)
-            {
-                HandleGridChanged(change);
-            }
+            /*
+            HandleGridChanges(_gridChanges);
             _gridChanges.Clear();
+            */
 
             HandleTileChanges(_tileChanges);
             _tileChanges.Clear();
@@ -90,33 +137,35 @@ namespace Content.Server.GameObjects.EntitySystems
 
         private void RemovePathfindingGrid(GridId gridId)
         {
-            if (!_gridNodes.ContainsKey(gridId))
+            if (!_graph.ContainsKey(gridId))
             {
                 throw new InvalidOperationException();
             }
 
-            _gridNodes.Remove(gridId);
+            _graph.Remove(gridId);
         }
 
-        private bool TryInitializeGrid(GridId gridId)
+        private PathfindingNode GetNodeTile(TileRef tile)
         {
-            if (_gridNodes.ContainsKey(gridId))
+            foreach (var chunk in GetChunks(tile.GridIndex))
             {
-                return false;
+                if (chunk.TryGetNode(tile, out var node))
+                {
+                    return node;
+                }
             }
+            return null;
+        }
 
-            var newNodes = new List<PathfindingNode>();
-
-            _gridNodes.Add(gridId, newNodes);
-            var grid = _mapManager.GetGrid(gridId);
-            foreach (var tile in grid.GetAllTiles(false))
+        private void UpdateNodeTile(TileRef tile)
+        {
+            foreach (var chunk in GetChunks(tile.GridIndex))
             {
-                var node = new PathfindingNode(tile, new int[]{});
-                newNodes.Add(node);
+                if (chunk.TryUpdateNode(tile))
+                {
+                    return;
+                }
             }
-
-            _gridNodes[gridId] = newNodes;
-            return true;
         }
 
         /// <summary>
@@ -125,82 +174,10 @@ namespace Content.Server.GameObjects.EntitySystems
         /// <param name="tileChangedEvents"></param>
         private void HandleTileChanges(List<TileChangedEventArgs> tileChangedEvents)
         {
-            // If any of the old tiles are space then that means there's no existing node for it already (TODO: Fix?)
-            for (var i = tileChangedEvents.Count - 1; i > 0; i--) {
-                var tile = tileChangedEvents[i];
-                if (tile.OldTile.IsEmpty)
-                {
-                    _gridNodes[tile.NewTile.GridIndex].Add(new PathfindingNode(tile.NewTile, new int[]{}));
-                    tileChangedEvents.RemoveAt(i);
-                }
-            }
-
-            var grids = new Dictionary<GridId, List<TileChangedEventArgs>>();
-            foreach (var tile in tileChangedEvents)
+            if (tileChangedEvents.Count == 0) return;
+            foreach (var tileEvent in tileChangedEvents)
             {
-                if (!grids.ContainsKey(tile.NewTile.GridIndex))
-                {
-                    grids.Add(tile.NewTile.GridIndex, new List<TileChangedEventArgs>());
-                }
-
-                grids[tile.NewTile.GridIndex].Add(tile);
-            }
-
-            // Update the existing tiles
-            foreach (var (grid, tiles) in grids)
-            {
-                var nodes = _gridNodes[grid];
-                for (var i = nodes.Count - 1; i > 0; i--)
-                {
-                    // If we can finish early because all nodes are found
-                    if (tiles.Count == 0) break;
-
-                    var node = nodes[i];
-
-                    for (var j = tiles.Count - 1; j > 0; j--)
-                    {
-                        if (node.TileRef.GridIndices != tileChangedEvents[j].NewTile.GridIndices) continue;
-                        nodes[i] = new PathfindingNode(tileChangedEvents[j].NewTile, nodes[i].CollisionLayers);
-                        tileChangedEvents.RemoveAt(j);
-                        break;
-                    }
-                }
-            }
-        }
-
-        // TODO: Test me
-        private void HandleGridChanged(GridChangedEventArgs eventArgs)
-        {
-            if (TryInitializeGrid(eventArgs.Grid.Index))
-            {
-                return;
-            }
-
-            var grid = _mapManager.GetGrid(eventArgs.Grid.Index);
-            var nodes = _gridNodes[eventArgs.Grid.Index];
-            var modifiedNodes = new Stack<MapIndices>();
-
-            for (var i = nodes.Count - 1; i > 0; i--)
-            {
-                foreach (var (position, _) in eventArgs.Modified)
-                {
-                    if (!modifiedNodes.Contains(position) && nodes[i].TileRef.GridIndices == position)
-                    {
-                       var tileRef = grid.GetTileRef(position);
-                       nodes[i] = new PathfindingNode(tileRef, new int[]{});
-                       modifiedNodes.Push(position);
-                       break;
-                    }
-                }
-            }
-
-            foreach (var modified in eventArgs.Modified)
-            {
-                if (!modifiedNodes.Contains(modified.position))
-                {
-                    var tileRef = grid.GetTileRef(modified.position);
-                    nodes.Add(new PathfindingNode(tileRef, new int[]{}));
-                }
+                UpdateNodeTile(tileEvent.NewTile);
             }
         }
 
@@ -213,14 +190,36 @@ namespace Content.Server.GameObjects.EntitySystems
             _mapManager.TileChanged += (sender, args) => { _tileChanges.Add(args); };
         }
 
+        private PathfindingChunk GetChunk(TileRef tile)
+        {
+            if (_graph.TryGetValue(tile.GridIndex, out var chunks))
+            {
+                foreach (var chunk in chunks)
+                {
+                    if (chunk.InBounds(tile))
+                    {
+                        return chunk;
+                    }
+                }
+            }
+
+            var chunkX = tile.X / PathfindingChunk.ChunkSize;
+            var chunkY = tile.Y / PathfindingChunk.ChunkSize;
+
+            var newChunk = CreateChunk(tile.GridIndex, new MapIndices(chunkX, chunkY));
+            return newChunk;
+        }
+
         /// <summary>
         /// Add the relevant collidable collision layers to nodes and also start watching the entity's movement
         /// </summary>
         /// <param name="collidableEntities"></param>
         private void HandleCollisionAdds(List<IEntity> collidableEntities)
         {
+            if (collidableEntities.Count == 0) return;
             // TODO: Need to fix multiple collision layers coz it ain't workin
             var collidableUpdates = new Dictionary<GridId, List<Tuple<TileRef, int>>>();
+            var updateGridIds = new HashSet<GridId>();
 
             foreach (var entity in collidableEntities)
             {
@@ -232,8 +231,6 @@ namespace Content.Server.GameObjects.EntitySystems
                 var grid = _mapManager.GetGrid(entity.Transform.GridID);
 
                 var tileRef = grid.GetTileRef(entity.Transform.GridPosition);
-                // Add the entity to their watched positions. The movement handler will use this to check if the entity's node needs updating
-                _entityPositions.Add(entity, tileRef);
 
                 if (!collidableUpdates.ContainsKey(grid.Index))
                 {
@@ -243,35 +240,23 @@ namespace Content.Server.GameObjects.EntitySystems
                 var collisionLayer = entity.GetComponent<CollidableComponent>().CollisionLayer;
 
                 collidableUpdates[grid.Index].Add(new Tuple<TileRef, int>(tileRef, collisionLayer));
-
-                if (entity.Name.Contains("APC"))
-                {
-
-                }
+                updateGridIds.Add(grid.Index);
             }
 
-            // Update the collision layers for the appropriate nodes
-            foreach (var (grid, collisions) in collidableUpdates)
+            // Add the relevant collision layers
+            foreach (var gridId in updateGridIds)
             {
-                var nodes = _gridNodes[grid];
-                for (var i = 0; i < nodes.Count; i++)
+                var updates = collidableUpdates[gridId];
+                foreach (var chunk in GetChunks(gridId))
                 {
-                    if (collisions.Count == 0) break;
-                    var node = nodes[i];
-                    for (var j = collisions.Count - 1; j > 0; j--)
+                    for (var i = updates.Count - 1; i > 0; i--)
                     {
-                        var collision = collisions[j];
-
-                        if (node.TileRef != collision.Item1) continue;
-                        var newLayer = node.CollisionLayers.ToList();
-                        if (newLayer.Count > 0)
+                        var update = updates[i];
+                        if (chunk.TryGetNode(update.Item1, out var node))
                         {
-
+                            node.AddCollisionLayer(update.Item2);
+                            updates.RemoveAt(i);
                         }
-                        newLayer.Add(collision.Item2);
-                        nodes[i] = new PathfindingNode(collision.Item1, newLayer.ToArray());
-                        collisions.RemoveAt(j);
-                        break;
                     }
                 }
             }
@@ -283,42 +268,46 @@ namespace Content.Server.GameObjects.EntitySystems
         /// <param name="collidableEntities"></param>
         private void HandleCollisionRemoves(List<IEntity> collidableEntities)
         {
-            var collidableUpdates = new Dictionary<GridId, List<CollidableComponent>>();
-            // If the entity isn't already tracked then no point doing anything
+            if (collidableEntities.Count == 0) return;
+            var collidableUpdates = new Dictionary<GridId, List<Tuple<TileRef, int>>>();
+            var updateGridIds = new HashSet<GridId>();
+
             foreach (var entity in collidableEntities)
             {
-                entity.Transform.OnMove -= (sender, args) => {_queuedMoveEvents.TryAdd(entity, args);}; // TODO: Check this
-                if (_entityPositions.ContainsKey(entity))
+                entity.Transform.OnMove -= (sender, args) =>
                 {
-                    _entityPositions.Remove(entity);
-                    var gridId = entity.Transform.GridID;
-                    if (!collidableUpdates.ContainsKey(gridId))
-                    {
-                        collidableUpdates.Add(gridId, new List<CollidableComponent>());
-                    }
-                    collidableUpdates[gridId].Add(entity.GetComponent<CollidableComponent>());
+                    _queuedMoveEvents.TryAdd(entity, args);
+                };
+
+                var grid = _mapManager.GetGrid(entity.Transform.GridID);
+
+                var tileRef = grid.GetTileRef(entity.Transform.GridPosition);
+
+                if (!collidableUpdates.ContainsKey(grid.Index))
+                {
+                    collidableUpdates.Add(grid.Index, new List<Tuple<TileRef, int>>());
                 }
+
+                var collisionLayer = entity.GetComponent<CollidableComponent>().CollisionLayer;
+
+                collidableUpdates[grid.Index].Add(new Tuple<TileRef, int>(tileRef, collisionLayer));
+                updateGridIds.Add(grid.Index);
             }
 
-            // If we added its collision layer we now need to remove it
-            foreach (var (grid, collidables) in collidableUpdates)
+            // Remove the relevant collision layers
+            // TODO: Need to detect whether it was even tracked already?
+            foreach (var gridId in updateGridIds)
             {
-                var nodes = _gridNodes[grid];
-                for (var i = 0; i < nodes.Count; i++)
+                var updates = collidableUpdates[gridId];
+                foreach (var chunk in GetChunks(gridId))
                 {
-                    // Unless the node's in a corner then we should be able to break early
-                    if (collidables.Count == 0) break;
-                    var node = nodes[i];
-                    for (var j = collidables.Count - 1; j > 0; j--)
+                    for (var i = updates.Count - 1; i > 0; i--)
                     {
-                        // TODO: Should use the _entityPositions cached TileRef
-                        var tileRef = _mapManager.GetGrid(grid).GetTileRef(collidables[j].Owner.Transform.GridPosition);
-                        if (node.TileRef == tileRef)
+                        var update = updates[i];
+                        if (chunk.TryGetNode(update.Item1, out var node))
                         {
-                            var newLayer = node.CollisionLayers.ToList();
-                            newLayer.Remove(collidables[j].CollisionLayer);
-                            nodes[i] = new PathfindingNode(nodes[i].TileRef, newLayer.ToArray());
-                            collidables.RemoveAt(j);
+                            node.AddCollisionLayer(update.Item2);
+                            updates.RemoveAt(i);
                         }
                     }
                 }
@@ -360,60 +349,39 @@ namespace Content.Server.GameObjects.EntitySystems
 
                 collidableRemoves[oldGrid].Add(new Tuple<TileRef, int>(oldTile, collisionLayer));
                 collidableAdds[newGrid].Add(new Tuple<TileRef, int>(newTile, collisionLayer));
-                // TODO: Up to here, need to then iterate over all nodes
             }
 
             foreach (var (grid, removes) in collidableRemoves)
             {
-                collidableAdds.TryGetValue(grid, out var adds);
-                if (adds == null) adds = new List<Tuple<TileRef, int>>();
-                var nodes = _gridNodes[grid];
-                for (var i = 0; i < nodes.Count; i++)
+                var chunks = _graph[grid];
+                foreach (var chunk in chunks)
                 {
-                    if (removes.Count == 0 && adds.Count == 0) break;
-                    var node = nodes[i];
-                    // It's possible for multiple collidables to be on the same tile so we can't break upon first occurence
-                    for (var j = removes.Count - 1; j > 0; j--)
+                    if (removes.Count == 0) break;
+                    for (var i = removes.Count - 1; i > 0; i--)
                     {
-                        if (node.TileRef == removes[j].Item1)
+                        var remove = removes[i];
+                        if (chunk.TryGetNode(remove.Item1, out var node))
                         {
-                            var newLayer = node.CollisionLayers.ToList();
-                            newLayer.Remove(removes[j].Item2);
-                            nodes[i] = new PathfindingNode(node.TileRef, newLayer.ToArray());
-                            removes.RemoveAt(j);
-                        }
-                    }
-
-                    for (var j = adds.Count - 1; j > 0; j--)
-                    {
-                        if (node.TileRef == adds[j].Item1)
-                        {
-                            var newLayer = node.CollisionLayers.ToList();
-                            newLayer.Remove(adds[j].Item2);
-                            nodes[i] = new PathfindingNode(node.TileRef, newLayer.ToArray());
-                            adds.RemoveAt(j);
+                            node.RemoveCollisionLayer(remove.Item2);
+                            removes.RemoveAt(i);
                         }
                     }
                 }
             }
 
-            // If we got lucky then all the grids have been taken care of already
             foreach (var (grid, adds) in collidableAdds)
             {
-                var nodes = _gridNodes[grid];
-                for (var i = 0; i < nodes.Count; i++)
+                var chunks = _graph[grid];
+                foreach (var chunk in chunks)
                 {
-                    if (adds.Count == 0) break;
-                    var node = nodes[i];
-                    for (var j = adds.Count - 1; j > 0; j--)
+                    if (collidableAdds.Count == 0) break;
+                    for (var i = adds.Count - 1; i > 0; i--)
                     {
-                        if (node.TileRef == adds[j].Item1)
+                        var add = adds[i];
+                        if (chunk.TryGetNode(add.Item1, out var node))
                         {
-                            // TODO: make the node updater a function probably
-                            var newLayer = node.CollisionLayers.ToList();
-                            newLayer.Remove(adds[j].Item2);
-                            nodes[i] = new PathfindingNode(node.TileRef, newLayer.ToArray());
-                            adds.RemoveAt(j);
+                            node.AddCollisionLayer(add.Item2);
+                            adds.RemoveAt(i);
                         }
                     }
                 }
