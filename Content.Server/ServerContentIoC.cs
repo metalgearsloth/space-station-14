@@ -3,6 +3,7 @@ using Content.Server.AI.HTN.Planner;
 using Content.Server.Cargo;
 using Content.Server.Chat;
 using Content.Server.GameObjects.Components.Pathfinding;
+using Content.Server.GameObjects.EntitySystems.Pathfinding.Pathfinders;
 using Content.Server.GameTicking;
 using Content.Server.Interfaces;
 using Content.Server.Interfaces.Chat;
@@ -29,7 +30,7 @@ namespace Content.Server
             IoCManager.Register<ICargoOrderDataManager, CargoOrderDataManager>();
             IoCManager.Register<IModuleManager, ServerModuleManager>();
             IoCManager.Register<IServerPreferencesManager, ServerPreferencesManager>();
-            IoCManager.Register<IPathfinder, PathfindingManager>();
+            IoCManager.Register<IPathfinder, AStarPathfinder>();
             IoCManager.Register<IPlanner, HtnPlanner>();
         }
     }

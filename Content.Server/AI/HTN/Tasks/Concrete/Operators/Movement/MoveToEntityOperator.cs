@@ -1,4 +1,3 @@
-using Content.Server.AI.HTN.Tasks.Primitive.Operators;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Interfaces.Map;
 using Robust.Shared.IoC;
@@ -17,7 +16,7 @@ namespace Content.Server.AI.HTN.Tasks.Concrete.Operators.Movement
 
         public MoveToEntityOperator(IEntity owner, IEntity target)
         {
-            base.Setup(owner);
+            Setup(owner);
             Target = target;
             _mapManager = IoCManager.Resolve<IMapManager>();
             // TODO: Get what you need from context once
@@ -25,28 +24,42 @@ namespace Content.Server.AI.HTN.Tasks.Concrete.Operators.Movement
 
         public override Outcome Execute(float frameTime)
         {
-            if (Target == null || Target.Deleted || Target.Transform.MapID != Owner.Transform.MapID)
+            if (Target == null ||
+                Target.Deleted ||
+                Target.Transform.GridID != Owner.Transform.GridID)
             {
                 HaveArrived();
                 return Outcome.Failed;
             }
 
-            // If they move near us
-            if ((Target.Transform.GridPosition.Position - Owner.Transform.GridPosition.Position).Length <= 1.5f)
+            if (RouteTask != null)
             {
+                if (!RouteTask.IsCompleted)
+                {
+                    return Outcome.Continuing;
+                }
+                ReceivedRoute();
+                return Route.Count == 0 ? Outcome.Failed : Outcome.Continuing;
+            }
+
+            var targetRange = (Target.Transform.GridPosition.Position - Owner.Transform.GridPosition.Position).Length;
+
+            // If they move near us
+            if (targetRange <= 1.5f)
+            {
+                // TODO: Update MoveToGrid inline with this executor
                 HaveArrived();
                 return Outcome.Success;
             }
 
             // If they move too far or no route
             if (_lastTargetPosition == default ||
-                (Target.Transform.GridPosition.Position - _lastTargetPosition.Position).Length > 2.0f ||
-                Route.Count == 0)
+                (Target.Transform.GridPosition.Position - _lastTargetPosition.Position).Length > 1.5f)
             {
                 _lastTargetPosition = Target.Transform.GridPosition;
                 TargetGrid = Target.Transform.GridPosition;
-                GetRoute(); // TODO: Look at making this async in conjunction with pathfinder
-                return Route == null ? Outcome.Failed : Outcome.Continuing;
+                GetRoute();
+                return Outcome.Continuing;
             }
 
             AntiStuck(frameTime);
@@ -61,9 +74,10 @@ namespace Content.Server.AI.HTN.Tasks.Concrete.Operators.Movement
                 return Outcome.Continuing;
             }
 
-            if (Route.Count == 0)
+            if (Route.Count == 0 && targetRange > 1.5f)
             {
-                return Outcome.Success;
+                HaveArrived();
+                return Outcome.Failed;
             }
 
             var nextTile = Route.Dequeue();

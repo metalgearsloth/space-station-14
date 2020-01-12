@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Content.Shared.GameObjects;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Interfaces.Map;
 using Robust.Shared.IoC;
@@ -7,12 +8,32 @@ using Robust.Shared.Map;
 using Robust.Shared.Maths;
 using Robust.Shared.Serialization;
 
-namespace Content.Shared.GameObjects.Components.Pathfinding
+namespace Content.Shared.Pathfinding
 {
     public abstract class SharedPathfindingDebugComponent : Component
     {
         public override string Name => "PathfindingDebugger";
         public override uint? NetID => ContentNetIDs.PATHFINDER_DEBUG;
+        public PathfindingDebugMode Mode = PathfindingDebugMode.Route;
+    }
+
+    [Serializable, NetSerializable]
+    public enum PathfindingDebugMode {
+        None = 0,
+        Route = 1 << 0,
+        ConsideredTiles = 1 << 1,
+        Graph = 1 << 2,
+    }
+
+    [Serializable, NetSerializable]
+    public class PathfindingGraphMessage : ComponentMessage
+    {
+        public Dictionary<int, List<Vector2>> Graph { get; }
+
+        public PathfindingGraphMessage(Dictionary<int, List<Vector2>> graph)
+        {
+            Graph = graph;
+        }
     }
 
     [Serializable, NetSerializable]

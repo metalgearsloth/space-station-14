@@ -24,10 +24,28 @@ namespace Content.Server.AI.HTN.Tasks.Concrete.Operators.Movement
 
         public override Outcome Execute(float frameTime)
         {
-            if (Route == null)
+            if (_grid.GridID != Owner.Transform.GridID)
             {
+                HaveArrived();
+                return Outcome.Failed;
+            }
+
+            if (RouteTask != null)
+            {
+                if (!RouteTask.IsCompleted)
+                {
+                    return Outcome.Continuing;
+                }
+                ReceivedRoute();
+                return Outcome.Continuing; // We'll deal with it next tick
+            }
+
+            // If they move too far or no route
+            if (Route.Count == 0)
+            {
+                TargetGrid = _grid;
                 GetRoute();
-                return Route == null ? Outcome.Failed : Outcome.Continuing;
+                return Outcome.Continuing;
             }
 
             AntiStuck(frameTime);

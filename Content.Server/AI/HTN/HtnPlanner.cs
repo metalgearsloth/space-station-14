@@ -13,6 +13,8 @@ namespace Content.Server.AI.HTN
 {
     public class HtnPlanner : IPlanner
     {
+        // TODO: Look at using individual tasks to generate plans for each agent given they don't affect state.
+
         // Reading material on how HTN works:
         // http://www.gameaipro.com/GameAIPro/GameAIPro_Chapter12_Exploring_HTN_Planners_through_Example.pdf
         // http://www.gameaipro.com/GameAIPro/GameAIPro_Chapter29_Hierarchical_AI_for_Multiplayer_Bots_in_Killzone_3.pdf

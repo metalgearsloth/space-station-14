@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Content.Shared.GameObjects.Components.Pathfinding;
+using Content.Shared.Pathfinding;
 using Robust.Client.Graphics.Drawing;
 using Robust.Client.Graphics.Overlays;
 using Robust.Client.Graphics.Shaders;
@@ -10,10 +10,13 @@ using Robust.Client.Interfaces.Graphics.Overlays;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Interfaces.Network;
+using Robust.Shared.Interfaces.Random;
 using Robust.Shared.IoC;
 using Robust.Shared.Log;
+using Robust.Shared.Map;
 using Robust.Shared.Maths;
 using Robust.Shared.Prototypes;
+using Robust.Shared.Random;
 using Robust.Shared.Timers;
 
 namespace Content.Client.GameObjects.Components.Pathfinding
@@ -32,6 +35,9 @@ namespace Content.Client.GameObjects.Components.Pathfinding
             {
                 case PathfindingRoute route:
                     ReceivedRoute(route);
+                    break;
+                case PathfindingGraphMessage graph:
+                    ReceivedGraph(graph);
                     break;
             }
         }
@@ -60,13 +66,24 @@ namespace Content.Client.GameObjects.Components.Pathfinding
                 _overlay.RemoveRoute(route);
             });
         }
+
+        private void ReceivedGraph(PathfindingGraphMessage message)
+        {
+            _overlay.UpdateGraph(message.Graph);
+        }
     }
 
     internal sealed class DebugPathfindingOverlay : Overlay
     {
         // TODO: Add a box like the debug one and show the most recent path stuff
         public override OverlaySpace Space => OverlaySpace.WorldSpace;
+        public PathfindingDebugMode Mode = PathfindingDebugMode.Route;
 
+        // Graph debugging
+        private readonly Dictionary<int, List<Vector2>> _graph = new Dictionary<int, List<Vector2>>();
+        private readonly Dictionary<int, Color> _graphColors = new Dictionary<int, Color>();
+
+        // Route debugging
         private readonly List<PathfindingRoute> _routes = new List<PathfindingRoute>();
 
         public DebugPathfindingOverlay() : base(nameof(DebugPathfindingOverlay))
@@ -74,6 +91,39 @@ namespace Content.Client.GameObjects.Components.Pathfinding
             Shader = IoCManager.Resolve<IPrototypeManager>().Index<ShaderPrototype>("unshaded").Instance();
         }
 
+        public void UpdateGraph(Dictionary<int, List<Vector2>> graph)
+        {
+            _graph.Clear();
+            _graphColors.Clear();
+            var robustRandom = IoCManager.Resolve<IRobustRandom>();
+            foreach (var (chunk, nodes) in graph)
+            {
+                _graph[chunk] = nodes;
+                _graphColors[chunk] = new Color(robustRandom.NextFloat(), robustRandom.NextFloat(), robustRandom.NextFloat(), 0.1f);
+            }
+        }
+
+        private void DrawGraph(DrawingHandleWorld worldHandle)
+        {
+            var viewport = IoCManager.Resolve<IEyeManager>().GetWorldViewport();
+
+            foreach (var (chunk, nodes) in _graph)
+            {
+                foreach (var tile in nodes)
+                {
+                    if (!viewport.Contains(tile)) continue;
+                    var box = new Box2(
+                        tile.X - 0.5f,
+                        tile.Y - 0.5f,
+                        tile.X + 0.5f,
+                        tile.Y + 0.5f);
+
+                    worldHandle.DrawRect(box, _graphColors[chunk]);
+                }
+            }
+        }
+
+        #region pathfinder
         public void AddRoute(PathfindingRoute route)
         {
             _routes.Add(route);
@@ -89,10 +139,9 @@ namespace Content.Client.GameObjects.Components.Pathfinding
             Logger.WarningS("pathfinding", "Not a valid route for overlay removal");
         }
 
-        protected override void Draw(DrawingHandleBase handle)
+        private void DrawRoutes(DrawingHandleWorld worldHandle)
         {
             var viewport = IoCManager.Resolve<IEyeManager>().GetWorldViewport();
-            var worldHandle = (DrawingHandleWorld) handle;
 
             foreach (var route in _routes)
             {
@@ -111,7 +160,7 @@ namespace Content.Client.GameObjects.Components.Pathfinding
                         0.0f,
                         score / highestgScore,
                         1.0f - (score / highestgScore),
-                        0.25f));
+                        0.1f));
                 }
 
                 // Draw box on each tile of route
@@ -127,6 +176,28 @@ namespace Content.Client.GameObjects.Components.Pathfinding
                     worldHandle.DrawRect(box, Color.Orange.WithAlpha(0.25f));
                 }
                 // TODO: Draw remaining stuff
+            }
+        }
+        #endregion
+
+        protected override void Draw(DrawingHandleBase handle)
+        {
+            var worldHandle = (DrawingHandleWorld) handle;
+
+            switch (Mode)
+            {
+                case PathfindingDebugMode.None:
+                    break;
+                case PathfindingDebugMode.Route:
+                    DrawRoutes(worldHandle);
+                    break;
+                case PathfindingDebugMode.ConsideredTiles:
+                    break;
+                case PathfindingDebugMode.Graph:
+                    DrawGraph(worldHandle);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
             }
         }
     }

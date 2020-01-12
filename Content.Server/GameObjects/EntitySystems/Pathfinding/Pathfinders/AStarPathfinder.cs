@@ -1,47 +1,35 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using Content.Server.GameObjects.Components.Pathfinding.PathfindingQueue;
-using Content.Server.GameObjects.EntitySystems;
-using Content.Server.GameObjects.EntitySystems.Pathfinding;
-using Content.Shared.GameObjects.Components.Pathfinding;
+using Content.Shared.Pathfinding;
 using JetBrains.Annotations;
 using Robust.Shared.Interfaces.GameObjects;
-using Robust.Shared.Interfaces.Map;
 using Robust.Shared.IoC;
-using Robust.Shared.Log;
 using Robust.Shared.Map;
+using Robust.Shared.Maths;
 
-namespace Content.Server.GameObjects.Components.Pathfinding
+namespace Content.Server.GameObjects.EntitySystems.Pathfinding.Pathfinders
 {
     public interface IPathfinder
     {
         event Action<PathfindingRoute> DebugRoute;
 
+        void Initialize();
+
         /// <summary>
         ///  Find a tile path from start to end
         /// </summary>
-        /// <param name="collisionMask"></param>
-        /// <param name="start"></param>
-        /// <param name="end"></param>
+        /// <param name="graph"></param>
         /// <param name="pathfindingArgs"></param>
         /// <returns></returns>
-        IReadOnlyCollection<TileRef> FindPath(int collisionMask, TileRef start, TileRef end, PathfindingArgs pathfindingArgs = new PathfindingArgs());
-
-        /// <summary>
-        ///  Find a tile path from start to end.
-        /// Is normally a wrapper around the other method.
-        /// </summary>
-        /// <param name="collisionMask"></param>
-        /// <param name="start"></param>
-        /// <param name="end"></param>
-        /// <param name="pathfindingArgs"></param>
-        /// <returns></returns>
-        IReadOnlyCollection<TileRef> FindPath(int collisionMask, GridCoordinates start, GridCoordinates end, PathfindingArgs pathfindingArgs = new PathfindingArgs());
+        Queue<TileRef> FindPath(List<PathfindingChunk> graph, PathfindingArgs pathfindingArgs);
     }
 
     public struct PathfindingArgs
     {
+        public int CollisionMask { get; }
+        public TileRef Start { get; }
+        public TileRef End { get; }
         // How close we need to get to the endpoint to be 'done'
         public float Proximity { get; }
         // Whether we use cardinal only or not
@@ -52,11 +40,17 @@ namespace Content.Server.GameObjects.Components.Pathfinding
         public bool AllowSpace { get; }
 
         public PathfindingArgs(
+            int collisionMask,
+            TileRef start,
+            TileRef end,
             float proximity = 0.0f,
             bool allowDiagonals = true,
             bool noClip = false,
             bool allowSpace = false)
         {
+            CollisionMask = collisionMask;
+            Start = start;
+            End = end;
             Proximity = proximity;
             AllowDiagonals = allowDiagonals;
             NoClip = noClip;
@@ -65,7 +59,7 @@ namespace Content.Server.GameObjects.Components.Pathfinding
     }
 
     [UsedImplicitly]
-    public class PathfindingManager : IPathfinder
+    public class AStarPathfinder : IPathfinder
     {
 
         // IMPORTANT NOTE:
@@ -103,51 +97,65 @@ namespace Content.Server.GameObjects.Components.Pathfinding
 // The system essentially tries to pre-cache shit where possible.
 // Everything to do with working out the actual path should be in the manager.
 
-
-#pragma warning disable 649
-        [Dependency] private readonly IMapManager _mapManager;
-#pragma warning restore 649
-
-        // TODO: Add cached paths and interface it with rooms?
-
         public event Action<PathfindingRoute> DebugRoute;
+        private PathfindingSystem _pathfindingSystem;
 
-        public IReadOnlyCollection<TileRef> FindPath(int collisionMask, GridCoordinates start, GridCoordinates end, PathfindingArgs pathfindingArgs = new PathfindingArgs())
+        public void Initialize()
         {
-            var startTile = _mapManager.GetGrid(start.GridID).GetTileRef(start);
-            var endTile = _mapManager.GetGrid(start.GridID).GetTileRef(end);
-            return FindPath(collisionMask, startTile, endTile, pathfindingArgs);
+            _pathfindingSystem = IoCManager.Resolve<IEntitySystemManager>().GetEntitySystem<PathfindingSystem>();
         }
 
-        // TODO: Test this asynchronously
-        public IReadOnlyCollection<TileRef> FindPath(int collisionMask, TileRef start, TileRef end, PathfindingArgs pathfindingArgs)
+        // This isn't the greatest but it's definitely a lot faster than when I first wrote it, plus given it's run in a background thread any crappy performance shouldn't be noticeable for a while.
+        public Queue<TileRef> FindPath(List<PathfindingChunk> graph, PathfindingArgs pathfindingArgs)
         {
-            if (_mapManager.GetGrid(start.GridIndex) != _mapManager.GetGrid(end.GridIndex))
+            var startTile = pathfindingArgs.Start;
+            var endTile = pathfindingArgs.End;
+
+            if (startTile.GridIndex != endTile.GridIndex)
             {
                 return null;
             }
 
             DateTime pathTimeStart = DateTime.Now;
-            var entitySystems = IoCManager.Resolve<IEntitySystemManager>();
-            var pathfindingSystem = entitySystems.GetEntitySystem<PathfindingSystem>();
-            PathfindingNode startNode = pathfindingSystem.GetNode(start);
-            PathfindingNode endNode = pathfindingSystem.GetNode(end);
+            PathfindingNode startNode = _pathfindingSystem.GetNode(startTile);
+            PathfindingNode endNode = _pathfindingSystem.GetNode(endTile);
 
             if (startNode == null)
             {
-                Logger.WarningS("pathfinding", $"No node found for {start}");
+                // Logger.WarningS("pathfinding", $"No node found for {startTile}");
                 return null;
             }
 
             if (endNode == null)
             {
-                Logger.WarningS("pathfinding", $"No node found for {end}");
+                // Logger.WarningS("pathfinding", $"No node found for {endTile}");
                 return null;
             }
 
-            // TODO: PauseManager for timeout
+            // Check if we can get a proximity tile to see if we can end early
+            if (!Traversable(pathfindingArgs.CollisionMask, endNode.CollisionMask))
+            {
+                var newEndFound = false;
+                if (pathfindingArgs.Proximity > 0.0f)
+                {
+                    // TODO: Should make this account for proximities, probably some kind of breadth-first search to find a valid one
+                    foreach (var (direction, node) in endNode.Neighbors)
+                    {
+                        if (Traversable(pathfindingArgs.CollisionMask, node.CollisionMask))
+                        {
+                            endNode = node;
+                            newEndFound = true;
+                            break;
+                        }
+                    }
+                }
 
-            // TODO: Look at Sebastian Lague https://www.youtube.com/watch?v=mZfyt03LDH4
+                if (!newEndFound)
+                {
+                    return null;
+                }
+            }
+
             var openTiles = new PathfindingPriorityQueue<PathfindingNode>();
             var gScores = new Dictionary<PathfindingNode, float>();
             var cameFrom = new Dictionary<PathfindingNode, PathfindingNode>();
@@ -173,15 +181,60 @@ namespace Content.Server.GameObjects.Components.Pathfinding
                 currentNode = openTiles.Dequeue();
                 closedTiles.Add(currentNode);
 
-                foreach (var next in pathfindingSystem.GetNeighbors(currentNode, pathfindingArgs.AllowDiagonals))
+                foreach (var (direction, next) in currentNode.Neighbors)
                 {
                     if (closedTiles.Contains(next))
                     {
                         continue;
                     }
 
+                    // TODO: If it's a diagonal we need to check NSEW to see if we can get to it and stop corner cutting, NE needs N and E etc.
+                    // Given there's different collision layers stored for each node in the graph it's probably not worth it to cache this
+
+                    currentNode.Neighbors.TryGetValue(Direction.North, out var northNeighbor);
+                    currentNode.Neighbors.TryGetValue(Direction.South, out var southNeighbor);
+                    currentNode.Neighbors.TryGetValue(Direction.East, out var eastNeighbor);
+                    currentNode.Neighbors.TryGetValue(Direction.West, out var westNeighbor);
+
+                    switch (direction)
+                    {
+                        case Direction.NorthEast:
+                            if (northNeighbor == null || eastNeighbor == null) continue;
+                            if (!Traversable(pathfindingArgs.CollisionMask, northNeighbor.CollisionMask) ||
+                                !Traversable(pathfindingArgs.CollisionMask, eastNeighbor.CollisionMask))
+                            {
+                                continue;
+                            }
+                            break;
+                        case Direction.NorthWest:
+                            if (northNeighbor == null || westNeighbor == null) continue;
+                            if (!Traversable(pathfindingArgs.CollisionMask, northNeighbor.CollisionMask) ||
+                                !Traversable(pathfindingArgs.CollisionMask, westNeighbor.CollisionMask))
+                            {
+                                continue;
+                            }
+                            break;
+                        case Direction.SouthWest:
+                            if (southNeighbor == null || westNeighbor == null) continue;
+                            if (!Traversable(pathfindingArgs.CollisionMask, southNeighbor.CollisionMask) ||
+                                !Traversable(pathfindingArgs.CollisionMask, westNeighbor.CollisionMask))
+                            {
+                                continue;
+                            }
+                            break;
+                        case Direction.SouthEast:
+                            if (southNeighbor == null || eastNeighbor == null) continue;
+                            if (!Traversable(pathfindingArgs.CollisionMask, southNeighbor.CollisionMask) ||
+                                !Traversable(pathfindingArgs.CollisionMask, eastNeighbor.CollisionMask))
+                            {
+                                continue;
+                            }
+                            break;
+                    }
+
+
                     // If tile is untraversable it'll be null
-                    var tileCost = GetTileCost(collisionMask, pathfindingArgs, next, currentNode);
+                    var tileCost = GetTileCost(pathfindingArgs.CollisionMask, pathfindingArgs, currentNode, next);
 
                     if (tileCost == null)
                     {
@@ -203,26 +256,32 @@ namespace Content.Server.GameObjects.Components.Pathfinding
 
             if (!routeFound)
             {
-                Logger.WarningS("pathfinding", $"No route from {start} to {end}");
+                // Logger.WarningS("pathfinding", $"No route from {startTile} to {endTile}");
                 return null;
             }
 
+            var route = ReconstructPath(cameFrom, currentNode);
+            if (route.Count == 1)
+            {
+                return null;
+            }
             var timeTaken = (DateTime.Now - pathTimeStart).TotalSeconds;
 
-            var route = ReconstructPath(cameFrom, currentNode);
-
+            // Need to get data into an easier format to send to the relevant clients
             if (DebugRoute != null)
             {
-                var debugClosedTiles = new Stack<TileRef>(closedTiles.Count);
-                foreach (var tile in closedTiles)
+                /*
+                var debugClosedTiles = new List<TileRef>();
+                var debugGScores = new Dictionary<TileRef, float>();
+
+                foreach (var (node, score) in gScores)
                 {
-                    debugClosedTiles.Push(tile.TileRef);
+                    debugGScores.Add(node.TileRef, score);
                 }
 
-                var debugGScores = new Dictionary<TileRef, float>();
-                foreach (var (node, value) in gScores)
+                foreach (var node in closedTiles)
                 {
-                    debugGScores.Add(node.TileRef, value);
+                    debugClosedTiles.Add(node.TileRef);
                 }
 
                 var debugRoute = new PathfindingRoute(
@@ -233,27 +292,38 @@ namespace Content.Server.GameObjects.Components.Pathfinding
                     timeTaken);
 
                 DebugRoute.Invoke(debugRoute);
+                */
             }
-
-            Logger.DebugS("pathfinding", $"Found path in {timeTaken} seconds");
 
             return route;
         }
 
-        private bool Traversable(int collisionMask, IEnumerable<int> collisionlayers)
+        public static Queue<TileRef> ReconstructPath(IDictionary<PathfindingNode, PathfindingNode> cameFrom, PathfindingNode current)
         {
-            foreach (var layer in collisionlayers)
+            var running = new Stack<TileRef>();
+            running.Push(current.TileRef);
+            while (cameFrom.ContainsKey(current))
             {
-                if ((collisionMask & layer) != 0) return false;
+                var previousCurrent = current;
+                current = cameFrom[current];
+                cameFrom.Remove(previousCurrent);
+                running.Push(current.TileRef);
             }
 
-            return true;
+            var result = new Queue<TileRef>(running);
+
+            return result;
+        }
+
+        private bool Traversable(int collisionMask, int nodeMask)
+        {
+            return (collisionMask & nodeMask) == 0;
         }
 
         private float? GetTileCost(int collisionMask, PathfindingArgs pathfindingArgs, PathfindingNode start, PathfindingNode end)
         {
 
-            if (!pathfindingArgs.NoClip && !Traversable(collisionMask, end.CollisionLayers))
+            if (!pathfindingArgs.NoClip && !Traversable(collisionMask, end.CollisionMask))
             {
                 return null;
             }
@@ -288,21 +358,6 @@ namespace Content.Server.GameObjects.Components.Pathfinding
             }
 
             return cost;
-        }
-
-        public static List<TileRef> ReconstructPath(IDictionary<PathfindingNode, PathfindingNode> cameFrom, PathfindingNode current)
-        {
-            var result = new List<TileRef>();
-            while (cameFrom.ContainsKey(current))
-            {
-                var previousCurrent = current;
-                current = cameFrom[current];
-                cameFrom.Remove(previousCurrent);
-                result.Add(current.TileRef);
-            }
-
-            result.Reverse();
-            return result;
         }
     }
 }

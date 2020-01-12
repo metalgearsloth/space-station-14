@@ -54,7 +54,7 @@ namespace Content.Server.GameObjects.Components.Movement
             base.ExposeData(serializer);
 
             serializer.DataField(ref _logicName, "logic", null);
-            serializer.DataField(ref _visionRadius, "vision", 8.0f);
+            serializer.DataField(ref _visionRadius, "vision", 2048.0f); // TODO Change back to 8
         }
 
         /// <summary>

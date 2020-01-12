@@ -1,8 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using Content.Server.GameObjects.Components.Movement;
 using Content.Server.GameObjects.Components.Pathfinding;
+using Content.Server.GameObjects.EntitySystems.Pathfinding;
+using Content.Server.GameObjects.EntitySystems.Pathfinding.Pathfinders;
 using Robust.Server.GameObjects;
+using Robust.Shared.GameObjects;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Interfaces.GameObjects.Components;
 using Robust.Shared.Interfaces.Map;
@@ -32,8 +37,10 @@ namespace Content.Server.AI.HTN.Tasks.Concrete.Operators.Movement
         private AntiStuckMethod _antiStuckMethod = AntiStuckMethod.None;
 
         // Instance variables
+        private CancellationTokenSource _routeCancelToken;
+        protected Task<Queue<TileRef>> RouteTask;
         private IMapManager _mapManager;
-        private IPathfinder _pathfinder;
+        private PathfindingSystem _pathfinder;
         private ICollidableComponent _ownerCollidable;
 
         // Input
@@ -44,7 +51,7 @@ namespace Content.Server.AI.HTN.Tasks.Concrete.Operators.Movement
         {
             Owner = owner;
             _mapManager = IoCManager.Resolve<IMapManager>();
-            _pathfinder = IoCManager.Resolve<IPathfinder>();
+            _pathfinder = IoCManager.Resolve<IEntitySystemManager>().GetEntitySystem<PathfindingSystem>();
             if (!Owner.TryGetComponent<ICollidableComponent>(out var collidableComponent))
             {
                 throw new InvalidOperationException();
@@ -172,6 +179,7 @@ namespace Content.Server.AI.HTN.Tasks.Concrete.Operators.Movement
         /// </summary>
         public void HaveArrived()
         {
+            _routeCancelToken?.Cancel(); // oh thank god no more pathfinding
             Route.Clear();
             Owner.TryGetComponent(out AiControllerComponent mover);
             mover.VelocityDir = Vector2.Zero;
@@ -179,8 +187,10 @@ namespace Content.Server.AI.HTN.Tasks.Concrete.Operators.Movement
 
         protected void GetRoute()
         {
+            _routeCancelToken?.Cancel();
+            _routeCancelToken = new CancellationTokenSource();
             Route.Clear();
-            // TODO: Look at using a task
+
             int collisionMask;
             if (!Owner.TryGetComponent(out CollidableComponent collidableComponent))
             {
@@ -190,23 +200,32 @@ namespace Content.Server.AI.HTN.Tasks.Concrete.Operators.Movement
             {
                 collisionMask = collidableComponent.CollisionMask;
             }
-            var route = _pathfinder.FindPath(
-                collisionMask,
-                Owner.Transform.GridPosition,
-                TargetGrid,
-                new PathfindingArgs(proximity: 1.4f));
 
-            if (route == null || route.Count <= 1)
+            var startGrid = _mapManager.GetGrid(Owner.Transform.GridID).GetTileRef(Owner.Transform.GridPosition);
+            var endGrid = _mapManager.GetGrid(TargetGrid.GridID).GetTileRef(TargetGrid);;
+            _routeCancelToken = new CancellationTokenSource();
+
+            RouteTask = _pathfinder.RequestPath(new PathfindingArgs(
+                collisionMask,
+                startGrid,
+                endGrid,
+                1.5f
+            ), _routeCancelToken);
+        }
+
+        protected void ReceivedRoute()
+        {
+            Route = RouteTask.Result;
+
+            if (RouteTask.Status != TaskStatus.RanToCompletion || Route == null)
             {
-                Route = null;
+                RouteTask = null;
+                Route = new Queue<TileRef>();
                 // Couldn't find a route to target
                 return;
             }
 
-            foreach (var tile in route)
-            {
-                Route.Enqueue(tile);
-            }
+            RouteTask = null;
 
             // Because the entity may be half on 2 tiles we'll just cut out the first tile.
             // This may not be the best solution but sometimes if the AI is chasing for example it will
