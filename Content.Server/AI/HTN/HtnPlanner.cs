@@ -44,7 +44,7 @@ namespace Content.Server.AI.HTN
         /// <param name="worldState"></param>
         /// <param name="rootTask">The final outcome we're trying to achieve</param>
         /// <returns></returns>
-        public Queue<ConcreteTask> GetPlan(AiWorldState worldState, IAiTask rootTask)
+        public Queue<PrimitiveTask> GetPlan(AiWorldState worldState, IAiTask rootTask)
         {
             // Debugging
             var startTime = DateTime.Now;
@@ -58,7 +58,7 @@ namespace Content.Server.AI.HTN
 
             var tasksToProcess = new Stack<IAiTask>();
             tasksToProcess.Push(rootTask);
-            var finalPlan = new Queue<ConcreteTask>();
+            var finalPlan = new Queue<PrimitiveTask>();
             var reset = false;
             var methodIndex = 0;
 
@@ -126,7 +126,7 @@ namespace Content.Server.AI.HTN
                         // TODO: Copy world state
                         blackboard.Save(
                             new Stack<IAiTask>(finalPlan),
-                            new Queue<ConcreteTask>(finalPlan),
+                            new Queue<PrimitiveTask>(finalPlan),
                             methodIndex + indexOffset,
                             compound);
                         tasksToProcess.Push(foundMethod);
@@ -147,7 +147,7 @@ namespace Content.Server.AI.HTN
                         }
 
                         break;
-                    case ConcreteTask primitive:
+                    case PrimitiveTask primitive:
                         if (primitive.PreconditionsMet(blackboard.RunningState))
                         {
                             primitive.ProceduralEffects(blackboard.RunningState);

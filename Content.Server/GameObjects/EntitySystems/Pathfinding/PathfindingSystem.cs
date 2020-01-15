@@ -3,16 +3,19 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Content.Server.GameObjects.Components.Doors;
+using Content.Server.GameObjects.Components.Pathfinding;
 using Content.Server.GameObjects.EntitySystems.Pathfinding.Pathfinders;
 using Content.Server.GameObjects.EntitySystems.Pathfinding.Updates;
-using Robust.Server.GameObjects;
+using Content.Shared.Pathfinding;
 using Robust.Shared.Enums;
+using Robust.Shared.GameObjects.Components;
 using Robust.Shared.GameObjects.Systems;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Interfaces.Map;
 using Robust.Shared.IoC;
 using Robust.Shared.Log;
 using Robust.Shared.Map;
+using Robust.Shared.Maths;
 
 namespace Content.Server.GameObjects.EntitySystems.Pathfinding
 {
@@ -29,9 +32,10 @@ namespace Content.Server.GameObjects.EntitySystems.Pathfinding
     */
     public class PathfindingSystem : EntitySystem
     {
-
+#pragma warning disable 649
         [Dependency] private readonly IMapManager _mapManager;
         [Dependency] private readonly IPathfinder _pathfinder;
+#pragma warning restore 649
 
         // Pathfinding chunks stored by row
         private readonly Dictionary<GridId, List<PathfindingChunk>> _graph = new Dictionary<GridId, List<PathfindingChunk>>();
@@ -44,6 +48,7 @@ namespace Content.Server.GameObjects.EntitySystems.Pathfinding
         private Queue<IPathfindingGraphUpdate> _runningUpdates = new Queue<IPathfindingGraphUpdate>();
         private Queue<IPathfindingGraphUpdate> _queuedUpdatesSync = new Queue<IPathfindingGraphUpdate>();
         private Queue<IPathfindingGraphUpdate> _queuedUpdates = new Queue<IPathfindingGraphUpdate>();
+        private Queue<AStarRouteDebug> _aStarRouteDebugs = new Queue<AStarRouteDebug>();
 
         // Need to store previously known entity positions for collidables for when they move
         private Dictionary<IEntity, TileRef> _lastKnownPositions = new Dictionary<IEntity, TileRef>();
@@ -51,7 +56,13 @@ namespace Content.Server.GameObjects.EntitySystems.Pathfinding
         private float _lastUpdate;
         private const float MaxUpdateTime = 1.0f;
 
-        public Task<Queue<TileRef>> RequestPath(PathfindingArgs pathfindingArgs, CancellationTokenSource cancelToken = null)
+        /// <summary>
+        /// Ask for the pathfinder to gimme somethin
+        /// </summary>
+        /// <param name="pathfindingArgs"></param>
+        /// <param name="cancelToken"></param>
+        /// <returns></returns>
+        public async Task<Queue<TileRef>> RequestPathAsync(PathfindingArgs pathfindingArgs, CancellationTokenSource cancelToken = null)
         {
             if (cancelToken == null)
             {
@@ -64,13 +75,31 @@ namespace Content.Server.GameObjects.EntitySystems.Pathfinding
             }
             var result = new Task<Queue<TileRef>>(() => _pathfinder.FindPath(chunks, pathfindingArgs), cancelToken.Token);
             _queuedPathfinders.Enqueue(result);
-            return result;
+            return await result;
         }
 
+        // Every single tick we more or less:
+        // Handle all the running pathfinders (i.e. are they completed or faulted)
+        // Wait for any pending updates that have been running since last tick (if needed)
+        // Queue up new pathfinders that are pending
+        // Queue up new updates (this tick and also asynchronously)
         public override void Update(float frameTime)
         {
             base.Update(frameTime);
             _lastUpdate += frameTime;
+
+#if DEBUG
+            var componentManager = IoCManager.Resolve<IComponentManager>();
+            foreach (var component in componentManager.GetAllComponents(typeof(ServerPathfindingDebugDebugComponent)))
+            {
+                foreach (var route in _aStarRouteDebugs)
+                {
+                    HandleAStar((ServerPathfindingDebugDebugComponent) component, route);
+                }
+            }
+
+            _aStarRouteDebugs.Clear();
+#endif
 
             var newRunningPathfinders = new Queue<Task>();
 
@@ -81,6 +110,8 @@ namespace Content.Server.GameObjects.EntitySystems.Pathfinding
                 {
                     case TaskStatus.RanToCompletion:
                         break;
+                    case TaskStatus.Faulted:
+                        throw new AggregateException(pathfinderTask.Exception?.Message);
                     default:
                         newRunningPathfinders.Enqueue(pathfinderTask);
                         break;
@@ -108,14 +139,10 @@ namespace Content.Server.GameObjects.EntitySystems.Pathfinding
 
             if ((_queuedUpdates.Count > 0 || _queuedUpdatesSync.Count > 0) && (_runningPathfinders.Count == 0 || _lastUpdate > MaxUpdateTime))
             {
-                // TODO: Probably have a function for handling completed pathfinders
                 _lastUpdate = 0.0f;
 
-                // Finish up previous tasks
-                foreach (var task in _runningPathfinders)
-                {
-                    task.Wait();
-                }
+                // Finish up previous paths so we can update the graph
+                Task.WaitAll(_runningPathfinders.ToArray());
                 _updateTask?.Wait();
                 _updateTask = null;
 
@@ -179,51 +206,6 @@ namespace Content.Server.GameObjects.EntitySystems.Pathfinding
             }
 
             _runningUpdates.Clear();
-        }
-
-        private void QueueCollidableMove(object sender, MoveEventArgs eventArgs, IEntity entity)
-        {
-            var oldTile = _lastKnownPositions[entity];
-            var newTile = _mapManager.GetGrid(eventArgs.NewPosition.GridID).GetTileRef(eventArgs.NewPosition);
-
-            if (oldTile == newTile)
-            {
-                return;
-            }
-
-            var collisionLayer = entity.GetComponent<CollidableComponent>().CollisionLayer;
-
-            _queuedUpdates.Enqueue(new CollidableMove(collisionLayer, oldTile, newTile));
-        }
-
-        // TODO: Creating Chunks should be synchronous on the main thread
-        private void HandleCollidableMove(CollidableMove move)
-        {
-            var gridIds = new HashSet<GridId>(2) {move.OldTile.GridIndex, move.NewTile.GridIndex};
-            var oldUpdated = false;
-            var newUpdated = false;
-            foreach (var gridId in gridIds)
-            {
-                if (oldUpdated && newUpdated) break;
-
-                foreach (var chunk in GetChunks(gridId))
-                {
-                    if (oldUpdated && newUpdated) break;
-
-                    if (!oldUpdated && chunk.TryGetNode(move.OldTile, out var oldNode))
-                    {
-                        oldNode.RemoveCollisionLayer(move.CollisionLayer);
-                        oldUpdated = true;
-                    }
-                    if (!newUpdated && chunk.TryGetNode(move.NewTile, out var newNode))
-                    {
-                        newNode.AddCollisionLayer(move.CollisionLayer);
-                        newNode.UpdateTile(move.NewTile);
-                        newUpdated = true;
-                    }
-                }
-            }
-
         }
 
         private void RemovePathfindingGrid(GridRemoval removal)
@@ -337,6 +319,10 @@ namespace Content.Server.GameObjects.EntitySystems.Pathfinding
             _mapManager.OnGridRemoved += (id => { _queuedUpdates.Enqueue(new GridRemoval(id)); });
             _mapManager.GridChanged += QueueGridChange;
             _mapManager.TileChanged += QueueTileChange;
+
+#if DEBUG
+            AStarPathfinder.DebugRoute += QueueAStarRouteDebug;
+#endif
         }
 
         public override void Shutdown()
@@ -345,7 +331,18 @@ namespace Content.Server.GameObjects.EntitySystems.Pathfinding
             _mapManager.OnGridRemoved -= (id => { _queuedUpdates.Enqueue(new GridRemoval(id)); });
             _mapManager.GridChanged -= QueueGridChange;
             _mapManager.TileChanged -= QueueTileChange;
+
+#if DEBUG
+            AStarPathfinder.DebugRoute -= QueueAStarRouteDebug;
+#endif
         }
+
+#if DEBUG
+        private void QueueAStarRouteDebug(AStarRouteDebug routeDebug)
+        {
+            _aStarRouteDebugs.Enqueue(routeDebug);
+        }
+#endif
 
         private void QueueGridChange(object sender, GridChangedEventArgs eventArgs)
         {
@@ -358,17 +355,76 @@ namespace Content.Server.GameObjects.EntitySystems.Pathfinding
             _queuedUpdates.Enqueue(new TileUpdate(eventArgs.NewTile));
         }
 
+        // Debuggers here. Because the pathfinding is run as a task on a threadpool thread we need to run this on the main thread
+        private void HandleAStar(ServerPathfindingDebugDebugComponent debugComponent, AStarRouteDebug routeDebug)
+        {
+            var mapManager = IoCManager.Resolve<IMapManager>();
+            if ((debugComponent.DebugMode & (int) PathfindingDebugMode.Route) != 0)
+            {
+                var route = new List<Vector2>();
+                foreach (var tile in routeDebug.Route)
+                {
+                    var tileGrid = mapManager.GetGrid(tile.GridIndex).GridTileToLocal(tile.GridIndices);
+                    route.Add(mapManager.GetGrid(tile.GridIndex).LocalToWorld(tileGrid).Position);
+                }
+
+
+                var cameFrom = new Dictionary<Vector2, Vector2>();
+                foreach (var (from, to) in routeDebug.CameFrom)
+                {
+                    var tileOneGrid = mapManager.GetGrid(from.GridIndex).GridTileToLocal(from.GridIndices);
+                    var tileOneWorld = mapManager.GetGrid(from.GridIndex).LocalToWorld(tileOneGrid).Position;
+                    var tileTwoGrid = mapManager.GetGrid(to.GridIndex).GridTileToLocal(to.GridIndices);
+                    var tileTwoWorld = mapManager.GetGrid(to.GridIndex).LocalToWorld(tileTwoGrid).Position;
+                    cameFrom.Add(tileOneWorld, tileTwoWorld);
+                }
+
+
+                var gScores = new Dictionary<Vector2, float>();
+                foreach (var (tile, score) in routeDebug.GScores)
+                {
+                    var tileGrid = mapManager.GetGrid(tile.GridIndex).GridTileToLocal(tile.GridIndices);
+                    gScores.Add(mapManager.GetGrid(tile.GridIndex).LocalToWorld(tileGrid).Position, score);
+                }
+
+                var closedTiles = new List<Vector2>();
+                foreach (var tile in routeDebug.ClosedTiles)
+                {
+                    var tileGrid = mapManager.GetGrid(tile.GridIndex).GridTileToLocal(tile.GridIndices);
+                    closedTiles.Add(mapManager.GetGrid(tile.GridIndex).LocalToWorld(tileGrid).Position);
+                }
+
+                var msg = new AStarRouteMessage(
+                    route,
+                    cameFrom,
+                    gScores,
+                    closedTiles,
+                    routeDebug.TimeTaken
+                    );
+
+                debugComponent.Owner.SendNetworkMessage(debugComponent, msg);
+            }
+        }
+
+        #region collidable
         /// <summary>
         /// If an entity's collision gets turn on then we need to start tracking it as it moves to update the graph
         /// </summary>
         /// <param name="entity"></param>
         private void HandleCollidableAdd(IEntity entity)
         {
-            // TODO: Should store tracked entities somewhere so if the component gets added after we can still function normally
-            if (entity.HasComponent<ServerDoorComponent>() || entity.HasComponent<AirlockComponent>()) return;
+            // It's a grid / gone / a door
+            if (entity.Prototype == null ||
+                entity.Deleted ||
+                entity.HasComponent<ServerDoorComponent>() ||
+                entity.HasComponent<AirlockComponent>())
+            {
+                return;
+            }
+
             entity.Transform.OnMove += (sender, args) =>
             {
-                QueueCollidableMove(sender, args, entity);
+                QueueCollidableMove(args, entity);
             };
             var grid = _mapManager.GetGrid(entity.Transform.GridID);
             var tileRef = grid.GetTileRef(entity.Transform.GridPosition);
@@ -393,10 +449,23 @@ namespace Content.Server.GameObjects.EntitySystems.Pathfinding
         /// <param name="entity"></param>
         private void HandleCollidableRemove(IEntity entity)
         {
-            if (entity.HasComponent<ServerDoorComponent>() || entity.HasComponent<AirlockComponent>()) return;
+            if (_lastKnownPositions.ContainsKey(entity))
+            {
+                _lastKnownPositions.Remove(entity);
+                // TODO: That spot will remain un-traversable 4EVA
+            }
+
+            if (entity.Prototype == null ||
+                entity.Deleted ||
+                entity.HasComponent<ServerDoorComponent>() ||
+                entity.HasComponent<AirlockComponent>())
+            {
+                return;
+            }
+
             entity.Transform.OnMove -= (sender, args) =>
             {
-                QueueCollidableMove(sender, args, entity);
+                QueueCollidableMove(args, entity);
             };
             var grid = _mapManager.GetGrid(entity.Transform.GridID);
             var tileRef = grid.GetTileRef(entity.Transform.GridPosition);
@@ -411,8 +480,51 @@ namespace Content.Server.GameObjects.EntitySystems.Pathfinding
                     break;
                 }
             }
+        }
 
-            _lastKnownPositions.Remove(entity);
+        private void QueueCollidableMove(MoveEventArgs eventArgs, IEntity entity)
+        {
+            var oldTile = _lastKnownPositions[entity];
+            var newTile = _mapManager.GetGrid(eventArgs.NewPosition.GridID).GetTileRef(eventArgs.NewPosition);
+
+            if (oldTile == newTile)
+            {
+                return;
+            }
+
+            _lastKnownPositions[entity] = newTile;
+            var collisionLayer = entity.GetComponent<CollidableComponent>().CollisionLayer;
+
+            _queuedUpdates.Enqueue(new CollidableMove(collisionLayer, oldTile, newTile));
+        }
+
+        // TODO: Creating Chunks should be synchronous on the main thread
+        private void HandleCollidableMove(CollidableMove move)
+        {
+            var gridIds = new HashSet<GridId>(2) {move.OldTile.GridIndex, move.NewTile.GridIndex};
+            var oldUpdated = false;
+            var newUpdated = false;
+            foreach (var gridId in gridIds)
+            {
+                if (oldUpdated && newUpdated) break;
+
+                foreach (var chunk in GetChunks(gridId))
+                {
+                    if (oldUpdated && newUpdated) break;
+
+                    if (!oldUpdated && chunk.TryGetNode(move.OldTile, out var oldNode))
+                    {
+                        oldNode.RemoveCollisionLayer(move.CollisionLayer);
+                        oldUpdated = true;
+                    }
+                    if (!newUpdated && chunk.TryGetNode(move.NewTile, out var newNode))
+                    {
+                        newNode.AddCollisionLayer(move.CollisionLayer);
+                        newNode.UpdateTile(move.NewTile);
+                        newUpdated = true;
+                    }
+                }
+            }
         }
 
         // TODO: Longer term -> Handle collision layer changes?
@@ -431,6 +543,7 @@ namespace Content.Server.GameObjects.EntitySystems.Pathfinding
                     break;
             }
         }
+        #endregion
 
         public override void SubscribeEvents()
         {

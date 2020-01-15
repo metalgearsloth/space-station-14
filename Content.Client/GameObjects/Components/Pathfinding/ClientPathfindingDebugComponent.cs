@@ -23,7 +23,7 @@ namespace Content.Client.GameObjects.Components.Pathfinding
 {
     // Component to receive the route data and an overlay to show it
     [RegisterComponent]
-    internal sealed class ClientPathfindingDebugSharedComponent : SharedPathfindingDebugComponent
+    internal sealed class ClientPathfindingDebugComponent : SharedPathfindingDebugComponent
     {
         private DebugPathfindingOverlay _overlay;
         private float _routeDuration = 4.0f; // How long before we remove it from the overlay
@@ -33,7 +33,7 @@ namespace Content.Client.GameObjects.Components.Pathfinding
             base.HandleMessage(message, netChannel, component);
             switch (message)
             {
-                case PathfindingRoute route:
+                case AStarRouteMessage route:
                     ReceivedRoute(route);
                     break;
                 case PathfindingGraphMessage graph:
@@ -57,13 +57,13 @@ namespace Content.Client.GameObjects.Components.Pathfinding
             overlaymanager.RemoveOverlay(nameof(DebugPathfindingOverlay));
         }
 
-        private void ReceivedRoute(PathfindingRoute route)
+        private void ReceivedRoute(AStarRouteMessage routeMessage)
         {
-            _overlay.AddRoute(route);
+            _overlay.AddRoute(routeMessage);
             Timer.Spawn(TimeSpan.FromSeconds(_routeDuration), () =>
             {
                 if (_overlay == null) return;
-                _overlay.RemoveRoute(route);
+                _overlay.RemoveRoute(routeMessage);
             });
         }
 
@@ -77,14 +77,14 @@ namespace Content.Client.GameObjects.Components.Pathfinding
     {
         // TODO: Add a box like the debug one and show the most recent path stuff
         public override OverlaySpace Space => OverlaySpace.WorldSpace;
-        public PathfindingDebugMode Mode = PathfindingDebugMode.Route;
+        public int Mode { get; private set; } = 1;
 
         // Graph debugging
         private readonly Dictionary<int, List<Vector2>> _graph = new Dictionary<int, List<Vector2>>();
         private readonly Dictionary<int, Color> _graphColors = new Dictionary<int, Color>();
 
         // Route debugging
-        private readonly List<PathfindingRoute> _routes = new List<PathfindingRoute>();
+        private readonly List<AStarRouteMessage> _routes = new List<AStarRouteMessage>();
 
         public DebugPathfindingOverlay() : base(nameof(DebugPathfindingOverlay))
         {
@@ -124,16 +124,16 @@ namespace Content.Client.GameObjects.Components.Pathfinding
         }
 
         #region pathfinder
-        public void AddRoute(PathfindingRoute route)
+        public void AddRoute(AStarRouteMessage routeMessage)
         {
-            _routes.Add(route);
+            _routes.Add(routeMessage);
         }
 
-        public void RemoveRoute(PathfindingRoute route)
+        public void RemoveRoute(AStarRouteMessage routeMessage)
         {
-            if (_routes.Contains(route))
+            if (_routes.Contains(routeMessage))
             {
-                _routes.Remove(route);
+                _routes.Remove(routeMessage);
                 return;
             }
             Logger.WarningS("pathfinding", "Not a valid route for overlay removal");
@@ -184,20 +184,9 @@ namespace Content.Client.GameObjects.Components.Pathfinding
         {
             var worldHandle = (DrawingHandleWorld) handle;
 
-            switch (Mode)
+            if ((Mode & (int) PathfindingDebugMode.Route) != 0)
             {
-                case PathfindingDebugMode.None:
-                    break;
-                case PathfindingDebugMode.Route:
-                    DrawRoutes(worldHandle);
-                    break;
-                case PathfindingDebugMode.ConsideredTiles:
-                    break;
-                case PathfindingDebugMode.Graph:
-                    DrawGraph(worldHandle);
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException();
+                DrawRoutes(worldHandle);
             }
         }
     }

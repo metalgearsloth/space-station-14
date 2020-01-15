@@ -19,7 +19,7 @@ namespace Content.Server.AI.HTN.WorldState
             RunningState = worldState;
         }
 
-        public void Save(Stack<IAiTask> tasksToProcess, Queue<ConcreteTask> finalPlan, int method, SelectorTask owningTask)
+        public void Save(Stack<IAiTask> tasksToProcess, Queue<PrimitiveTask> finalPlan, int method, SelectorTask owningTask)
         {
             _decompositionHistory.Push(new Decomposition(tasksToProcess, finalPlan, method, owningTask, RunningState));
         }
@@ -32,14 +32,14 @@ namespace Content.Server.AI.HTN.WorldState
         public struct Decomposition
         {
             public Stack<IAiTask> TasksToProcess { get; }
-            public Queue<ConcreteTask> FinalPlan { get; }
+            public Queue<PrimitiveTask> FinalPlan { get; }
             public int ChosenMethodIndex { get; }
             public SelectorTask OwningSelectorTask { get; }
             public AiWorldState WorldState { get; }
 
             public Decomposition(
                 Stack<IAiTask> tasksToProcess,
-                Queue<ConcreteTask> finalPlan,
+                Queue<PrimitiveTask> finalPlan,
                 int chosenMethodIndex,
                 SelectorTask owningSelectorTask,
                 AiWorldState worldState)

@@ -12,7 +12,6 @@ namespace Content.Server.GameObjects.EntitySystems.Pathfinding.Pathfinders
 {
     public interface IPathfinder
     {
-        event Action<PathfindingRoute> DebugRoute;
 
         void Initialize();
 
@@ -97,7 +96,7 @@ namespace Content.Server.GameObjects.EntitySystems.Pathfinding.Pathfinders
 // The system essentially tries to pre-cache shit where possible.
 // Everything to do with working out the actual path should be in the manager.
 
-        public event Action<PathfindingRoute> DebugRoute;
+        public static event Action<AStarRouteDebug> DebugRoute;
         private PathfindingSystem _pathfindingSystem;
 
         public void Initialize()
@@ -133,7 +132,7 @@ namespace Content.Server.GameObjects.EntitySystems.Pathfinding.Pathfinders
             }
 
             // Check if we can get a proximity tile to see if we can end early
-            if (!Traversable(pathfindingArgs.CollisionMask, endNode.CollisionMask))
+            if (!Utils.Traversable(pathfindingArgs.CollisionMask, endNode.CollisionMask))
             {
                 var newEndFound = false;
                 if (pathfindingArgs.Proximity > 0.0f)
@@ -141,7 +140,7 @@ namespace Content.Server.GameObjects.EntitySystems.Pathfinding.Pathfinders
                     // TODO: Should make this account for proximities, probably some kind of breadth-first search to find a valid one
                     foreach (var (direction, node) in endNode.Neighbors)
                     {
-                        if (Traversable(pathfindingArgs.CollisionMask, node.CollisionMask))
+                        if (Utils.Traversable(pathfindingArgs.CollisionMask, node.CollisionMask))
                         {
                             endNode = node;
                             newEndFound = true;
@@ -200,32 +199,32 @@ namespace Content.Server.GameObjects.EntitySystems.Pathfinding.Pathfinders
                     {
                         case Direction.NorthEast:
                             if (northNeighbor == null || eastNeighbor == null) continue;
-                            if (!Traversable(pathfindingArgs.CollisionMask, northNeighbor.CollisionMask) ||
-                                !Traversable(pathfindingArgs.CollisionMask, eastNeighbor.CollisionMask))
+                            if (!Utils.Traversable(pathfindingArgs.CollisionMask, northNeighbor.CollisionMask) ||
+                                !Utils.Traversable(pathfindingArgs.CollisionMask, eastNeighbor.CollisionMask))
                             {
                                 continue;
                             }
                             break;
                         case Direction.NorthWest:
                             if (northNeighbor == null || westNeighbor == null) continue;
-                            if (!Traversable(pathfindingArgs.CollisionMask, northNeighbor.CollisionMask) ||
-                                !Traversable(pathfindingArgs.CollisionMask, westNeighbor.CollisionMask))
+                            if (!Utils.Traversable(pathfindingArgs.CollisionMask, northNeighbor.CollisionMask) ||
+                                !Utils.Traversable(pathfindingArgs.CollisionMask, westNeighbor.CollisionMask))
                             {
                                 continue;
                             }
                             break;
                         case Direction.SouthWest:
                             if (southNeighbor == null || westNeighbor == null) continue;
-                            if (!Traversable(pathfindingArgs.CollisionMask, southNeighbor.CollisionMask) ||
-                                !Traversable(pathfindingArgs.CollisionMask, westNeighbor.CollisionMask))
+                            if (!Utils.Traversable(pathfindingArgs.CollisionMask, southNeighbor.CollisionMask) ||
+                                !Utils.Traversable(pathfindingArgs.CollisionMask, westNeighbor.CollisionMask))
                             {
                                 continue;
                             }
                             break;
                         case Direction.SouthEast:
                             if (southNeighbor == null || eastNeighbor == null) continue;
-                            if (!Traversable(pathfindingArgs.CollisionMask, southNeighbor.CollisionMask) ||
-                                !Traversable(pathfindingArgs.CollisionMask, eastNeighbor.CollisionMask))
+                            if (!Utils.Traversable(pathfindingArgs.CollisionMask, southNeighbor.CollisionMask) ||
+                                !Utils.Traversable(pathfindingArgs.CollisionMask, eastNeighbor.CollisionMask))
                             {
                                 continue;
                             }
@@ -233,7 +232,7 @@ namespace Content.Server.GameObjects.EntitySystems.Pathfinding.Pathfinders
                     }
 
 
-                    // If tile is untraversable it'll be null
+                    // If tile is unUtils.Traversable it'll be null
                     var tileCost = GetTileCost(pathfindingArgs.CollisionMask, pathfindingArgs, currentNode, next);
 
                     if (tileCost == null)
@@ -270,9 +269,14 @@ namespace Content.Server.GameObjects.EntitySystems.Pathfinding.Pathfinders
             // Need to get data into an easier format to send to the relevant clients
             if (DebugRoute != null)
             {
-                /*
-                var debugClosedTiles = new List<TileRef>();
-                var debugGScores = new Dictionary<TileRef, float>();
+                var debugCameFrom = new Dictionary<TileRef, TileRef>(cameFrom.Count);
+                var debugGScores = new Dictionary<TileRef, float>(gScores.Count);
+                var debugClosedTiles = new HashSet<TileRef>(closedTiles.Count);
+
+                foreach (var (node, parent) in cameFrom)
+                {
+                    debugCameFrom.Add(node.TileRef, parent.TileRef);
+                }
 
                 foreach (var (node, score) in gScores)
                 {
@@ -284,21 +288,21 @@ namespace Content.Server.GameObjects.EntitySystems.Pathfinding.Pathfinders
                     debugClosedTiles.Add(node.TileRef);
                 }
 
-                var debugRoute = new PathfindingRoute(
+                var debugRoute = new AStarRouteDebug(
                     route,
-                    // cameFrom,
+                    debugCameFrom,
                     debugGScores,
                     debugClosedTiles,
                     timeTaken);
 
                 DebugRoute.Invoke(debugRoute);
-                */
+
             }
 
             return route;
         }
 
-        public static Queue<TileRef> ReconstructPath(IDictionary<PathfindingNode, PathfindingNode> cameFrom, PathfindingNode current)
+        public static Queue<TileRef> ReconstructPath(Dictionary<PathfindingNode, PathfindingNode> cameFrom, PathfindingNode current)
         {
             var running = new Stack<TileRef>();
             running.Push(current.TileRef);
@@ -315,15 +319,10 @@ namespace Content.Server.GameObjects.EntitySystems.Pathfinding.Pathfinders
             return result;
         }
 
-        private bool Traversable(int collisionMask, int nodeMask)
-        {
-            return (collisionMask & nodeMask) == 0;
-        }
-
         private float? GetTileCost(int collisionMask, PathfindingArgs pathfindingArgs, PathfindingNode start, PathfindingNode end)
         {
 
-            if (!pathfindingArgs.NoClip && !Traversable(collisionMask, end.CollisionMask))
+            if (!pathfindingArgs.NoClip && !Utils.Traversable(collisionMask, end.CollisionMask))
             {
                 return null;
             }

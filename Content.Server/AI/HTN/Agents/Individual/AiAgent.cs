@@ -1,13 +1,12 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using Content.Server.AI.HTN.Agents.Group;
 using Content.Server.AI.HTN.Planner;
 using Content.Server.AI.HTN.Tasks;
-using Content.Server.AI.HTN.Tasks.Concrete.Operators;
 using Content.Server.AI.HTN.Tasks.Primitive;
 using Content.Server.AI.HTN.Tasks.Primitive.Operators;
 using Content.Server.AI.HTN.WorldState;
+using Content.Server.GameObjects;
 using Content.Server.Interfaces.Chat;
 using Robust.Server.AI;
 using Robust.Shared.IoC;
@@ -23,7 +22,7 @@ namespace Content.Server.AI.HTN.Agents.Individual
         public GroupAiManager AiManager { get; set; }
 
         public AiWorldState State { get; private set; }
-        private Queue<ConcreteTask>? RunPlan { get; set; }
+        private Queue<PrimitiveTask>? RunPlan { get; set; }
         protected virtual float PlanCooldown => 0.5f;
         private float _planCooldownRemaining;
 
@@ -35,6 +34,8 @@ namespace Content.Server.AI.HTN.Agents.Individual
 
         private readonly List<KeyValuePair<RootTaskPriority, List<IAiTask>>> _rootTasks =
             new List<KeyValuePair<RootTaskPriority, List<IAiTask>>>();
+
+        private bool _isDead = false;
 
         public event Action<PlanUpdate> PlanStatus;
 
@@ -50,7 +51,7 @@ namespace Content.Server.AI.HTN.Agents.Individual
             _planner = IoCManager.Resolve<IPlanner>();
         }
 
-        private bool TryActiveTask(out ConcreteTask activeTask)
+        private bool TryActiveTask(out PrimitiveTask activeTask)
         {
             activeTask = null;
             if (RunPlan == null || RunPlan?.Count <= 0) return false;
@@ -130,6 +131,23 @@ namespace Content.Server.AI.HTN.Agents.Individual
 
         protected virtual void SetupListeners()
         {
+            if (SelfEntity.TryGetComponent(out DamageableComponent damageableComponent))
+            {
+                // TODO: Unsubscribe
+                damageableComponent.DamageThresholdPassed += (sender, args) =>
+                {
+                    if (args.DamageThreshold.ThresholdType == ThresholdType.Death)
+                    {
+                        _isDead = true;
+                    }
+
+                    // TODO: If we get healed - double-check what it should be
+                    if (args.DamageThreshold.ThresholdType == ThresholdType.None)
+                    {
+                        _isDead = false;
+                    }
+                };
+            }
             return;
         }
 
@@ -178,6 +196,12 @@ namespace Content.Server.AI.HTN.Agents.Individual
 
         public override void Update(float frameTime)
         {
+            // TODO: Check if we ded via event
+            if (_isDead)
+            {
+                return;
+            }
+
             // Cooldown;
             _planCooldownRemaining -= frameTime;
             _interactionCooldownRemaining -= frameTime;

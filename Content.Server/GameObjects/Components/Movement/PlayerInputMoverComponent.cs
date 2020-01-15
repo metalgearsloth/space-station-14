@@ -68,7 +68,7 @@ namespace Content.Server.GameObjects.Components.Movement
             base.ExposeData(serializer);
 
             serializer.DataReadWriteFunction("wspd", 4.0f, value => WalkMoveSpeed = value, () => WalkMoveSpeed);
-            serializer.DataReadWriteFunction("rspd", 10.0f, value => SprintMoveSpeed = value, () => SprintMoveSpeed);
+            serializer.DataReadWriteFunction("rspd", 7.0f, value => SprintMoveSpeed = value, () => SprintMoveSpeed);
 
             // The velocity and moving directions is usually set from player or AI input,
             // so we don't want to save/load these derived fields.

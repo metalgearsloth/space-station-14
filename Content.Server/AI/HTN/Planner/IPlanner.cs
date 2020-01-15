@@ -10,6 +10,6 @@ namespace Content.Server.AI.HTN.Planner
     public interface IPlanner
     {
         event Action<AiPlanMessage> FoundPlan;
-        Queue<ConcreteTask> GetPlan(AiWorldState worldState, IAiTask rootTask);
+        Queue<PrimitiveTask> GetPlan(AiWorldState worldState, IAiTask rootTask);
     }
 }

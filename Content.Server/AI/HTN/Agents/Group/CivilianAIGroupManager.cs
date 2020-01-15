@@ -1,9 +1,9 @@
 using System;
 using System.Reflection;
 using Content.Server.AI.HTN.Agents.Individual;
+using Content.Server.AI.HTN.Tasks.Primitive.Movement;
 using Content.Server.AI.HTN.Tasks.Selector.Clothing;
 using Content.Server.AI.HTN.Tasks.Selector.Nutrition;
-using Content.Server.AI.HTN.Tasks.Sequence.Clothing;
 using Content.Server.GameObjects;
 using Content.Server.GameObjects.Components.Nutrition;
 using Content.Server.GameObjects.EntitySystems;
@@ -95,10 +95,14 @@ namespace Content.Server.AI.HTN.Agents.Group
                 thirstComponent.ThresholdChange += threshold => HandleThirst(agent, threshold);
             }
 
+            agent.AddRootTask(AiAgent.RootTaskPriority.VeryLow, new IdleAround(agent.SelfEntity));
+
+            /*
             if (agent.SelfEntity.HasComponent<InventoryComponent>())
             {
                 agent.AddRootTask(AiAgent.RootTaskPriority.Normal, new EquipUniform(agent.SelfEntity));
             }
+            */
         }
 
         private void HandleHunger(AiAgent agent, HungerThreshold threshold)

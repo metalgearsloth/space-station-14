@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 using Content.Server.AI.HTN.Tasks.Compound;
-using Content.Server.AI.HTN.Tasks.Concrete.Nutrition.Hunger;
+using Content.Server.AI.HTN.Tasks.Primitive.Nutrition.Hunger;
 using Content.Server.AI.HTN.Tasks.Sequence.Nutrition;
 using Content.Server.AI.HTN.WorldState;
 using Content.Server.GameObjects.Components.Nutrition;

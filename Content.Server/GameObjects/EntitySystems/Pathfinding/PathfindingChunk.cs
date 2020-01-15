@@ -10,6 +10,7 @@ using Robust.Shared.Utility;
 namespace Content.Server.GameObjects.EntitySystems.Pathfinding
 {
     // TODO: Look at using more indexing like the snapgrids
+    // TODO: Use Dictionary in the graph to store the MapIndices
 
     public class PathfindingChunk
     {

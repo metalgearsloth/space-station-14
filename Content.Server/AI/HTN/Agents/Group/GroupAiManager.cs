@@ -1,7 +1,5 @@
 using System.Collections.Generic;
 using Content.Server.AI.HTN.Agents.Individual;
-using Content.Server.AI.HTN.Tasks;
-using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Log;
 
 namespace Content.Server.AI.HTN.Agents.Group
