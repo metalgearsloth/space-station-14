@@ -18,26 +18,6 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Movement
 {
     public abstract class BaseMover : IOperator
     {
-        public float SpeedMultiplier
-        {
-            get => _speedMultiplier;
-            set
-            {
-                // Need to cap currently because of physics
-                if (value < 0.3f)
-                {
-                    value = 0.3f;
-                } else if (value > 1.0f)
-                {
-                    value = 1.0f;
-                }
-
-                _speedMultiplier = value;
-                _controller.SprintMoveSpeed = _speedMultiplier * 7.0f;
-            }
-        }
-
-        private float _speedMultiplier = 1.0f;
         public float PathfindingProximity { get; set; } = 1.42f;
         protected Queue<TileRef> Route = new Queue<TileRef>();
         protected GridCoordinates TargetGrid;

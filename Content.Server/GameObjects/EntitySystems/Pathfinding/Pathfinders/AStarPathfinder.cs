@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Content.Server.GameObjects.Components.Pathfinding.PathfindingQueue;
 using Content.Shared.Pathfinding;
 using JetBrains.Annotations;
@@ -160,12 +161,7 @@ namespace Content.Server.GameObjects.EntitySystems.Pathfinding.Pathfinders
             var cameFrom = new Dictionary<PathfindingNode, PathfindingNode>();
             var closedTiles = new HashSet<PathfindingNode>();
 
-            // See http://theory.stanford.edu/~amitp/GameProgramming/Heuristics.html#S7;
-            // Helps to breaks ties
-            const float pFactor = 1 + 1 / 1000;
-
-            // TODO: Look at trimming the graph during iteration given it's a copy instead of using closedTiles
-            PathfindingNode? currentNode = startNode;
+            PathfindingNode currentNode = startNode;
             openTiles.Enqueue(currentNode, 0);
             gScores[currentNode] = 0.0f;
             bool routeFound = false;
@@ -242,12 +238,13 @@ namespace Content.Server.GameObjects.EntitySystems.Pathfinding.Pathfinders
 
                     var gScore = gScores[currentNode] + tileCost.Value;
 
-                    if (!gScores.ContainsKey(next) || gScore < gScores[next])
+                    if (!gScores.TryGetValue(next, out var nextValue) || gScore < nextValue)
                     {
                         cameFrom[next] = currentNode;
                         gScores[next] = gScore;
-                        // pFactor is tie-breaker. Not implemented in the heuristic itself
-                        float fScore = gScores[next] + tileCost.Value * pFactor;
+                        // pFactor is tie-breaker where the fscore is otherwise equal.
+                        // See http://theory.stanford.edu/~amitp/GameProgramming/Heuristics.html#S7;
+                        float fScore = gScores[next] + OctileDistance(endNode, currentNode) * (1 + 1 / 1000);
                         openTiles.Enqueue(next, fScore);
                     }
                 }
@@ -319,6 +316,27 @@ namespace Content.Server.GameObjects.EntitySystems.Pathfinding.Pathfinders
             return result;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private float OctileDistance(PathfindingNode endNode, PathfindingNode currentNode)
+        {
+            // "Fast Euclidean" / octile.
+            // This implementation is written down in a few sources; it just saves doing sqrt.
+            int dstX = Math.Abs(currentNode.TileRef.X - endNode.TileRef.X);
+            int dstY = Math.Abs(currentNode.TileRef.Y - endNode.TileRef.Y);
+            if (dstX > dstY)
+            {
+                return 1.4f * dstY + (dstX - dstY);
+            }
+
+            return 1.4f * dstX + (dstY - dstX);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private float ManhattanDistance(PathfindingNode endNode, PathfindingNode currentNode)
+        {
+            return Math.Abs(currentNode.TileRef.X - endNode.TileRef.X) + Math.Abs(currentNode.TileRef.Y - endNode.TileRef.Y);
+        }
+
         private float? GetTileCost(int collisionMask, PathfindingArgs pathfindingArgs, PathfindingNode start, PathfindingNode end)
         {
 
@@ -337,22 +355,11 @@ namespace Content.Server.GameObjects.EntitySystems.Pathfinding.Pathfinders
             switch (pathfindingArgs.AllowDiagonals)
             {
                 case true:
-                    // "Fast Euclidean" / octile.
-                    // This implementation is written down in a few sources; it just saves doing sqrt.
-                    int dstX = Math.Abs(start.TileRef.X - end.TileRef.X);
-                    int dstY = Math.Abs(start.TileRef.Y - end.TileRef.Y);
-                    if (dstX > dstY)
-                    {
-                        cost *= 1.4f * dstY + (dstX - dstY);
-                    }
-                    else
-                    {
-                        cost *= 1.4f * dstX + (dstY - dstX);
-                    }
+                    cost *= OctileDistance(end, start);
                     break;
                 // Manhattan distance
                 case false:
-                    cost *= (Math.Abs(start.TileRef.X - end.TileRef.X) + Math.Abs(start.TileRef.Y - end.TileRef.Y));
+                    cost *= ManhattanDistance(end, start);
                     break;
             }
 

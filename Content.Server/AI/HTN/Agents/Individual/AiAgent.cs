@@ -32,6 +32,9 @@ namespace Content.Server.AI.HTN.Agents.Individual
         protected virtual float MeleeAttackCooldown => 0.4f;
         private float _meleeAttackCooldownRemaining;
 
+        protected virtual float BarkCooldown => 2.0f;
+        private DateTime _lastBark = DateTime.Now;
+
         private readonly List<KeyValuePair<RootTaskPriority, List<IAiTask>>> _rootTasks =
             new List<KeyValuePair<RootTaskPriority, List<IAiTask>>>();
 
@@ -75,8 +78,9 @@ namespace Content.Server.AI.HTN.Agents.Individual
 
         }
 
-        public void Bark(string message)
+        public void Bark(string message, bool force = false)
         {
+            if (!force && (DateTime.Now - _lastBark).TotalSeconds < BarkCooldown) return;
             var chatManager = IoCManager.Resolve<IChatManager>();
             chatManager.EntitySay(SelfEntity, message);
         }

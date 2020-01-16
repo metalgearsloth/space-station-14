@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using Content.Server.AI.HTN.Tasks.Primitive.Operators;
 using Content.Server.AI.HTN.Tasks.Primitive.Operators.Movement;
 using Content.Server.AI.HTN.WorldState;
@@ -19,7 +18,8 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Movement
     public class IdleAround : PrimitiveTask
     {
         // TODO: Make a separate one for wander station that's identical
-        private float range = 100.0f;
+        // range limit by worldbounds of grid?
+        private int range = 2;
         private GridCoordinates _idleCenter;
         // Where we will wander to (within range)
         private GridCoordinates _idleSpot;
@@ -28,7 +28,7 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Movement
         private float _holdTimeRemaining;
 
         private MoveToGridOperator _operator;
-        private bool _movementFinished = false;
+        private bool _movementFinished;
 
         public IdleAround(IEntity owner) : base(owner)
         {
@@ -46,7 +46,6 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Movement
         {
             _operator = new MoveToGridOperator(Owner, _idleSpot);
             TaskOperator = _operator;
-            _operator.SpeedMultiplier = 0.3f;
             _operator.Stuck += () =>
             {
                 _idleSpot = Owner.Transform.GridPosition;
@@ -84,20 +83,19 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Movement
                 return Outcome.Continuing;
             }
 
+            // todo: choose a random direction and try and get the tile there instead
             _movementFinished = false;
             _holdTimeRemaining = _holdTime;
             var mapManager = IoCManager.Resolve<IMapManager>();
             var grid = mapManager.GetGrid(Owner.Transform.GridID);
-            var validTiles = grid.GetTilesIntersecting(new Circle(_idleCenter.Position, range)).ToList();
-
-            if (validTiles.Count == 0)
-            {
-                return Outcome.Failed;
-            }
-
             var robustRandom = IoCManager.Resolve<IRobustRandom>();
-            var randomTile = validTiles[robustRandom.Next(validTiles.Count - 1)];
-            _idleSpot = grid.GridTileToLocal(randomTile.GridIndices);
+            var angle = Angle.FromDegrees(robustRandom.Next(0, 359));
+            var randomDistance = robustRandom.Next(range);
+            var newPosition = _idleCenter.Position + angle.ToVec() * randomDistance;
+            // Conversions blah blah
+            _idleSpot = grid.GridTileToLocal(grid.WorldToTile(grid.LocalToWorld(newPosition)));
+
+
             _operator.UpdateTarget(_idleSpot);
             return Outcome.Continuing;
         }

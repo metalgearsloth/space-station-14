@@ -75,7 +75,7 @@ namespace Content.Server.GameObjects.EntitySystems.Pathfinding
             }
             var result = new Task<Queue<TileRef>>(() => _pathfinder.FindPath(chunks, pathfindingArgs), cancelToken.Token);
             _queuedPathfinders.Enqueue(result);
-            return await result;
+            return await result.ConfigureAwait(false);
         }
 
         // Every single tick we more or less:
@@ -116,6 +116,7 @@ namespace Content.Server.GameObjects.EntitySystems.Pathfinding
                         newRunningPathfinders.Enqueue(pathfinderTask);
                         break;
                 }
+
             }
 
             _runningPathfinders.Clear();
