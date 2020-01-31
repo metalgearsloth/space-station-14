@@ -10,6 +10,8 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Nutrition.Hunger
 {
     public sealed class UseFoodInInventory : PrimitiveTask
     {
+        public override string Name => "UseFoodInInventory";
+
         private IEntity _targetFood;
         public override PrimitiveTaskType TaskType => PrimitiveTaskType.Interaction;
 

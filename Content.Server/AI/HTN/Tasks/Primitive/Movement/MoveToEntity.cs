@@ -6,8 +6,10 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Movement
 {
     public sealed class MoveToEntity : PrimitiveTask
     {
-
+        public override string Name => "MoveToEntity";
+        public IEntity Target => _target;
         private IEntity _target;
+
         public MoveToEntity(IEntity owner, IEntity target) : base(owner)
         {
             _target = target;
@@ -15,6 +17,11 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Movement
 
         public override bool PreconditionsMet(AiWorldState context)
         {
+            if (_target == null)
+            {
+                return false;
+            }
+
             return Owner.Transform.GridID == _target.Transform.GridID;
         }
 

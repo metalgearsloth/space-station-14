@@ -42,7 +42,7 @@ namespace Content.Server.AI.HTN.Agents.Group
          /// <summary>
          /// Generally used to handle where we're unable to plan or need to abort a running plan
          /// </summary>
-         protected abstract void HandlePlanOutcome(AiAgent.PlanUpdate update);
+         protected abstract void HandlePlanOutcome(PlanUpdate update);
 
          /// <summary>
          /// When the Ai System announces an AI with no manager this will try and grab it for use.

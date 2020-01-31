@@ -30,7 +30,7 @@ namespace Content.Server.AI.HTN.Tasks.Sequence
         }
 
         /// <summary>
-        /// This should instantiate the SubTasks for this sequence in reverse-order.
+        /// This should instantiate the SubTasks for this sequence in REVERSE ORDER.
         /// </summary>
         /// <param name="context"></param>
         public abstract void SetupSubTasks(AiWorldState context);

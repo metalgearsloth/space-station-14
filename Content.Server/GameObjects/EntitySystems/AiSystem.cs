@@ -53,6 +53,7 @@ namespace Content.Server.GameObjects.EntitySystems
         private void SetupAiManagers()
         {
             _aiManagers.Add(new CivilianAiGroupManager());
+            _aiManagers.Add(new SpirateAiGroupManager());
 
             foreach (var manager in _aiManagers)
             {

@@ -7,6 +7,8 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Movement
 {
     public sealed class MoveToNearestPlayer : PrimitiveTask
     {
+        public override string Name => "MoveToNearestPlayer";
+
         private IEntity _nearestPlayer;
 
         public MoveToNearestPlayer(IEntity owner) : base(owner)

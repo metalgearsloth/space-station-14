@@ -15,11 +15,17 @@ namespace Content.Shared.GameObjects.Components.AI
     [Serializable, NetSerializable]
     public class AiPlanMessage : ComponentMessage
     {
+        public EntityUid EntityUid { get; }
+        public double PlanningTime { get; }
         public string RootTask { get; }
+        public string[] PrimitiveTaskNames { get; }
 
-        public AiPlanMessage(string rootTask)
+        public AiPlanMessage(EntityUid entityUid, double planningTime, string rootTask, string[] primitiveTaskNames)
         {
+            EntityUid = entityUid;
+            PlanningTime = planningTime;
             RootTask = rootTask;
+            PrimitiveTaskNames = primitiveTaskNames;
         }
     }
 }

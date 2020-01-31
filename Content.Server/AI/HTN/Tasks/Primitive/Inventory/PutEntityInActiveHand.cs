@@ -8,6 +8,7 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Inventory
 {
     public class PutEntityInActiveHand : PrimitiveTask
     {
+        public override string Name => "PutEntityInActiveHand";
         private IEntity _target;
 
         public PutEntityInActiveHand(IEntity owner, IEntity target) : base(owner)

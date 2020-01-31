@@ -6,6 +6,8 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Inventory
 {
     public class DropHandItems : PrimitiveTask
     {
+        public override string Name => "DropHandItems";
+
         // TODO: Look at having this put in backpack
         public DropHandItems(IEntity owner) : base(owner)
         {

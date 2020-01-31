@@ -6,6 +6,8 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Inventory
 {
     public class UseItemOnEntity : PrimitiveTask
     {
+        public override string Name => "UseItemOnEntity";
+
         private IEntity _equippedItem;
         private IEntity _useTarget;
 

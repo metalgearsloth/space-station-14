@@ -4,9 +4,11 @@ using Content.Server.AI.HTN.Planner;
 using Content.Server.AI.HTN.Tasks;
 using Content.Server.AI.HTN.Tasks.Compound;
 using Content.Server.AI.HTN.Tasks.Primitive;
+using Content.Server.AI.HTN.Tasks.Primitive.Movement;
 using Content.Server.AI.HTN.Tasks.Sequence;
 using Content.Server.AI.HTN.WorldState;
 using Content.Shared.GameObjects.Components.AI;
+using Robust.Shared.GameObjects;
 using Logger = Robust.Shared.Log.Logger;
 
 namespace Content.Server.AI.HTN
@@ -44,7 +46,7 @@ namespace Content.Server.AI.HTN
         /// <param name="worldState"></param>
         /// <param name="rootTask">The final outcome we're trying to achieve</param>
         /// <returns></returns>
-        public Queue<PrimitiveTask> GetPlan(AiWorldState worldState, IAiTask rootTask)
+        public Queue<PrimitiveTask> GetPlan(EntityUid entityUid, AiWorldState worldState, IAiTask rootTask)
         {
             // Debugging
             var startTime = DateTime.Now;
@@ -67,6 +69,7 @@ namespace Content.Server.AI.HTN
 
             while (tasksToProcess.Count > 0 || reset)
             {
+#if RELEASE
                 if (planningTime >= PlanTimeout)
                 {
                     Logger.WarningS("ai", $"Planning timed out for {rootTask}");
@@ -74,6 +77,7 @@ namespace Content.Server.AI.HTN
                 }
 
                 planningTime = (DateTime.Now - startTime).TotalSeconds;
+#endif
 
                 IAiTask currentTask;
                 if (reset)
@@ -131,6 +135,7 @@ namespace Content.Server.AI.HTN
                             compound);
                         tasksToProcess.Push(foundMethod);
                         methodTraversalRecord.Enqueue(methodIndex);
+                        compound.ProceduralEffects(blackboard.RunningState);
                         break;
                     case SequenceTask sequence:
                         if (sequence.PreconditionsMet(blackboard.RunningState))
@@ -178,8 +183,32 @@ namespace Content.Server.AI.HTN
             }
 
             planningTime = (DateTime.Now - startTime).TotalSeconds;
-            var plan = new AiPlanMessage(rootTask.ToString()); //, finalPlan, methodTraversalRecord, planningTime); TODO
-            FoundPlan?.Invoke(plan);
+
+            if (FoundPlan != null)
+            {
+                var finalPlanNames = new List<string>();
+
+                foreach (var task in finalPlan)
+                {
+                    // Just some extra debugging presets
+                    switch (task)
+                    {
+                        case MoveToEntity moveToEntity:
+                            finalPlanNames.Add($"{task.Name} {moveToEntity.Target}");
+                            break;
+                        default:
+                            finalPlanNames.Add(task.Name);
+                            break;
+                    }
+                }
+
+                var plan = new AiPlanMessage(
+                    entityUid,
+                    planningTime,
+                    rootTask.Name,
+                    finalPlanNames.ToArray()); //, finalPlan, methodTraversalRecord, planningTime); TODO
+                FoundPlan.Invoke(plan);
+            }
 
             return finalPlan;
         }

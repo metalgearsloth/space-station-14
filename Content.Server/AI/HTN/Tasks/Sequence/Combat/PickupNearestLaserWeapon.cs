@@ -1,12 +1,13 @@
 using Content.Server.AI.HTN.Tasks.Primitive.Inventory;
 using Content.Server.AI.HTN.Tasks.Primitive.Movement;
 using Content.Server.AI.HTN.WorldState;
+using Content.Server.AI.HTN.WorldState.States;
 using Content.Server.AI.HTN.WorldState.States.Combat;
 using Content.Server.GameObjects;
-using Content.Server.GameObjects.Components.Weapon.Ranged.Hitscan;
+using Content.Server.GameObjects.Components.Weapon.Melee;
 using Robust.Shared.Interfaces.GameObjects;
 
-namespace Content.Server.AI.HTN.Tasks.Sequence.Combat.Laser
+namespace Content.Server.AI.HTN.Tasks.Sequence.Combat
 {
     public sealed class PickupNearestLaserWeapon : SequenceTask
     {
@@ -16,11 +17,11 @@ namespace Content.Server.AI.HTN.Tasks.Sequence.Combat.Laser
 
         }
 
-        public override string Name { get; }
+        public override string Name => "PickupNearestLaserWeapon";
 
         public override bool PreconditionsMet(AiWorldState context)
         {
-            var equippedWeapon = context.GetStateValue<EquippedLaserWeapon, HitscanWeaponComponent>();
+            var equippedWeapon = context.GetStateValue<EquippedMeleeWeapon, MeleeWeaponComponent>();
             if (equippedWeapon != null)
             {
                 return false;

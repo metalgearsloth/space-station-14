@@ -70,6 +70,34 @@ namespace Content.Server.AI.HTN.WorldState
 
         }
 
+        /// <summary>
+        /// Get the AI state class
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="U"></typeparam>
+        /// <returns></returns>
+        /// <exception cref="InvalidOperationException"></exception>
+        public T GetState<T, U>() where T : StateData<U>
+        {
+            foreach (var knownState in _states)
+            {
+                if (knownState.GetType() == typeof(T))
+                {
+                    return (T) knownState;
+                }
+            }
+
+            throw new InvalidOperationException();
+        }
+
+        // TODO: REMOVE ME
+        /// <summary>
+        /// Get the underlying value of the state class.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <typeparam name="U"></typeparam>
+        /// <returns></returns>
+        /// <exception cref="InvalidOperationException"></exception>
         public U GetStateValue<T, U>() where T : StateData<U>
         {
             foreach (var knownState in _states)

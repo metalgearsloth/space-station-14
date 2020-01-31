@@ -7,6 +7,8 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Movement
 {
     public sealed class MoveToGrid : PrimitiveTask
     {
+        public override string Name => "MoveToGrid";
+
         private GridCoordinates _target;
         public MoveToGrid(IEntity owner, GridCoordinates target) : base(owner)
         {

@@ -31,6 +31,13 @@ namespace Content.Server.AI.HTN.Tasks.Compound
         public abstract void SetupMethods(AiWorldState context);
 
         /// <summary>
+        ///  Apply the outcome of this task to the worldstate e.g. 1 less free hand, no longer hungry, etc.
+        /// For planning purposes only so it doesn't need to actually reflect reality.
+        /// </summary>
+        /// <param name="context"></param>
+        public virtual void ProceduralEffects(in AiWorldState context) {}
+
+        /// <summary>
         /// Checks whether the compound task can be run. Also sets up variables needed
         /// </summary>
         /// <param name="context"></param>

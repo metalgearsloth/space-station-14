@@ -13,13 +13,13 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Movement
 {
     /// <summary>
     ///  Will loiter around a particular spot indefinitely.
-    /// If you want this to wander the station just increase the range
     /// </summary>
-    public class IdleAround : PrimitiveTask
+    public class IdleAt : PrimitiveTask
     {
-        // TODO: Make a separate one for wander station that's identical
+        public override string Name => "IdleAt";
+
         // range limit by worldbounds of grid?
-        private int range = 2;
+        private int range = 3;
         private GridCoordinates _idleCenter;
         // Where we will wander to (within range)
         private GridCoordinates _idleSpot;
@@ -30,7 +30,7 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Movement
         private MoveToGridOperator _operator;
         private bool _movementFinished;
 
-        public IdleAround(IEntity owner) : base(owner)
+        public IdleAt(IEntity owner) : base(owner)
         {
         }
 
@@ -90,7 +90,7 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Movement
             var grid = mapManager.GetGrid(Owner.Transform.GridID);
             var robustRandom = IoCManager.Resolve<IRobustRandom>();
             var angle = Angle.FromDegrees(robustRandom.Next(0, 359));
-            var randomDistance = robustRandom.Next(range);
+            var randomDistance = robustRandom.Next(1, range);
             var newPosition = _idleCenter.Position + angle.ToVec() * randomDistance;
             // Conversions blah blah
             _idleSpot = grid.GridTileToLocal(grid.WorldToTile(grid.LocalToWorld(newPosition)));

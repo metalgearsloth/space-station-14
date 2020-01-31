@@ -13,7 +13,8 @@ namespace Content.Server.AI.HTN.Tasks.Primitive
     /// </summary>
     public abstract class PrimitiveTask : IAiTask
     {
-        public string Name { get; }
+        // Could probably just use GetType but to keep it consistent with components we'll set it
+        public abstract string Name { get; }
 
         /// <summary>
         /// Checks whether the primitive task can be run. Also sets up variables needed
@@ -54,6 +55,7 @@ namespace Content.Server.AI.HTN.Tasks.Primitive
         }
     }
 
+    // Used for cooldowns
     public enum PrimitiveTaskType
     {
         Default, // Default

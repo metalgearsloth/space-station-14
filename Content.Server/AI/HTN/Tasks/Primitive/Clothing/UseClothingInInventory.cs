@@ -10,6 +10,7 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Clothing
 {
     public class UseClothingInInventory : PrimitiveTask
     {
+        public override string Name => "UseClothingInInventory";
         private IEntity _clothing;
         private EquipmentSlotDefines.Slots _slot;
 

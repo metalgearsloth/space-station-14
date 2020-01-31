@@ -13,6 +13,7 @@ using Robust.Shared.IoC;
 using Robust.Shared.Log;
 using Robust.Shared.Map;
 using Robust.Shared.Maths;
+using Timer = Robust.Shared.Timers.Timer;
 
 namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Movement
 {
@@ -31,7 +32,8 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Movement
         // Anti-stuck measures. See the AntiStuck() method for more details
         private bool _tryingAntiStuck = false;
         public bool IsStuck;
-        private AntiStuckMethod _antiStuckMethod = AntiStuckMethod.ReRoute;
+        private AntiStuckMethod _antiStuckMethod = AntiStuckMethod.Angle;
+        private Angle _addedAngle = Angle.Zero;
         public event Action Stuck;
 
         // Instance variables
@@ -77,7 +79,7 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Movement
             {
                 return false;
             }
-            _controller.VelocityDir = targetDiff.Normalized;
+            _controller.VelocityDir = _addedAngle.RotateVec(targetDiff).Normalized;
             return true;
 
         }
@@ -87,7 +89,7 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Movement
         /// </summary>
         protected void AntiStuck(float frameTime)
         {
-            // TODO: More work because these are sketchy
+            // TODO: More work because these are sketchy af
 
             // First check if we're still in a stuck state from last frame
             if (IsStuck)
@@ -147,6 +149,16 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Movement
                     case AntiStuckMethod.ReRoute:
                         GetRoute();
                         IsStuck = false;
+                        break;
+                    case AntiStuckMethod.Angle:
+                        var random = IoCManager.Resolve<IRobustRandom>();
+                        _addedAngle = new Angle(random.Next(-60, 60));
+                        IsStuck = false;
+                        Timer.Spawn(100, () =>
+                        {
+                            _addedAngle = Angle.Zero;
+                            //GetRoute(); Suss on this
+                        });
                         break;
                     default:
                         throw new InvalidOperationException();
@@ -251,5 +263,6 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Movement
         Jiggle, // Just pick a random direction for a bit and hope for the best
         Teleport, // The Half-Life 2 method
         PhaseThrough, // Just makes it non-collidable
+        Angle, // Add a different angle for a bit
     }
 }

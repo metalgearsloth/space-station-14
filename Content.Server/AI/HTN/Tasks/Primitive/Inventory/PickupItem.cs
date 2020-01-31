@@ -8,6 +8,7 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Inventory
 {
     public class PickupItem : PrimitiveTask
     {
+        public override string Name => "PickupItem";
         private IEntity _target;
         public PickupItem(IEntity owner, IEntity target) : base(owner)
         {

@@ -10,6 +10,7 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Combat
 {
     public class LaserTarget : PrimitiveTask
     {
+        public override string Name => "LaserTarget";
         private IEntity _target;
 
         public LaserTarget(IEntity owner, IEntity target) : base(owner)

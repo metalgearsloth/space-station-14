@@ -12,14 +12,15 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Movement
         private IMapManager _mapManager;
 
         // Input
-        public IEntity Target { get; set; }
+        public IEntity Target { get; }
+        private readonly float _desiredRange;
 
-        public MoveToEntityOperator(IEntity owner, IEntity target)
+        public MoveToEntityOperator(IEntity owner, IEntity target, float desiredRange = 1.5f)
         {
             Setup(owner);
             Target = target;
             _mapManager = IoCManager.Resolve<IMapManager>();
-            // TODO: Get what you need from context once
+            _desiredRange = desiredRange;
         }
 
         public override Outcome Execute(float frameTime)
@@ -45,7 +46,7 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Movement
             var targetRange = (Target.Transform.GridPosition.Position - Owner.Transform.GridPosition.Position).Length;
 
             // If they move near us
-            if (targetRange <= 1.5f)
+            if (targetRange <= _desiredRange)
             {
                 HaveArrived();
                 return Outcome.Success;
@@ -73,10 +74,20 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Movement
                 return Outcome.Continuing;
             }
 
-            if (Route.Count == 0 && targetRange > 1.5f)
+            // If we're really close just try bee-lining it?
+            if (Route.Count == 0)
             {
-                HaveArrived();
-                return Outcome.Failed;
+                if (targetRange < 1.5f)
+                {
+                    // TODO: If they have a phat hitbox they could block us
+                    NextGrid = TargetGrid;
+                    return Outcome.Continuing;
+                }
+                if (targetRange > _desiredRange)
+                {
+                    HaveArrived();
+                    return Outcome.Failed;
+                }
             }
 
             var nextTile = Route.Dequeue();

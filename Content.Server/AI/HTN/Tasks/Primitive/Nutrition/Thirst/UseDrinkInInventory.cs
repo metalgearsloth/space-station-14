@@ -9,6 +9,7 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Nutrition.Thirst
 {
     public sealed class UseDrinkInInventory : PrimitiveTask
     {
+        public override string Name => "UseDrinkInInventory";
         private IEntity _targetDrink;
         public override PrimitiveTaskType TaskType => PrimitiveTaskType.Interaction;
 
