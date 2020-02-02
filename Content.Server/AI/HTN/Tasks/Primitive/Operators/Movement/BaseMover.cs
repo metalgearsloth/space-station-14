@@ -19,9 +19,23 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Movement
 {
     public abstract class BaseMover : IOperator
     {
+        /// <summary>
+        /// Invoked every time we move across a tile
+        /// </summary>
+        public event Action MovedATile;
+
+        /// <summary>
+        /// How close the pathfinder needs to get before returning a route
+        /// </summary>
         public float PathfindingProximity { get; set; } = 1.42f;
         protected Queue<TileRef> Route = new Queue<TileRef>();
+        /// <summary>
+        ///  The final spot we're trying to get to
+        /// </summary>
         protected GridCoordinates TargetGrid;
+        /// <summary>
+        /// As the pathfinder is tilebased we'll move to each tile's grid.
+        /// </summary>
         protected GridCoordinates NextGrid;
         private const float TileTolerance = 0.2f;
 
@@ -250,6 +264,7 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Operators.Movement
             Route.Dequeue();
 
             var nextTile = Route.Peek();
+            MovedATile?.Invoke();
             NextGrid = _mapManager.GetGrid(nextTile.GridIndex).GridTileToLocal(nextTile.GridIndices);
         }
 

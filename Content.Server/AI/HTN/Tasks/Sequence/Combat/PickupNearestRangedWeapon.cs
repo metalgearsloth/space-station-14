@@ -1,33 +1,33 @@
 using Content.Server.AI.HTN.Tasks.Primitive.Inventory;
 using Content.Server.AI.HTN.Tasks.Primitive.Movement;
 using Content.Server.AI.HTN.WorldState;
-using Content.Server.AI.HTN.WorldState.States;
 using Content.Server.AI.HTN.WorldState.States.Combat;
+using Content.Server.AI.HTN.WorldState.States.Combat.Equipped;
+using Content.Server.AI.HTN.WorldState.States.Combat.Nearby;
 using Content.Server.GameObjects;
-using Content.Server.GameObjects.Components.Weapon.Melee;
 using Robust.Shared.Interfaces.GameObjects;
 
 namespace Content.Server.AI.HTN.Tasks.Sequence.Combat
 {
-    public sealed class PickupNearestLaserWeapon : SequenceTask
+    public sealed class PickupNearestRangedWeapon : SequenceTask
     {
         private IEntity _nearestWeapon;
-        public PickupNearestLaserWeapon(IEntity owner) : base(owner)
+        public PickupNearestRangedWeapon(IEntity owner) : base(owner)
         {
 
         }
 
-        public override string Name => "PickupNearestLaserWeapon";
+        public override string Name => "PickupNearestRangedWeapon";
 
         public override bool PreconditionsMet(AiWorldState context)
         {
-            var equippedWeapon = context.GetStateValue<EquippedMeleeWeapon, MeleeWeaponComponent>();
+            var equippedWeapon = context.GetStateValue<EquippedRangedWeapon, IEntity>();
             if (equippedWeapon != null)
             {
                 return false;
             }
 
-            foreach (var entity in context.GetEnumerableStateValue<NearbyLaserWeapons, IEntity>())
+            foreach (var entity in context.GetEnumerableStateValue<NearbyRangedWeapons, IEntity>())
             {
                 // If someone already has it then skip
                 if (!entity.TryGetComponent(out ItemComponent itemComponent) || itemComponent.IsEquipped) continue;

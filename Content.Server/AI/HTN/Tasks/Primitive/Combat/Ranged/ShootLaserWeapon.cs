@@ -8,19 +8,20 @@ using Robust.Shared.Interfaces.GameObjects;
 
 namespace Content.Server.AI.HTN.Tasks.Primitive.Combat.Ranged
 {
-    public class ShootWeapon : PrimitiveTask
+    public class ShootLaserWeapon : PrimitiveTask
     {
-        public override string Name => "ShootWeapon";
+        public override string Name => "ShootLaserWeapon";
         private float _attackRange = 7.0f;
         private IEntity _target;
+        private HitscanWeaponComponent _equippedWeapon;
 
-        public ShootWeapon(IEntity owner) : base(owner)
+        public ShootLaserWeapon(IEntity owner) : base(owner)
         {
         }
 
         public override bool PreconditionsMet(AiWorldState context)
         {
-            var equippedWeapon = (HitscanWeaponComponent) context.GetState<EquippedLaserWeapon, HitscanWeaponComponent>().Value;
+            _equippedWeapon = (HitscanWeaponComponent) context.GetState<EquippedLaserWeapon, HitscanWeaponComponent>().Value;
             var target = context.GetStateValue<AttackTarget, IEntity>();
             if (target == null)
             {
@@ -28,7 +29,7 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Combat.Ranged
             }
 
             _target = target;
-            return equippedWeapon != null;
+            return _equippedWeapon != null;
         }
 
         public override void SetupOperator()
@@ -38,6 +39,7 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Combat.Ranged
 
         public override Outcome Execute(float frameTime)
         {
+            // TODO: Move more of this shit to the operator
             var outcome = base.Execute(frameTime);
 
             if ((_target.Transform.GridPosition.Position - Owner.Transform.GridPosition.Position).Length >= _attackRange
@@ -56,7 +58,7 @@ namespace Content.Server.AI.HTN.Tasks.Primitive.Combat.Ranged
 
             if (outcome != Outcome.Failed)
             {
-                // Only succeed when they ded
+                // Only succeed when they ded or ammo out
                 return Outcome.Continuing;
             }
 

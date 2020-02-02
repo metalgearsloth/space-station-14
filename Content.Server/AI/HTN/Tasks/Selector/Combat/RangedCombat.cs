@@ -30,14 +30,12 @@ namespace Content.Server.AI.HTN.Tasks.Selector.Combat
 
         public override void SetupMethods(AiWorldState context)
         {
-            // TODO: Change tasks to use world states instead of passing variables??
             Methods = new List<IAiTask>
             {
-                new MeleeAttackTarget(Owner),
+                new RangedAttackTarget(Owner),
                 // TODO: Equip another gun in pack
-                // TODO: Reload gun
-                // TODO: Charge laser
-                new PickupNearestMeleeWeapon(Owner),
+                new ReloadRangedWeapon(Owner),
+                new PickupNearestRangedWeapon(Owner),
             };
         }
     }
