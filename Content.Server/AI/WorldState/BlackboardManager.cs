@@ -25,7 +25,7 @@ namespace Content.Server.AI.WorldState
                 _aiStates.Add(state);
             }
             
-            DebugTools.AssertNotNull(_aiStates);
+            DebugTools.Assert(_aiStates.Count > 0);
         }
     }
 }

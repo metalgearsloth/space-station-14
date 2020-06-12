@@ -16,6 +16,7 @@ namespace Content.Server.GameObjects.Components.Movement
     {
         private string _logicName;
         private float _visionRadius;
+        private float _audioRadius;
 
         public override string Name => "AiController";
 
@@ -39,6 +40,13 @@ namespace Content.Server.GameObjects.Components.Movement
             set => _visionRadius = value;
         }
 
+        [ViewVariables(VVAccess.ReadWrite)]
+        public float AudioRadius
+        {
+            get => _audioRadius;
+            set => _audioRadius = value;
+        }
+
         /// <inheritdoc />
         public override void Initialize()
         {
@@ -56,6 +64,7 @@ namespace Content.Server.GameObjects.Components.Movement
 
             serializer.DataField(ref _logicName, "logic", null);
             serializer.DataField(ref _visionRadius, "vision", 8.0f);
+            serializer.DataField(ref _audioRadius, "audio", 25.0f);
         }
 
         protected override void Shutdown()

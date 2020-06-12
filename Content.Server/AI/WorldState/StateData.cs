@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using Robust.Shared.Interfaces.GameObjects;
+using Robust.Shared.Interfaces.Timing;
+using Robust.Shared.IoC;
 
 namespace Content.Server.AI.WorldState
 {
@@ -19,7 +21,7 @@ namespace Content.Server.AI.WorldState
 
     public interface ICachedState
     {
-        void CheckCache();
+        void CheckCache(TimeSpan currentTime);
     }
 
     /// <summary>
@@ -108,7 +110,7 @@ namespace Content.Server.AI.WorldState
         protected IEntity Owner { get; private set; }
         private bool _cached;
         protected T Value;
-        private DateTime _lastCache = DateTime.Now;
+        private TimeSpan _lastCache = TimeSpan.Zero;
         /// <summary>
         /// How long something stays in the cache before new values are retrieved
         /// </summary>
@@ -119,9 +121,9 @@ namespace Content.Server.AI.WorldState
             Owner = owner;
         }
 
-        public void CheckCache()
+        public void CheckCache(TimeSpan currentTime)
         {
-            if (!_cached || (DateTime.Now - _lastCache).TotalSeconds >= CacheTime)
+            if (!_cached || (currentTime - _lastCache).TotalSeconds >= CacheTime)
             {
                 _cached = false;
                 return;
@@ -137,12 +139,13 @@ namespace Content.Server.AI.WorldState
 
         public T GetValue()
         {
-            CheckCache();
+            var currentTime = IoCManager.Resolve<IGameTiming>().CurTime;
+            CheckCache(currentTime);
             if (!_cached)
             {
                 Value = GetTrueValue();
                 _cached = true;
-                _lastCache = DateTime.Now;
+                _lastCache = currentTime;
             }
 
             return Value;

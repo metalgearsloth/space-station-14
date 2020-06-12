@@ -68,6 +68,14 @@ namespace Content.Server.GameObjects.EntitySystems.AI
             }
         }
 
+        public IEnumerable<AiControllerComponent> GetControllers()
+        {
+            foreach (var controller in IoCManager.Resolve<IComponentManager>().GetAllComponents<AiControllerComponent>())
+            {
+                yield return controller;
+            }
+        }
+
         /// <summary>
         /// Will start up the controller's processor if not already done so
         /// </summary>
