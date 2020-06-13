@@ -11,6 +11,7 @@ using Robust.Shared.Interfaces.Map;
 using Robust.Shared.Interfaces.Timing;
 using Robust.Shared.IoC;
 using Robust.Shared.Map;
+using Robust.Shared.Maths;
 using Robust.Shared.Physics;
 
 namespace Content.Server.GameObjects.EntitySystems.AI.Perception
@@ -91,7 +92,20 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Perception
         }
         
         // TODO: Need an x / y converter to direction
+        private Direction GetDirection(int x, int y)
+        {
+            if (x == -1)
+            {
+                
+            }
+        }
 
+        /// <summary>
+        /// AI LOS check
+        /// </summary>
+        /// <param name="owner"></param>
+        /// <param name="target"></param>
+        /// <returns></returns>
         public bool CanSee(IEntity owner, IEntity target)
         {
             // TODO: Need to handle diagonals I reckon
