@@ -146,5 +146,19 @@ namespace Content.Shared.AI
             }
         }
         #endregion
+        #region HPA Debug
+        [Serializable, NetSerializable]
+        public sealed class HpaChunkRegionsDebugMessage : EntitySystemMessage
+        {
+            public GridId GridId { get; }
+            public Dictionary<int, Dictionary<int, List<Vector2>>> Regions { get; }
+
+            public HpaChunkRegionsDebugMessage(GridId gridId, Dictionary<int, Dictionary<int, List<Vector2>>> regions)
+            {
+                GridId = gridId;
+                Regions = regions;
+            }
+        }
+        #endregion
     }
 }

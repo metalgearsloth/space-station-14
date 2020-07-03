@@ -91,6 +91,7 @@ namespace Content.Server.GameObjects.EntitySystems.Pathfinding
         public void UpdateTile(TileRef newTile)
         {
             TileRef = newTile;
+            ParentChunk.Dirty();
         }
 
         /// <summary>
@@ -110,6 +111,7 @@ namespace Content.Server.GameObjects.EntitySystems.Pathfinding
                 if (entity.TryGetComponent(out AccessReader accessReader) && !_accessReaders.ContainsKey(entity.Uid))
                 {
                     _accessReaders.Add(entity.Uid, accessReader);
+                    ParentChunk.Dirty();
                 }
                 return;
             }
@@ -124,6 +126,7 @@ namespace Content.Server.GameObjects.EntitySystems.Pathfinding
                 {
                     _blockedCollidables.TryAdd(entity.Uid, collidableComponent.CollisionLayer);
                     GenerateMask();
+                    ParentChunk.Dirty();
                 }
             }
         }
@@ -133,6 +136,7 @@ namespace Content.Server.GameObjects.EntitySystems.Pathfinding
             if (_accessReaders.ContainsKey(entity.Uid))
             {
                 _accessReaders.Remove(entity.Uid);
+                ParentChunk.Dirty();
                 return;
             }
 
@@ -142,6 +146,7 @@ namespace Content.Server.GameObjects.EntitySystems.Pathfinding
                 {
                     _blockedCollidables.Remove(entity.Uid);
                     GenerateMask();
+                    ParentChunk.Dirty();
                 }
                 else
                 {

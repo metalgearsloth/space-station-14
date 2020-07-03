@@ -3,16 +3,30 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Content.Server.GameObjects.EntitySystems.Pathfinding;
+using Robust.Shared.GameObjects;
 using Robust.Shared.GameObjects.Systems;
+using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Interfaces.Map;
+using Robust.Shared.Interfaces.Timing;
 using Robust.Shared.IoC;
 using Robust.Shared.Map;
 using Robust.Shared.Maths;
 
 namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding
 {
+    public class PathfindingChunkUpdate : EntitySystemMessage
+    {
+        public PathfindingChunk Chunk { get; }
+
+        public PathfindingChunkUpdate(PathfindingChunk chunk)
+        {
+            Chunk = chunk;
+        }
+    }
+    
     public class PathfindingChunk
     {
+        public TimeSpan LastUpdate { get; private set; }
         public GridId GridId { get; }
 
         public MapIndices Indices => _indices;
@@ -40,6 +54,18 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding
                     CreateNode(tileRef);
                 }
             }
+            
+            Dirty();
+        }
+
+        /// <summary>
+        /// Only called when blockers change (i.e. un-anchored physics objects don't trigger)
+        /// </summary>
+        public void Dirty()
+        {
+            LastUpdate = IoCManager.Resolve<IGameTiming>().CurTime;
+            IoCManager.Resolve<IEntityManager>().EventBus
+                .RaiseEvent(EventSource.Local, new PathfindingChunkUpdate(this));
         }
 
         public IEnumerable<PathfindingChunk> GetNeighbors()
@@ -155,12 +181,6 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding
             var chunkY = tile.Y - _indices.Y;
 
             return _nodes[chunkX, chunkY];
-        }
-
-        public void UpdateNode(TileRef tile)
-        {
-            var node = GetNode(tile);
-            node.UpdateTile(tile);
         }
 
         private void CreateNode(TileRef tile, PathfindingChunk parent = null)

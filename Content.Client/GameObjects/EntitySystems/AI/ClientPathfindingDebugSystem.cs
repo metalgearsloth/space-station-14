@@ -30,6 +30,15 @@ namespace Content.Client.GameObjects.EntitySystems.AI
             SubscribeNetworkEvent<SharedAiDebug.AStarRouteMessage>(HandleAStarRouteMessage);
             SubscribeNetworkEvent<SharedAiDebug.JpsRouteMessage>(HandleJpsRouteMessage);
             SubscribeNetworkEvent<SharedAiDebug.PathfindingGraphMessage>(HandleGraphMessage);
+            SubscribeNetworkEvent<SharedAiDebug.HpaChunkRegionsDebugMessage>(HandleRegionsMessage);
+            // I'm lazy
+            EnableOverlay();
+        }
+
+        public override void Shutdown()
+        {
+            base.Shutdown();
+            DisableOverlay();
         }
 
         private void HandleAStarRouteMessage(SharedAiDebug.AStarRouteMessage message)
@@ -62,11 +71,14 @@ namespace Content.Client.GameObjects.EntitySystems.AI
 
         private void HandleGraphMessage(SharedAiDebug.PathfindingGraphMessage message)
         {
-            if ((_modes & PathfindingDebugMode.Graph) != 0)
-            {
-                _overlay.UpdateGraph(message.Graph);
-            }
+            _overlay.UpdateGraph(message.Graph);
         }
+
+        private void HandleRegionsMessage(SharedAiDebug.HpaChunkRegionsDebugMessage message)
+        {
+            _overlay.UpdateRegions(message.Regions);
+        }
+            
 
         private void EnableOverlay()
         {
@@ -144,6 +156,8 @@ namespace Content.Client.GameObjects.EntitySystems.AI
 
     internal sealed class DebugPathfindingOverlay : Overlay
     {
+        private IEyeManager _eyeManager;
+        
         // TODO: Add a box like the debug one and show the most recent path stuff
         public override OverlaySpace Space => OverlaySpace.ScreenSpace;
 
@@ -152,7 +166,10 @@ namespace Content.Client.GameObjects.EntitySystems.AI
         // Graph debugging
         public readonly Dictionary<int, List<Vector2>> Graph = new Dictionary<int, List<Vector2>>();
         private readonly Dictionary<int, Color> _graphColors = new Dictionary<int, Color>();
-
+        
+        public readonly Dictionary<int, Dictionary<int, List<Vector2>>> Regions = new Dictionary<int, Dictionary<int, List<Vector2>>>();
+        private readonly Dictionary<int, Dictionary<int, Color>> _regionColors = new Dictionary<int, Dictionary<int, Color>>();
+        
         // Route debugging
         // As each pathfinder is very different you'll likely want to draw them completely different
         public readonly List<SharedAiDebug.AStarRouteMessage> AStarRoutes = new List<SharedAiDebug.AStarRouteMessage>();
@@ -161,8 +178,10 @@ namespace Content.Client.GameObjects.EntitySystems.AI
         public DebugPathfindingOverlay() : base(nameof(DebugPathfindingOverlay))
         {
             Shader = IoCManager.Resolve<IPrototypeManager>().Index<ShaderPrototype>("unshaded").Instance();
+            _eyeManager = IoCManager.Resolve<IEyeManager>();
         }
 
+        #region Graph
         public void UpdateGraph(Dictionary<int, List<Vector2>> graph)
         {
             Graph.Clear();
@@ -176,19 +195,15 @@ namespace Content.Client.GameObjects.EntitySystems.AI
             }
         }
 
-        private void DrawGraph(DrawingHandleScreen screenHandle)
+        private void DrawGraph(DrawingHandleScreen screenHandle, Box2 viewport)
         {
-            var eyeManager = IoCManager.Resolve<IEyeManager>();
-            var viewport = IoCManager.Resolve<IEyeManager>().GetWorldViewport();
-
             foreach (var (chunk, nodes) in Graph)
             {
                 foreach (var tile in nodes)
                 {
                     if (!viewport.Contains(tile)) continue;
 
-                    var screenTile = eyeManager.WorldToScreen(tile);
-
+                    var screenTile = _eyeManager.WorldToScreen(tile);
                     var box = new UIBox2(
                         screenTile.X - 15.0f,
                         screenTile.Y - 15.0f,
@@ -199,21 +214,62 @@ namespace Content.Client.GameObjects.EntitySystems.AI
                 }
             }
         }
+        #endregion
+
+        #region Regions
+        public void UpdateRegions(Dictionary<int, Dictionary<int, List<Vector2>>> messageRegions)
+        {
+            Regions.Clear();
+            _regionColors.Clear();
+            var robustRandom = IoCManager.Resolve<IRobustRandom>();
+            foreach (var (chunk, regions) in messageRegions)
+            {
+                Regions[chunk] = new Dictionary<int, List<Vector2>>();
+                _regionColors[chunk] = new Dictionary<int, Color>();
+                
+                foreach (var (region, nodes) in regions)
+                {
+                    Regions[chunk].Add(region, nodes);
+                    _regionColors[chunk][region] = new Color(robustRandom.NextFloat(), robustRandom.NextFloat(),
+                        robustRandom.NextFloat(), 0.3f);
+                }
+            }
+        }
+        
+        private void DrawRegions(DrawingHandleScreen screenHandle, Box2 viewport)
+        {
+            foreach (var (chunk, regions) in Regions)
+            {
+                foreach (var (region, nodes) in regions)
+                {
+                    foreach (var tile in nodes)
+                    {
+                        if (!viewport.Contains(tile)) continue;
+
+                        var screenTile = _eyeManager.WorldToScreen(tile);
+                        var box = new UIBox2(
+                            screenTile.X - 15.0f,
+                            screenTile.Y - 15.0f,
+                            screenTile.X + 15.0f,
+                            screenTile.Y + 15.0f);
+                        
+                        screenHandle.DrawRect(box, _regionColors[chunk][region]);
+                    }
+                }
+            }
+        }
+        #endregion
 
         #region pathfinder
-
-        private void DrawAStarRoutes(DrawingHandleScreen screenHandle)
+        private void DrawAStarRoutes(DrawingHandleScreen screenHandle, Box2 viewport)
         {
-            var eyeManager = IoCManager.Resolve<IEyeManager>();
-            var viewport = eyeManager.GetWorldViewport();
-
             foreach (var route in AStarRoutes)
             {
                 // Draw box on each tile of route
                 foreach (var position in route.Route)
                 {
                     if (!viewport.Contains(position)) continue;
-                    var screenTile = eyeManager.WorldToScreen(position);
+                    var screenTile = _eyeManager.WorldToScreen(position);
                     // worldHandle.DrawLine(position, nextWorld.Value, Color.Blue);
                     var box = new UIBox2(
                         screenTile.X - 15.0f,
@@ -225,11 +281,8 @@ namespace Content.Client.GameObjects.EntitySystems.AI
             }
         }
 
-        private void DrawAStarNodes(DrawingHandleScreen screenHandle)
+        private void DrawAStarNodes(DrawingHandleScreen screenHandle, Box2 viewport)
         {
-            var eyeManager = IoCManager.Resolve<IEyeManager>();
-            var viewport = eyeManager.GetWorldViewport();
-
             foreach (var route in AStarRoutes)
             {
                 var highestgScore = route.GScores.Values.Max();
@@ -242,8 +295,7 @@ namespace Content.Client.GameObjects.EntitySystems.AI
                         continue;
                     }
 
-                    var screenTile = eyeManager.WorldToScreen(tile);
-
+                    var screenTile = _eyeManager.WorldToScreen(tile);
                     var box = new UIBox2(
                         screenTile.X - 15.0f,
                         screenTile.Y - 15.0f,
@@ -259,18 +311,15 @@ namespace Content.Client.GameObjects.EntitySystems.AI
             }
         }
 
-        private void DrawJpsRoutes(DrawingHandleScreen screenHandle)
+        private void DrawJpsRoutes(DrawingHandleScreen screenHandle, Box2 viewport)
         {
-            var eyeManager = IoCManager.Resolve<IEyeManager>();
-            var viewport = eyeManager.GetWorldViewport();
-
             foreach (var route in JpsRoutes)
             {
                 // Draw box on each tile of route
                 foreach (var position in route.Route)
                 {
                     if (!viewport.Contains(position)) continue;
-                    var screenTile = eyeManager.WorldToScreen(position);
+                    var screenTile = _eyeManager.WorldToScreen(position);
                     // worldHandle.DrawLine(position, nextWorld.Value, Color.Blue);
                     var box = new UIBox2(
                         screenTile.X - 15.0f,
@@ -282,11 +331,8 @@ namespace Content.Client.GameObjects.EntitySystems.AI
             }
         }
 
-        private void DrawJpsNodes(DrawingHandleScreen screenHandle)
+        private void DrawJpsNodes(DrawingHandleScreen screenHandle, Box2 viewport)
         {
-            var eyeManager = IoCManager.Resolve<IEyeManager>();
-            var viewport = eyeManager.GetWorldViewport();
-
             foreach (var route in JpsRoutes)
             {
                 foreach (var tile in route.JumpNodes)
@@ -297,8 +343,7 @@ namespace Content.Client.GameObjects.EntitySystems.AI
                         continue;
                     }
 
-                    var screenTile = eyeManager.WorldToScreen(tile);
-
+                    var screenTile = _eyeManager.WorldToScreen(tile);
                     var box = new UIBox2(
                         screenTile.X - 15.0f,
                         screenTile.Y - 15.0f,
@@ -324,22 +369,28 @@ namespace Content.Client.GameObjects.EntitySystems.AI
             }
 
             var screenHandle = (DrawingHandleScreen) handle;
+            var viewport = _eyeManager.GetWorldViewport();
 
             if ((Modes & PathfindingDebugMode.Route) != 0)
             {
-                DrawAStarRoutes(screenHandle);
-                DrawJpsRoutes(screenHandle);
+                DrawAStarRoutes(screenHandle, viewport);
+                DrawJpsRoutes(screenHandle, viewport);
             }
 
             if ((Modes & PathfindingDebugMode.Nodes) != 0)
             {
-                DrawAStarNodes(screenHandle);
-                DrawJpsNodes(screenHandle);
+                DrawAStarNodes(screenHandle, viewport);
+                DrawJpsNodes(screenHandle, viewport);
             }
 
             if ((Modes & PathfindingDebugMode.Graph) != 0)
             {
-                DrawGraph(screenHandle);
+                DrawGraph(screenHandle, viewport);
+            }
+
+            if ((Modes & PathfindingDebugMode.Regions) != 0)
+            {
+                DrawRegions(screenHandle, viewport);
             }
         }
     }
@@ -350,6 +401,7 @@ namespace Content.Client.GameObjects.EntitySystems.AI
         Route = 1 << 0,
         Graph = 1 << 1,
         Nodes = 1 << 2,
+        Regions = 1 << 3,
     }
 #endif
 }
