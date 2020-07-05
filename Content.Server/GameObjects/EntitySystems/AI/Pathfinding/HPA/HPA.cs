@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using Content.Server.GameObjects.Components.Access;
+using Content.Server.GameObjects.Components.Movement;
+using Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Pathfinders;
 using Content.Server.GameObjects.EntitySystems.Pathfinding;
 using Content.Shared.AI;
 using JetBrains.Annotations;
@@ -15,6 +17,16 @@ using Robust.Shared.Utility;
 
 namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
 {
+    public sealed class HPAAccessible
+    {
+        public ICollection<string> Access { get; }
+
+        public HPAAccessible(ICollection<string> access)
+        {
+            Access = access;
+        }
+    }
+    
     [UsedImplicitly]
     public sealed class HPAPathfindingSystem : EntitySystem
     {
@@ -38,7 +50,8 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
             new Dictionary<GridId, Dictionary<PathfindingChunk, HashSet<HPARegion>>>();
         
         private HashSet<PathfindingChunk> _queuedUpdates = new HashSet<PathfindingChunk>();
-        
+        private Dictionary<IEntity, HashSet<HPARegion>> _cachedAccessible = new Dictionary<IEntity, HashSet<HPARegion>>();
+
         public override void Initialize()
         {
             _pathfindingSystem = Get<PathfindingSystem>();
@@ -64,13 +77,18 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
 
         public bool CanAccess(IEntity entity, IEntity target)
         {
-            if (entity.Transform.GridID != target.Transform.GridID)
+            var targetTile = _mapmanager.GetGrid(target.Transform.GridID).GetTileRef(target.Transform.GridPosition);
+            return CanAccess(entity, targetTile);
+        }
+
+        public bool CanAccess(IEntity entity, TileRef targetTile)
+        {
+            if (entity.Transform.GridID != targetTile.GridIndex)
             {
                 return false;
             }
             
             var entityTile = _mapmanager.GetGrid(entity.Transform.GridID).GetTileRef(entity.Transform.GridPosition);
-            var targetTile = _mapmanager.GetGrid(target.Transform.GridID).GetTileRef(target.Transform.GridPosition);
             var entityNode = _pathfindingSystem.GetNode(entityTile);
             var targetNode = _pathfindingSystem.GetNode(targetTile);
             var entityRegion = GetRegion(entityNode);
@@ -81,14 +99,64 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
             {
                 return true;
             }
-            
-            // TODO: Cache region accessibility for access and mask I think...
-            
-            // TODO: Do an actual pathfind here
 
-            // TODO
+            
+            if (!IsCacheValid(entity, targetTile))
+            {
+                BuildVisionAccessible(entity);
+            }
+            
+            return _cachedAccessible[entity].Contains(targetRegion);
+        }
+
+        private bool IsCacheValid(IEntity entity, TileRef targetTile)
+        {
+            accessible = null;
             return false;
         }
+
+        /// <summary>
+        /// Caches the entity's nearby accessible regions in vision radius
+        /// </summary>
+        /// Longer-term TODO: Hierarchical pathfinding in which case this function would probably get bulldozed
+        /// Also TODO: Can share cache with other entities as well if similar to us. Can also cache indefinitely until pathfinding graph changes
+        /// <param name="entity"></param>
+        private void BuildVisionAccessible(IEntity entity)
+        {
+            _cachedAccessible[entity] = null;
+            var visionRadius = entity.GetComponent<AiControllerComponent>().VisionRadius;
+            var entityNode = _pathfindingSystem.GetNode(entity);
+            var entityRegion = GetRegion(entityNode);
+
+            // Can't go anywhere
+            if (!entityRegion.RegionTraversable(entity))
+            {
+                return;
+            }
+            
+            var openSet = new Queue<HPARegion>();
+            openSet.Enqueue(entityRegion);
+            var closedSet = new HashSet<HPARegion>();
+            var accessible = new HashSet<HPARegion> {entityRegion};
+
+            while (openSet.Count > 0)
+            {
+                var region = openSet.Dequeue();
+                closedSet.Add(region);
+
+                foreach (var (_, neighbor) in region.Neighbors)
+                {
+                    // Technically it'll also cache outside of visionradius because it's only checking origin but ehh it's fine I think
+                    if (!neighbor.RegionTraversable(entity) || neighbor.Distance(entityRegion) > visionRadius || closedSet.Contains(neighbor)) continue;
+                    openSet.Enqueue(neighbor);
+                    accessible.Add(neighbor);
+                }
+            }
+
+            _cachedAccessible[entity] = accessible;
+        }
+        
+        // TODO: Build args for entity here
 
         /// <summary>
         /// Grab the left and bottom nodes and if they're in different regions then add to our edge and their edge
@@ -360,6 +428,11 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
         public void UpdateNeighbor(Direction direction, HPARegion region)
         {
             Neighbors[direction] = region;
+        }
+
+        public float Distance(HPARegion otherRegion)
+        {
+            return PathfindingHelpers.OctileDistance(otherRegion.OriginNode, OriginNode);
         }
 
         /// <summary>
