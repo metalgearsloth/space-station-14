@@ -14,11 +14,11 @@ using Robust.Shared.Maths;
 
 namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding
 {
-    public class PathfindingChunkUpdate : EntitySystemMessage
+    public class PathfindingChunkUpdateMessage : EntitySystemMessage
     {
         public PathfindingChunk Chunk { get; }
 
-        public PathfindingChunkUpdate(PathfindingChunk chunk)
+        public PathfindingChunkUpdateMessage(PathfindingChunk chunk)
         {
             Chunk = chunk;
         }
@@ -43,14 +43,13 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding
             _indices = indices;
         }
 
-        public void Initialize()
+        public void Initialize(IMapGrid mapGrid)
         {
-            var grid = IoCManager.Resolve<IMapManager>().GetGrid(GridId);
             for (var x = 0; x < ChunkSize; x++)
             {
                 for (var y = 0; y < ChunkSize; y++)
                 {
-                    var tileRef = grid.GetTileRef(new MapIndices(x + _indices.X, y + _indices.Y));
+                    var tileRef = mapGrid.GetTileRef(new MapIndices(x + _indices.X, y + _indices.Y));
                     CreateNode(tileRef);
                 }
             }
@@ -65,7 +64,7 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding
         {
             LastUpdate = IoCManager.Resolve<IGameTiming>().CurTime;
             IoCManager.Resolve<IEntityManager>().EventBus
-                .RaiseEvent(EventSource.Local, new PathfindingChunkUpdate(this));
+                .RaiseEvent(EventSource.Local, new PathfindingChunkUpdateMessage(this));
         }
 
         public IEnumerable<PathfindingChunk> GetNeighbors()

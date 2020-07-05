@@ -27,45 +27,156 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
          * (HPA* technically caches the edge nodes of each chunk), e.g. Rimworld, Factorio, etc.
          * so we'll just write one with SS14's requirements in mind.
          */
+
+        // TODO: Lots of optimisation work. Like a lot.
+        // Need to optimise the neighbors for regions more
         
+        [Dependency] private IMapManager _mapmanager;
         private PathfindingSystem _pathfindingSystem;
         // Oh god the nesting. Shouldn't need to go beyond this
         private Dictionary<GridId, Dictionary<PathfindingChunk, HashSet<HPARegion>>> _regions = 
             new Dictionary<GridId, Dictionary<PathfindingChunk, HashSet<HPARegion>>>();
-
+        
+        private HashSet<PathfindingChunk> _queuedUpdates = new HashSet<PathfindingChunk>();
+        
         public override void Initialize()
         {
             _pathfindingSystem = Get<PathfindingSystem>();
-            SubscribeLocalEvent<PathfindingChunkUpdate>(RecalculateNodeRegions);
+            SubscribeLocalEvent<PathfindingChunkUpdateMessage>(RecalculateNodeRegions);
         }
 
-        private void RecalculateNodeRegions(PathfindingChunkUpdate message)
+        public override void Update(float frameTime)
         {
-            GenerateRegions(message.Chunk);
+            base.Update(frameTime);
+            foreach (var chunk in _queuedUpdates)
+            {
+                GenerateRegions(chunk);
+            }
+            
+            _queuedUpdates.Clear();
+        }
+
+        private void RecalculateNodeRegions(PathfindingChunkUpdateMessage message)
+        {
+            // TODO: Only need to do changed nodes ideally
+            _queuedUpdates.Add(message.Chunk);
+        }
+
+        public bool CanAccess(IEntity entity, IEntity target)
+        {
+            if (entity.Transform.GridID != target.Transform.GridID)
+            {
+                return false;
+            }
+            
+            var entityTile = _mapmanager.GetGrid(entity.Transform.GridID).GetTileRef(entity.Transform.GridPosition);
+            var targetTile = _mapmanager.GetGrid(target.Transform.GridID).GetTileRef(target.Transform.GridPosition);
+            var entityNode = _pathfindingSystem.GetNode(entityTile);
+            var targetNode = _pathfindingSystem.GetNode(targetTile);
+            var entityRegion = GetRegion(entityNode);
+            var targetRegion = GetRegion(targetNode);
+            // TODO: Regional pathfind from target to entity
+            // Early out
+            if (entityRegion == targetRegion)
+            {
+                return true;
+            }
+            
+            // TODO: Cache region accessibility for access and mask I think...
+            
+            // TODO: Do an actual pathfind here
+
+            // TODO
+            return false;
         }
 
         /// <summary>
-        /// Add this node to the relevant region
+        /// Grab the left and bottom nodes and if they're in different regions then add to our edge and their edge
+        /// </summary>
+        /// Implicitly they would've already been merged if possible
+        /// <param name="region"></param>
+        /// <param name="node"></param>
+        private void UpdateRegionEdge(HPARegion region, PathfindingNode node)
+        {
+            // TODO: Look at hashing instead maybe... to try and lower memory usage
+            DebugTools.Assert(region.Nodes.Contains(node));
+            // TODO: Get the node to the left and check if it's a different region, if so then hash
+            var leftNode = node.GetNeighbor(Direction.West);
+            if (leftNode != null)
+            {
+                var leftRegion = GetRegion(leftNode);
+                if (leftRegion != null && leftRegion != region)
+                {
+                    // TODO: Update our left edge
+                    region.UpdateNeighbor(Direction.West, leftRegion);
+                    leftRegion.UpdateNeighbor(Direction.East, region);
+                }
+            }
+
+            // TODO: Get the node to the bottom and check if it's a different region, if so then hash
+            var bottomNode = node.GetNeighbor(Direction.South);
+            if (bottomNode != null)
+            {
+                var bottomRegion = GetRegion(bottomNode);
+                if (bottomRegion != null && bottomRegion != region)
+                {
+                    // TODO
+                    region.UpdateNeighbor(Direction.South, bottomRegion);
+                    bottomRegion.UpdateNeighbor(Direction.North, region);
+                }
+            }
+        }
+
+        private HPARegion GetRegion(PathfindingNode node)
+        {
+            // Not sure on the best way to optimise this
+            // On the one hand, just storing each node's region is faster buuutttt muh memory
+            // On the other hand, you might need O(n) lookups on regions for each chunk, though it's probably not too bad with smaller chunk sizes?
+
+            var parentChunk = node.ParentChunk;
+            
+            // No guarantee the node even has a region yet (if we're doing neighbor lookups)
+            if (!_regions[parentChunk.GridId].TryGetValue(parentChunk, out var regions))
+            {
+                return null;
+            }
+
+            foreach (var region in regions)
+            {
+                if (region.Nodes.Contains(node))
+                {
+                    return region;
+                }
+            }
+
+            // Longer term this will probably be guaranteed a region but for now space etc. are no region
+            return null;
+        }
+
+        /// <summary>
+        /// Add this node to the relevant region.
         /// </summary>
         /// <param name="node"></param>
         /// <param name="existingRegions"></param>
         /// <returns></returns>
         private HPARegion CalculateNode(PathfindingNode node, Dictionary<PathfindingNode, HPARegion> existingRegions)
         {
-            if (node.BlockedCollisionMask != 0x0)
+            if (node.BlockedCollisionMask != 0x0 || node.TileRef.Tile.IsEmpty)
             {
                 return null;
             }
 
+            // TODO: Need to check left and bottom nodes to see if they're in a different region (that we can't merge with)
+            // If that's the case then set this node as an edge for us (joining an existing edge if possible) and add it as an edge for them
+            
             var parentChunk = node.ParentChunk;
             // Doors will be their own separate region
             // We won't store them in existingRegions so they don't show up
             if (node.AccessReaders.Count > 0)
             {
-                var region = new HPARegion(node.ParentChunk, new HashSet<PathfindingNode>(1) {node}, true);
+                var region = new HPARegion(node.ParentChunk, node, new HashSet<PathfindingNode>(1) {node}, true);
                 _regions[parentChunk.GridId][parentChunk].Add(region);
-                // TODO: Need to hash left / bottom side / top side for edges
-                // Like rimjob
+                UpdateRegionEdge(region, node);
                 return region;
             }
 
@@ -114,21 +225,10 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
             }
 
             // If we can't join an existing region then we'll make our own
-            var newRegion = new HPARegion(node.ParentChunk, new HashSet<PathfindingNode> {node}, node.AccessReaders.Count > 0);
+            var newRegion = new HPARegion(node.ParentChunk, node, new HashSet<PathfindingNode> {node}, node.AccessReaders.Count > 0);
             _regions[parentChunk.GridId][parentChunk].Add(newRegion);
             existingRegions.Add(node, newRegion);
-
-            if (leftNeighbor != null && existingRegions.TryGetValue(leftNeighbor, out leftRegion) && leftRegion.IsDoor)
-            {
-                newRegion.Neighbors.Add(leftRegion);
-                leftRegion.Neighbors.Add(newRegion);
-            }
-
-            if (bottomNeighbor != null && existingRegions.TryGetValue(bottomNeighbor, out bottomRegion) && bottomRegion.IsDoor)
-            {
-                newRegion.Neighbors.Add(bottomRegion);
-                bottomRegion.Neighbors.Add(newRegion);
-            }
+            UpdateRegionEdge(newRegion, node);
             
             return newRegion;
         }
@@ -173,21 +273,16 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
                 {
                     var node = chunk.Nodes[x, y];
                     var region = CalculateNode(node, nodeRegions);
-                    // Currently we won't store a separate region for each mask because muh effort
+                    // Currently we won't store a separate region for each mask / space / whatever because muh effort
                     // Long-term you'll want to account for it probably
                     if (region == null)
                     {
                         continue;
                     }
+                    
                     chunkRegions.Add(region);
                 }
             }
-
-            foreach (var region in chunkRegions)
-            {
-                RefreshRegionEdges(region);
-            }
-            
 #if DEBUG
             SendRegionsDebugMessage(chunk.GridId);
 #endif
@@ -207,7 +302,7 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
             var chunkIdx = 0;
             var regionIdx = 0;
             
-            foreach (var (chunk, regions) in _regions[gridId])
+            foreach (var (_, regions) in _regions[gridId])
             {
                 var debugRegions = new Dictionary<int, List<Vector2>>();
                 debugResult.Add(chunkIdx, debugRegions);
@@ -232,14 +327,6 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
         }
 #endif
 
-        /// <summary>
-        /// Hash our edges so we can lookup our neighbors more easily
-        /// </summary>
-        private void RefreshRegionEdges(HPARegion region)
-        {
-            // TODO: Region should cache edge nodes as it's doing it...
-        }
-
         private void GenerateRooms()
         {
             /* TODO: Go through each chunk's regions on the borders
@@ -251,18 +338,28 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
 
     public class HPARegion
     {
+        /// <summary>
+        /// Bottom-left node of the region
+        /// </summary>
+        public PathfindingNode OriginNode { get; }
         public PathfindingChunk ParentChunk { get; }
-        public List<HPARegion> Neighbors { get; } = new List<HPARegion>();
+        public Dictionary<Direction, HPARegion> Neighbors { get; private set; } = new Dictionary<Direction, HPARegion>();
         
         public bool IsDoor { get; }
         public HashSet<PathfindingNode> Nodes => _nodes;
         private HashSet<PathfindingNode> _nodes;
 
-        public HPARegion(PathfindingChunk parentChunk, HashSet<PathfindingNode> nodes, bool isDoor = false)
+        public HPARegion(PathfindingChunk parentChunk, PathfindingNode originNode, HashSet<PathfindingNode> nodes, bool isDoor = false)
         {
             ParentChunk = parentChunk;
+            OriginNode = originNode;
             _nodes = nodes;
             IsDoor = isDoor;
+        }
+
+        public void UpdateNeighbor(Direction direction, HPARegion region)
+        {
+            Neighbors[direction] = region;
         }
 
         /// <summary>

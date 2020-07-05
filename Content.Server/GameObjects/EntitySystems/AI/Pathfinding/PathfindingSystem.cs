@@ -166,12 +166,14 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding
         private PathfindingChunk CreateChunk(GridId gridId, MapIndices indices)
         {
             var newChunk = new PathfindingChunk(gridId, indices);
-            newChunk.Initialize();
             if (!_graph.ContainsKey(gridId))
             {
                 _graph.Add(gridId, new Dictionary<MapIndices, PathfindingChunk>());
             }
+            
             _graph[gridId].Add(indices, newChunk);
+            newChunk.Initialize(_mapManager.GetGrid(gridId));
+            
             return newChunk;
         }
 
