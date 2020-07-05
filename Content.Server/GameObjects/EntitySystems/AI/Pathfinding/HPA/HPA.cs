@@ -82,8 +82,10 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
         // so multiple entities in the same region with the same args should all be able to share their accessibility lookup
         // Also need to store when we cached it to know if it's stale
         // TODO: There's probably a more memory-efficient way to cache this
-        private Dictionary<HPAAccessible, Dictionary<HPARegion, (TimeSpan, HashSet<HPARegion>)>> _cachedAccessible = 
-            new Dictionary<HPAAccessible, Dictionary<HPARegion, (TimeSpan, HashSet<HPARegion>)>>();
+        // Also, didn't use a dictionary because there didn't seem to be a clean way to do the lookup
+        // Plus this way we can check if everything is equal except for vision so an entity with a lower vision radius can use an entity with a higher vision radius' cached result
+        private List<(HPAAccessible, Dictionary<HPARegion, (TimeSpan, HashSet<HPARegion>)>)> _cachedAccessible = 
+            new List<(HPAAccessible, Dictionary<HPARegion, (TimeSpan, HashSet<HPARegion>)>)>();
 
         public override void Initialize()
         {
@@ -154,26 +156,37 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
                 return true;
             }
 
+            // We'll go from target's position to us because most of the time it's probably in a locked room rather than vice versa
             var accessibleArgs = HPAAccessible.GetArgs(entity);
             
-            if (!TryGetCache(accessibleArgs, entityRegion))
+            if (!TryGetCache(accessibleArgs, targetRegion, out var cached))
             {
-                BuildVisionAccessible(accessibleArgs, entityRegion);
+                cached[targetRegion] = GetVisionAccessible(accessibleArgs, targetRegion);
             }
-            
-            return _cachedAccessible[accessibleArgs][entityRegion].Item2.Contains(targetRegion);
+
+            return cached[targetRegion].Item2.Contains(entityRegion);
         }
 
-        private bool TryGetCache(HPAAccessible accessible, HPARegion region)
+        private bool TryGetCache(HPAAccessible accessible, HPARegion region, out Dictionary<HPARegion, (TimeSpan, HashSet<HPARegion>)> cached)
         {
-            if (!_cachedAccessible.TryGetValue(accessible, out var accessibleCache))
+            cached = null;
+            
+            foreach (var (cachedAccessible, result) in _cachedAccessible)
             {
-                _cachedAccessible[accessible] = new Dictionary<HPARegion, (TimeSpan, HashSet<HPARegion>)>();
-                return false;
+                if (Equals(cachedAccessible.Access, accessible.Access) &&
+                    cachedAccessible.CollisionMask == accessible.CollisionMask &&
+                    cachedAccessible.VisionRadius <= accessible.VisionRadius)
+                {
+                    cached = result;
+                    break;
+                }
             }
 
-            if (!accessibleCache.TryGetValue(region, out var regionCache))
+            cached ??= new Dictionary<HPARegion, (TimeSpan, HashSet<HPARegion>)>();
+
+            if (!cached.TryGetValue(region, out var regionCache))
             {
+                _cachedAccessible.Add((accessible, new Dictionary<HPARegion, (TimeSpan, HashSet<HPARegion>)>()));
                 return false;
             }
 
@@ -190,6 +203,8 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
                 // Any applicable chunk has been invalidated
                 if (accessibleRegion.ParentChunk.LastUpdate > regionCache.Item1)
                 {
+                    // Remove the stale cache to be updated later
+                    cached.Remove(region);
                     return false;
                 }
             }
@@ -204,7 +219,8 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
         /// Also TODO: Can share cache with other entities as well if similar to us. Can also cache indefinitely until pathfinding graph changes
         /// <param name="accessibleArgs"></param>
         /// <param name="entityRegion"></param>
-        private void BuildVisionAccessible(HPAAccessible accessibleArgs, HPARegion entityRegion)
+        /// <param name="cached"></param>
+        private (TimeSpan, HashSet<HPARegion>) GetVisionAccessible(HPAAccessible accessibleArgs, HPARegion entityRegion)
         {
             var openSet = new Queue<HPARegion>();
             openSet.Enqueue(entityRegion);
@@ -226,7 +242,7 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
             }
 
             var currentTime = IoCManager.Resolve<IGameTiming>().CurTime;
-            _cachedAccessible[accessibleArgs][entityRegion] = (currentTime, accessible);
+            return (currentTime, accessible);
         }
         
         // TODO: Build args for entity here
