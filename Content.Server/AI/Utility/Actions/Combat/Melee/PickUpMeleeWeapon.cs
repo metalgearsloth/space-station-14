@@ -35,12 +35,12 @@ namespace Content.Server.AI.Utility.Actions.Combat.Melee
         }
 
         protected override Consideration[] Considerations { get; } = {
-            new TargetAccessibleCon(
-                new BoolCurve()),
             new FreeHandCon(
                 new BoolCurve()),
             new HasMeleeWeaponCon(
                 new InverseBoolCurve()),
+            new TargetAccessibleCon(
+                new BoolCurve()),
             new DistanceCon(
                 new QuadraticCurve(-1.0f, 1.0f, 1.02f, 0.0f)),
             new MeleeWeaponDamageCon(
