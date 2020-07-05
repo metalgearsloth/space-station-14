@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Content.Server.GameObjects.Components.Access;
 using Content.Server.GameObjects.Components.Movement;
+using Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Accessible;
 using Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Pathfinders;
 using Content.Server.GameObjects.EntitySystems.Pathfinding;
 using Content.Shared.AI;
@@ -63,8 +64,9 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
 
         // TODO: Lots of optimisation work. Like a lot.
         // Need to optimise the neighbors for regions more
-        
+#pragma warning disable 649
         [Dependency] private IMapManager _mapmanager;
+#pragma warning restore 649
         private PathfindingSystem _pathfindingSystem;
         
         private HashSet<PathfindingChunk> _queuedUpdates = new HashSet<PathfindingChunk>();
@@ -130,6 +132,16 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
             _queuedUpdates.Add(message.Chunk);
         }
 
+        /// <summary>
+        /// Can the entity reach the target?
+        /// </summary>
+        /// First it does a quick check to see if there are any traversable nodes in range.
+        /// Then it will go through the regions to try and see if there's a region connection between the target and itself
+        /// Will used a cached region if available
+        /// <param name="entity"></param>
+        /// <param name="target"></param>
+        /// <param name="range"></param>
+        /// <returns></returns>
         public bool CanAccess(IEntity entity, IEntity target, float range = 0.0f)
         {
             var targetTile = _mapmanager.GetGrid(target.Transform.GridID).GetTileRef(target.Transform.GridPosition);
@@ -144,6 +156,7 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
             var access = AccessReader.FindAccessTags(entity);
 
             // We'll do a quick traversable check before going through regions
+            // If we can't access it we'll try to get a valid node in range (this is essentially an early-out)
             if (!PathfindingHelpers.Traversable(collisionMask, access, targetNode))
             {
                 // ReSharper disable once CompareOfFloatsByEqualityOperator
@@ -151,16 +164,14 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
                 {
                     return false;
                 }
-                else
+
+                var pathfindingArgs = new PathfindingArgs(entity.Uid, access, collisionMask, default, targetTile, range);
+                foreach (var node in BFSPathfinder.GetNodesInRange(pathfindingArgs, false))
                 {
-                    /*
-                    foreach (var node in)
-                    {
-                        
-                    }
-                    */
+                    targetNode = node;
                 }
             }
+            
             return CanAccess(entity, targetNode);
         }
 
@@ -193,6 +204,14 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
             return cached[targetRegion].Item2.Contains(entityRegion);
         }
 
+        /// <summary>
+        /// Checks whether there's a valid cache for our accessibility args.
+        /// Most regular mobs can share their cached accessibility with each other
+        /// </summary>
+        /// <param name="accessibleArgs"></param>
+        /// <param name="region"></param>
+        /// <param name="cached"></param>
+        /// <returns></returns>
         private bool TryGetCache(HPAAccessibleArgs accessibleArgs, HPARegion region, out Dictionary<HPARegion, (TimeSpan, HashSet<HPARegion>)> cached)
         {
             cached = null;
@@ -270,8 +289,6 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
             var currentTime = IoCManager.Resolve<IGameTiming>().CurTime;
             return (currentTime, accessible);
         }
-        
-        // TODO: Build args for entity here
 
         /// <summary>
         /// Grab the left and bottom nodes and if they're in different regions then add to our edge and their edge
@@ -281,16 +298,13 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
         /// <param name="node"></param>
         private void UpdateRegionEdge(HPARegion region, PathfindingNode node)
         {
-            // TODO: Look at hashing instead maybe... to try and lower memory usage
             DebugTools.Assert(region.Nodes.Contains(node));
-            // TODO: Get the node to the left and check if it's a different region, if so then hash
             var leftNode = node.GetNeighbor(Direction.West);
             if (leftNode != null)
             {
                 var leftRegion = GetRegion(leftNode);
                 if (leftRegion != null && leftRegion != region)
                 {
-                    // TODO: Update our left edge
                     // TODO: Need to make sure teardown is working
                     region.Neighbors.Add(leftRegion);
                     leftRegion.Neighbors.Add(region);
@@ -304,7 +318,6 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
                 var bottomRegion = GetRegion(bottomNode);
                 if (bottomRegion != null && bottomRegion != region)
                 {
-                    // TODO
                     region.Neighbors.Add(bottomRegion);
                     bottomRegion.Neighbors.Add(region);
                 }

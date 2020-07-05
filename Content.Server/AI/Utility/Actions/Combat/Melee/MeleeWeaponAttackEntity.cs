@@ -6,6 +6,7 @@ using Content.Server.AI.Operators.Movement;
 using Content.Server.AI.Utility.Considerations;
 using Content.Server.AI.Utility.Considerations.Combat;
 using Content.Server.AI.Utility.Considerations.Combat.Melee;
+using Content.Server.AI.Utility.Considerations.Containers;
 using Content.Server.AI.Utility.Considerations.Movement;
 using Content.Server.AI.Utility.Curves;
 using Content.Server.AI.WorldState;
@@ -79,6 +80,8 @@ namespace Content.Server.AI.Utility.Actions.Combat.Melee
                 new QuadraticCurve(1.0f, 0.5f, 0.0f, 0.0f)),
             new MeleeWeaponDamageCon(
                 new QuadraticCurve(1.0f, 0.25f, 0.0f, 0.0f)),
+            new TargetAccessibleCon(
+                new BoolCurve()),
         };
     }
 }

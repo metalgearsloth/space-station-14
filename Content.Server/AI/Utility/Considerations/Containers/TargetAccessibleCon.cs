@@ -13,6 +13,7 @@ namespace Content.Server.AI.Utility.Considerations.Containers
 {
     /// <summary>
     /// Returns 1.0f if the item is freely accessible (e.g. in storage we can open, on ground, etc.)
+    /// This can be expensive so consider using this last for the considerations
     /// </summary>
     public sealed class TargetAccessibleCon : Consideration
     {

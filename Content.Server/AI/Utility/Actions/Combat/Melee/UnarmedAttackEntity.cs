@@ -5,6 +5,7 @@ using Content.Server.AI.Operators.Movement;
 using Content.Server.AI.Utility.Considerations;
 using Content.Server.AI.Utility.Considerations.Combat;
 using Content.Server.AI.Utility.Considerations.Combat.Melee;
+using Content.Server.AI.Utility.Considerations.Containers;
 using Content.Server.AI.Utility.Considerations.Movement;
 using Content.Server.AI.Utility.Curves;
 using Content.Server.AI.WorldState;
@@ -73,6 +74,8 @@ namespace Content.Server.AI.Utility.Actions.Combat.Melee
                 new QuadraticCurve(1.0f, 0.4f, 0.0f, -0.02f)),
             // TODO: Consider our Speed and Damage to compare this to using a weapon
             // Also need to unequip our weapon if we have one (xenos can't hold one so no issue for now)
+            new TargetAccessibleCon(
+                new BoolCurve()),
         };
     }
 }
