@@ -279,8 +279,10 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
 
                 foreach (var neighbor in region.Neighbors)
                 {
-                    // Technically it'll also cache outside of visionradius because it's only checking origin but ehh it's fine I think
-                    if (!neighbor.RegionTraversable(accessibleArgsArgs) || neighbor.Distance(entityRegion) > accessibleArgsArgs.VisionRadius || closedSet.Contains(neighbor)) continue;
+                    // Technically it'll also cache outside of visionradius because it's only checking origin
+                    // Not sure how to make it less jank and more optimised
+                    // TODO: The distance check is jank a.f.
+                    if (!neighbor.RegionTraversable(accessibleArgsArgs) || neighbor.Distance(entityRegion) > accessibleArgsArgs.VisionRadius * 2 || closedSet.Contains(neighbor)) continue;
                     openSet.Enqueue(neighbor);
                     accessible.Add(neighbor);
                 }
@@ -298,29 +300,22 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
         /// <param name="node"></param>
         private void UpdateRegionEdge(HPARegion region, PathfindingNode node)
         {
+            // TODO: Moar work to fix
             DebugTools.Assert(region.Nodes.Contains(node));
-            var leftNode = node.GetNeighbor(Direction.West);
-            if (leftNode != null)
-            {
-                var leftRegion = GetRegion(leftNode);
-                if (leftRegion != null && leftRegion != region)
-                {
-                    // TODO: Need to make sure teardown is working
-                    region.Neighbors.Add(leftRegion);
-                    leftRegion.Neighbors.Add(region);
-                }
-            }
+            // Originally I tried just doing bottom and left but that doesn't work as the chunk update order is not guaranteed
 
-            // TODO: Get the node to the bottom and check if it's a different region, if so then hash
-            var bottomNode = node.GetNeighbor(Direction.South);
-            if (bottomNode != null)
+            var checkDirections = new[] {Direction.East, Direction.South, Direction.West, Direction.North};
+            
+            foreach (var direction in checkDirections)
             {
-                var bottomRegion = GetRegion(bottomNode);
-                if (bottomRegion != null && bottomRegion != region)
-                {
-                    region.Neighbors.Add(bottomRegion);
-                    bottomRegion.Neighbors.Add(region);
-                }
+                var directionNode = node.GetNeighbor(direction);
+                if (directionNode == null) continue;
+                
+                var directionRegion = GetRegion(directionNode);
+                if (directionRegion == null) continue;
+
+                region.Neighbors.Add(directionRegion);
+                directionRegion.Neighbors.Add(region);
             }
         }
 
@@ -438,9 +433,15 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
             {
                 target.Add(node);
             }
-            
-            _regions[source.ParentChunk.GridId][source.ParentChunk].Remove(source);
+
             source.Shutdown();
+            _regions[source.ParentChunk.GridId][source.ParentChunk].Remove(source);
+
+            foreach (var node in target.Nodes)
+            {
+                UpdateRegionEdge(target, node);
+            }
+            
         }
         
         /// <summary>
@@ -550,7 +551,7 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
         public PathfindingNode OriginNode { get; }
         public PathfindingChunk ParentChunk { get; }
         public HashSet<HPARegion> Neighbors { get; } = new HashSet<HPARegion>();
-        
+
         public bool IsDoor { get; }
         public HashSet<PathfindingNode> Nodes => _nodes;
         private HashSet<PathfindingNode> _nodes;
@@ -565,8 +566,11 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
 
         public void Shutdown()
         {
-            foreach (var neighbor in Neighbors)
+            var neighbors = new List<HPARegion>(Neighbors);
+            
+            for (var i = 0; i < neighbors.Count; i++)
             {
+                var neighbor = neighbors[i];
                 neighbor.Neighbors.Remove(this);
             }
         }
@@ -576,9 +580,17 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
             return PathfindingHelpers.OctileDistance(otherRegion.OriginNode, OriginNode);
         }
 
+        /// <summary>
+        /// Can the given args can traverse this region?
+        /// </summary>
+        /// <param name="accessibleArgsArgs"></param>
+        /// <returns></returns>
         public bool RegionTraversable(HPAAccessibleArgs accessibleArgsArgs)
         {
-            return false;
+            // The assumption is that all nodes in a region have the same pathfinding traits
+            // As such we can just use the origin node for checking.
+            return PathfindingHelpers.Traversable(accessibleArgsArgs.CollisionMask, accessibleArgsArgs.Access,
+                OriginNode);
         }
 
         /// <summary>
