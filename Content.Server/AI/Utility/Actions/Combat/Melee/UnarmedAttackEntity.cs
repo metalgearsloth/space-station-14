@@ -71,7 +71,7 @@ namespace Content.Server.AI.Utility.Actions.Combat.Melee
                 new QuadraticCurve(-1.0f, 1.0f, 1.02f, 0.0f)),
             // Prefer weaker targets
             new TargetHealthCon(
-                new QuadraticCurve(1.0f, 0.4f, 0.0f, -0.02f)),
+                new QuadraticCurve(1.0f, 0.1f, 0.0f, -0.02f)),
             // TODO: Consider our Speed and Damage to compare this to using a weapon
             // Also need to unequip our weapon if we have one (xenos can't hold one so no issue for now)
             new TargetAccessibleCon(
