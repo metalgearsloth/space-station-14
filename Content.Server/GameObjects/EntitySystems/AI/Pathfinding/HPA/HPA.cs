@@ -55,23 +55,28 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
         /*
          * The purpose of this is to provide a higher-level / hierarchical abstraction of the actual pathfinding graph
          * The goal is so that we can more quickly discern if a specific node is reachable or not rather than
-         * Pathfinding the entire bloody graph.
+         * Pathfinding the entire graph.
          *
          * There's a lot of different implementations of hierarchical or some variation of it: HPA*, PRA, HAA*, etc.
          * (HPA* technically caches the edge nodes of each chunk), e.g. Rimworld, Factorio, etc.
          * so we'll just write one with SS14's requirements in mind.
          */
 
-        // TODO: Lots of optimisation work. Like a lot.
-        // Need to optimise the neighbors for regions more
 #pragma warning disable 649
         [Dependency] private IMapManager _mapmanager;
 #pragma warning restore 649
         private PathfindingSystem _pathfindingSystem;
         
+        /// <summary>
+        /// Queued region updates
+        /// </summary>
         private HashSet<PathfindingChunk> _queuedUpdates = new HashSet<PathfindingChunk>();
         
         // Oh god the nesting. Shouldn't need to go beyond this
+        /// <summary>
+        /// The corresponding regions for each PathfindingChunk.
+        /// Regions are groups of nodes with the same profile (for pathfinding) i.e. same collision, same access, etc.
+        /// </summary>
         private Dictionary<GridId, Dictionary<PathfindingChunk, HashSet<HPARegion>>> _regions = 
             new Dictionary<GridId, Dictionary<PathfindingChunk, HashSet<HPARegion>>>();
         
@@ -129,6 +134,7 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
         private void RecalculateNodeRegions(PathfindingChunkUpdateMessage message)
         {
             // TODO: Only need to do changed nodes ideally
+            // For now this is fine but it's a low-hanging fruit optimisation
             _queuedUpdates.Add(message.Chunk);
         }
 
