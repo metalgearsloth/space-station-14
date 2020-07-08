@@ -80,6 +80,8 @@ namespace Content.Server.AI.Utility.Actions.Combat.Melee
                     .QuadraticCurve(context, 1.0f, 0.5f, 0.0f, 0.0f),
                 considerationsManager.Get<MeleeWeaponDamageCon>()
                     .QuadraticCurve(context, 1.0f, 0.25f, 0.0f, 0.0f),
+                considerationsManager.Get<TargetAccessibleCon>()
+                    .BoolCurve(context),
             };
         }
     }
