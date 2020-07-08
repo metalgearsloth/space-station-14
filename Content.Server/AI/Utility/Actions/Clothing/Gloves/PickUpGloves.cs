@@ -45,7 +45,9 @@ namespace Content.Server.AI.Utility.Actions.Clothing.Gloves
                 considerationsManager.Get<CanPutTargetInHandsCon>()
                     .BoolCurve(context),
                 considerationsManager.Get<ClothingInInventoryCon>().Slot(EquipmentSlotDefines.SlotFlags.GLOVES, context)
-                    .InverseBoolCurve(context)
+                    .InverseBoolCurve(context),
+                considerationsManager.Get<TargetAccessibleCon>()
+                    .BoolCurve(context),
             };
         }
     }

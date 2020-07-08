@@ -8,7 +8,7 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Accessible
 {
     public sealed class ReachableArgs
     {
-        public float VisionRadius { get; }
+        public float VisionRadius { get; set; }
         public ICollection<string> Access { get; }
         public int CollisionMask { get; }
 
@@ -19,6 +19,11 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Accessible
             CollisionMask = collisionMask;
         }
 
+        /// <summary>
+        /// Get appropriate args for a particular entity
+        /// </summary>
+        /// <param name="entity"></param>
+        /// <returns></returns>
         public static ReachableArgs GetArgs(IEntity entity)
         {
             var collisionMask = 0;

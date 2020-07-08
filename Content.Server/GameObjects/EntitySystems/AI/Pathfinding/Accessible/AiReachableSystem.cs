@@ -92,9 +92,12 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Accessible
 #if DEBUG
             if (_queuedUpdates.Count > 0)
             {
-                foreach (var (gridId, _) in _regions)
+                foreach (var (gridId, regs) in _regions)
                 {
-                    SendRegionsDebugMessage(gridId);
+                    if (regs.Count > 0)
+                    {
+                        SendRegionsDebugMessage(gridId);
+                    }
                 }
             }
 #endif
@@ -178,23 +181,40 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Accessible
             }
 
             // We'll go from target's position to us because most of the time it's probably in a locked room rather than vice versa
-            var accessibleArgs = ReachableArgs.GetArgs(entity);
-            var cachedArgs = GetCachedArgs(accessibleArgs);
+            var reachableArgs = ReachableArgs.GetArgs(entity);
+            var reachableRegions = GetReachableRegions(reachableArgs, targetRegion);
+
+            return reachableRegions.Contains(entityRegion);
+        }
+
+        /// <summary>
+        /// Retrieve the reachable regions
+        /// </summary>
+        /// <param name="reachableArgs"></param>
+        /// <param name="region"></param>
+        /// <returns></returns>
+        public HashSet<PathfindingRegion> GetReachableRegions(ReachableArgs reachableArgs, PathfindingRegion region)
+        {
+            // if we're on a node that's not tracked at all atm then region will be null
+            if (region == null)
+            {
+                return new HashSet<PathfindingRegion>();
+            }
+            
+            var cachedArgs = GetCachedArgs(reachableArgs);
             (TimeSpan, HashSet<PathfindingRegion>)? cached;
 
-            // Check whether we have a valid region cache for our specific args;
-            // if not then get a new one and cache it
-            if (!IsCacheValid(cachedArgs, targetRegion))
+            if (!IsCacheValid(cachedArgs, region))
             {
-                cached = GetVisionReachable(cachedArgs, targetRegion);
-                _cachedAccessible[cachedArgs][targetRegion] = cached.Value;
+                cached = GetVisionReachable(cachedArgs, region);
+                _cachedAccessible[cachedArgs][region] = cached.Value;
             }
             else
             {
-                cached = _cachedAccessible[cachedArgs][targetRegion];
+                cached = _cachedAccessible[cachedArgs][region];
             }
 
-            return cached.Value.Item2.Contains(entityRegion);
+            return cached.Value.Item2;
         }
 
         /// <summary>
@@ -347,7 +367,24 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Accessible
             }
         }
 
-        private PathfindingRegion GetRegion(PathfindingNode node)
+        /// <summary>
+        /// Get the current region for this entity
+        /// </summary>
+        /// <param name="entity"></param>
+        /// <returns></returns>
+        public PathfindingRegion GetRegion(IEntity entity)
+        {
+            var entityTile = _mapmanager.GetGrid(entity.Transform.GridID).GetTileRef(entity.Transform.GridPosition);
+            var entityNode = _pathfindingSystem.GetNode(entityTile);
+            return GetRegion(entityNode);
+        }
+
+        /// <summary>
+        /// Get the current region for this node
+        /// </summary>
+        /// <param name="node"></param>
+        /// <returns></returns>
+        public PathfindingRegion GetRegion(PathfindingNode node)
         {
             // Not sure on the best way to optimise this
             // On the one hand, just storing each node's region is faster buuutttt muh memory
@@ -381,6 +418,8 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Accessible
         /// <returns></returns>
         private PathfindingRegion CalculateNode(PathfindingNode node, Dictionary<PathfindingNode, PathfindingRegion> existingRegions)
         {
+            DebugTools.Assert(_regions.ContainsKey(node.ParentChunk.GridId));
+            DebugTools.Assert(_regions[node.ParentChunk.GridId].ContainsKey(node.ParentChunk));
             // TODO For now we don't have these regions but longer-term yeah sure
             if (node.BlockedCollisionMask != 0x0 || node.TileRef.Tile.IsEmpty)
             {
@@ -499,6 +538,7 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Accessible
             // Makes merging regions or adding nodes to existing regions neater.
             var nodeRegions = new Dictionary<PathfindingNode, PathfindingRegion>();
             var chunkRegions = new HashSet<PathfindingRegion>();
+            _regions[chunk.GridId].Add(chunk, chunkRegions);
 
             for (var y = 0; y < PathfindingChunk.ChunkSize; y++)
             {
@@ -516,8 +556,6 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Accessible
                     chunkRegions.Add(region);
                 }
             }
-            
-            _regions[chunk.GridId].Add(chunk, chunkRegions);
 #if DEBUG
             SendRegionsDebugMessage(chunk.GridId);
 #endif
@@ -526,15 +564,12 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Accessible
 #if DEBUG
         private void SendDebugMessage(PlayerAttachSystemMessage message)
         {
-            foreach (var (grid, _) in _regions)
-            {
-                SendRegionsDebugMessage(grid);
-            }
+            var playerGrid = message.Entity.Transform.GridID;
+            SendRegionsDebugMessage(playerGrid);
         }
 
         private void SendRegionsDebugMessage(GridId gridId)
         {
-
             var grid = _mapmanager.GetGrid(gridId);
             // Chunk / Regions / Nodes
             var debugResult = new Dictionary<int, Dictionary<int, List<Vector2>>>();
@@ -562,6 +597,8 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Accessible
 
                 chunkIdx++;
             }
+            
+            
             RaiseNetworkEvent(new SharedAiDebug.HpaChunkRegionsDebugMessage(gridId, debugResult));
         }
 #endif

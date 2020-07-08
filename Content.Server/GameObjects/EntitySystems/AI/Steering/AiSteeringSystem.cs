@@ -135,7 +135,32 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Steering
             
             if (_pathfindingRequests.TryGetValue(entity, out var request))
             {
-                request.Item1.Cancel();
+                switch (request.Item2.Status)
+                {
+                    case JobStatus.Pending:
+                        break;
+                    case JobStatus.Running:
+                        request.Item1.Cancel();
+                        break;
+                    case JobStatus.Paused:
+                        request.Item1.Cancel();
+                        break;
+                    case JobStatus.Waiting:
+                        request.Item1.Cancel();
+                        break;
+                    case JobStatus.Finished:
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+
+                switch (request.Item2.Exception)
+                {
+                    case null:
+                        break;
+                    default:
+                        throw request.Item2.Exception;
+                }
                 _pathfindingRequests.Remove(entity);
             }
             

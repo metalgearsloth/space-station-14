@@ -7,9 +7,11 @@ using Robust.Client.Graphics.Overlays;
 using Robust.Client.Graphics.Shaders;
 using Robust.Client.Interfaces.Graphics.ClientEye;
 using Robust.Client.Interfaces.Graphics.Overlays;
+using Robust.Client.Player;
 using Robust.Shared.GameObjects.Systems;
 using Robust.Shared.Interfaces.Random;
 using Robust.Shared.IoC;
+using Robust.Shared.Map;
 using Robust.Shared.Maths;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Random;
@@ -71,14 +73,15 @@ namespace Content.Client.GameObjects.EntitySystems.AI
 
         private void HandleGraphMessage(SharedAiDebug.PathfindingGraphMessage message)
         {
+            EnableOverlay();
             _overlay.UpdateGraph(message.Graph);
         }
 
         private void HandleRegionsMessage(SharedAiDebug.HpaChunkRegionsDebugMessage message)
         {
-            _overlay.UpdateRegions(message.Regions);
+            EnableOverlay();
+            _overlay.UpdateRegions(message.GridId, message.Regions);
         }
-            
 
         private void EnableOverlay()
         {
@@ -157,6 +160,7 @@ namespace Content.Client.GameObjects.EntitySystems.AI
     internal sealed class DebugPathfindingOverlay : Overlay
     {
         private IEyeManager _eyeManager;
+        private IPlayerManager _playerManager;
         
         // TODO: Add a box like the debug one and show the most recent path stuff
         public override OverlaySpace Space => OverlaySpace.ScreenSpace;
@@ -167,8 +171,11 @@ namespace Content.Client.GameObjects.EntitySystems.AI
         public readonly Dictionary<int, List<Vector2>> Graph = new Dictionary<int, List<Vector2>>();
         private readonly Dictionary<int, Color> _graphColors = new Dictionary<int, Color>();
         
-        public readonly Dictionary<int, Dictionary<int, List<Vector2>>> Regions = new Dictionary<int, Dictionary<int, List<Vector2>>>();
-        private readonly Dictionary<int, Dictionary<int, Color>> _regionColors = new Dictionary<int, Dictionary<int, Color>>();
+        public readonly Dictionary<GridId, Dictionary<int, Dictionary<int, List<Vector2>>>> Regions = 
+                    new Dictionary<GridId, Dictionary<int, Dictionary<int, List<Vector2>>>>();
+        
+        private readonly Dictionary<GridId, Dictionary<int, Dictionary<int, Color>>> _regionColors = 
+                     new Dictionary<GridId, Dictionary<int, Dictionary<int, Color>>>();
         
         // Route debugging
         // As each pathfinder is very different you'll likely want to draw them completely different
@@ -179,6 +186,7 @@ namespace Content.Client.GameObjects.EntitySystems.AI
         {
             Shader = IoCManager.Resolve<IPrototypeManager>().Index<ShaderPrototype>("unshaded").Instance();
             _eyeManager = IoCManager.Resolve<IEyeManager>();
+            _playerManager = IoCManager.Resolve<IPlayerManager>();
         }
 
         #region Graph
@@ -217,20 +225,24 @@ namespace Content.Client.GameObjects.EntitySystems.AI
         #endregion
 
         #region Regions
-        public void UpdateRegions(Dictionary<int, Dictionary<int, List<Vector2>>> messageRegions)
+        public void UpdateRegions(GridId gridId, Dictionary<int, Dictionary<int, List<Vector2>>> messageRegions)
         {
-            Regions.Clear();
-            _regionColors.Clear();
+            if (!Regions.ContainsKey(gridId))
+            {
+                Regions.Add(gridId, new Dictionary<int, Dictionary<int, List<Vector2>>>());
+                _regionColors.Add(gridId, new Dictionary<int, Dictionary<int, Color>>());
+            }
+            
             var robustRandom = IoCManager.Resolve<IRobustRandom>();
             foreach (var (chunk, regions) in messageRegions)
             {
-                Regions[chunk] = new Dictionary<int, List<Vector2>>();
-                _regionColors[chunk] = new Dictionary<int, Color>();
+                Regions[gridId][chunk] = new Dictionary<int, List<Vector2>>();
+                _regionColors[gridId][chunk] = new Dictionary<int, Color>();
                 
                 foreach (var (region, nodes) in regions)
                 {
-                    Regions[chunk].Add(region, nodes);
-                    _regionColors[chunk][region] = new Color(robustRandom.NextFloat(), robustRandom.NextFloat(),
+                    Regions[gridId][chunk].Add(region, nodes);
+                    _regionColors[gridId][chunk][region] = new Color(robustRandom.NextFloat(), robustRandom.NextFloat(),
                         robustRandom.NextFloat(), 0.3f);
                 }
             }
@@ -238,7 +250,13 @@ namespace Content.Client.GameObjects.EntitySystems.AI
         
         private void DrawRegions(DrawingHandleScreen screenHandle, Box2 viewport)
         {
-            foreach (var (chunk, regions) in Regions)
+            var attachedEntity = _playerManager.LocalPlayer?.ControlledEntity;
+            if (attachedEntity == null || !Regions.TryGetValue(attachedEntity.Transform.GridID, out var entityRegions))
+            {
+                return;
+            }
+
+            foreach (var (chunk, regions) in entityRegions)
             {
                 foreach (var (region, nodes) in regions)
                 {
@@ -253,7 +271,7 @@ namespace Content.Client.GameObjects.EntitySystems.AI
                             screenTile.X + 15.0f,
                             screenTile.Y + 15.0f);
                         
-                        screenHandle.DrawRect(box, _regionColors[chunk][region]);
+                        screenHandle.DrawRect(box, _regionColors[attachedEntity.Transform.GridID][chunk][region]);
                     }
                 }
             }
