@@ -1,9 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Content.Server.GameObjects.Components.Access;
-using Content.Server.GameObjects.Components.Movement;
-using Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Accessible;
 using Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Pathfinders;
 using Content.Server.GameObjects.EntitySystems.Pathfinding;
 using Content.Shared.AI;
@@ -19,38 +16,14 @@ using Robust.Shared.Map;
 using Robust.Shared.Maths;
 using Robust.Shared.Utility;
 
-namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
+namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Accessible
 {
-    public sealed class HPAAccessibleArgs
-    {
-        public float VisionRadius { get; }
-        public ICollection<string> Access { get; }
-        public int CollisionMask { get; }
-
-        public HPAAccessibleArgs(float visionRadius, ICollection<string> access, int collisionMask)
-        {
-            VisionRadius = visionRadius;
-            Access = access;
-            CollisionMask = collisionMask;
-        }
-
-        public static HPAAccessibleArgs GetArgs(IEntity entity)
-        {
-            var collisionMask = 0;
-            if (entity.TryGetComponent(out CollidableComponent collidableComponent))
-            {
-                collisionMask = collidableComponent.CollisionMask;
-            }
-
-            var access = AccessReader.FindAccessTags(entity);
-            var visionRadius = entity.GetComponent<AiControllerComponent>().VisionRadius;
-            
-            return new HPAAccessibleArgs(visionRadius, access, collisionMask);
-        }
-    }
-    
+    /// <summary>
+    /// Determines whether an AI has access to a specific pathfinding node.
+    /// </summary>
+    /// Long-term can be used to do hierarchical pathfinding
     [UsedImplicitly]
-    public sealed class HPAPathfindingSystem : EntitySystem
+    public sealed class AiReachableSystem : EntitySystem
     {
         /*
          * The purpose of this is to provide a higher-level / hierarchical abstraction of the actual pathfinding graph
@@ -60,10 +33,14 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
          * There's a lot of different implementations of hierarchical or some variation of it: HPA*, PRA, HAA*, etc.
          * (HPA* technically caches the edge nodes of each chunk), e.g. Rimworld, Factorio, etc.
          * so we'll just write one with SS14's requirements in mind.
+         *
+         * There's probably a better data structure to use though you'd need to benchmark multiple ones to compare,
+         * at the very least on the memory side it could definitely be better.
          */
 
 #pragma warning disable 649
         [Dependency] private IMapManager _mapmanager;
+        [Dependency] private IGameTiming _gameTiming;
 #pragma warning restore 649
         private PathfindingSystem _pathfindingSystem;
         
@@ -75,24 +52,25 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
         // Oh god the nesting. Shouldn't need to go beyond this
         /// <summary>
         /// The corresponding regions for each PathfindingChunk.
-        /// Regions are groups of nodes with the same profile (for pathfinding) i.e. same collision, same access, etc.
+        /// Regions are groups of nodes with the same profile (for pathfinding purposes)
+        /// i.e. same collision, not-space, same access, etc.
         /// </summary>
-        private Dictionary<GridId, Dictionary<PathfindingChunk, HashSet<HPARegion>>> _regions = 
-            new Dictionary<GridId, Dictionary<PathfindingChunk, HashSet<HPARegion>>>();
+        private Dictionary<GridId, Dictionary<PathfindingChunk, HashSet<PathfindingRegion>>> _regions = 
+            new Dictionary<GridId, Dictionary<PathfindingChunk, HashSet<PathfindingRegion>>>();
         
         /// <summary>
-        /// Minimum time for the cache to be stored
+        /// Minimum time for the cached reachable regions to be stored
         /// </summary>
         private const float MinCacheTime = 1.0f;
         
-        // Cache what regions are accessible from this region. Cached per accessible args
-        // so multiple entities in the same region with the same args should all be able to share their accessibility lookup
-        // Also need to store when we cached it to know if it's stale
+        // Cache what regions are accessible from this region. Cached per ReachableArgs
+        // so multiple entities in the same region with the same args should all be able to share their reachable lookup
+        // Also need to store when we cached it to know if it's stale if the chunks have updated
         // TODO: There's probably a more memory-efficient way to cache this
         // Also, didn't use a dictionary because there didn't seem to be a clean way to do the lookup
         // Plus this way we can check if everything is equal except for vision so an entity with a lower vision radius can use an entity with a higher vision radius' cached result
-        private Dictionary<HPAAccessibleArgs, Dictionary<HPARegion, (TimeSpan, HashSet<HPARegion>)>> _cachedAccessible = 
-            new Dictionary<HPAAccessibleArgs, Dictionary<HPARegion, (TimeSpan, HashSet<HPARegion>)>>();
+        private Dictionary<ReachableArgs, Dictionary<PathfindingRegion, (TimeSpan, HashSet<PathfindingRegion>)>> _cachedAccessible = 
+            new Dictionary<ReachableArgs, Dictionary<PathfindingRegion, (TimeSpan, HashSet<PathfindingRegion>)>>();
 
         public override void Initialize()
         {
@@ -200,13 +178,15 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
             }
 
             // We'll go from target's position to us because most of the time it's probably in a locked room rather than vice versa
-            var accessibleArgs = HPAAccessibleArgs.GetArgs(entity);
+            var accessibleArgs = ReachableArgs.GetArgs(entity);
             var cachedArgs = GetCachedArgs(accessibleArgs);
-            (TimeSpan, HashSet<HPARegion>)? cached;
+            (TimeSpan, HashSet<PathfindingRegion>)? cached;
 
+            // Check whether we have a valid region cache for our specific args;
+            // if not then get a new one and cache it
             if (!IsCacheValid(cachedArgs, targetRegion))
             {
-                cached = GetVisionAccessible(cachedArgs, targetRegion);
+                cached = GetVisionReachable(cachedArgs, targetRegion);
                 _cachedAccessible[cachedArgs][targetRegion] = cached.Value;
             }
             else
@@ -220,13 +200,13 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
         /// <summary>
         /// Get any adequate cached args if possible, otherwise just use ours
         /// </summary>
+        /// Essentially any args that have the same access AND >= our vision radius can be used
         /// <param name="accessibleArgs"></param>
         /// <returns></returns>
-        private HPAAccessibleArgs GetCachedArgs(HPAAccessibleArgs accessibleArgs)
+        private ReachableArgs GetCachedArgs(ReachableArgs accessibleArgs)
         {
-            HPAAccessibleArgs foundArgs = null;
-
-            // Get a "good enough" cache for our args (e.g. if their vision is higher but all the rest is the same it's fine)
+            ReachableArgs foundArgs = null;
+            
             foreach (var (cachedAccessible, _) in _cachedAccessible)
             {
                 if (Equals(cachedAccessible.Access, accessibleArgs.Access) &&
@@ -249,11 +229,11 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
         /// <param name="accessibleArgs"></param>
         /// <param name="region"></param>
         /// <returns></returns>
-        private bool IsCacheValid(HPAAccessibleArgs accessibleArgs, HPARegion region)
+        private bool IsCacheValid(ReachableArgs accessibleArgs, PathfindingRegion region)
         {
             if (!_cachedAccessible.TryGetValue(accessibleArgs, out var cachedArgs))
             {
-                _cachedAccessible.Add(accessibleArgs, new Dictionary<HPARegion, (TimeSpan, HashSet<HPARegion>)>());
+                _cachedAccessible.Add(accessibleArgs, new Dictionary<PathfindingRegion, (TimeSpan, HashSet<PathfindingRegion>)>());
                 return false;
             }
             
@@ -263,23 +243,23 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
             }
 
             // Just so we don't invalidate the cache every tick we'll store it for a minimum amount of time
-            var currentTime = IoCManager.Resolve<IGameTiming>().CurTime;
+            var currentTime = _gameTiming.CurTime;
             if ((currentTime - regionCache.Item1).TotalSeconds < MinCacheTime)
             {
                 return true;
             }
 
-            var checkedAccess = new HashSet<HPARegion>();
-            
+            var checkedAccess = new HashSet<PathfindingRegion>();
             // Check if cache is stale
             foreach (var accessibleRegion in regionCache.Item2)
             {
                 if (checkedAccess.Contains(accessibleRegion)) continue;
                 
                 // Any applicable chunk has been invalidated OR one of our neighbors has been invalidated (i.e. new connections)
+                // TODO: Could look at storing the TimeSpan directly on the region so our neighbor can tell us straight-up
                 if (accessibleRegion.ParentChunk.LastUpdate > regionCache.Item1)
                 {
-                    // Remove the stale cache to be updated later
+                    // Remove the stale cache, to be updated later
                     _cachedAccessible[accessibleArgs].Remove(region);
                     return false;
                 }
@@ -302,17 +282,15 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
         /// <summary>
         /// Caches the entity's nearby accessible regions in vision radius
         /// </summary>
-        /// Longer-term TODO: Hierarchical pathfinding in which case this function would probably get bulldozed
-        /// Also TODO: Can share cache with other entities as well if similar to us. Can also cache indefinitely until pathfinding graph changes
-        /// <param name="accessibleArgs"></param>
+        /// Longer-term TODO: Hierarchical pathfinding in which case this function would probably get bulldozed, BRRRTT
+        /// <param name="reachableArgs"></param>
         /// <param name="entityRegion"></param>
-        private (TimeSpan, HashSet<HPARegion>) GetVisionAccessible(HPAAccessibleArgs accessibleArgs, HPARegion entityRegion)
+        private (TimeSpan, HashSet<PathfindingRegion>) GetVisionReachable(ReachableArgs reachableArgs, PathfindingRegion entityRegion)
         {
-            // TODO: Still not working
-            var openSet = new Queue<HPARegion>();
+            var openSet = new Queue<PathfindingRegion>();
             openSet.Enqueue(entityRegion);
-            var closedSet = new HashSet<HPARegion> {entityRegion};
-            var accessible = new HashSet<HPARegion> {entityRegion};
+            var closedSet = new HashSet<PathfindingRegion>();
+            var accessible = new HashSet<PathfindingRegion> {entityRegion};
 
             while (openSet.Count > 0)
             {
@@ -325,13 +303,12 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
                     {
                         continue;
                     }
-                    // TODO: The HashSet was allowing duplicate HPARegion which it probably shouldn't be allowing
-                    // (under the old implementation)
-                    // Technically it'll also cache outside of visionradius because it's only checking origin
-                    // Not sure how to make it less jank and more optimised
+                    
+                    // Technically it'll cache outside of visionradius because it's only checking origin
+                    // Not sure how to make it less jank and more optimised (maybe have width and height that nodes update?)
                     // TODO: The distance check is jank a.f.
-                    if (!neighbor.RegionTraversable(accessibleArgs) ||
-                        neighbor.Distance(entityRegion) > accessibleArgs.VisionRadius * 2)
+                    if (!neighbor.RegionTraversable(reachableArgs) ||
+                        neighbor.Distance(entityRegion) > reachableArgs.VisionRadius * 2)
                     {
                         closedSet.Add(neighbor);
                         continue;
@@ -341,9 +318,8 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
                     accessible.Add(neighbor);
                 }
             }
-
-            var currentTime = IoCManager.Resolve<IGameTiming>().CurTime;
-            return (currentTime, accessible);
+            
+            return (_gameTiming.CurTime, accessible);
         }
 
         /// <summary>
@@ -352,9 +328,8 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
         /// Implicitly they would've already been merged if possible
         /// <param name="region"></param>
         /// <param name="node"></param>
-        private void UpdateRegionEdge(HPARegion region, PathfindingNode node)
+        private void UpdateRegionEdge(PathfindingRegion region, PathfindingNode node)
         {
-            // TODO: Moar work to fix
             DebugTools.Assert(region.Nodes.Contains(node));
             // Originally I tried just doing bottom and left but that doesn't work as the chunk update order is not guaranteed
 
@@ -372,12 +347,12 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
             }
         }
 
-        private HPARegion GetRegion(PathfindingNode node)
+        private PathfindingRegion GetRegion(PathfindingNode node)
         {
             // Not sure on the best way to optimise this
             // On the one hand, just storing each node's region is faster buuutttt muh memory
             // On the other hand, you might need O(n) lookups on regions for each chunk, though it's probably not too bad with smaller chunk sizes?
-
+            // Someone smarter than me will know better
             var parentChunk = node.ParentChunk;
             
             // No guarantee the node even has a region yet (if we're doing neighbor lookups)
@@ -404,22 +379,20 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
         /// <param name="node"></param>
         /// <param name="existingRegions"></param>
         /// <returns></returns>
-        private HPARegion CalculateNode(PathfindingNode node, Dictionary<PathfindingNode, HPARegion> existingRegions)
+        private PathfindingRegion CalculateNode(PathfindingNode node, Dictionary<PathfindingNode, PathfindingRegion> existingRegions)
         {
+            // TODO For now we don't have these regions but longer-term yeah sure
             if (node.BlockedCollisionMask != 0x0 || node.TileRef.Tile.IsEmpty)
             {
                 return null;
             }
 
-            // TODO: Need to check left and bottom nodes to see if they're in a different region (that we can't merge with)
-            // If that's the case then set this node as an edge for us (joining an existing edge if possible) and add it as an edge for them
-            
             var parentChunk = node.ParentChunk;
             // Doors will be their own separate region
-            // We won't store them in existingRegions so they don't show up
+            // We won't store them in existingRegions so they don't show up and can't be connected to (at least for now)
             if (node.AccessReaders.Count > 0)
             {
-                var region = new HPARegion(node, new HashSet<PathfindingNode>(1) {node}, true);
+                var region = new PathfindingRegion(node, new HashSet<PathfindingNode>(1) {node}, true);
                 _regions[parentChunk.GridId][parentChunk].Add(region);
                 UpdateRegionEdge(region, node);
                 return region;
@@ -432,45 +405,45 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
             var y = node.TileRef.Y - parentChunk.Indices.Y;
             var leftNeighbor = x > 0 ? parentChunk.Nodes[x - 1, y] : null;
             var bottomNeighbor = y > 0 ? parentChunk.Nodes[x, y - 1] : null;
-            HPARegion leftRegion;
-            HPARegion bottomRegion;
+            PathfindingRegion leftRegion;
+            PathfindingRegion bottomRegion;
 
             // We'll check if our left or down neighbors are already in a region and join them, unless we're a door
             if (node.AccessReaders.Count == 0)
             {
-                if (x > 0 && leftNeighbor != null)
+                // Is left node valid to connect to
+                if (leftNeighbor != null &&
+                    existingRegions.TryGetValue(leftNeighbor, out leftRegion) && 
+                    !leftRegion.IsDoor)
                 {
-                    if (existingRegions.TryGetValue(leftNeighbor, out leftRegion) && !leftRegion.IsDoor)
-                    {
-                        // We'll try and connect the left node's region to the bottom region if they're separate
-                        if (bottomNeighbor != null && existingRegions.TryGetValue(bottomNeighbor, out bottomRegion) &&
-                            !bottomRegion.IsDoor)
-                        {
-                            bottomRegion.Add(node);
-                            existingRegions.Add(node, bottomRegion);
-                            MergeInto(leftRegion, bottomRegion);
-                            return bottomRegion;
-                        }
-
-                        leftRegion.Add(node);
-                        existingRegions.Add(node, leftRegion);
-                        return leftRegion;
-                    }
-                }
-
-                if (y > 0 && bottomNeighbor != null)
-                {
-                    if (existingRegions.TryGetValue(bottomNeighbor, out bottomRegion) && !bottomRegion.IsDoor)
+                    // We'll try and connect the left node's region to the bottom region if they're separate (yay merge)
+                    if (bottomNeighbor != null && existingRegions.TryGetValue(bottomNeighbor, out bottomRegion) &&
+                        !bottomRegion.IsDoor)
                     {
                         bottomRegion.Add(node);
                         existingRegions.Add(node, bottomRegion);
+                        MergeInto(leftRegion, bottomRegion);
                         return bottomRegion;
                     }
+
+                    leftRegion.Add(node);
+                    existingRegions.Add(node, leftRegion);
+                    return leftRegion;
+                }
+
+                //Is bottom node valid to connect to
+                if (bottomNeighbor != null && 
+                    existingRegions.TryGetValue(bottomNeighbor, out bottomRegion) && 
+                    !bottomRegion.IsDoor)
+                {
+                    bottomRegion.Add(node);
+                    existingRegions.Add(node, bottomRegion);
+                    return bottomRegion;
                 }
             }
 
             // If we can't join an existing region then we'll make our own
-            var newRegion = new HPARegion(node, new HashSet<PathfindingNode> {node}, node.AccessReaders.Count > 0);
+            var newRegion = new PathfindingRegion(node, new HashSet<PathfindingNode> {node}, node.AccessReaders.Count > 0);
             _regions[parentChunk.GridId][parentChunk].Add(newRegion);
             existingRegions.Add(node, newRegion);
             UpdateRegionEdge(newRegion, node);
@@ -483,7 +456,7 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
         /// </summary>
         /// <param name="source"></param>
         /// <param name="target"></param>
-        private void MergeInto(HPARegion source, HPARegion target)
+        private void MergeInto(PathfindingRegion source, PathfindingRegion target)
         {
             DebugTools.AssertNotNull(source);
             DebugTools.AssertNotNull(target);
@@ -503,14 +476,14 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
         
         /// <summary>
         /// Generate all of the regions within a chunk
-        /// These can't across over into another chunk and doors are their own region
         /// </summary>
+        /// These can't across over into another chunk and doors are their own region
         /// <param name="chunk"></param>
         private void GenerateRegions(PathfindingChunk chunk)
         {
             if (!_regions.ContainsKey(chunk.GridId))
             {
-                _regions.Add(chunk.GridId, new Dictionary<PathfindingChunk, HashSet<HPARegion>>());
+                _regions.Add(chunk.GridId, new Dictionary<PathfindingChunk, HashSet<PathfindingRegion>>());
             }
 
             if (_regions[chunk.GridId].TryGetValue(chunk, out var regions))
@@ -522,11 +495,11 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
                 _regions[chunk.GridId].Remove(chunk);
             }
 
-            // Temporarily store the corresponding for each node
-            var nodeRegions = new Dictionary<PathfindingNode, HPARegion>();
-            var chunkRegions = new HashSet<HPARegion>();
-            _regions[chunk.GridId].Add(chunk, chunkRegions);
-            
+            // Temporarily store the corresponding region for each node
+            // Makes merging regions or adding nodes to existing regions neater.
+            var nodeRegions = new Dictionary<PathfindingNode, PathfindingRegion>();
+            var chunkRegions = new HashSet<PathfindingRegion>();
+
             for (var y = 0; y < PathfindingChunk.ChunkSize; y++)
             {
                 for (var x = 0; x < PathfindingChunk.ChunkSize; x++)
@@ -543,6 +516,8 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
                     chunkRegions.Add(region);
                 }
             }
+            
+            _regions[chunk.GridId].Add(chunk, chunkRegions);
 #if DEBUG
             SendRegionsDebugMessage(chunk.GridId);
 #endif
@@ -556,15 +531,11 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
                 SendRegionsDebugMessage(grid);
             }
         }
-        
-        /// <summary>
-        /// Holy fuckballs this is hammering the connection, make better
-        /// </summary>
-        /// <param name="gridId"></param>
+
         private void SendRegionsDebugMessage(GridId gridId)
         {
-            var mapManager = IoCManager.Resolve<IMapManager>();
-            var grid = mapManager.GetGrid(gridId);
+
+            var grid = _mapmanager.GetGrid(gridId);
             // Chunk / Regions / Nodes
             var debugResult = new Dictionary<int, Dictionary<int, List<Vector2>>>();
             var chunkIdx = 0;
@@ -582,7 +553,7 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
 
                     foreach (var node in region.Nodes)
                     {
-                        var nodeVector = grid.GridTileToLocal(node.TileRef.GridIndices).ToMapPos(mapManager);
+                        var nodeVector = grid.GridTileToLocal(node.TileRef.GridIndices).ToMapPos(_mapmanager);
                         debugRegionNodes.Add(nodeVector);
                     }
 
@@ -594,81 +565,5 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA
             RaiseNetworkEvent(new SharedAiDebug.HpaChunkRegionsDebugMessage(gridId, debugResult));
         }
 #endif
-
-        private void GenerateRooms()
-        {
-            /* TODO: Go through each chunk's regions on the borders
-             * foreach relevant neighboring chunk check if we can
-             * 
-             */
-        }
-    }
-
-    public class HPARegion : IEquatable<HPARegion>
-    {
-        /// <summary>
-        /// Bottom-left node of the region
-        /// </summary>
-        public PathfindingNode OriginNode { get; }
-
-        public PathfindingChunk ParentChunk => OriginNode.ParentChunk;
-        public HashSet<HPARegion> Neighbors { get; } = new HashSet<HPARegion>();
-
-        public bool IsDoor { get; }
-        public HashSet<PathfindingNode> Nodes => _nodes;
-        private HashSet<PathfindingNode> _nodes;
-
-        public HPARegion(PathfindingNode originNode, HashSet<PathfindingNode> nodes, bool isDoor = false)
-        {
-            OriginNode = originNode;
-            _nodes = nodes;
-            IsDoor = isDoor;
-        }
-
-        public void Shutdown()
-        {
-            var neighbors = new List<HPARegion>(Neighbors);
-            
-            for (var i = 0; i < neighbors.Count; i++)
-            {
-                var neighbor = neighbors[i];
-                neighbor.Neighbors.Remove(this);
-            }
-        }
-
-        public float Distance(HPARegion otherRegion)
-        {
-            return PathfindingHelpers.OctileDistance(otherRegion.OriginNode, OriginNode);
-        }
-
-        /// <summary>
-        /// Can the given args can traverse this region?
-        /// </summary>
-        /// <param name="accessibleArgs"></param>
-        /// <returns></returns>
-        public bool RegionTraversable(HPAAccessibleArgs accessibleArgs)
-        {
-            // The assumption is that all nodes in a region have the same pathfinding traits
-            // As such we can just use the origin node for checking.
-            return PathfindingHelpers.Traversable(accessibleArgs.CollisionMask, accessibleArgs.Access,
-                OriginNode);
-        }
-
-        public void Add(PathfindingNode node)
-        {
-            _nodes.Add(node);
-        }
-
-        public bool Equals(HPARegion other)
-        {
-            if (other == null) return false;
-            if (ReferenceEquals(this, other)) return true;
-            return GetHashCode() == other.GetHashCode();
-        }
-
-        public override int GetHashCode()
-        {
-            return OriginNode.GetHashCode();
-        }
     }
 }

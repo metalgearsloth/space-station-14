@@ -2,7 +2,8 @@ using Content.Server.AI.WorldState;
 using Content.Server.AI.WorldState.States;
 using Content.Server.GameObjects.Components;
 using Content.Server.GameObjects.Components.Movement;
-using Content.Server.GameObjects.EntitySystems.AI.Pathfinding.HPA;
+using Content.Server.GameObjects.EntitySystems.AI.Pathfinding;
+using Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Accessible;
 using Content.Shared.GameObjects.EntitySystems;
 using Robust.Shared.Containers;
 using Robust.Shared.GameObjects.Systems;
@@ -42,7 +43,7 @@ namespace Content.Server.AI.Utility.Considerations.Containers
 
             var owner = context.GetState<SelfState>().GetValue();
 
-            return EntitySystem.Get<HPAPathfindingSystem>().CanAccess(owner, target, SharedInteractionSystem.InteractionRange) ? 1.0f : 0.0f;
+            return EntitySystem.Get<AiReachableSystem>().CanAccess(owner, target, SharedInteractionSystem.InteractionRange) ? 1.0f : 0.0f;
         }
     }
 }
