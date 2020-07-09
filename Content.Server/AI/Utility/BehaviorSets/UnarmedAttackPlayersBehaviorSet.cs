@@ -10,7 +10,7 @@ namespace Content.Server.AI.Utility.BehaviorSets
         {
             Actions = new IAiUtility[]
             {
-                new UnarmedAttackNearbyPlayerExp(), 
+                new UnarmedAttackNearbySpeciesExp(), 
             };
         }
     }

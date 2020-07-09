@@ -27,7 +27,7 @@ namespace Content.Server.AI.WorldState.States.Mobs
 
             foreach (var player in nearbyPlayers)
             {
-                if (player.AttachedEntity != Owner && player.AttachedEntity.HasComponent<SpeciesComponent>())
+                if (player.AttachedEntity != null && player.AttachedEntity != Owner && player.AttachedEntity.HasComponent<SpeciesComponent>())
                 {
                     result.Add(player.AttachedEntity);
                 }

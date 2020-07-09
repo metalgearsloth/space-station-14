@@ -3,14 +3,13 @@ using Content.Server.AI.Utility.Actions;
 using Content.Server.AI.Utility.Actions.Combat.Melee;
 using Content.Server.AI.WorldState;
 using Content.Server.AI.WorldState.States;
-using Content.Server.AI.WorldState.States.Mobs;
 using Content.Server.GameObjects;
 using Content.Server.GameObjects.EntitySystems.AI.Sensory;
 using Robust.Shared.GameObjects.Systems;
 
 namespace Content.Server.AI.Utility.ExpandableActions.Combat.Melee
 {
-    public sealed class MeleeAttackNearbySpeciesExp : ExpandableUtilityAction
+    public sealed class UnarmedAttackNearbySpeciesExp : ExpandableUtilityAction
     {
         public override float Bonus => UtilityAction.CombatBonus;
 
@@ -21,7 +20,7 @@ namespace Content.Server.AI.Utility.ExpandableActions.Combat.Melee
 
             foreach (var entity in sensor.GetNearestEntities<SpeciesComponent>(owner))
             {
-                yield return new MeleeWeaponAttackEntity(owner, entity, Bonus);
+                yield return new UnarmedAttackEntity(owner, entity, Bonus);
             }
         }
     }
