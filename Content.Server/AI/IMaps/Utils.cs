@@ -1,4 +1,5 @@
 using System;
+using Robust.Shared.Map;
 using Robust.Shared.Maths;
 using Robust.Shared.Utility;
 
@@ -13,44 +14,77 @@ namespace Content.Server.AI.IMaps
 
     public class InfluenceMap
     {
-        private Vector2 _anchorLocation;
-        private float _cellSize;
+        private GridCoordinates _gridCoordinates;
+        
+        // TODO: I don't this can be a discrete MapIndices... Because the influencemap gets reused
+        //private Vector2 _anchorLocation;
+        // World location of the map (center?)
+        private readonly Vector2 _anchorLocation;
+        // Size of the clel in world units
+        private float _cellSize; // Could just be ints for tiles?
         private int _height;
         private int _width;
+        // Actual contents
         private float[,] _mapGrid;
 
-        public InfluenceMap(int newWidth, int newHeight, float x = 0.0f, float y = 0.0f, int newCellSize = 1)
+        public InfluenceMap(int newWidth, int newHeight, Vector2 anchorLocation = default, float newCellSize = 1)
         {
+            _gridCoordinates = GridCoordinates.InvalidGrid;
+            _anchorLocation = anchorLocation;
             _width = newWidth;
             _height = newHeight;
-            _anchorLocation = new Vector2(x, y);
             _cellSize = newCellSize;
             _mapGrid = new float[_width,_height];
         }
 
-        public void AddValue(int x, int y, float value)
+        private bool InBounds(float x, float y)
         {
-            if (x >= 0 && x < _width && y >= 0 && y < _height)
+            return x >= _anchorLocation.X && 
+                   y >= _anchorLocation.Y && 
+                   x < _anchorLocation.X + _width && 
+                   y < _anchorLocation.Y + _height;
+        }
+
+        public void AddValue(float x, float y, float value)
+        {
+            if (!InBounds(x, y))
             {
-                var existing = _mapGrid[x, y];
-                _mapGrid[x, y] = existing + value;
+                return;
             }
+            
+            var xOffset = indices.X - _anchorLocation.X;
+            var yOffset = indices.Y - _anchorLocation.Y;
+
+            _mapGrid[xOffset, yOffset] += value;
         }
 
-        public void SetCellValue(int x, int y, float value)
+        public void SetCellValue(float x, float y, float value)
         {
-            if (x >= 0 && x < _width && y >= 0 && y < _height)
+            if (!InBounds(x, y))
             {
-                _mapGrid[x, y] = value;
+                return;
             }
+            
+            var xOffset = indices.X - _center.X;
+            var yOffset = indices.Y - _center.Y;
+            
+            _mapGrid[xOffset, yOffset] = value;
         }
 
-        public float GetCellValue(int x, int y)
+        public float GetCellValue(float x, float y)
         {
-            return (x >= 0 && x < _width && y >= 0 && y < _height) ? _mapGrid[x, y] : 0.0f;
+            if (!InBounds(x, y))
+            {
+                return 0.0f;
+            }
+            
+            var xOffset = indices.X - _center.X;
+            var yOffset = indices.Y - _center.Y;
+            
+            return _mapGrid[xOffset, yOffset];
         }
 
-        public void PropagateInfluence(int centerX, int centerY, int radius, InfluenceCurve propType, float magnitude)
+        public void PropagateInfluence(int centerX, int centerY, int radius, InfluenceCurve propType, float magnitude = 1.0f)
         {
             int startX = centerX - (radius / 2);
             int startY = centerY - (radius / 2);
@@ -66,18 +100,27 @@ namespace Content.Server.AI.IMaps
             {
                 for (int x = minX; x < maxX; x++)
                 {
-                    float distance = 0.0f; // GetDistance(y, centerY, x, centerX);
-                    _mapGrid[x, y] = 0.0f;  // PropValue(distance, propType);
+                    var distance = GetDistance(x, y, centerX, centerY);
+                    _mapGrid[x, y] = PropValue(distance, propType) * magnitude;
                 }
             }
         }
 
+        private float PropValue(float distance, InfluenceCurve curve)
+        {
+            return 1.0f;
+        }
+
+        private static float GetDistance(MapIndices source, MapIndices target)
+        {
+            var xDiff = Math.Abs(source.X - target.X);
+            var yDiff = Math.Abs(source.Y - target.Y);
+            return MathF.Sqrt(xDiff ^ 2 + yDiff ^ 2);
+        }
+
         public void PropagateInfluenceFromCenter(int radius, InfluenceCurve propType, float magnitude)
         {
-            // IMap always adds 1 so there's an odd number of rows / columns
-            var center = radius + 1;
-            
-            PropagateInfluence(center, center, radius, propType, magnitude);
+            PropagateInfluence(_anchorLocation.X, _anchorLocation.Y, radius, propType, magnitude);
         }
 
         // 14:53 ; used for combining maps
