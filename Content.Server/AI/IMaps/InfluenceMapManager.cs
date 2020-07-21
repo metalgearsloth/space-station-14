@@ -1,87 +1,92 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Robust.Shared.GameObjects.Systems;
 using Robust.Shared.Map;
 using Robust.Shared.Maths;
 
 namespace Content.Server.AI.IMaps
 {
-
-    public class GridLayerMapCollection
+    public sealed class InfluenceMapLayer
     {
-        public const int MapHeightInTiles = 32;
-        private Dictionary<TileRef, Dictionary<Type, InfluenceMap>> _mapLayerStored = new Dictionary<TileRef, Dictionary<Type, InfluenceMap>>();
+        public const int ChunkSize = 16;
+        public InfluenceMapType MapType;
 
-        // 23:47
-        public void AddMapLayer(Type layerId, TileRef tile, InfluenceMap influenceMap)
+        public InfluenceMapLayer(InfluenceMapType mapType)
         {
-            Dictionary<Type, InfluenceMap> layer;
-            if (!_mapLayerStored.TryGetValue(tile, out layer))
-            {
-                _mapLayerStored[tile] = new Dictionary<Type, InfluenceMap> {{layerId, influenceMap}};
-            } else if (!layer.ContainsKey(layerId))
-            {
-                layer[layerId] = influenceMap;
-            }
+            MapType = mapType;
         }
+    }
 
-        public InfluenceMap CheckAndAddMapLayer(Type layerId, InfluenceMapType mapType, TileRef tile)
+    /// <summary>
+    /// A single chunk may contain multiple influencemaps (e.g. 1 per faction)
+    /// so this will store all of the relevant ones per chunk.
+    /// </summary>
+    public sealed class InfluenceMapCollection
+    {
+        private Dictionary<InfluenceMapType, InfluenceMapLayer> _influenceMaps = 
+            new Dictionary<InfluenceMapType, InfluenceMapLayer>();
+
+        // TODO: May need a filter function that can pull out multiple map types
+        public InfluenceMapLayer GetOrCreateMap(InfluenceMapType mapType)
         {
-            if (MapInBounds(tile))
+            if (_influenceMaps.TryGetValue(mapType, out var map))
             {
-                var map = GetLayerMapCollection(mapType).GetMapLayer(layerId, tile);
-                if (map == null)
-                {
-                    var thisIndex = (0, 0);
-                    map = AddMapLayer(llayerId, mapType, tile);
-                }
-
                 return map;
             }
-
-            return null;
-        }
-        
-        // 24:15
-        public IEnumerable<KeyValuePair<Type, InfluenceMap>> GetMapLayers(TileRef tile,
-            Func<KeyValuePair<Type, InfluenceMap>, bool> filter = null)
-        {
-            Dictionary<Type, InfluenceMap> layer;
-            if (_mapLayerStored.TryGetValue(tile, out layer))
-            {
-                foreach (var keyValuePair in layer)
-                {
-                    if (filter == null || filter(keyValuePair))
-                    {
-                        yield return keyValuePair;
-                    }
-                }
-            }
-        }
-
-        // 26:39
-        private IEnumerable<InfluenceMap> GetTouchedMaps(Type layerId, InfluenceMapType mapType, TileRef mapIndex, int radius, TileRef center)
-        {
-            // Okay so something I need to do: imapIndex increments by 0 / 1 for each cell so uhhh
-            // Might need to normalise the TileRef X / Y indices
             
-            // Returns a list of references to the maps that are touched by the templated based on location and radius
-            // Check center and each corner
-            var currentMap = CheckAndAddMapLayer(layerId, mapType, mapIndex);
-            if (currentMap != null)
-            {
-                yield return currentMap;
-            }
-            
-            // Check if we are overlapping in any direction
-            // NorthWest
-            if ((mapIndex.X - radius < 0) && center.Y + radius > MapHeightInTiles)
-            {
-                currentMap = CheckAndAddMapLayer(layerId, mapType,)
-            }
+            map = new InfluenceMapLayer(mapType);
+            _influenceMaps[mapType] = map;
+
+            return map;
         }
     }
     
+    public sealed class InfluenceMapSystem : EntitySystem
+    {
+        private readonly Dictionary<GridId, Dictionary<MapIndices, InfluenceMapCollection>> _influenceMaps = 
+                     new Dictionary<GridId, Dictionary<MapIndices, InfluenceMapCollection>>();
+
+        public InfluenceMapCollection GetOrCreateMapCollection(TileRef tile)
+        {
+            var originIndices = new MapIndices(
+                tile.GridIndices.X / InfluenceMapLayer.ChunkSize, 
+                tile.GridIndices.Y / InfluenceMapLayer.ChunkSize);
+
+            if (!_influenceMaps.TryGetValue(tile.GridIndex, out var layerMapCollections))
+            {
+                layerMapCollections = new Dictionary<MapIndices, InfluenceMapCollection>();
+                _influenceMaps[tile.GridIndex] = layerMapCollections;
+            }
+
+            if (!layerMapCollections.TryGetValue(originIndices, out var collection))
+            {
+                collection = new InfluenceMapCollection();
+                _influenceMaps[tile.GridIndex][originIndices] = collection;
+            }
+
+            return collection;
+        }
+        
+        public InfluenceMapLayer GetOrCreateMap(InfluenceMapType mapType, TileRef tile)
+        {
+            var collection = GetOrCreateMapCollection(tile);
+            return collection.GetOrCreateMap(mapType);
+        }
+
+        /// <summary>
+        /// If an entity is near the border of a chunk they may need multiple influencemapcollections
+        /// </summary>
+        /// <returns></returns>
+        public IEnumerable<InfluenceMapLayer> GetRelevantLayerMaps(InfluenceMapType mapType, TileRef tile, int radius)
+        {
+            yield return GetOrCreateMapCollection(tile).GetOrCreateMap(mapType);
+            
+            // TODO: Get neighbors
+            throw new NotImplementedException();
+        }
+    }
+
     // 29:34 ways of processing influence
     // Remove last influence if they've changed meaningfully
     // Add their current influence
