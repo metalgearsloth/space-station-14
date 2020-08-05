@@ -322,7 +322,7 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Accessible
                     return false;
                 }
 
-                foreach (var neighbor in accessibleRegion.Neighbors)
+                foreach (var neighbor in accessibleRegion.GetNeighborRegions())
                 {
                     if (checkedAccess.Contains(neighbor)) continue;
                     if (neighbor.ParentChunk.LastUpdate > regionCache.CacheTime)
@@ -355,9 +355,9 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Accessible
                 var region = openSet.Dequeue();
                 closedSet.Add(region);
 
-                foreach (var neighbor in region.Neighbors)
+                foreach (var neighbor in region.GetNeighborRegions())
                 {
-                    if (closedSet.Contains(neighbor) || neighbor.Deleted)
+                    if (closedSet.Contains(neighbor))
                     {
                         continue;
                     }
@@ -377,31 +377,6 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Accessible
             }
 
             return (_gameTiming.CurTime, accessible);
-        }
-
-        /// <summary>
-        /// Grab the related cardinal nodes and if they're in different regions then add to our edge and their edge
-        /// </summary>
-        /// Implicitly they would've already been merged if possible
-        /// <param name="region"></param>
-        /// <param name="node"></param>
-        private void UpdateRegionEdge(PathfindingRegion region, PathfindingNode node)
-        {
-            DebugTools.Assert(region.Nodes.Contains(node));
-            // Originally I tried just doing bottom and left but that doesn't work as the chunk update order is not guaranteed
-
-            var checkDirections = new[] {Direction.East, Direction.South, Direction.West, Direction.North};
-            foreach (var direction in checkDirections)
-            {
-                var directionNode = node.GetNeighbor(direction);
-                if (directionNode == null) continue;
-
-                var directionRegion = GetRegion(directionNode);
-                if (directionRegion == null || directionRegion == region) continue;
-
-                region.Neighbors.Add(directionRegion);
-                directionRegion.Neighbors.Add(region);
-            }
         }
 
         /// <summary>
@@ -437,7 +412,7 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Accessible
 
             foreach (var region in regions)
             {
-                if (region.Nodes.Contains(node))
+                if (region.InBounds(node))
                 {
                     return region;
                 }
@@ -546,33 +521,6 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Accessible
         }
 
         /// <summary>
-        /// Combines the two regions into one bigger region
-        /// </summary>
-        /// <param name="source"></param>
-        /// <param name="target"></param>
-        private void MergeInto(PathfindingRegion source, PathfindingRegion target) 
-        {
-            DebugTools.AssertNotNull(source);
-            DebugTools.AssertNotNull(target);
-            DebugTools.Assert(source != target);
-            foreach (var node in source.Nodes)
-            {
-                target.Add(node);
-            }
-
-            source.Shutdown();
-            // This doesn't check the cachedaccessible to see if it's reachable but maybe it should?
-            // Although currently merge gets spammed so maybe when some other stuff is improved
-            // MergeInto is also only called by GenerateRegions currently so nothing should hold onto the original region
-            _regions[source.ParentChunk.GridId][source.ParentChunk].Remove(source);
-
-            foreach (var node in target.Nodes)
-            {
-                UpdateRegionEdge(target, node);
-            }
-        }
-
-        /// <summary>
         /// Remove the cached accessibility lookup for this region
         /// </summary>
         /// <param name="region"></param>
@@ -631,26 +579,39 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Accessible
 
             // Temporarily store the corresponding region for each node
             // Makes merging regions or adding nodes to existing regions neater.
-            var nodeRegions = new Dictionary<PathfindingNode, PathfindingRegion>();
             var chunkRegions = new HashSet<PathfindingRegion>();
             _regions[chunk.GridId].Add(chunk, chunkRegions);
 
-            for (var y = 0; y < PathfindingChunk.ChunkSize; y++)
+            var freeNodes = new Stack<(int x, int y)>(PathfindingChunk.ChunkSize * PathfindingChunk.ChunkSize);
+
+            // Insert in reverse- order
+            for (var y = PathfindingChunk.ChunkSize - 1; y >= 0; y--)
             {
-                for (var x = 0; x < PathfindingChunk.ChunkSize; x++)
+                for (var x = PathfindingChunk.ChunkSize - 1; x >= 0; x--)
                 {
-                    var node = chunk.Nodes[x, y];
-                    var region = CalculateNode(node, nodeRegions, chunkRegions, x, y);
-                    // Currently we won't store a separate region for each mask / space / whatever because muh effort
-                    // Long-term you'll want to account for it probably
-                    if (region == null)
-                    {
-                        continue;
-                    }
-                    
-                    chunkRegions.Add(region);
+                    freeNodes.Push((x, y));
                 }
             }
+
+            // TODO: Do the magic here
+            var nextNode = freeNodes.Pop();
+            var originNode = chunk.Nodes[x, y];
+
+            // TODO: cancel if a wall
+            if (originNode.BlockedCollisionMask)
+            {
+                
+            }
+
+            for (var x = nextNode.x; x < PathfindingChunk.ChunkSize; x++)
+            {
+                for (var y = nextNode.y; y < PathfindingChunk.ChunkSize; y++)
+                {
+                    var profile = chunk.Nodes[x, y];
+                }
+            }
+            // TODO: Keep going up until we hit an obstacle
+            
 #if DEBUG
             SendRegionsDebugMessage(chunk.GridId);
 #endif
