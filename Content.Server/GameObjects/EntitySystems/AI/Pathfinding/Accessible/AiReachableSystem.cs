@@ -6,6 +6,7 @@ using Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Pathfinders;
 using Content.Server.GameObjects.EntitySystems.Pathfinding;
 using Content.Shared.AI;
 using JetBrains.Annotations;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Robust.Server.GameObjects;
 using Robust.Shared.GameObjects.Components;
 using Robust.Shared.GameObjects.Systems;
@@ -582,7 +583,7 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Accessible
             var chunkRegions = new HashSet<PathfindingRegion>();
             _regions[chunk.GridId].Add(chunk, chunkRegions);
 
-            var freeNodes = new Stack<(int x, int y)>(PathfindingChunk.ChunkSize * PathfindingChunk.ChunkSize);
+            var freeNodes = new Stack<(int X, int Y)>(PathfindingChunk.ChunkSize * PathfindingChunk.ChunkSize);
 
             // Insert in reverse- order
             for (var y = PathfindingChunk.ChunkSize - 1; y >= 0; y--)
@@ -594,24 +595,69 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Accessible
             }
 
             // TODO: Do the magic here
-            var nextNode = freeNodes.Pop();
-            var originNode = chunk.Nodes[x, y];
-
-            // TODO: cancel if a wall
-            if (originNode.BlockedCollisionMask)
+            while (freeNodes.Count > 0)
             {
-                
-            }
+                var nextNode = freeNodes.Pop();
+                var originNode = chunk.Nodes[nextNode.X, nextNode.Y];
 
-            for (var x = nextNode.x; x < PathfindingChunk.ChunkSize; x++)
-            {
-                for (var y = nextNode.y; y < PathfindingChunk.ChunkSize; y++)
+                // TODO: cancel if a wall
+                if (originNode.BlockedCollisionMask != 0x0 || originNode.TileRef.Tile.IsEmpty)
                 {
-                    var profile = chunk.Nodes[x, y];
+                    break;
                 }
+
+                var yHeight = PathfindingChunk.ChunkSize - 1;
+                var terminate = false;
+                PathfindingRegion region;
+
+                for (var x = nextNode.X; x < PathfindingChunk.ChunkSize; x++)
+                {
+                    for (var y = nextNode.Y; y < PathfindingChunk.ChunkSize; y++)
+                    {
+                        var node = chunk.Nodes[x, y];
+                        if (!originNode.SameTraversable(node))
+                        {
+                            yHeight = y;
+                            terminate = true;
+                            break;
+                        }
+                    }
+
+                    if (terminate)
+                    {
+                        break;
+                    }
+                }
+
+                for (var x = nextNode.X + 1; x < PathfindingChunk.ChunkSize; x++) {
+                    
+                    terminate = false;
+
+                    for (var y = nextNode.Y; y < yHeight; y++)
+                    {
+                        var node = chunk.Nodes[x, y];
+                        if (!originNode.SameTraversable(node))
+                        {
+                            terminate = true;
+                            break;
+                        }
+                    }
+
+                    if (!terminate)
+                    {
+                        continue;
+                    }
+                    
+                    // TODO: I don't think these are width and height...
+                    region = new PathfindingRegion(originNode, yHeight - nextNode.Y, x - nextNode.X);
+                    chunkRegions.Add(region);
+                }
+                
+                // TODO: Remove those nodes from nextNode
             }
-            // TODO: Keep going up until we hit an obstacle
             
+            // TODO: Build each region's neighbors
+
 #if DEBUG
             SendRegionsDebugMessage(chunk.GridId);
 #endif

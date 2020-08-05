@@ -45,6 +45,20 @@ namespace Content.Server.GameObjects.EntitySystems.Pathfinding
         }
 
         /// <summary>
+        ///     Whether 2 nodes have the same level of requirements for access
+        /// </summary>
+        /// <param name="otherNode"></param>
+        /// <returns></returns>
+        public bool SameTraversable(PathfindingNode otherNode)
+        {
+            if (BlockedCollisionMask != otherNode.BlockedCollisionMask) return false;
+            if (!_accessReaders.Keys.All(otherNode._accessReaders.Keys.Contains)) return false;
+            if (TileRef.Tile.IsEmpty != otherNode.TileRef.Tile.IsEmpty) return false;
+
+            return true;
+        }
+
+        /// <summary>
         /// Return our neighboring nodes (even across chunks)
         /// </summary>
         /// <returns></returns>
