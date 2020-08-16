@@ -4,48 +4,51 @@
         "x": 32,
         "y": 32
     },
-    "license": "CC-BY-SA-3.0",
-    "copyright": "https://github.com/discordia-space/CEV-Eris/raw/237d8f7894617007d75c71d5d9feb4354c78debd/icons/obj/stationobjs.dmi",
+    "copyright": "https://github.com/tgstation/tgstation/raw/ba34423d32428c74749fc7fa8b63acc8eb285dd4/icons/obj/stationobjs.dmi",
     "states": [
         {
-            "name": "portal-pending",
+            "name": "open",
             "directions": 1,
-            "delays": [[
-                0.1,
-                0.1,
-                0.1,
-                0.1,
-                0.1,
-                0.1,
-                0.1,
-                0.1,
-                0.1,
-                0.1,
-                0.1,
-                0.1,
-                0.1,
-                0.1
-            ]]
+            "delays": [
+                [
+                    0.1,
+                    0.1,
+                    0.1,
+                    0.1,
+                    0.1,
+                    0.1,
+                    0.1,
+                    0.1,
+                    0.1,
+                    0.1,
+                    0.1,
+                    0.1,
+                    0.1,
+                    0.1
+                ]
+            ]
         },
         {
-            "name": "portal-unconnected",
+            "name": "closed",
             "directions": 1,
-            "delays": [[
-                0.1,
-                0.1,
-                0.1,
-                0.1,
-                0.1,
-                0.1,
-                0.1,
-                0.1,
-                0.1,
-                0.1,
-                0.1,
-                0.1,
-                0.1,
-                0.1
-            ]]
+            "delays": [
+                [
+                    0.1,
+                    0.1,
+                    0.1,
+                    0.1,
+                    0.1,
+                    0.1,
+                    0.1,
+                    0.1,
+                    0.1,
+                    0.1,
+                    0.1,
+                    0.1,
+                    0.1,
+                    0.1
+                ]
+            ]
         }
     ]
 }
