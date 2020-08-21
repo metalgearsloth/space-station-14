@@ -20,7 +20,8 @@ using Robust.Shared.ViewVariables;
 namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 {
     [RegisterComponent]
-    public class ClientMagazineBarrelComponent : Component, IItemStatus
+    [ComponentReference(typeof(ClientRangedBarrelComponent))]
+    public class ClientMagazineBarrelComponent : ClientRangedBarrelComponent, IItemStatus
     {
         private static readonly Animation AlarmAnimationSmg = new Animation
         {

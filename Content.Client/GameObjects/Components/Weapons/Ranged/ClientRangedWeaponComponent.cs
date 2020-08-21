@@ -1,4 +1,5 @@
-﻿using Content.Shared.GameObjects.Components.Weapons.Ranged;
+﻿using Content.Client.GameObjects.Components.Weapons.Ranged.Barrels;
+using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Map;
 using Robust.Shared.Maths;
@@ -18,6 +19,8 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged
     [RegisterComponent]
     public sealed class ClientRangedWeaponComponent : SharedRangedWeaponComponent
     {
+        public ClientRangedBarrelComponent Barrel => Owner.GetComponent<ClientRangedBarrelComponent>();
+        
         public FireRateSelector FireRateSelector { get; private set; } = FireRateSelector.Safety;
 
         public override void HandleComponentState(ComponentState curState, ComponentState nextState)
@@ -31,9 +34,9 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged
             FireRateSelector = rangedState.FireRateSelector;
         }
 
-        public void SyncFirePos(GridId targetGrid, Vector2 targetPosition)
+        public void SyncFirePos(MapId mapId, Vector2 targetPosition)
         {
-            SendNetworkMessage(new FirePosComponentMessage(targetGrid, targetPosition));
+            SendNetworkMessage(new FirePosComponentMessage(mapId, targetPosition));
         }
     }
 }

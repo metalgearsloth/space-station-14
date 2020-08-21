@@ -11,7 +11,6 @@ using Robust.Shared.Input;
 using Robust.Shared.Interfaces.Map;
 using Robust.Shared.Interfaces.Timing;
 using Robust.Shared.IoC;
-using Robust.Shared.Map;
 
 namespace Content.Client.GameObjects.EntitySystems
 {
@@ -54,7 +53,7 @@ namespace Content.Client.GameObjects.EntitySystems
                 return;
             }
 
-            var entity = _playerManager.LocalPlayer.ControlledEntity;
+            var entity = _playerManager.LocalPlayer?.ControlledEntity;
             if (entity == null || !entity.TryGetComponent(out HandsComponent hands))
             {
                 return;
@@ -64,6 +63,17 @@ namespace Content.Client.GameObjects.EntitySystems
             if (held == null || !held.TryGetComponent(out ClientRangedWeaponComponent weapon))
             {
                 _blocked = true;
+                return;
+            }
+
+            if (weapon.Barrel.ShotsLeft == 0)
+            {
+                // weapon.Owner.PopupMessage(entity, Loc.GetString("No shots left"));
+                return;
+            }
+
+            if (!weapon.WeaponCanFireHandler() || !weapon.UserCanFireHandler(entity))
+            {
                 return;
             }
 
@@ -92,15 +102,7 @@ namespace Content.Client.GameObjects.EntitySystems
             }
 
             var worldPos = _eyeManager.ScreenToMap(_inputManager.MouseScreenPosition);
-
-            if (!_mapManager.TryFindGridAt(worldPos, out var grid))
-            {
-                weapon.SyncFirePos(GridId.Invalid, worldPos.Position);
-            }
-            else
-            {
-                weapon.SyncFirePos(grid.Index, grid.MapToGrid(worldPos).Position);
-            }
+            weapon.SyncFirePos(worldPos.MapId, worldPos.Position);
         }
     }
 }

@@ -23,6 +23,7 @@ using Robust.Shared.Serialization;
 namespace Content.Server.GameObjects.Components.Weapon.Ranged.Barrels
 {
     [RegisterComponent]
+    [ComponentReference(typeof(ServerRangedBarrelComponent))]
     public sealed class RevolverBarrelComponent : ServerRangedBarrelComponent
     {
         [Dependency] private readonly IRobustRandom _random = default!;

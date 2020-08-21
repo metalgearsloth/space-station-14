@@ -26,6 +26,7 @@ using Robust.Shared.ViewVariables;
 namespace Content.Server.GameObjects.Components.Weapon.Ranged.Barrels
 {
     [RegisterComponent]
+    [ComponentReference(typeof(ServerRangedBarrelComponent))]
     public sealed class ServerBatteryBarrelComponent : ServerRangedBarrelComponent
     {
         public override string Name => "BatteryBarrel";

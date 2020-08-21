@@ -1,34 +1,9 @@
-﻿using System;
-using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
-using Content.Shared.GameObjects.EntitySystems;
-using Robust.Server.GameObjects;
-using Robust.Server.GameObjects.EntitySystems;
 using Robust.Shared.GameObjects;
-using Robust.Shared.GameObjects.EntitySystemMessages;
-using Robust.Shared.GameObjects.Systems;
-using Robust.Shared.Interfaces.GameObjects;
-using Robust.Shared.Interfaces.Map;
-using Robust.Shared.Interfaces.Timing;
-using Robust.Shared.IoC;
-using Robust.Shared.Localization;
-using Robust.Shared.Log;
-using Robust.Shared.Map;
-using Robust.Shared.Maths;
-using Robust.Shared.Serialization;
-using Robust.Shared.Utility;
 
-namespace Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition
+namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Ammunition
 {
-    /// <summary>
-    /// Allows this entity to be loaded into a ranged weapon (if the caliber matches)
-    /// Generally used for bullets but can be used for other things like bananas
-    /// </summary>
-    [RegisterComponent]
-    public class AmmoComponent : Component, IExamine
+    public class SharedAmmoComponent : Component
     {
-        [Dependency] private readonly IGameTiming _gameTiming = default!;
-        [Dependency] private readonly IEntityManager _entityManager = default!;
-
         public override string Name => "Ammo";
         public BallisticCaliber Caliber => _caliber;
         private BallisticCaliber _caliber;
@@ -47,20 +22,21 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition
         private bool _spent;
 
         /// <summary>
-        /// Used for anything without a case that fires itself
+        ///     Used for anything without a case that fires itself
         /// </summary>
         private bool _ammoIsProjectile;
 
         /// <summary>
-        /// Used for something that is deleted when the projectile is retrieved
+        ///     Used for something that is deleted when the projectile is retrieved
         /// </summary>
         public bool Caseless => _caseless;
         private bool _caseless;
+        
         // Rather than managing bullet / case state seemed easier to just have 2 toggles
         // ammoIsProjectile being for a beanbag for example and caseless being for ClRifle rounds
 
         /// <summary>
-        /// For shotguns where they might shoot multiple entities
+        ///     For shotguns where they might shoot multiple entities
         /// </summary>
         public int ProjectilesFired => _projectilesFired;
         private int _projectilesFired;
@@ -108,7 +84,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition
             }
         }
 
-        public IEntity TakeBullet(EntityCoordinates spawnAtGrid, MapCoordinates spawnAtMap)
+        public IEntity TakeBullet(GridCoordinates spawnAtGrid, MapCoordinates spawnAtMap)
         {
             if (_ammoIsProjectile)
             {
@@ -126,22 +102,20 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition
                 appearanceComponent.SetData(AmmoVisuals.Spent, true);
             }
 
-            var entity = spawnAtGrid.GetGridId(_entityManager) != GridId.Invalid
-                ? Owner.EntityManager.SpawnEntity(_projectileId, spawnAtGrid)
-                : Owner.EntityManager.SpawnEntity(_projectileId, spawnAtMap);
+            var entity = spawnAtGrid.GridID != GridId.Invalid ? Owner.EntityManager.SpawnEntity(_projectileId, spawnAtGrid) : Owner.EntityManager.SpawnEntity(_projectileId, spawnAtMap);
 
             DebugTools.AssertNotNull(entity);
             return entity;
         }
 
-        public void MuzzleFlash(IEntity entity, Angle angle)
+        public void MuzzleFlash(GridCoordinates grid, Angle angle)
         {
             if (_muzzleFlashSprite == null)
             {
                 return;
             }
 
-            var time = _gameTiming.CurTime;
+            var time = IoCManager.Resolve<IGameTiming>().CurTime;
             var deathTime = time + TimeSpan.FromMilliseconds(200);
             // Offset the sprite so it actually looks like it's coming from the gun
             var offset = angle.ToVec().Normalized / 2;
@@ -151,8 +125,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition
                 EffectSprite = _muzzleFlashSprite,
                 Born = time,
                 DeathTime = deathTime,
-                AttachedEntityUid = entity.Uid,
-                AttachedOffset = offset,
+                Coordinates = grid.Translated(offset),
                 //Rotated from east facing
                 Rotation = (float) angle.Theta,
                 Color = Vector4.Multiply(new Vector4(255, 255, 255, 255), 1.0f),
@@ -160,12 +133,6 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition
                 Shaded = false
             };
             EntitySystem.Get<EffectSystem>().CreateParticle(message);
-        }
-
-        public void Examine(FormattedMessage message, bool inDetailsRange)
-        {
-            var text = Loc.GetString("It's [color=white]{0}[/color] ammo.", Caliber);
-            message.AddMarkup(text);
         }
     }
 }
