@@ -1,7 +1,6 @@
+#nullable enable
 using System;
-using System.ComponentModel;
 using System.Threading.Tasks;
-using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
 using Content.Shared.GameObjects.EntitySystems;
 using Content.Shared.GameObjects.Verbs;
 using Content.Shared.Interfaces;
@@ -12,9 +11,14 @@ using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Interfaces.Random;
 using Robust.Shared.IoC;
 using Robust.Shared.Localization;
+using Robust.Shared.Log;
 using Robust.Shared.Map;
+using Robust.Shared.Maths;
 using Robust.Shared.Serialization;
+using Robust.Shared.Utility;
+using Robust.Shared.ViewVariables;
 using Component = Robust.Shared.GameObjects.Component;
+using IContainer = Robust.Shared.Interfaces.GameObjects.Components.IContainer;
 
 namespace Content.Shared.GameObjects.Components.Weapons.Ranged
 {
@@ -36,18 +40,167 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         Grenade,
         Energy,
     }
-    public abstract class SharedRevolverBarrelComponent : Component
+
+    /// <summary>
+    ///     Allows this entity to be loaded into a ranged weapon (if the caliber matches)
+    ///     Generally used for bullets but can be used for other things like bananas
+    /// </summary>
+    public abstract class SharedAmmoComponent : Component
+    {
+        public override string Name => "Ammo";
+        
+        [ViewVariables]
+        public BallisticCaliber Caliber { get; private set; }
+        
+        [ViewVariables]
+        public bool Spent
+        {
+            get
+            {
+                if (_ammoIsProjectile)
+                {
+                    return false;
+                }
+
+                return _spent;
+            }
+        }
+        private bool _spent;
+
+        /// <summary>
+        /// Used for anything without a case that fires itself
+        /// </summary>
+        private bool _ammoIsProjectile;
+
+        /// <summary>
+        ///     Used for ammo that is deleted when the projectile is retrieved
+        /// </summary>
+        [ViewVariables]
+        public bool Caseless { get; private set; }
+        // Rather than managing bullet / case state seemed easier to just have 2 toggles
+        // ammoIsProjectile being for a beanbag for example and caseless being for ClRifle rounds
+
+        /// <summary>
+        ///     For shotguns where they might shoot multiple entities
+        /// </summary>
+        [ViewVariables]
+        public byte ProjectilesFired { get; private set; }
+
+        /// <summary>
+        ///     Prototype ID of the entity to be spawned.
+        /// </summary>
+        [ViewVariables]
+        public string? ProjectileId { get; private set; }
+        // How far apart each entity is if multiple are shot
+        public float EvenSpreadAngle => _evenSpreadAngle;
+        private float _evenSpreadAngle;
+        /// <summary>
+        /// How fast the shot entities travel
+        /// </summary>
+        public float Velocity => _velocity;
+        private float _velocity;
+
+        private string? _muzzleFlashSprite;
+
+        public string? SoundCollectionEject => _soundCollectionEject;
+        private string? _soundCollectionEject;
+
+        public override void ExposeData(ObjectSerializer serializer)
+        {
+            base.ExposeData(serializer);
+            // For shotty or whatever as well
+            serializer.DataReadWriteFunction(
+                "projectile", 
+                null, 
+                projectile => ProjectileId = projectile,
+                () => ProjectileId);
+            
+            serializer.DataReadWriteFunction(
+                "caliber", 
+                BallisticCaliber.Unspecified, 
+                caliber => Caliber = caliber,
+                () => Caliber);
+
+            serializer.DataReadWriteFunction(
+                "projectilesFired", 
+                1, 
+                numFired => ProjectilesFired = (byte) numFired,
+                () => ProjectilesFired);
+            
+            // TODO: Up to here
+            // Used for shotty to determine overall pellet spread
+            serializer.DataField(ref _evenSpreadAngle, "ammoSpread", 0);
+            serializer.DataField(ref _velocity, "ammoVelocity", 20.0f);
+            serializer.DataField(ref _ammoIsProjectile, "isProjectile", false);
+            serializer.DataReadWriteFunction(
+                "caseless", 
+                false, 
+                caseless => Caseless = caseless,
+                () => Caseless);
+            // Being both caseless and shooting yourself doesn't make sense
+            DebugTools.Assert(!(_ammoIsProjectile && Caseless));
+            serializer.DataField(ref _muzzleFlashSprite, "muzzleFlash", "Objects/Weapons/Guns/Projectiles/bullet_muzzle.png");
+            serializer.DataField(ref _soundCollectionEject, "soundCollectionEject", "CasingEject");
+
+            if (_projectilesFired < 1)
+            {
+                Logger.Error("Ammo can't have less than 1 projectile");
+            }
+
+            if (_evenSpreadAngle > 0 && _projectilesFired == 1)
+            {
+                Logger.Error("Can't have an even spread if only 1 projectile is fired");
+                throw new InvalidOperationException();
+            }
+        }
+
+        public virtual bool TryTakeBullet(GridCoordinates spawnAtGrid, MapCoordinates spawnAtMap, out IEntity? entity)
+        {
+            if (_ammoIsProjectile)
+            {
+                entity = Owner;
+                return true;
+            }
+
+            if (_spent)
+            {
+                entity = null;
+                return false;
+            }
+
+            _spent = true;
+            /* TODO: Client-side
+            if (Owner.TryGetComponent(out AppearanceComponent appearanceComponent))
+            {
+                appearanceComponent.SetData(AmmoVisuals.Spent, true);
+            }
+            */
+
+            entity = spawnAtGrid.GridID != GridId.Invalid ? Owner.EntityManager.SpawnEntity(_projectileId, spawnAtGrid) : Owner.EntityManager.SpawnEntity(_projectileId, spawnAtMap);
+
+            DebugTools.AssertNotNull(entity);
+            return true;
+        }
+
+        // TODO: Implement client and server-side.
+        public abstract void MuzzleFlash(GridCoordinates grid, Angle angle);
+    }
+    
+    public abstract class SharedRevolverBarrelComponent : Component, IInteractUsing
     {
         public override string Name => "RevolverBarrel";
         private BallisticCaliber _caliber;
-        private byte _currentSlot = 0;
-        public abstract byte Capacity { get; }
-        private IEntity[] _ammoSlots;
+        private ushort _currentSlot = 0;
+        public abstract ushort Capacity { get; }
+        private IEntity?[] _ammoSlots;
         
-        public abstract byte ShotsLeft { get; }
+        public abstract ushort ShotsLeft { get; }
         
-        private string _fillPrototype;
-        private int _unspawnedCount;
+        private string? _fillPrototype;
+        private ushort _unspawnedCount;
+
+        // TODO: Use ContainerSlot on the server
+        protected abstract IContainer AmmoContainer { get; set; }
 
         // Sounds
         private string _soundEject;
@@ -74,7 +227,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
 
         public bool TryInsertBullet(IEntity user, IEntity entity)
         {
-            if (!entity.TryGetComponent(out AmmoComponent ammoComponent))
+            if (!entity.TryGetComponent(out SharedAmmoComponent? ammoComponent))
             {
                 return false;
             }
@@ -93,16 +246,9 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
                 var slot = _ammoSlots[i];
                 if (slot == null)
                 {
-                    _currentSlot = i;
+                    _currentSlot = (byte) i;
                     _ammoSlots[i] = entity;
-                    _ammoContainer.Insert(entity);
-                    if (_soundInsert != null)
-                    {
-                        EntitySystem.Get<AudioSystem>().PlayAtCoords(_soundInsert, Owner.Transform.GridPosition, AudioParams.Default.WithVolume(-2));
-                    }
-
-                    // Dirty();
-                    UpdateAppearance();
+                    AmmoContainer.Insert(entity);
                     return true;
                 }
             }
@@ -114,11 +260,10 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         public void Cycle()
         {
             // Move up a slot
-            _currentSlot = (_currentSlot + 1) % _ammoSlots.Length;
-            // Dirty();
-            UpdateAppearance();
+            _currentSlot = (ushort) ((_currentSlot + 1) % _ammoSlots.Length);
         }
 
+        /* TODO: CLIENT-SIDE
         /// <summary>
         /// Russian Roulette
         /// </summary>
@@ -131,39 +276,46 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
                 EntitySystem.Get<AudioSystem>().PlayAtCoords(_soundSpin, Owner.Transform.GridPosition, AudioParams.Default.WithVolume(-2));
             }
         }
+        */
 
-        public override IEntity PeekAmmo()
+        public IEntity PeekAmmo()
         {
             return _ammoSlots[_currentSlot];
         }
 
         /// <summary>
         /// Takes a projectile out if possible
-        /// IEnumerable just to make supporting shotguns saner
         /// </summary>
         /// <returns></returns>
         /// <exception cref="NotImplementedException"></exception>
-        public override IEntity TakeProjectile(GridCoordinates spawnAtGrid, MapCoordinates spawnAtMap)
+        public IEntity TakeProjectile(MapCoordinates spawnAtMap)
         {
             var ammo = _ammoSlots[_currentSlot];
             IEntity bullet = null;
             if (ammo != null)
             {
-                var ammoComponent = ammo.GetComponent<AmmoComponent>();
+                var ammoComponent = ammo.GetComponent<SharedAmmoComponent>();
                 bullet = ammoComponent.TakeBullet(spawnAtGrid, spawnAtMap);
                 if (ammoComponent.Caseless)
                 {
                     _ammoSlots[_currentSlot] = null;
-                    _ammoContainer.Remove(ammo);
+                    AmmoContainer.Remove(ammo);
                 }
             }
             Cycle();
-            UpdateAppearance();
             return bullet;
         }
+        
+        // TODO: EJECTCASING should be on like a GunManager.
 
-        private void EjectAllSlots()
+        /// <summary>
+        /// Dumps all cartridges onto the ground.
+        /// </summary>
+        /// <returns>The number of cartridges ejected</returns>
+        private ushort EjectAllSlots()
         {
+            ushort dumped = 0;
+            
             for (var i = 0; i < _ammoSlots.Length; i++)
             {
                 var entity = _ammoSlots[i];
@@ -172,22 +324,15 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
                     continue;
                 }
 
-                _ammoContainer.Remove(entity);
-                EjectCasing(entity);
+                AmmoContainer.Remove(entity);
+                // TODO: MANAGER EjectCasing(entity);
                 _ammoSlots[i] = null;
-            }
-
-            if (_ammoContainer.ContainedEntities.Count > 0)
-            {
-                if (_soundEject != null)
-                {
-                    EntitySystem.Get<AudioSystem>().PlayAtCoords(_soundEject, Owner.Transform.GridPosition, AudioParams.Default.WithVolume(-1));
-                }
+                dumped++;
             }
 
             // May as well point back at the end?
-            _currentSlot = _ammoSlots.Length - 1;
-            return;
+            _currentSlot = (ushort) (_ammoSlots.Length - 1);
+            return dumped;
         }
 
         /// <summary>
@@ -198,44 +343,26 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         /// <exception cref="NotImplementedException"></exception>
         public override bool UseEntity(UseEntityEventArgs eventArgs)
         {
-            EjectAllSlots();
-            //Dirty();
-            UpdateAppearance();
+            var dumped = EjectAllSlots();
+
+            if (dumped > 0)
+            {
+                // TODO: IF client-side predict and play sound
+                
+            }
+
             return true;
         }
 
         public override async Task<bool> InteractUsing(InteractUsingEventArgs eventArgs)
         {
-            return TryInsertBullet(eventArgs.User, eventArgs.Using);
-        }
-
-        [Verb]
-        private sealed class SpinRevolverVerb : Verb<RevolverBarrelComponent>
-        {
-            protected override void GetData(IEntity user, RevolverBarrelComponent component, VerbData data)
+            if (TryInsertBullet(eventArgs.User, eventArgs.Using))
             {
-                if (!ActionBlockerSystem.CanInteract(user))
-                {
-                    data.Visibility = VerbVisibility.Invisible;
-                    return;
-                }
-
-                data.Text = Loc.GetString("Spin");
-                if (component.Capacity <= 1)
-                {
-                    data.Visibility = VerbVisibility.Invisible;
-                    return;
-                }
-
-                data.Visibility = component.ShotsLeft > 0 ? VerbVisibility.Visible : VerbVisibility.Disabled;
-            }
-
-            protected override void Activate(IEntity user, RevolverBarrelComponent component)
-            {
-                component.Spin();
-                component.Owner.PopupMessage(user, Loc.GetString("Spun the cylinder"));
+                // TODO: Sound (both sides) / appearance (client-side).
             }
         }
+
+        // TODO: Do spin verb client-side
     }
     
     public abstract class SharedRangedBarrelComponent : Component

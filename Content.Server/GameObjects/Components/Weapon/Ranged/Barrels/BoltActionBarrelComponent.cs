@@ -170,7 +170,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged.Barrels
             {
                 Cycle();
             }
-            return chamberEntity?.GetComponent<AmmoComponent>().TakeBullet(spawnAtGrid, spawnAtMap);
+            return chamberEntity?.GetComponent<AmmoComponent>().TryTakeBullet(spawnAtGrid, spawnAtMap);
         }
 
         protected override bool WeaponCanFire()

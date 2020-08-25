@@ -206,7 +206,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged.Barrels
             if (ammo != null)
             {
                 var ammoComponent = ammo.GetComponent<AmmoComponent>();
-                bullet = ammoComponent.TakeBullet(spawnAtGrid, spawnAtMap);
+                bullet = ammoComponent.TryTakeBullet(spawnAtGrid, spawnAtMap);
                 if (ammoComponent.Caseless)
                 {
                     _ammoSlots[_currentSlot] = null;

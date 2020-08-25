@@ -220,7 +220,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged.Barrels
             var entity = _chamberContainer.ContainedEntity;
 
             Cycle();
-            return entity?.GetComponent<AmmoComponent>().TakeBullet(spawnAtGrid, spawnAtMap);
+            return entity?.GetComponent<AmmoComponent>().TryTakeBullet(spawnAtGrid, spawnAtMap);
         }
 
         private void Cycle(bool manual = false)
