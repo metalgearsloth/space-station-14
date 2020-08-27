@@ -7,6 +7,7 @@ using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Interfaces.GameObjects.Components;
 using Robust.Shared.Interfaces.Random;
 using Robust.Shared.IoC;
+using Robust.Shared.Map;
 
 namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 {
@@ -14,31 +15,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
     public sealed class RevolverBarrelComponent : SharedRevolverBarrelComponent
     {
         protected override IContainer AmmoContainer { get; set; }
-        
-        public override void Initialize()
-        {
-            base.Initialize();
-            Owner.GetComponent<ClientRangedWeaponComponent>().WeaponCanFireHandler += WeaponCanFire;
-            Owner.GetComponent<ClientRangedWeaponComponent>().UserCanFireHandler += UserCanFire;
-        }
 
-        protected override void Shutdown()
-        {
-            base.Shutdown();
-            Owner.GetComponent<ClientRangedWeaponComponent>().WeaponCanFireHandler -= WeaponCanFire;
-            Owner.GetComponent<ClientRangedWeaponComponent>().UserCanFireHandler -= UserCanFire;
-        }
-
-        private bool WeaponCanFire()
-        {
-            return false;
-        }
-
-        private bool UserCanFire(IEntity entity)
-        {
-            return false;
-        }
-        
         /// <summary>
         ///     Russian Roulette
         /// </summary>
@@ -53,6 +30,40 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             
             // TODO: Send message
             // SendNetworkMessage();
+        }
+
+        protected override bool CanFire(IEntity entity)
+        {
+            if (!base.CanFire(entity))
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        public override void MuzzleFlash()
+        {
+            throw new System.NotImplementedException();
+        }
+
+        protected override bool TryTakeBullet()
+        {
+            // TODO.
+        }
+
+        protected override void Shoot(int shotCount, MapCoordinates fromPos, MapCoordinates toPos)
+        {
+            if (SoundGunshot != null)
+            {
+                var audioSystem = EntitySystem.Get<AudioSystem>();
+                for (var i = 0; i < shotCount; i++)
+                {
+                    audioSystem.Play(SoundGunshot, Owner.Transform.GridPosition);
+                }
+            }
+            
+            // TODO: Take bullets.
         }
     }
 }

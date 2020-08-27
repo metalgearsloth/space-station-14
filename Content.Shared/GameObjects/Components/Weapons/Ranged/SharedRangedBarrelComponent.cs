@@ -11,6 +11,7 @@ using Robust.Shared.GameObjects;
 using Robust.Shared.GameObjects.Systems;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Interfaces.Random;
+using Robust.Shared.Interfaces.Timing;
 using Robust.Shared.IoC;
 using Robust.Shared.Localization;
 using Robust.Shared.Log;
@@ -49,13 +50,114 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         
     }
 
-    public interface IRangedWeapon
+    public abstract class SharedRangedWeapon : Component, IEquipped
     {
-        FireRateSelector Selector { get; }
-        TimeSpan NextFire { get; set; }
-        float FireRate { get; }
-        bool CanFire(IEntity entity);
-        void MuzzleFlash();
+        public override string Name => "RangedWeapon";
+
+        public FireRateSelector Selector { get; }
+        
+        public TimeSpan NextFire { get; set; }
+        
+        public float FireRate { get; }
+        
+        private uint _shotCounter = 0;
+        
+        // Sounds
+        protected string? SoundGunshot { get; }
+
+        protected virtual bool CanFire(IEntity entity)
+        {
+            switch (Selector)
+            {
+                case FireRateSelector.Safety:
+                    return false;
+                case FireRateSelector.Single:
+                    if (_shotCounter >= 1)
+                    {
+                        return false;
+                    }
+
+                    break;
+                case FireRateSelector.Automatic:
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+
+            return true;
+        }
+        
+        public abstract void MuzzleFlash();
+
+        /// <summary>
+        ///     Whether we can take another bullet for our running total.
+        ///     Won't actually take the bullet out; that's done under Shoot.
+        /// </summary>
+        /// <returns></returns>
+        protected abstract bool TryTakeBullet();
+        
+        public bool TryFire(TimeSpan currentTime, IEntity entity, MapCoordinates position)
+        {
+            if (currentTime < NextFire)
+            {
+                return false;
+            }
+            
+            // If it's our first shot then we'll fire at least 1 bullet now.
+            if (_shotCounter == 0 && NextFire <= currentTime)
+            {
+                NextFire = currentTime;
+            }
+            
+            // We'll send them a popup explaining why they can't as well.
+            if (!CanFire(entity))
+            {
+                return false;
+            }
+            
+            MuzzleFlash();
+
+            var firedShots = 0;
+
+            // To handle guns with firerates higher than framerate / tickrate
+            while (NextFire <= currentTime)
+            {
+                // soundSystem.Play();
+                NextFire += TimeSpan.FromSeconds(1 / FireRate);
+                
+                // Mainly check if we can get more bullets (e.g. if there's only 1 left in the clip).
+                if (!TryTakeBullet())
+                {
+                    break;
+                }
+                
+                firedShots++;
+            }
+
+            // SO server-side we essentially need to backtrack by n firedShots to work out what to shoot for each one
+            // Client side we'll just play the effects and shit
+            // unless we get client-side entity prediction in.
+            Shoot(firedShots, entity.Transform.MapPosition, position);
+            
+            NextFire = currentTime + TimeSpan.FromSeconds(1 / FireRate);
+            return true;
+        }
+
+        /// <summary>
+        ///     Fire out the specified number of bullets.
+        ///     Client-side this will just play the specified number of sounds and a muzzle flash.
+        ///     Server-side this will work out each bullet to spawn and fire them.
+        /// </summary>
+        /// <param name="shotCount"></param>
+        /// <param name="fromPos"></param>
+        /// <param name="toPos"></param>
+        protected abstract void Shoot(int shotCount, MapCoordinates fromPos, MapCoordinates toPos);
+
+        public void Equipped(EquippedEventArgs eventArgs)
+        {
+            _shotCounter = 0;
+            NextFire = IoCManager.Resolve<IGameTiming>().CurTime + TimeSpan.FromSeconds(0.3);
+        }
     }
 
     /// <summary>
@@ -230,7 +332,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
     
     // TODO: Need lightweight messages for syncing
     
-    public abstract class SharedRevolverBarrelComponent : Component, IInteractUsing, IUse
+    public abstract class SharedRevolverBarrelComponent : SharedRangedWeapon, IInteractUsing, IUse
     {
         public override string Name => "RevolverBarrel";
 

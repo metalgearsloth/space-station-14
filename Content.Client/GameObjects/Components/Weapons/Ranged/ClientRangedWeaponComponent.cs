@@ -15,28 +15,4 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged
         Mag,
         MagUnshaded,
     }
-    
-    [RegisterComponent]
-    public sealed class ClientRangedWeaponComponent : SharedRangedWeaponComponent
-    {
-        public ClientRangedBarrelComponent Barrel => Owner.GetComponent<ClientRangedBarrelComponent>();
-        
-        public FireRateSelector FireRateSelector { get; private set; } = FireRateSelector.Safety;
-
-        public override void HandleComponentState(ComponentState curState, ComponentState nextState)
-        {
-            base.HandleComponentState(curState, nextState);
-            if (!(curState is RangedWeaponComponentState rangedState))
-            {
-                return;
-            }
-
-            FireRateSelector = rangedState.FireRateSelector;
-        }
-
-        public void SyncFirePos(MapId mapId, Vector2 targetPosition)
-        {
-            SendNetworkMessage(new FirePosComponentMessage(mapId, targetPosition));
-        }
-    }
 }
