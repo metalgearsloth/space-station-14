@@ -64,6 +64,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         
         // Sounds
         protected string? SoundGunshot { get; }
+        protected string? SoundEmpty { get; }
 
         protected virtual bool CanFire(IEntity entity)
         {
