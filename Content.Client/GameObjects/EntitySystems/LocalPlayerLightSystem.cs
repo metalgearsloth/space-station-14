@@ -14,7 +14,7 @@ namespace Content.Client.GameObjects.EntitySystems
     [UsedImplicitly]
     internal sealed class LocalPlayerLightSystem : EntitySystem
     {
-        private IEntity? _lightEntity = null;
+        private IEntity? _lightEntity;
         
         public override void Initialize()
         {
