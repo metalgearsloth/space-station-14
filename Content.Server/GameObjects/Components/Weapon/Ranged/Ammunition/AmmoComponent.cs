@@ -17,8 +17,13 @@ using Robust.Shared.Utility;
 
 namespace Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition
 {
+    [RegisterComponent]
+    [ComponentReference(typeof(SharedAmmoComponent))]
     internal sealed class AmmoComponent : SharedAmmoComponent
     {
-        
+        public IEntity? TakeBullet()
+        {
+            return null;
+        }
     }
 }

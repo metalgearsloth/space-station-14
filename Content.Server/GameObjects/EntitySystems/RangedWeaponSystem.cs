@@ -34,7 +34,12 @@ namespace Content.Server.GameObjects.EntitySystems
         
         private void Update(SharedRangedWeapon weapon, TimeSpan currentTime)
         {
-            if (!weapon.Firing || !weapon.FireAngle.HasValue)
+            if (weapon.FiringStart == null && weapon.FiringEnd == null)
+            {
+                return;
+            }
+            
+            if ((weapon.FiringStart != null && weapon.FiringStart > currentTime) && (weapon.FiringEnd != null && currentTime > weapon.FiringEnd))
             {
                 return;
             }
@@ -47,7 +52,7 @@ namespace Content.Server.GameObjects.EntitySystems
                 return;
             }
 
-            weapon.TryFire(currentTime, shooter, weapon.FireAngle.Value);
+            weapon.TryFire(currentTime, shooter, weapon.FireAngle!.Value);
         }
     }
 }

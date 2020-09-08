@@ -91,6 +91,7 @@ namespace Content.Client.GameObjects.EntitySystems
             {
                 if (_firingWeapon.Firing)
                 {
+                    _firingWeapon.FireAngle = null;
                     _firingWeapon.Firing = false;
                 }
                 
@@ -99,10 +100,9 @@ namespace Content.Client.GameObjects.EntitySystems
 
             if (!_firingWeapon.Firing)
             {
+                _firingWeapon.FireAngle = angle;
                 _firingWeapon.Firing = true;
             }
-            
-            _firingWeapon.FireAngle = angle;
         }
     }
 }
