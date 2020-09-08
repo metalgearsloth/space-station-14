@@ -34,6 +34,7 @@
     <Compile Remove="GameObjects\Components\Weapon\Ranged\Ammunition\AmmoBoxComponent.cs" />
     <Compile Remove="GameObjects\Components\Weapon\Ranged\Ammunition\SpeedLoaderComponent.cs" />
     <Compile Remove="GameObjects\Components\Weapon\Ranged\ServerRangedWeaponComponent.cs" />
+    <Compile Remove="GameObjects\Components\Weapon\Ranged\ServerWeapon.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="GameObjects\Components\Weapon\Ranged\Barrels" />
