@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Content.Shared.GameObjects.EntitySystems;
 using Content.Shared.GameObjects.Verbs;
@@ -10,6 +11,7 @@ using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
 using Robust.Shared.GameObjects.Systems;
 using Robust.Shared.Interfaces.GameObjects;
+using Robust.Shared.Interfaces.Network;
 using Robust.Shared.Interfaces.Random;
 using Robust.Shared.Interfaces.Timing;
 using Robust.Shared.IoC;
@@ -17,6 +19,7 @@ using Robust.Shared.Localization;
 using Robust.Shared.Log;
 using Robust.Shared.Map;
 using Robust.Shared.Maths;
+using Robust.Shared.Players;
 using Robust.Shared.Serialization;
 using Robust.Shared.Utility;
 using Robust.Shared.ViewVariables;
@@ -43,51 +46,142 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         Grenade,
         Energy,
     }
+    
+    [Serializable, NetSerializable]
+    public class RangedFiringMessage : ComponentMessage
+    {
+        public bool Firing { get; }
+
+        public RangedFiringMessage(bool firing)
+        {
+            Firing = firing;
+        }
+    }
 
     [Serializable, NetSerializable]
-    public class RangedFireMessage : EntitySystemMessage
+    public class RangedAngleMessage : ComponentMessage
     {
-        
+        public Angle? Angle { get; }
+
+        public RangedAngleMessage(Angle? angle)
+        {
+            Angle = angle;
+        }
     }
+
+    public interface IServerRangedWeapon {}
 
     public abstract class SharedRangedWeapon : Component, IEquipped
     {
         public override string Name => "RangedWeapon";
 
-        public FireRateSelector Selector { get; }
+        public FireRateSelector Selector { get; protected set; }
         
-        public TimeSpan NextFire { get; set; }
+        public TimeSpan NextFire { get; protected set; }
         
-        public float FireRate { get; }
+        public float FireRate { get; protected set; }
         
-        private uint _shotCounter = 0;
+        private ushort _shotCounter = 0;
+        
+        // Shooting
+        // So I guess we'll try syncing start and stop fire, as well as fire angles
+        public abstract bool Firing { get; set; }
+
+        public abstract Angle? FireAngle { get; set; }
         
         // Sounds
         protected string? SoundGunshot { get; }
         protected string? SoundEmpty { get; }
+        
+        public override void ExposeData(ObjectSerializer serializer)
+        {
+            base.ExposeData(serializer);
+            
+            serializer.DataReadWriteFunction(
+                "fireRate", 
+                0.0f, 
+                rate => FireRate = rate,
+                () => FireRate);
+            
+            serializer.DataReadWriteFunction(
+                "currentSelector", 
+                FireRateSelector.Safety, 
+                value => Selector = value, 
+                () => Selector);
+            
+            serializer.DataReadWriteFunction(
+                "allSelectors", 
+                new List<FireRateSelector>(),
+                selectors => selectors.ForEach(value => Selector |= value),
+                () =>
+                {
+                    var result = new List<FireRateSelector>();
+                    
+                    foreach (FireRateSelector selector in Enum.GetValues(typeof(FireRateSelector)))
+                    {
+                        if ((selector & Selector) != 0)
+                            result.Add(selector);
+                    }
+
+                    return result;
+                });
+        }
+
+        public override void HandleNetworkMessage(ComponentMessage message, INetChannel netChannel, ICommonSession? session = null)
+        {
+            base.HandleNetworkMessage(message, netChannel, session);
+            if (session?.AttachedEntity != Shooter())
+            {
+                Logger.Warning("Cheat cheat");
+                return;
+            }
+            
+            switch (message)
+            {
+                case RangedAngleMessage msg:
+                    FireAngle = msg.Angle;
+                    break;
+                case RangedFiringMessage msg:
+                    Firing = msg.Firing;
+                    if (!Firing)
+                    {
+                        FireAngle = null;
+                    }
+                    break;
+            }
+        }
+
+        public IEntity? Shooter()
+        {
+            if (!ContainerHelpers.TryGetContainer(Owner, out var container))
+            {
+                return null;
+            }
+
+            return container.Owner;
+        }
 
         protected virtual bool CanFire(IEntity entity)
         {
+            if (FireRate <= 0.0f)
+            {
+                return false;
+            }
+            
             switch (Selector)
             {
                 case FireRateSelector.Safety:
                     return false;
                 case FireRateSelector.Single:
-                    if (_shotCounter >= 1)
-                    {
-                        return false;
-                    }
+                    return _shotCounter < 1;
 
-                    break;
                 case FireRateSelector.Automatic:
-                    break;
+                    return true;
                 default:
                     throw new ArgumentOutOfRangeException();
             }
-
-            return true;
         }
-        
+
         public abstract void MuzzleFlash();
 
         /// <summary>
@@ -95,9 +189,22 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         ///     Won't actually take the bullet out; that's done under Shoot.
         /// </summary>
         /// <returns></returns>
-        protected abstract bool TryTakeBullet();
+        protected virtual bool TryTakeBullet()
+        {
+            switch (Selector)
+            {
+                case FireRateSelector.Safety:
+                    return false;
+                case FireRateSelector.Single:
+                    return _shotCounter < 1;
+                case FireRateSelector.Automatic:
+                    return true;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+        }
         
-        public bool TryFire(TimeSpan currentTime, IEntity entity, MapCoordinates position)
+        public bool TryFire(TimeSpan currentTime, IEntity entity, Angle direction)
         {
             if (currentTime < NextFire)
             {
@@ -118,31 +225,34 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
             
             MuzzleFlash();
 
-            var firedShots = 0;
+            ushort firedShots = 0;
 
             // To handle guns with firerates higher than framerate / tickrate
             while (NextFire <= currentTime)
             {
-                // soundSystem.Play();
                 NextFire += TimeSpan.FromSeconds(1 / FireRate);
                 
                 // Mainly check if we can get more bullets (e.g. if there's only 1 left in the clip).
                 if (!TryTakeBullet())
                 {
+                    PlaySound(SoundEmpty);
                     break;
                 }
                 
+                PlaySound(SoundGunshot);
                 firedShots++;
+                _shotCounter++;
             }
-
+            
             // SO server-side we essentially need to backtrack by n firedShots to work out what to shoot for each one
-            // Client side we'll just play the effects and shit
-            // unless we get client-side entity prediction in.
-            Shoot(firedShots, entity.Transform.MapPosition, position);
+            // Client side we'll just play the effects and shit unless we get client-side entity prediction in.
+            Shoot(firedShots, direction);
             
             NextFire = currentTime + TimeSpan.FromSeconds(1 / FireRate);
             return true;
         }
+        
+        // TODO: We need a "StartFiring" message so the NextFire gets reset to now. Also need to verify it.
 
         /// <summary>
         ///     Fire out the specified number of bullets.
@@ -150,14 +260,19 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         ///     Server-side this will work out each bullet to spawn and fire them.
         /// </summary>
         /// <param name="shotCount"></param>
-        /// <param name="fromPos"></param>
-        /// <param name="toPos"></param>
-        protected abstract void Shoot(int shotCount, MapCoordinates fromPos, MapCoordinates toPos);
+        /// <param name="direction"></param>
+        protected abstract void Shoot(int shotCount, Angle direction);
 
         public void Equipped(EquippedEventArgs eventArgs)
         {
+            ResetFire();
+        }
+
+        protected void ResetFire()
+        {
             _shotCounter = 0;
-            NextFire = IoCManager.Resolve<IGameTiming>().CurTime + TimeSpan.FromSeconds(0.3);
+            NextFire = IoCManager.Resolve<IGameTiming>().CurTime;
+            FireAngle = null;
         }
     }
 
@@ -171,21 +286,8 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         
         [ViewVariables]
         public BallisticCaliber Caliber { get; private set; }
-        
-        [ViewVariables]
-        public bool Spent
-        {
-            get
-            {
-                if (_ammoIsProjectile)
-                {
-                    return false;
-                }
 
-                return _spent;
-            }
-        }
-        private bool _spent;
+        public bool Spent { get; set; }
 
         /// <summary>
         ///     Used for anything without a case that fires itself, like if you loaded a banana into a banana launcher.
@@ -211,7 +313,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         ///     Prototype ID of the entity to be spawned.
         /// </summary>
         [ViewVariables]
-        public string? ProjectileId { get; private set; }
+        public string ProjectileId { get; private set; } = default!;
         
         /// <summary>
         ///     How far apart each entity is if multiple are shot, like with a shotgun.
@@ -224,9 +326,6 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         /// </summary>
         [ViewVariables]
         public float Velocity { get; private set; }
-
-        [ViewVariables]
-        public string? MuzzleFlashSprite { get; set; }
 
         public string? SoundCollectionEject { get; private set; }
 
@@ -276,12 +375,6 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
             DebugTools.Assert(!(_ammoIsProjectile && Caseless));
 
             serializer.DataReadWriteFunction(
-                "muzzleFlash", 
-                "Objects/Weapons/Guns/Projectiles/bullet_muzzle.png", 
-                muzzle => MuzzleFlashSprite = muzzle,
-                () => MuzzleFlashSprite);
-            
-            serializer.DataReadWriteFunction(
                 "soundCollectionEject", 
                 "CasingEject", 
                 soundEject => SoundCollectionEject = soundEject,
@@ -299,43 +392,21 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
             }
         }
 
-        public virtual bool TryTakeBullet(out IEntity? entity)
+        public bool CanFire()
         {
-            if (_ammoIsProjectile)
+            if (Spent && !_ammoIsProjectile)
             {
-                entity = Owner;
-                return true;
-            }
-
-            if (_spent)
-            {
-                entity = null;
                 return false;
             }
 
-            _spent = true;
-            /* TODO: Client-side
-            if (Owner.TryGetComponent(out AppearanceComponent appearanceComponent))
-            {
-                appearanceComponent.SetData(AmmoVisuals.Spent, true);
-            }
-            */
-            
-            entity = Owner.EntityManager.SpawnEntity(ProjectileId, Owner.Transform.MapPosition);
-
-            DebugTools.AssertNotNull(entity);
             return true;
         }
-
-        // TODO: Implement client and server-side.
-        public abstract void MuzzleFlash(GridCoordinates grid, Angle angle);
     }
-    
-    // TODO: Need lightweight messages for syncing
-    
+
     public abstract class SharedRevolverBarrelComponent : SharedRangedWeapon, IInteractUsing, IUse
     {
-        public override string Name => "RevolverBarrel";
+        public override string Name => "RevolverWeapon";
+        public override uint? NetID => ContentNetIDs.MAGAZINE_BARREL;
 
         protected BallisticCaliber Caliber;
         
@@ -345,9 +416,8 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         protected ushort CurrentSlot = 0;
 
         protected IEntity?[] AmmoSlots = null!;
-        
-        // TODO: Use ContainerSlot on the server
-        protected abstract IContainer AmmoContainer { get; set; }
+
+        protected IContainer AmmoContainer { get; set; } = default!;
 
         protected string? FillPrototype;
         
@@ -380,36 +450,12 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
             serializer.DataField(ref SoundSpin, "soundSpin", "/Audio/Weapons/Guns/Misc/revolver_spin.ogg");
         }
 
-        private void Cycle()
+        protected void Cycle()
         {
             // Move up a slot
             CurrentSlot = (ushort) ((CurrentSlot + 1) % AmmoSlots.Length);
         }
 
-        /// <summary>
-        ///     Takes a projectile out if possible
-        /// </summary>
-        /// <returns></returns>
-        /// <exception cref="NotImplementedException"></exception>
-        public IEntity? TakeProjectile()
-        {
-            var ammo = AmmoSlots[CurrentSlot];
-            IEntity? bullet = null;
-            if (ammo != null)
-            {
-                var ammoComponent = ammo.GetComponent<SharedAmmoComponent>();
-
-                if (ammoComponent.TryTakeBullet(out bullet) && ammoComponent.Caseless)
-                {
-                    AmmoSlots[CurrentSlot] = null;
-                    AmmoContainer.Remove(ammo);
-                }
-            }
-            
-            Cycle();
-            return bullet;
-        }
-        
         // TODO: EJECTCASING should be on like a GunManager.
 
         /// <summary>
@@ -463,6 +509,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
                     CurrentSlot = (byte) i;
                     AmmoSlots[i] = entity;
                     AmmoContainer.Insert(entity);
+                    NextFire = IoCManager.Resolve<IGameTiming>().CurTime;
                     return true;
                 }
             }
@@ -498,15 +545,6 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
 
             return true;
         }
-    }
-    
-    public abstract class SharedRangedBarrelComponent : Component
-    {
-        public abstract FireRateSelector FireRateSelector { get; }
-        public abstract FireRateSelector AllRateSelectors { get; }
-        public abstract float FireRate { get; }
-        public abstract int ShotsLeft { get; }
-        public abstract int Capacity { get; }
     }
 
     [Flags]

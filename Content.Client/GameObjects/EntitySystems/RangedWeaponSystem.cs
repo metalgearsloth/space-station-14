@@ -11,10 +11,11 @@ using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Interfaces.Map;
 using Robust.Shared.Interfaces.Timing;
 using Robust.Shared.IoC;
+using Robust.Shared.Maths;
 
 namespace Content.Client.GameObjects.EntitySystems
 {
-    public class RangedWeaponSystem : EntitySystem
+    internal sealed class RangedWeaponSystem : EntitySystem
     {
         
         [Dependency] private readonly IPlayerManager _playerManager = default!;
@@ -24,8 +25,7 @@ namespace Content.Client.GameObjects.EntitySystems
 
         private InputSystem _inputSystem = null!;
         private CombatModeSystem _combatModeSystem = null!;
-        private bool _blocked;
-        private int _shotCounter;
+        private SharedRangedWeapon? _firingWeapon = null;
 
         public override void Initialize()
         {
@@ -36,9 +36,9 @@ namespace Content.Client.GameObjects.EntitySystems
             _combatModeSystem = EntitySystemManager.GetEntitySystem<CombatModeSystem>();
         }
 
-        private SharedRangedWeapon? GetRangedWeapon(IEntity? entity)
+        private SharedRangedWeapon? GetRangedWeapon(IEntity entity)
         {
-            if (entity == null || !entity.TryGetComponent(out HandsComponent? hands))
+            if (!entity.TryGetComponent(out HandsComponent? hands))
             {
                 return null;
             }
@@ -60,28 +60,49 @@ namespace Content.Client.GameObjects.EntitySystems
             {
                 return;
             }
-
-            // TODO: Will also need parts of the logic server-side.
+            
             var state = _inputSystem.CmdStates.GetState(EngineKeyFunctions.Use);
             if (!_combatModeSystem.IsInCombatMode() || state != BoundKeyState.Down)
             {
-                _shotCounter = 0;
-                _blocked = false;
+                if (_firingWeapon != null)
+                {
+                    _firingWeapon.Firing = false;
+                    _firingWeapon = null;
+                }
                 return;
             }
 
             var player = _playerManager.LocalPlayer?.ControlledEntity;
-            var weapon = GetRangedWeapon(player);
-            
-            if (player == null || weapon == null)
+            if (player == null)
             {
-                _blocked = true;
+                return;
+            }
+            
+            _firingWeapon = GetRangedWeapon(player);
+            if (_firingWeapon == null)
+            {
                 return;
             }
 
             var currentTime = _gameTiming.CurTime;
             var mousePos = _eyeManager.ScreenToMap(_inputManager.MouseScreenPosition);
-            weapon.TryFire(currentTime, player, mousePos);
+            var angle = (player.Transform.MapPosition.Position - mousePos.Position).ToAngle();
+            if (!_firingWeapon.TryFire(currentTime, player, angle))
+            {
+                if (_firingWeapon.Firing)
+                {
+                    _firingWeapon.Firing = false;
+                }
+                
+                return;
+            }
+
+            if (!_firingWeapon.Firing)
+            {
+                _firingWeapon.Firing = true;
+            }
+            
+            _firingWeapon.FireAngle = angle;
         }
     }
 }
