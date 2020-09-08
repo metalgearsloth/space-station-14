@@ -235,11 +235,11 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
                 // Mainly check if we can get more bullets (e.g. if there's only 1 left in the clip).
                 if (!TryTakeBullet())
                 {
-                    PlaySound(SoundEmpty);
+                    //PlaySound(SoundEmpty);
                     break;
                 }
                 
-                PlaySound(SoundGunshot);
+                //PlaySound(SoundGunshot);
                 firedShots++;
                 _shotCounter++;
             }
@@ -251,8 +251,6 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
             NextFire = currentTime + TimeSpan.FromSeconds(1 / FireRate);
             return true;
         }
-        
-        // TODO: We need a "StartFiring" message so the NextFire gets reset to now. Also need to verify it.
 
         /// <summary>
         ///     Fire out the specified number of bullets.
