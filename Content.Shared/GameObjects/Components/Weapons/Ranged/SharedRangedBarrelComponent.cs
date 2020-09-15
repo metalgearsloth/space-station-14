@@ -323,6 +323,8 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
 
         public bool Spent { get; set; }
 
+        public bool AmmoIsProjectile => _ammoIsProjectile;
+        
         /// <summary>
         ///     Used for anything without a case that fires itself, like if you loaded a banana into a banana launcher.
         /// </summary>

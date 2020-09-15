@@ -3,12 +3,14 @@ using System;
 using System.Threading.Tasks;
 using Content.Server.GameObjects.Components.Projectiles;
 using Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition;
+using Content.Server.GameObjects.EntitySystems;
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using Content.Shared.Interfaces;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Robust.Server.GameObjects.Components.Container;
 using Robust.Shared.GameObjects;
 using Robust.Shared.GameObjects.Components;
+using Robust.Shared.GameObjects.Systems;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Interfaces.GameObjects.Components;
 using Robust.Shared.Interfaces.Timing;
@@ -89,6 +91,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
 
         protected override bool TryTakeAmmo()
         {
+            // Always true for revolvers as you can keep cycling
             if (!base.TryTakeAmmo())
             {
                 return false;
@@ -102,13 +105,8 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                 UnspawnedCount--;
             }
 
-            if (_ammoSlots[CurrentSlot] != null)
-            {
-                Cycle();
-                return true;
-            }
-
-            return false;
+            Cycle();
+            return true;
         }
 
         protected override void Shoot(int shotCount, Angle direction)
@@ -123,28 +121,13 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             {
                 slot = (ushort) (slot == 0 ? _ammoSlots.Length - 1 : slot - 1);
                 var ammo = _ammoSlots[slot];
-                DebugTools.AssertNotNull(ammo);
-                var ammoComp = ammo!.GetComponent<AmmoComponent>();
-                
-                if (!ammoComp.Can)
-                
-                // TODO: Need to take bullets here
-                var bullet = ammoComp.TakeBullet();
 
-                for (var j = 0; j < ammoComp.ProjectilesFired; j++)
-                {
-                    if (j > 0)
-                    {
-                        bullet = Owner
-                            .EntityManager
-                            .SpawnEntity(ammoComp.ProjectileId, Owner.Transform.MapPosition);
-                    }
+                if (ammo == null)
+                    continue;
+                
+                var ammoComp = ammo.GetComponent<AmmoComponent>();
 
-                    bullet.Transform.LocalRotation = direction;
-                    
-                    bullet.GetComponent<ProjectileComponent>().IgnoreEntity(Shooter());
-                    bullet.GetComponent<CollidableComponent>().LinearVelocity = direction.ToVec() * ammoComp.Velocity;
-                }
+                EntitySystem.Get<RangedWeaponSystem>().Shoot(Shooter(), direction, ammoComp);
             }
         }
 
