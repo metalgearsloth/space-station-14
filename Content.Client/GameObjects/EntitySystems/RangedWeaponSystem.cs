@@ -26,6 +26,7 @@ namespace Content.Client.GameObjects.EntitySystems
         private InputSystem _inputSystem = null!;
         private CombatModeSystem _combatModeSystem = null!;
         private SharedRangedWeapon? _firingWeapon = null;
+        private bool _lastFireResult = true;
 
         public override void Initialize()
         {
@@ -64,6 +65,9 @@ namespace Content.Client.GameObjects.EntitySystems
             var state = _inputSystem.CmdStates.GetState(EngineKeyFunctions.Use);
             if (!_combatModeSystem.IsInCombatMode() || state != BoundKeyState.Down)
             {
+                // Result this so we can queue up more firing.
+                _lastFireResult = true;
+                
                 if (_firingWeapon != null)
                 {
                     _firingWeapon.Firing = false;
@@ -77,32 +81,37 @@ namespace Content.Client.GameObjects.EntitySystems
             {
                 return;
             }
-            
+
+            var currentFiringWeapon = _firingWeapon;
             _firingWeapon = GetRangedWeapon(player);
+
+            if (currentFiringWeapon != _firingWeapon && currentFiringWeapon != null)
+            {
+                currentFiringWeapon.Firing = false;
+            }
+            
             if (_firingWeapon == null)
             {
                 return;
             }
-
-            var currentTime = _gameTiming.CurTime;
-            var mousePos = _eyeManager.ScreenToMap(_inputManager.MouseScreenPosition);
-            var angle = (player.Transform.MapPosition.Position - mousePos.Position).ToAngle();
-            if (!_firingWeapon.TryFire(currentTime, player, angle))
+            
+            // We'll block any more firings so a single shot weapon doesn't spam the SoundEmpty for example.
+            if (!_lastFireResult)
             {
-                if (_firingWeapon.Firing)
-                {
-                    _firingWeapon.FireAngle = null;
-                    _firingWeapon.Firing = false;
-                }
-                
+                _firingWeapon.FireAngle = null;
+                _firingWeapon.Firing = false;
                 return;
             }
+            
+            var currentTime = _gameTiming.CurTime;
+            var mousePos = _eyeManager.ScreenToMap(_inputManager.MouseScreenPosition);
+            var angle = (mousePos.Position - player.Transform.MapPosition.Position).ToAngle();
 
-            if (!_firingWeapon.Firing)
-            {
-                _firingWeapon.FireAngle = angle;
-                _firingWeapon.Firing = true;
-            }
+            _lastFireResult = _firingWeapon.TryFire(currentTime, player, angle);
+
+            // Update server as well if necessary
+            _firingWeapon.FireAngle = angle;
+            _firingWeapon.Firing = true;
         }
     }
 }

@@ -2,7 +2,9 @@ using System;
 using Content.Client.GameObjects.Components.Mobs;
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using Content.Shared.Interfaces;
+using Robust.Client.GameObjects.EntitySystems;
 using Robust.Shared.GameObjects;
+using Robust.Shared.GameObjects.Systems;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Interfaces.Timing;
 using Robust.Shared.IoC;
@@ -28,16 +30,15 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged
                 }
 
                 _firing = value;
-                var currentTime = IoCManager.Resolve<IGameTiming>().CurTime;
 
                 if (_firing)
                 {
-                    SendNetworkMessage(new StartFiringMessage(currentTime, FireAngle!.Value));
+                    SendNetworkMessage(new StartFiringMessage(FireAngle!.Value));
                 }
                 else
                 {
+                    SendNetworkMessage(new StopFiringMessage(ShotCounter));
                     ShotCounter = 0;
-                    SendNetworkMessage(new StopFiringMessage(currentTime));
                 }
             }
         }
@@ -121,8 +122,21 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged
             {
                 recoilComponent.Kick(-direction.ToVec().Normalized * 1.1f);
             }
+
+            for (var i = 0; i < shotCount; i++)
+            {
+                PlaySound(SoundGunshot);
+            }
         }
-        
+
+        protected override void PlaySound(string? sound)
+        {
+            if (sound == null)
+                return;
+
+            EntitySystem.Get<AudioSystem>().Play(sound, Owner);
+        }
+
         protected override ushort EjectAllSlots()
         {
             // TODO: Predict
@@ -135,7 +149,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged
                 if (slot == null)
                     continue;
 
-                // TODO: PLAYSOUND
+                // TODO: Play SOUND
                 count++;
                 slot = null;
             }
@@ -159,7 +173,9 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged
                     CurrentSlot = (byte) i;
                     _bullets[i] = !ammoComponent.Spent;
                     // TODO: CLIENT-SIDE PREDICTED CONTAINERS HERE
-                    NextFire = IoCManager.Resolve<IGameTiming>().CurTime;
+                    var extraTime = FireRate > 0 ? TimeSpan.FromSeconds(1 / FireRate) : TimeSpan.FromSeconds(0.3);
+                    
+                    NextFire = IoCManager.Resolve<IGameTiming>().CurTime + extraTime;
                     return true;
                 }
             }

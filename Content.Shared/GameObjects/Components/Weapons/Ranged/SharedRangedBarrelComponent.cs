@@ -55,12 +55,10 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
     [Serializable, NetSerializable]
     public class StartFiringMessage : ComponentMessage
     {
-        public TimeSpan Time { get; }
         public Angle FireAngle { get; }
 
-        public StartFiringMessage(TimeSpan time, Angle fireAngle)
+        public StartFiringMessage(Angle fireAngle)
         {
-            Time = time;
             FireAngle = fireAngle;
         }
     }
@@ -68,11 +66,14 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
     [Serializable, NetSerializable]
     public sealed class StopFiringMessage : ComponentMessage
     {
-        public TimeSpan Time { get; }
+        /// <summary>
+        ///     We'll send the amount of shots we expected so the server can try to reconcile it.
+        /// </summary>
+        public ushort Shots { get; }
 
-        public StopFiringMessage(TimeSpan time)
+        public StopFiringMessage(ushort shots)
         {
-            Time = time;
+            Shots = shots;
         }
     }
 
@@ -106,14 +107,15 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         public abstract bool Firing { get; set; }
 
         public abstract Angle? FireAngle { get; set; }
+
+        // TODO: A few of these are server-only so need to move in the refactor
+        public ushort ExpectedShots { get; set; }
         
-        public TimeSpan? FiringStart { get; private set; }
-        
-        public TimeSpan? FiringEnd { get; private set; }
+        public ushort AccumulatedShots { get; set; }
         
         // Sounds
-        protected string? SoundGunshot { get; }
-        protected string? SoundEmpty { get; }
+        protected string? SoundGunshot { get; set; }
+        protected string? SoundEmpty { get; set; }
         
         public override void ExposeData(ObjectSerializer serializer)
         {
@@ -147,6 +149,21 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
 
                     return result;
                 });
+            
+            // Sounds
+            serializer.DataReadWriteFunction(
+                "soundGunshot",
+                null,
+                sound => SoundGunshot = sound,
+                () => SoundGunshot
+                );
+            
+            serializer.DataReadWriteFunction(
+                "soundEmpty",
+                null,
+                sound => SoundEmpty = sound,
+                () => SoundEmpty
+            );
         }
 
         public override void HandleNetworkMessage(ComponentMessage message, INetChannel netChannel, ICommonSession? session = null)
@@ -164,21 +181,17 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
                     FireAngle = msg.Angle;
                     break;
                 case StartFiringMessage msg:
+                    if (msg.FireAngle == null)
+                    {
+                        return;
+                    }
                     Firing = true;
                     FireAngle = msg.FireAngle;
-                    FiringEnd = null;
                     ShotCounter = 0;
-                    
-                    // Client can say when they started shooting but we'll verify it
-                    var startFiring = Math.Max(msg.Time.TotalSeconds,
-                        NextFire.TotalSeconds + TimeSpan.FromSeconds(1 / FireRate).TotalSeconds);
-                    FiringStart = TimeSpan.FromSeconds(startFiring);
-                    
                     break;
                 case StopFiringMessage msg:
                     Firing = false;
-                    FiringStart = null;
-                    FiringEnd = msg.Time;
+                    ExpectedShots += msg.Shots;
                     break;
             }
         }
@@ -247,7 +260,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         /// <param name="currentTime"></param>
         /// <param name="entity"></param>
         /// <param name="direction"></param>
-        /// <returns>false if firing is impossible</returns>
+        /// <returns>false if firing is impossible, true if firing is possible but delayed or we did fire</returns>
         public bool TryFire(TimeSpan currentTime, IEntity entity, Angle direction)
         {
             if (ShotCounter == 0 && NextFire <= currentTime)
@@ -259,8 +272,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
             {
                 return true;
             }
-
-            // We'll send them a popup explaining why they can't as well.
+            
             if (!CanFire(entity))
             {
                 return false;
@@ -278,7 +290,6 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
                 // Mainly check if we can get more bullets (e.g. if there's only 1 left in the clip).
                 if (!TryTakeAmmo())
                 {
-                    //PlaySound(SoundEmpty);
                     break;
                 }
                 
@@ -286,11 +297,19 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
                 firedShots++;
                 ShotCounter++;
             }
-            
+
+            // No ammo :(
+            if (firedShots == 0)
+            {
+                PlaySound(SoundEmpty);
+                return false;
+            }
+
+            AccumulatedShots += firedShots;
             // SO server-side we essentially need to backtrack by n firedShots to work out what to shoot for each one
             // Client side we'll just play the effects and shit unless we get client-side entity prediction in.
             Shoot(firedShots, direction);
-            
+
             return true;
         }
 
@@ -333,7 +352,29 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         [ViewVariables]
         public BallisticCaliber Caliber { get; private set; }
 
-        public bool Spent { get; set; }
+        public bool Spent
+        {
+            get => _spent;
+            set
+            {
+                if (_spent == value)
+                {
+                    return;
+                }
+
+                _spent = value;
+
+                if (_spent)
+                {
+                    if (Caseless)
+                    {
+                        Owner.Delete();
+                        return;
+                    }
+                }
+            }
+        }
+        private bool _spent;
 
         public bool AmmoIsProjectile => _ammoIsProjectile;
         

@@ -21,9 +21,5 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition
     [ComponentReference(typeof(SharedAmmoComponent))]
     internal sealed class AmmoComponent : SharedAmmoComponent
     {
-        public IEntity? TakeBullet()
-        {
-            return null;
-        }
     }
 }

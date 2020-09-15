@@ -45,32 +45,31 @@ namespace Content.Server.GameObjects.EntitySystems
         
         private void Update(SharedRangedWeapon weapon, TimeSpan currentTime)
         {
-            if (weapon.FiringStart == null && weapon.FiringEnd == null)
+            if (weapon.FireAngle == null || (!weapon.Firing && weapon.ExpectedShots == 0))
             {
                 return;
             }
-            
-            if ((weapon.FiringStart != null && weapon.FiringStart > currentTime) && (weapon.FiringEnd != null && currentTime > weapon.FiringEnd))
-            {
-                return;
-            }
-            
+
             // TODO: Shitcode
             var shooter = weapon.Shooter();
-            
             if (shooter == null)
             {
                 return;
             }
 
-            weapon.TryFire(currentTime, shooter, weapon.FireAngle!.Value);
+            if (!weapon.TryFire(currentTime, shooter, weapon.FireAngle!.Value) || (!weapon.Firing && weapon.ExpectedShots <= weapon.AccumulatedShots))
+            {
+                // TODO: If these are different need to reconcile with client.
+                weapon.ExpectedShots = 0;
+                weapon.AccumulatedShots = 0;
+            }
         }
 
         public void Shoot(IEntity user, Angle angle, AmmoComponent ammoComponent, float spreadRatio = 1.0f)
         {
             if (!ammoComponent.CanFire())
                 return;
-            
+
             List<Angle> sprayAngleChange = null;
             var count = ammoComponent.ProjectilesFired;
             var evenSpreadAngle = ammoComponent.EvenSpreadAngle;
@@ -78,12 +77,11 @@ namespace Content.Server.GameObjects.EntitySystems
             if (ammoComponent.AmmoIsProjectile)
             {
                 Fire(user, ammoComponent.Owner, angle, ammoComponent.Velocity);
+                return;
             }
 
             if (count > 1)
             {
-                // TODO: Queue angles server-side alongside timestamp from client and get latest angle
-                // Ideally you'd also roll client position back maybe..., idk
                 evenSpreadAngle *= spreadRatio;
                 sprayAngleChange = Linspace(-evenSpreadAngle / 2, evenSpreadAngle / 2, count);
             }
@@ -106,11 +104,15 @@ namespace Content.Server.GameObjects.EntitySystems
 
                 Fire(user, projectile, projectileAngle, ammoComponent.Velocity);
             }
-            
-            if (ammoComponent.Caseless)
-                ammoComponent.Owner.Delete();
         }
 
+        /// <summary>
+        ///     Sends out a particular bullet projectile.
+        /// </summary>
+        /// <param name="shooter"></param>
+        /// <param name="bullet"></param>
+        /// <param name="angle"></param>
+        /// <param name="velocity"></param>
         private void Fire(IEntity shooter, IEntity bullet, Angle angle, float velocity)
         {
             var collidableComponent = bullet.GetComponent<ICollidableComponent>();
@@ -125,6 +127,19 @@ namespace Content.Server.GameObjects.EntitySystems
                 .LinearVelocity = angle.ToVec() * velocity;
 
             bullet.Transform.LocalRotation = angle.Theta;
+        }
+        
+        private List<Angle> Linspace(double start, double end, int intervals)
+        {
+            DebugTools.Assert(intervals > 1);
+
+            var linspace = new List<Angle>(intervals);
+
+            for (var i = 0; i <= intervals - 1; i++)
+            {
+                linspace.Add(Angle.FromDegrees(start + (end - start) * i / (intervals - 1)));
+            }
+            return linspace;
         }
     }
 }

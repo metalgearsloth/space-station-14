@@ -1,21 +1,18 @@
 #nullable enable
 using System;
-using System.Threading.Tasks;
-using Content.Server.GameObjects.Components.Projectiles;
 using Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition;
 using Content.Server.GameObjects.EntitySystems;
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
-using Content.Shared.Interfaces;
-using Content.Shared.Interfaces.GameObjects.Components;
 using Robust.Server.GameObjects.Components.Container;
+using Robust.Server.GameObjects.EntitySystems;
+using Robust.Server.Interfaces.GameObjects;
+using Robust.Server.Interfaces.Player;
 using Robust.Shared.GameObjects;
-using Robust.Shared.GameObjects.Components;
 using Robust.Shared.GameObjects.Systems;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Interfaces.GameObjects.Components;
 using Robust.Shared.Interfaces.Timing;
 using Robust.Shared.IoC;
-using Robust.Shared.Localization;
 using Robust.Shared.Maths;
 using Robust.Shared.Serialization;
 using Robust.Shared.Utility;
@@ -40,14 +37,11 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
 
         public override Angle? FireAngle { get; set; }
         
-        // TODO: When client-side predicted containers are in use that and move this to shared.
         private IEntity?[] _ammoSlots = null!;
 
         private IContainer AmmoContainer { get; set; } = default!;
 
         protected override ushort Capacity => (ushort) _ammoSlots.Length;
-        
-        public TimeSpan BurstStop { get; } = TimeSpan.Zero;
 
         public override void ExposeData(ObjectSerializer serializer)
         {
@@ -91,18 +85,35 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
 
         protected override bool TryTakeAmmo()
         {
-            // Always true for revolvers as you can keep cycling
+            // Revolvers can keep cycling even if the ammo is invalid.
             if (!base.TryTakeAmmo())
             {
                 return false;
             }
-            
-            if (_ammoSlots[CurrentSlot] == null && UnspawnedCount > 0)
+
+            var currentAmmo = _ammoSlots[CurrentSlot];
+
+            if (currentAmmo == null)
             {
-                var entity = Owner.EntityManager.SpawnEntity(FillPrototype, Owner.Transform.MapPosition);
-                _ammoSlots[CurrentSlot] = entity;
-                AmmoContainer.Insert(entity);
-                UnspawnedCount--;
+                if (UnspawnedCount > 0)
+                {
+                    var entity = Owner.EntityManager.SpawnEntity(FillPrototype, Owner.Transform.MapPosition);
+                    _ammoSlots[CurrentSlot] = entity;
+                    AmmoContainer.Insert(entity);
+                    UnspawnedCount--;
+                }
+                else
+                {
+                    return false;
+                }
+            } 
+            else
+            {
+                if (currentAmmo.GetComponent<AmmoComponent>().Spent)
+                {
+                    Cycle();
+                    return false;
+                }
             }
 
             Cycle();
@@ -127,7 +138,27 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                 
                 var ammoComp = ammo.GetComponent<AmmoComponent>();
 
+                PlaySound(SoundGunshot);
                 EntitySystem.Get<RangedWeaponSystem>().Shoot(Shooter(), direction, ammoComp);
+                ammoComp.Spent = true;
+            }
+        }
+
+        protected override void PlaySound(string? sound)
+        {
+            if (sound == null)
+                return;
+
+            IActorComponent? actorComponent = null;
+            Shooter()?.TryGetComponent(out actorComponent);
+
+            if (actorComponent != null)
+            {
+                EntitySystem.Get<AudioSystem>().PlayFromEntity(sound, Owner, excludedSession: actorComponent.playerSession);
+            }
+            else
+            {
+                EntitySystem.Get<AudioSystem>().PlayFromEntity(sound, Owner);
             }
         }
 
