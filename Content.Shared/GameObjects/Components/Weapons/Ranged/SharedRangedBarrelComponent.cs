@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -183,6 +183,10 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
             }
         }
 
+        /// <summary>
+        ///     Lord help me this is bad.
+        /// </summary>
+        /// <returns></returns>
         public IEntity? Shooter()
         {
             if (!ContainerHelpers.TryGetContainer(Owner, out var container))
@@ -206,7 +210,6 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
                     return false;
                 case FireRateSelector.Single:
                     return ShotCounter < 1;
-
                 case FireRateSelector.Automatic:
                     return true;
                 default:
@@ -238,6 +241,13 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
             }
         }
         
+        /// <summary>
+        ///     
+        /// </summary>
+        /// <param name="currentTime"></param>
+        /// <param name="entity"></param>
+        /// <param name="direction"></param>
+        /// <returns>false if firing is impossible</returns>
         public bool TryFire(TimeSpan currentTime, IEntity entity, Angle direction)
         {
             if (ShotCounter == 0 && NextFire <= currentTime)
@@ -247,7 +257,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
             
             if (currentTime < NextFire)
             {
-                return false;
+                return true;
             }
 
             // We'll send them a popup explaining why they can't as well.
@@ -292,6 +302,8 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         /// <param name="shotCount"></param>
         /// <param name="direction"></param>
         protected abstract void Shoot(int shotCount, Angle direction);
+
+        protected abstract void PlaySound(string? sound);
 
         void IHandSelected.HandSelected(HandSelectedEventArgs eventArgs)
         {
