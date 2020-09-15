@@ -3,6 +3,7 @@ using System;
 using Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition;
 using Content.Server.GameObjects.EntitySystems;
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
+using Content.Shared.GameObjects.EntitySystems;
 using Robust.Server.GameObjects.Components.Container;
 using Robust.Server.GameObjects.EntitySystems;
 using Robust.Server.Interfaces.GameObjects;
@@ -77,12 +78,6 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             }
         }
 
-        public override void MuzzleFlash()
-        {
-            // TODO
-            return;
-        }
-
         protected override bool TryTakeAmmo()
         {
             // Revolvers can keep cycling even if the ammo is invalid.
@@ -127,7 +122,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             // Also TODO: Make this common to all projectile guns
             shotCount = Math.Min(shotCount, _ammoSlots.Length);
             var slot = CurrentSlot;
-            
+
             for (var i = 0; i < shotCount; i++)
             {
                 slot = (ushort) (slot == 0 ? _ammoSlots.Length - 1 : slot - 1);
@@ -138,27 +133,9 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                 
                 var ammoComp = ammo.GetComponent<AmmoComponent>();
 
-                PlaySound(SoundGunshot);
+                EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(Shooter(), Owner, SoundGunshot);
                 EntitySystem.Get<RangedWeaponSystem>().Shoot(Shooter(), direction, ammoComp);
                 ammoComp.Spent = true;
-            }
-        }
-
-        protected override void PlaySound(string? sound)
-        {
-            if (sound == null)
-                return;
-
-            IActorComponent? actorComponent = null;
-            Shooter()?.TryGetComponent(out actorComponent);
-
-            if (actorComponent != null)
-            {
-                EntitySystem.Get<AudioSystem>().PlayFromEntity(sound, Owner, excludedSession: actorComponent.playerSession);
-            }
-            else
-            {
-                EntitySystem.Get<AudioSystem>().PlayFromEntity(sound, Owner);
             }
         }
 

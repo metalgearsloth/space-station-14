@@ -1,8 +1,8 @@
 using System;
 using Content.Client.GameObjects.Components.Mobs;
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
+using Content.Shared.GameObjects.EntitySystems;
 using Content.Shared.Interfaces;
-using Robust.Client.GameObjects.EntitySystems;
 using Robust.Shared.GameObjects;
 using Robust.Shared.GameObjects.Systems;
 using Robust.Shared.Interfaces.GameObjects;
@@ -93,12 +93,6 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged
             }
         }
 
-        public override void MuzzleFlash()
-        {
-            // TODO:
-            return;
-        }
-
         protected override bool TryTakeAmmo()
         {
             if (!base.TryTakeAmmo())
@@ -117,24 +111,17 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged
         protected override void Shoot(int shotCount, Angle direction)
         {
             CameraRecoilComponent recoilComponent = null;
+            var shooter = Shooter();
             
-            if (Shooter()?.TryGetComponent(out recoilComponent) == true)
+            if (shooter != null && shooter.TryGetComponent(out recoilComponent))
             {
                 recoilComponent.Kick(-direction.ToVec().Normalized * 1.1f);
             }
 
             for (var i = 0; i < shotCount; i++)
             {
-                PlaySound(SoundGunshot);
+                EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(shooter, Owner, SoundGunshot);
             }
-        }
-
-        protected override void PlaySound(string? sound)
-        {
-            if (sound == null)
-                return;
-
-            EntitySystem.Get<AudioSystem>().Play(sound, Owner);
         }
 
         protected override ushort EjectAllSlots()

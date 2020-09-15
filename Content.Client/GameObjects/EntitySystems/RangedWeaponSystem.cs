@@ -1,21 +1,22 @@
 ﻿#nullable enable
 using Content.Client.GameObjects.Components.Items;
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
+using Content.Shared.GameObjects.EntitySystems;
+using Robust.Client.GameObjects;
 using Robust.Client.GameObjects.EntitySystems;
 using Robust.Client.Interfaces.Graphics.ClientEye;
 using Robust.Client.Interfaces.Input;
 using Robust.Client.Player;
-using Robust.Shared.GameObjects.Systems;
+using Robust.Shared.GameObjects.EntitySystemMessages;
 using Robust.Shared.Input;
 using Robust.Shared.Interfaces.GameObjects;
-using Robust.Shared.Interfaces.Map;
 using Robust.Shared.Interfaces.Timing;
 using Robust.Shared.IoC;
 using Robust.Shared.Maths;
 
 namespace Content.Client.GameObjects.EntitySystems
 {
-    internal sealed class RangedWeaponSystem : EntitySystem
+    internal sealed class RangedWeaponSystem : SharedRangedWeaponSystem
     {
         
         [Dependency] private readonly IPlayerManager _playerManager = default!;
@@ -112,6 +113,20 @@ namespace Content.Client.GameObjects.EntitySystems
             // Update server as well if necessary
             _firingWeapon.FireAngle = angle;
             _firingWeapon.Firing = true;
+        }
+
+        public override void PlaySound(IEntity? user, IEntity weapon, string? sound)
+        {
+            if (sound == null)
+                return;
+
+            Get<AudioSystem>().Play(sound, weapon);
+        }
+
+        public override void MuzzleFlash(IEntity user, IEntity weapon, Angle angle)
+        {
+            var effect = new EffectSystemMessage();
+            Get<EffectSystem>().CreateParticle();
         }
     }
 }

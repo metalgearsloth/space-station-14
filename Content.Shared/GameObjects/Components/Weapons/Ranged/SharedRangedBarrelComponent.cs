@@ -2,9 +2,11 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Content.Shared.GameObjects.EntitySystems;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
+using Robust.Shared.GameObjects.Systems;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Interfaces.Network;
 using Robust.Shared.Interfaces.Timing;
@@ -94,18 +96,33 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
     {
         public override string Name => "RangedWeapon";
 
+        /// <summary>
+        ///     Current fire selector.
+        /// </summary>
         public FireRateSelector Selector { get; protected set; }
         
+        /// <summary>
+        ///     The earliest time the gun can fire next.
+        /// </summary>
         public TimeSpan NextFire { get; protected set; }
         
+        /// <summary>
+        ///     Shots fired per second.
+        /// </summary>
         public float FireRate { get; protected set; }
         
+        /// <summary>
+        ///     Keep a running track of how many shots we've fired for single-shot (etc.) weapons.
+        /// </summary>
         protected ushort ShotCounter;
         
         // Shooting
         // So I guess we'll try syncing start and stop fire, as well as fire angles
         public abstract bool Firing { get; set; }
 
+        /// <summary>
+        ///     The angle the shooter selected to fire at.
+        /// </summary>
         public abstract Angle? FireAngle { get; set; }
 
         // TODO: A few of these are server-only so need to move in the refactor
@@ -212,7 +229,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
 
         protected virtual bool CanFire(IEntity entity)
         {
-            if (FireRate <= 0.0f)
+            if (FireRate <= 0.0f || FireAngle == null)
             {
                 return false;
             }
@@ -229,8 +246,6 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
                     throw new ArgumentOutOfRangeException();
             }
         }
-
-        public abstract void MuzzleFlash();
 
         /// <summary>
         ///     Whether we can take more ammo for shooting. Doesn't necessarily need to be fireable.
@@ -277,8 +292,6 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
             {
                 return false;
             }
-            
-            MuzzleFlash();
 
             ushort firedShots = 0;
 
@@ -293,7 +306,6 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
                     break;
                 }
                 
-                //PlaySound(SoundGunshot);
                 firedShots++;
                 ShotCounter++;
             }
@@ -301,10 +313,11 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
             // No ammo :(
             if (firedShots == 0)
             {
-                PlaySound(SoundEmpty);
+                EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(Shooter(), Owner, SoundEmpty);
                 return false;
             }
 
+            EntitySystem.Get<SharedRangedWeaponSystem>().MuzzleFlash(Shooter(), Owner, FireAngle.Value);
             AccumulatedShots += firedShots;
             // SO server-side we essentially need to backtrack by n firedShots to work out what to shoot for each one
             // Client side we'll just play the effects and shit unless we get client-side entity prediction in.
@@ -321,8 +334,6 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         /// <param name="shotCount"></param>
         /// <param name="direction"></param>
         protected abstract void Shoot(int shotCount, Angle direction);
-
-        protected abstract void PlaySound(string? sound);
 
         void IHandSelected.HandSelected(HandSelectedEventArgs eventArgs)
         {
