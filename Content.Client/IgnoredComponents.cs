@@ -43,7 +43,6 @@
             "Healing",
             "Catwalk",
             "RangedMagazine",
-            "Ammo",
             "HitscanWeaponCapacitor",
             "PowerCell",
             "PowerCellCharger",

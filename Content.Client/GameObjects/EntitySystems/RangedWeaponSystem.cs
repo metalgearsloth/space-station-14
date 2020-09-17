@@ -169,7 +169,8 @@ namespace Content.Client.GameObjects.EntitySystems
             RaiseLocalEvent(message);
         }
 
-        public override void EjectCasing(IEntity user, IEntity casing, Direction[] ejectDirections = null)
+        // TODO: Won't be used until container prediction
+        public override void EjectCasing(IEntity? user, IEntity casing, Direction[] ejectDirections = null)
         {
             ejectDirections ??= new[] {Direction.East, Direction.North, Direction.South, Direction.West};
 

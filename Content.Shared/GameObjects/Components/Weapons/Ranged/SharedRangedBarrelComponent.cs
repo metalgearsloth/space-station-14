@@ -128,7 +128,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         /// <summary>
         ///     The angle the shooter selected to fire at.
         /// </summary>
-        public abstract Angle? FireAngle { get; set; }
+        public Angle? FireAngle { get; set; }
 
         // TODO: A few of these are server-only so need to move in the refactor
         public ushort ExpectedShots { get; set; }

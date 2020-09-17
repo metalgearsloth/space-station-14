@@ -26,8 +26,6 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
     [ComponentReference(typeof(SharedRangedWeaponComponent))]
     public sealed class ServerRevolverBarrelComponent : SharedRevolverBarrelComponent
     {
-        public override Angle? FireAngle { get; set; }
-        
         private IEntity?[] _ammoSlots = null!;
 
         private IContainer AmmoContainer { get; set; } = default!;

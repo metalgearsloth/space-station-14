@@ -28,7 +28,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
     {
         // TODO: Need a way to make this common
 
-        public override Angle? FireAngle { get; set; }
+        public Angle? FireAngle { get; set; }
         
         private StatusControl _statusControl;
 

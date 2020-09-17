@@ -149,6 +149,7 @@ namespace Content.Server.GameObjects.EntitySystems
 
         public void Shoot(IEntity? user, Angle angle, AmmoComponent ammoComponent, float spreadRatio = 1.0f)
         {
+            // BIG FAT TODO: NEED TO GET RECOIL HERE
             if (!ammoComponent.CanFire())
                 return;
 
@@ -265,7 +266,7 @@ namespace Content.Server.GameObjects.EntitySystems
             Get<EffectSystem>().CreateParticle(message, actorComponent?.playerSession);
         }
 
-        public override void EjectCasing(IEntity user, IEntity casing, Direction[] ejectDirections = null)
+        public override void EjectCasing(IEntity? user, IEntity casing, Direction[] ejectDirections = null)
         {
             ejectDirections ??= new[] {Direction.East, Direction.North, Direction.South, Direction.West};
 
@@ -283,9 +284,13 @@ namespace Content.Server.GameObjects.EntitySystems
 
             var soundCollection = _prototypeManager.Index<SoundCollectionPrototype>(ammo.SoundCollectionEject);
             var randomFile = _robustRandom.Pick(soundCollection.PickFiles);
-            user.TryGetComponent(out IActorComponent? actorComponent);
-            var excludedSession = actorComponent?.playerSession;
+            IPlayerSession? excludedSession = null;
             
+            if (user != null && user.TryGetComponent(out IActorComponent? actorComponent))
+            {
+                excludedSession = actorComponent?.playerSession;
+            }
+
             Get<AudioSystem>().PlayFromEntity(randomFile, casing, AudioHelpers.WithVariation(0.2f, _robustRandom).WithVolume(-1), excludedSession: excludedSession);
         }
     }
