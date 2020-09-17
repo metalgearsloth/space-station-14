@@ -183,7 +183,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
             
             serializer.DataReadWriteFunction(
                 "muzzleFlash",
-                null,
+                "Objects/Weapons/Guns/Projectiles/bullet_muzzle.png",
                 value => MuzzleFlash = value,
                 () => MuzzleFlash);
             
@@ -197,7 +197,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
             
             serializer.DataReadWriteFunction(
                 "soundEmpty",
-                null,
+                "/Audio/Weapons/Guns/Empty/empty.ogg",
                 sound => SoundEmpty = sound,
                 () => SoundEmpty
             );

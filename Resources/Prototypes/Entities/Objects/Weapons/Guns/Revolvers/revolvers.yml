@@ -73,34 +73,31 @@
     fillPrototype: CartridgeMagnum
     caliber: Magnum
     capacity: 7
-    muzzleFlash: Objects/Weapons/Guns/Projectiles/bullet_muzzle.png
-    soundEmpty: /Audio/Weapons/Guns/Empty/empty.ogg
     soundGunshot: /Audio/Weapons/Guns/Gunshots/revolver.ogg
     soundEject: /Audio/Weapons/Guns/MagOut/revolver_magout.ogg
     soundInsert: /Audio/Weapons/Guns/MagIn/revolver_magin.ogg
 
-#- type: entity
-#  name: Mateba
-#  parent: RevolverBase
-#  id: RevolverMateba
-#  description: A rooty tooty point and shooty.
-#  components:
-#  - type: Sprite
-#    sprite: Objects/Weapons/Guns/Revolvers/mateba.rsi
-#  - type: Icon
-#    sprite: Objects/Weapons/Guns/Revolvers/mateba.rsi
-#  - type: Item
-#    size: 24
-#    sprite: Objects/Weapons/Guns/Revolvers/mateba.rsi
-#  - type: RangedWeapon
-#  - type: RevolverBarrel
-#    currentSelector: Single
-#    allSelectors:
-#    - Single
-#    fillPrototype: CartridgeMagnum
-#    caliber: Magnum
-#    capacity: 7
-#    soundEmpty: /Audio/Weapons/Guns/Empty/empty.ogg
-#    soundGunshot: /Audio/Weapons/Guns/Gunshots/revolver.ogg
-#    soundEject: /Audio/Weapons/Guns/MagOut/revolver_magout.ogg
-#    soundInsert: /Audio/Weapons/Guns/MagIn/revolver_magin.ogg
+- type: entity
+  name: Mateba
+  parent: RevolverBase
+  id: RevolverMateba
+  description: A rooty tooty point and shooty.
+  components:
+  - type: Sprite
+    sprite: Objects/Weapons/Guns/Revolvers/mateba.rsi
+  - type: Icon
+    sprite: Objects/Weapons/Guns/Revolvers/mateba.rsi
+  - type: Item
+    size: 24
+    sprite: Objects/Weapons/Guns/Revolvers/mateba.rsi
+  - type: RevolverBarrel
+    currentSelector: Single
+    allSelectors:
+    - Single
+    fireRate: 2
+    fillPrototype: CartridgeMagnum
+    caliber: Magnum
+    capacity: 7
+    soundGunshot: /Audio/Weapons/Guns/Gunshots/revolver.ogg
+    soundEject: /Audio/Weapons/Guns/MagOut/revolver_magout.ogg
+    soundInsert: /Audio/Weapons/Guns/MagIn/revolver_magin.ogg

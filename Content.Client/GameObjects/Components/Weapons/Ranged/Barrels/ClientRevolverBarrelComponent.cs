@@ -10,6 +10,7 @@ using System;
 using Content.Client.GameObjects.Components.Mobs;
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using Content.Shared.GameObjects.EntitySystems;
+using Content.Shared.GameObjects.Verbs;
 using Content.Shared.Interfaces;
 using Robust.Shared.GameObjects.Systems;
 using Robust.Shared.Interfaces.GameObjects;
@@ -148,14 +149,13 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             
             return false;
         }
-
-        // TODO: Copy from existing guns.
+        
         private void Spin()
         {
-            CurrentSlot = (ushort) IoCManager.Resolve<IRobustRandom>().Next(Bullets.Length);
+            CurrentSlot = (ushort) IoCManager.Resolve<IRobustRandom>().Next(Bullets.Length - 1);
+            _statusControl?.Update(true);
             SendNetworkMessage(new RevolverSpinMessage(CurrentSlot));
-            // TODO: Predict sound
-            EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(null, Owner, SoundSpin, true);
+            EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(Shooter(), Owner, SoundSpin, true);
         }
 
         // Item status etc.
@@ -202,7 +202,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                 }));
             }
 
-            public void Update()
+            public void Update(bool hideMarker = false)
             {
                 _bulletsList.RemoveAllChildren();
 
@@ -225,10 +225,10 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                 var texture = StaticIoC.ResC.GetTexture(texturePath);
                 var spentTexture = StaticIoC.ResC.GetTexture("/Textures/Interface/ItemStatus/Bullets/empty.png");
 
-                FillBulletRow(_bulletsList, texture, spentTexture);
+                FillBulletRow(_bulletsList, texture, spentTexture, hideMarker);
             }
 
-            private void FillBulletRow(Control container, Texture texture, Texture emptyTexture)
+            private void FillBulletRow(Control container, Texture texture, Texture emptyTexture, bool hideMarker)
             {
                 var colorA = Color.FromHex("#b68f0e");
                 var colorB = Color.FromHex("#d7df60");
@@ -248,7 +248,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                     {
                         CustomMinimumSize = texture.Size * scale,
                     };
-                    if (i == _parent.CurrentSlot)
+                    if (i == _parent.CurrentSlot && !hideMarker)
                     {
                         box.AddChild(new TextureRect
                         {
@@ -293,6 +293,33 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             protected override Vector2 CalculateMinimumSize()
             {
                 return Vector2.ComponentMax((0, 15), base.CalculateMinimumSize());
+            }
+        }
+        
+        [Verb]
+        private sealed class SpinRevolverVerb : Verb<ClientRevolverBarrelComponent>
+        {
+            protected override void GetData(IEntity user, ClientRevolverBarrelComponent component, VerbData data)
+            {
+                if (!ActionBlockerSystem.CanInteract(user))
+                {
+                    data.Visibility = VerbVisibility.Invisible;
+                    return;
+                }
+
+                data.Text = Loc.GetString("Spin");
+                if (component.Capacity <= 1)
+                {
+                    data.Visibility = VerbVisibility.Invisible;
+                    return;
+                }
+
+                data.Visibility = VerbVisibility.Visible;
+            }
+
+            protected override void Activate(IEntity user, ClientRevolverBarrelComponent component)
+            {
+                component.Spin();
             }
         }
     }
