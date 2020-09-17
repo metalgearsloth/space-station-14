@@ -55,37 +55,46 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
     }
     
     [Serializable, NetSerializable]
-    public class StartFiringMessage : ComponentMessage
+    public class StartFiringMessage : EntitySystemMessage
     {
+        public EntityUid Uid { get; }
+        
         public Angle FireAngle { get; }
 
-        public StartFiringMessage(Angle fireAngle)
+        public StartFiringMessage(EntityUid uid, Angle fireAngle)
         {
+            Uid = uid;
             FireAngle = fireAngle;
         }
     }
 
     [Serializable, NetSerializable]
-    public sealed class StopFiringMessage : ComponentMessage
+    public sealed class StopFiringMessage : EntitySystemMessage
     {
+        public EntityUid Uid { get; }
+        
         /// <summary>
         ///     We'll send the amount of shots we expected so the server can try to reconcile it.
         /// </summary>
         public ushort Shots { get; }
 
-        public StopFiringMessage(ushort shots)
+        public StopFiringMessage(EntityUid uid, ushort shots)
         {
+            Uid = uid;
             Shots = shots;
         }
     }
 
     [Serializable, NetSerializable]
-    public class RangedAngleMessage : ComponentMessage
+    public class RangedAngleMessage : EntitySystemMessage
     {
+        public EntityUid Uid { get; }
+        
         public Angle? Angle { get; }
 
-        public RangedAngleMessage(Angle? angle)
+        public RangedAngleMessage(EntityUid uid, Angle? angle)
         {
+            Uid = uid;
             Angle = angle;
         }
     }
@@ -114,11 +123,11 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         /// <summary>
         ///     Keep a running track of how many shots we've fired for single-shot (etc.) weapons.
         /// </summary>
-        protected ushort ShotCounter;
+        public ushort ShotCounter;
         
         // Shooting
         // So I guess we'll try syncing start and stop fire, as well as fire angles
-        public abstract bool Firing { get; set; }
+        public bool Firing { get; set; }
         
         /// <summary>
         ///     Filepath to MuzzleFlash texture
@@ -194,36 +203,6 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
             );
         }
 
-        public override void HandleNetworkMessage(ComponentMessage message, INetChannel netChannel, ICommonSession? session = null)
-        {
-            base.HandleNetworkMessage(message, netChannel, session);
-            if (session?.AttachedEntity != Shooter())
-            {
-                Logger.Warning("Cheat cheat");
-                return;
-            }
-            
-            switch (message)
-            {
-                case RangedAngleMessage msg:
-                    FireAngle = msg.Angle;
-                    break;
-                case StartFiringMessage msg:
-                    if (msg.FireAngle == null)
-                    {
-                        return;
-                    }
-                    Firing = true;
-                    FireAngle = msg.FireAngle;
-                    ShotCounter = 0;
-                    break;
-                case StopFiringMessage msg:
-                    Firing = false;
-                    ExpectedShots += msg.Shots;
-                    break;
-            }
-        }
-
         /// <summary>
         ///     Lord help me this is bad.
         /// </summary>
@@ -294,14 +273,14 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
                 NextFire = currentTime;
             }
             
-            if (currentTime < NextFire)
-            {
-                return true;
-            }
-            
             if (!CanFire(entity))
             {
                 return false;
+            }
+            
+            if (currentTime < NextFire)
+            {
+                return true;
             }
 
             ushort firedShots = 0;
@@ -515,6 +494,18 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
             }
 
             return true;
+        }
+    }
+
+    [Serializable, NetSerializable]
+    public sealed class RevolverSpinMessage : ComponentMessage
+    {
+        public ushort Slot { get; }
+        
+        public RevolverSpinMessage(ushort slot)
+        {
+            Slot = slot;
+            Directed = true;
         }
     }
 

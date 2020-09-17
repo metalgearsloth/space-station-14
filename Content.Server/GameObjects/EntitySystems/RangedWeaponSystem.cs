@@ -10,7 +10,9 @@ using Content.Shared.Physics;
 using JetBrains.Annotations;
 using Robust.Server.GameObjects.EntitySystems;
 using Robust.Server.Interfaces.GameObjects;
+using Robust.Server.Interfaces.Player;
 using Robust.Shared.Audio;
+using Robust.Shared.GameObjects;
 using Robust.Shared.GameObjects.Components;
 using Robust.Shared.GameObjects.EntitySystemMessages;
 using Robust.Shared.GameObjects.Systems;
@@ -20,6 +22,7 @@ using Robust.Shared.Interfaces.Timing;
 using Robust.Shared.IoC;
 using Robust.Shared.Log;
 using Robust.Shared.Maths;
+using Robust.Shared.Prototypes;
 using Robust.Shared.Random;
 using Robust.Shared.Utility;
 
@@ -39,9 +42,72 @@ namespace Content.Server.GameObjects.EntitySystems
         // SharedRangedWeapon -> SharedRevolver -> ServerRevolver
         // (needs to sync via system or component spaghetti)
 
+        [Dependency] private readonly IEntityManager _entityManager = default!;
+        [Dependency] private readonly IPrototypeManager _prototypeManager = default!;
         [Dependency] private readonly IRobustRandom _robustRandom = default!;
         [Dependency] private readonly IGameTiming _gameTiming = default!;
+
+        public override void Initialize()
+        {
+            base.Initialize();
+            SubscribeNetworkEvent<RangedAngleMessage>(HandleRangedAngleMessage);
+            SubscribeNetworkEvent<StartFiringMessage>(HandleStartFiringMessage);
+            SubscribeNetworkEvent<StopFiringMessage>(HandleStopFiringMessage);
+        }
+
+        private void HandleRangedAngleMessage(RangedAngleMessage message, EntitySessionEventArgs args)
+        {
+            var entity = _entityManager.GetEntity(message.Uid);
+            var weapon = entity.GetComponent<SharedRangedWeapon>();
+            var shooter = weapon.Shooter();
+
+            if (shooter != args.SenderSession.AttachedEntity)
+            {
+                // Cheater / lagger
+                return;
+            }
+
+            weapon.FireAngle = message.Angle;
+        }
         
+        private void HandleStartFiringMessage(StartFiringMessage message, EntitySessionEventArgs args)
+        {
+            if (message.FireAngle == null)
+            {
+                return;
+            }
+
+            var entity = _entityManager.GetEntity(message.Uid);
+            var weapon = entity.GetComponent<SharedRangedWeapon>();
+            var shooter = weapon.Shooter();
+
+            if (shooter != args.SenderSession.AttachedEntity)
+            {
+                // Cheater / lagger
+                return;
+            }
+
+            weapon.Firing = true;
+            weapon.FireAngle = message.FireAngle;
+            weapon.ShotCounter = 0;
+        }
+        
+        private void HandleStopFiringMessage(StopFiringMessage message, EntitySessionEventArgs args)
+        {
+            var entity = _entityManager.GetEntity(message.Uid);
+            var weapon = entity.GetComponent<SharedRangedWeapon>();
+            var shooter = weapon.Shooter();
+
+            if (shooter != args.SenderSession.AttachedEntity)
+            {
+                // Cheater / lagger
+                return;
+            }
+            
+            weapon.Firing = false;
+            weapon.ExpectedShots += message.Shots;
+        }
+
         public override void Update(float frameTime)
         {
             base.Update(frameTime);
@@ -70,7 +136,8 @@ namespace Content.Server.GameObjects.EntitySystems
             if (!weapon.TryFire(currentTime, shooter, weapon.FireAngle!.Value) || (!weapon.Firing && weapon.ExpectedShots <= weapon.AccumulatedShots))
             {
                 // TODO: If these are different need to reconcile with client.
-                weapon.AccumulatedShots -= weapon.ExpectedShots;
+                weapon.ExpectedShots -= weapon.ExpectedShots;
+                weapon.AccumulatedShots = 0;
 
                 if (weapon.ExpectedShots > 0)
                 {
@@ -198,9 +265,28 @@ namespace Content.Server.GameObjects.EntitySystems
             Get<EffectSystem>().CreateParticle(message, actorComponent?.playerSession);
         }
 
-        public override void EjectCasings()
+        public override void EjectCasing(IEntity user, IEntity casing, Direction[] ejectDirections = null)
         {
-            throw new NotImplementedException();
+            ejectDirections ??= new[] {Direction.East, Direction.North, Direction.South, Direction.West};
+
+            const float ejectOffset = 0.2f;
+            
+            var ammo = casing.GetComponent<SharedAmmoComponent>();
+            var offsetPos = (_robustRandom.NextFloat() * ejectOffset, _robustRandom.NextFloat() * ejectOffset);
+            casing.Transform.Coordinates = casing.Transform.Coordinates.Offset(offsetPos);
+            casing.Transform.LocalRotation = _robustRandom.Pick(ejectDirections).ToAngle();
+
+            if (ammo.SoundCollectionEject == null)
+            {
+                return;
+            }
+
+            var soundCollection = _prototypeManager.Index<SoundCollectionPrototype>(ammo.SoundCollectionEject);
+            var randomFile = _robustRandom.Pick(soundCollection.PickFiles);
+            user.TryGetComponent(out IActorComponent? actorComponent);
+            var excludedSession = actorComponent?.playerSession;
+            
+            Get<AudioSystem>().PlayFromEntity(randomFile, casing, AudioHelpers.WithVariation(0.2f, _robustRandom).WithVolume(-1), excludedSession: excludedSession);
         }
     }
 }

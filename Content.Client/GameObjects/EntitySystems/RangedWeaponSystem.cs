@@ -11,12 +11,14 @@ using Robust.Client.Interfaces.Input;
 using Robust.Client.Player;
 using Robust.Shared.Audio;
 using Robust.Shared.GameObjects.EntitySystemMessages;
+using Robust.Shared.GameObjects.Systems;
 using Robust.Shared.Input;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Interfaces.Random;
 using Robust.Shared.Interfaces.Timing;
 using Robust.Shared.IoC;
 using Robust.Shared.Maths;
+using Robust.Shared.Prototypes;
 using Robust.Shared.Random;
 
 namespace Content.Client.GameObjects.EntitySystems
@@ -28,6 +30,7 @@ namespace Content.Client.GameObjects.EntitySystems
         [Dependency] private readonly IEyeManager _eyeManager = default!;
         [Dependency] private readonly IInputManager _inputManager = default!;
         [Dependency] private readonly IGameTiming _gameTiming = default!;
+        [Dependency] private readonly IPrototypeManager _prototypeManager = default!;
         [Dependency] private readonly IRobustRandom _robustRandom = default!;
 
         private InputSystem _inputSystem = null!;
@@ -77,7 +80,8 @@ namespace Content.Client.GameObjects.EntitySystems
                 
                 if (_firingWeapon != null)
                 {
-                    _firingWeapon.Firing = false;
+                    StopFiring(_firingWeapon);
+                    _firingWeapon.ShotCounter = 0;
                     _firingWeapon = null;
                 }
                 return;
@@ -89,12 +93,12 @@ namespace Content.Client.GameObjects.EntitySystems
                 return;
             }
 
-            var currentFiringWeapon = _firingWeapon;
+            var lastFiringWeapon = _firingWeapon;
             _firingWeapon = GetRangedWeapon(player);
 
-            if (currentFiringWeapon != _firingWeapon && currentFiringWeapon != null)
+            if (lastFiringWeapon != _firingWeapon && lastFiringWeapon != null)
             {
-                currentFiringWeapon.Firing = false;
+                StopFiring(lastFiringWeapon);
             }
             
             if (_firingWeapon == null)
@@ -106,7 +110,7 @@ namespace Content.Client.GameObjects.EntitySystems
             if (!_lastFireResult)
             {
                 _firingWeapon.FireAngle = null;
-                _firingWeapon.Firing = false;
+                StopFiring(_firingWeapon);
                 return;
             }
             
@@ -115,9 +119,25 @@ namespace Content.Client.GameObjects.EntitySystems
             var angle = (mousePos.Position - player.Transform.MapPosition.Position).ToAngle();
             // Update server as well if necessary
             _firingWeapon.FireAngle = angle;
-            _firingWeapon.Firing = true;
 
             _lastFireResult = _firingWeapon.TryFire(currentTime, player, angle);
+            _firingWeapon.Firing = _lastFireResult;
+            
+            if (_firingWeapon.Firing)
+            {
+                RaiseNetworkEvent(new StartFiringMessage(_firingWeapon.Owner.Uid, _firingWeapon.FireAngle.Value));
+            }
+            else
+            {
+                StopFiring(_firingWeapon);
+            }
+        }
+        
+        private void StopFiring(SharedRangedWeapon weapon)
+        {
+            RaiseNetworkEvent(new StopFiringMessage(weapon.Owner.Uid, weapon.ShotCounter));
+            weapon.Firing = false;
+            // TODO: Stop precision mouse
         }
 
         public override void PlaySound(IEntity? user, IEntity weapon, string? sound, bool randomPitch = false)
@@ -149,9 +169,25 @@ namespace Content.Client.GameObjects.EntitySystems
             RaiseLocalEvent(message);
         }
 
-        public override void EjectCasings()
+        public override void EjectCasing(IEntity user, IEntity casing, Direction[] ejectDirections = null)
         {
-            throw new NotImplementedException();
+            ejectDirections ??= new[] {Direction.East, Direction.North, Direction.South, Direction.West};
+
+            const float ejectOffset = 0.2f;
+            
+            var ammo = casing.GetComponent<SharedAmmoComponent>();
+            var offsetPos = (_robustRandom.NextFloat() * ejectOffset, _robustRandom.NextFloat() * ejectOffset);
+            casing.Transform.Coordinates = casing.Transform.Coordinates.Offset(offsetPos);
+            casing.Transform.LocalRotation = _robustRandom.Pick(ejectDirections).ToAngle();
+
+            if (ammo.SoundCollectionEject == null)
+            {
+                return;
+            }
+
+            var soundCollection = _prototypeManager.Index<SoundCollectionPrototype>(ammo.SoundCollectionEject);
+            var randomFile = _robustRandom.Pick(soundCollection.PickFiles);
+            Get<AudioSystem>().Play(randomFile, casing, AudioHelpers.WithVariation(0.2f, _robustRandom).WithVolume(-1));
         }
     }
 }

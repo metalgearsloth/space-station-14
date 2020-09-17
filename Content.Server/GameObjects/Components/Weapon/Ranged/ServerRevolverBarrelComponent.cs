@@ -12,9 +12,11 @@ using Robust.Shared.GameObjects;
 using Robust.Shared.GameObjects.Systems;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Interfaces.GameObjects.Components;
+using Robust.Shared.Interfaces.Network;
 using Robust.Shared.Interfaces.Timing;
 using Robust.Shared.IoC;
 using Robust.Shared.Maths;
+using Robust.Shared.Players;
 using Robust.Shared.Serialization;
 using Robust.Shared.Utility;
 
@@ -24,18 +26,6 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
     [ComponentReference(typeof(SharedRangedWeapon))]
     public sealed class ServerRevolverBarrelComponent : SharedRevolverBarrelComponent, IServerRangedWeapon
     {
-
-        public override bool Firing
-        {
-            get => _firing;
-            set
-            {
-                _firing = value;
-            }
-        }
-        
-        private bool _firing;
-
         public override Angle? FireAngle { get; set; }
         
         private IEntity?[] _ammoSlots = null!;
@@ -53,6 +43,29 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                 cap => _ammoSlots = new IEntity[cap],
                 () => _ammoSlots.Length);
             serializer.DataField(ref FillPrototype, "fillPrototype", null);
+        }
+
+        public override void HandleNetworkMessage(ComponentMessage message, INetChannel netChannel, ICommonSession? session = null)
+        {
+            base.HandleNetworkMessage(message, netChannel, session);
+
+            IActorComponent? actorComponent = null;
+            var user = Shooter();
+            user?.TryGetComponent(out actorComponent);
+
+            if (user == null || session != actorComponent?.playerSession)
+            {
+                // Cheater / lagger?
+                return;
+            }
+
+            switch (message)
+            {
+                case RevolverSpinMessage msg:
+                    CurrentSlot = msg.Slot;
+                    EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(user, Owner, SoundSpin, true);
+                    break;
+            }
         }
 
         public override void Initialize()

@@ -1,6 +1,4 @@
-﻿using Content.Client.UserInterface.Stylesheets;
-using Content.Client.Utility;
-using Content.Shared.GameObjects;
+﻿using Content.Client.Utility;
 using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
 using Robust.Client.Graphics;
 using Robust.Client.UserInterface;
@@ -9,15 +7,13 @@ using Robust.Shared.GameObjects;
 using Robust.Shared.Maths;
 using Robust.Shared.ViewVariables;
 using System;
-using System.Collections.Generic;
-using System.Runtime.InteropServices.ComTypes;
-using System.Text;
 using Content.Client.GameObjects.Components.Mobs;
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using Content.Shared.GameObjects.EntitySystems;
 using Content.Shared.Interfaces;
 using Robust.Shared.GameObjects.Systems;
 using Robust.Shared.Interfaces.GameObjects;
+using Robust.Shared.Interfaces.Random;
 using Robust.Shared.Interfaces.Timing;
 using Robust.Shared.IoC;
 using Robust.Shared.Localization;
@@ -30,50 +26,8 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
     public class ClientRevolverBarrelComponent : SharedRevolverBarrelComponent, IItemStatus
     {
         // TODO: Need a way to make this common
-        public override bool Firing
-        {
-            get => _firing;
-            set
-            {
-                if (_firing == value)
-                {
-                    return;
-                }
 
-                _firing = value;
-
-                if (_firing)
-                {
-                    SendNetworkMessage(new StartFiringMessage(FireAngle!.Value));
-                }
-                else
-                {
-                    SendNetworkMessage(new StopFiringMessage(ShotCounter));
-                    ShotCounter = 0;
-                }
-            }
-        }
-        
-        private bool _firing;
-
-        public override Angle? FireAngle
-        {
-            get => _fireAngle;
-            set
-            {
-                if (_fireAngle == value)
-                {
-                    return;
-                }
-
-                _fireAngle = value;
-                if (Firing && _fireAngle != null)
-                {
-                    SendNetworkMessage(new RangedAngleMessage(_fireAngle));
-                }
-            }
-        }
-        private Angle? _fireAngle;
+        public override Angle? FireAngle { get; set; }
         
         private StatusControl _statusControl;
 
@@ -150,7 +104,6 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         {
             // TODO: Predict
             ushort count = 0;
-            var gunSystem = EntitySystem.Get<SharedRangedWeaponSystem>();
 
             for (var i = 0; i < Bullets.Length; i++)
             {
@@ -159,10 +112,10 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                 if (slot == null)
                     continue;
 
-                // TODO: Play SOUND
+                // TODO: Play SOUND. Once we have prediction and know what the ammo component is.
                 
                 count++;
-                slot = null;
+                Bullets[i] = null;
             }
 
             _statusControl?.Update();
@@ -194,6 +147,15 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             }
             
             return false;
+        }
+
+        // TODO: Copy from existing guns.
+        private void Spin()
+        {
+            CurrentSlot = (ushort) IoCManager.Resolve<IRobustRandom>().Next(Bullets.Length);
+            SendNetworkMessage(new RevolverSpinMessage(CurrentSlot));
+            // TODO: Predict sound
+            EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(null, Owner, SoundSpin, true);
         }
 
         // Item status etc.
@@ -276,13 +238,13 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                 var colorGoneB = Color.FromHex("#222222");
 
                 var altColor = false;
-                var scale = 1.3f;
+                const float scale = 1.3f;
 
                 for (var i = 0; i < _parent.Bullets.Length; i++)
                 {
-                    var bulletSpent = _parent.Bullets[i];
+                    var bulletSpent = !_parent.Bullets[i];
                     // Add a outline
-                    var box = new Control()
+                    var box = new Control
                     {
                         CustomMinimumSize = texture.Size * scale,
                     };
@@ -296,7 +258,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                         });
                     }
                     Color color;
-                    Texture bulletTexture = texture;
+                    var bulletTexture = texture;
 
                     if (bulletSpent.HasValue)
                     {
