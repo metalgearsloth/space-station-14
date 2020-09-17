@@ -9,6 +9,6 @@ namespace Content.Shared.GameObjects.EntitySystems
     {
         public abstract void PlaySound(IEntity? user, IEntity weapon, string? sound);
 
-        public abstract void MuzzleFlash(IEntity user, IEntity weapon, Angle angle);
+        public abstract void MuzzleFlash(IEntity? user, IEntity weapon, Angle? angle);
     }
 }

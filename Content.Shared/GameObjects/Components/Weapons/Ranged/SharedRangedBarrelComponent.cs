@@ -317,7 +317,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
                 return false;
             }
 
-            EntitySystem.Get<SharedRangedWeaponSystem>().MuzzleFlash(Shooter(), Owner, FireAngle.Value);
+            EntitySystem.Get<SharedRangedWeaponSystem>().MuzzleFlash(Shooter(), Owner, FireAngle);
             AccumulatedShots += firedShots;
             // SO server-side we essentially need to backtrack by n firedShots to work out what to shoot for each one
             // Client side we'll just play the effects and shit unless we get client-side entity prediction in.

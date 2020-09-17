@@ -16,6 +16,7 @@ using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Interfaces.Random;
 using Robust.Shared.Interfaces.Timing;
 using Robust.Shared.IoC;
+using Robust.Shared.Log;
 using Robust.Shared.Maths;
 using Robust.Shared.Utility;
 
@@ -65,8 +66,13 @@ namespace Content.Server.GameObjects.EntitySystems
             if (!weapon.TryFire(currentTime, shooter, weapon.FireAngle!.Value) || (!weapon.Firing && weapon.ExpectedShots <= weapon.AccumulatedShots))
             {
                 // TODO: If these are different need to reconcile with client.
-                weapon.ExpectedShots = 0;
-                weapon.AccumulatedShots = 0;
+                weapon.AccumulatedShots -= weapon.ExpectedShots;
+
+                if (weapon.ExpectedShots > 0)
+                {
+                    Logger.Warning("Desync shots fired");
+                    weapon.ExpectedShots = 0;
+                }
             }
         }
 
@@ -164,19 +170,14 @@ namespace Content.Server.GameObjects.EntitySystems
             }
         }
 
-        public override void MuzzleFlash(IEntity user, IEntity weapon, Angle angle)
+        public override void MuzzleFlash(IEntity? user, IEntity weapon, Angle? angle)
         {
             // TODO: Copy existing.
+            var message = new EffectSystemMessage();
+            IActorComponent? actorComponent = null;
+            user?.TryGetComponent(out actorComponent);
 
-            if (user != null && user.TryGetComponent(out IActorComponent? actorComponent))
-            {
-                Get<EffectSystem>().CreateParticle();
-            }
-            else
-            {
-                Get<EffectSystem>().CreateParticle();
-            }
-            // TODO: Predict and don't send to client reeeeeee
+            Get<EffectSystem>().CreateParticle(message, actorComponent?.playerSession);
         }
     }
 }

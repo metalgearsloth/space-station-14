@@ -123,10 +123,10 @@ namespace Content.Client.GameObjects.EntitySystems
             Get<AudioSystem>().Play(sound, weapon);
         }
 
-        public override void MuzzleFlash(IEntity user, IEntity weapon, Angle angle)
+        public override void MuzzleFlash(IEntity? user, IEntity weapon, Angle? angle)
         {
             var effect = new EffectSystemMessage();
-            Get<EffectSystem>().CreateParticle();
+            RaiseLocalEvent(effect);
         }
     }
 }
