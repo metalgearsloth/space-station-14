@@ -1,5 +1,7 @@
 ﻿#nullable enable
+using System;
 using Content.Client.GameObjects.Components.Items;
+using Content.Shared.Audio;
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using Content.Shared.GameObjects.EntitySystems;
 using Robust.Client.GameObjects;
@@ -7,12 +9,15 @@ using Robust.Client.GameObjects.EntitySystems;
 using Robust.Client.Interfaces.Graphics.ClientEye;
 using Robust.Client.Interfaces.Input;
 using Robust.Client.Player;
+using Robust.Shared.Audio;
 using Robust.Shared.GameObjects.EntitySystemMessages;
 using Robust.Shared.Input;
 using Robust.Shared.Interfaces.GameObjects;
+using Robust.Shared.Interfaces.Random;
 using Robust.Shared.Interfaces.Timing;
 using Robust.Shared.IoC;
 using Robust.Shared.Maths;
+using Robust.Shared.Random;
 
 namespace Content.Client.GameObjects.EntitySystems
 {
@@ -23,6 +28,7 @@ namespace Content.Client.GameObjects.EntitySystems
         [Dependency] private readonly IEyeManager _eyeManager = default!;
         [Dependency] private readonly IInputManager _inputManager = default!;
         [Dependency] private readonly IGameTiming _gameTiming = default!;
+        [Dependency] private readonly IRobustRandom _robustRandom = default!;
 
         private InputSystem _inputSystem = null!;
         private CombatModeSystem _combatModeSystem = null!;
@@ -107,26 +113,45 @@ namespace Content.Client.GameObjects.EntitySystems
             var currentTime = _gameTiming.CurTime;
             var mousePos = _eyeManager.ScreenToMap(_inputManager.MouseScreenPosition);
             var angle = (mousePos.Position - player.Transform.MapPosition.Position).ToAngle();
-
-            _lastFireResult = _firingWeapon.TryFire(currentTime, player, angle);
-
             // Update server as well if necessary
             _firingWeapon.FireAngle = angle;
             _firingWeapon.Firing = true;
+
+            _lastFireResult = _firingWeapon.TryFire(currentTime, player, angle);
         }
 
-        public override void PlaySound(IEntity? user, IEntity weapon, string? sound)
+        public override void PlaySound(IEntity? user, IEntity weapon, string? sound, bool randomPitch = false)
         {
             if (sound == null)
                 return;
 
-            Get<AudioSystem>().Play(sound, weapon);
+            Get<AudioSystem>().Play(sound, weapon, AudioHelpers.WithVariation(0.2f, _robustRandom));
         }
 
-        public override void MuzzleFlash(IEntity? user, IEntity weapon, Angle? angle)
+        public override void MuzzleFlash(IEntity? user, IEntity weapon, string texture, Angle angle)
         {
-            var effect = new EffectSystemMessage();
-            RaiseLocalEvent(effect);
+            var offset = angle.ToVec().Normalized / 2;
+
+            var message = new EffectSystemMessage
+            {
+                EffectSprite = texture,
+                Born = _gameTiming.CurTime,
+                DeathTime = _gameTiming.CurTime + TimeSpan.FromSeconds(0.2),
+                AttachedEntityUid = weapon.Uid,
+                AttachedOffset = offset,
+                //Rotated from east facing
+                Rotation = (float) angle.Theta,
+                Color = Vector4.Multiply(new Vector4(255, 255, 255, 750), Vector4.One),
+                ColorDelta = new Vector4(0, 0, 0, -1500f),
+                Shaded = false
+            };
+
+            RaiseLocalEvent(message);
+        }
+
+        public override void EjectCasings()
+        {
+            throw new NotImplementedException();
         }
     }
 }

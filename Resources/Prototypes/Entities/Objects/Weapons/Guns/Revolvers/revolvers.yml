@@ -65,7 +65,7 @@
   - type: Item
     size: 24
     sprite: Objects/Weapons/Guns/Revolvers/inspector.rsi
-  - type: RevolverWeapon
+  - type: RevolverBarrel
     currentSelector: Single
     allSelectors:
     - Single
@@ -73,6 +73,7 @@
     fillPrototype: CartridgeMagnum
     caliber: Magnum
     capacity: 7
+    muzzleFlash: Objects/Weapons/Guns/Projectiles/bullet_muzzle.png
     soundEmpty: /Audio/Weapons/Guns/Empty/empty.ogg
     soundGunshot: /Audio/Weapons/Guns/Gunshots/revolver.ogg
     soundEject: /Audio/Weapons/Guns/MagOut/revolver_magout.ogg

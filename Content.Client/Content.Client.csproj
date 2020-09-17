@@ -23,6 +23,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Remove="GameObjects\Components\Weapons\Ranged\Barrels\ClientRangedBarrelComponent.cs" />
+    <Compile Remove="GameObjects\Components\Weapons\Ranged\ClientRevolver.cs" />
   </ItemGroup>
   <Import Project="..\RobustToolbox\MSBuild\Robust.Engine.targets" />
   <Target Name="ContentAfterBuild" DependsOnTargets="ClientAfterBuild" AfterTargets="Build" />

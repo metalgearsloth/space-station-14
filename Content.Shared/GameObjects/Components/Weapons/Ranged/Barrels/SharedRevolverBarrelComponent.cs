@@ -9,13 +9,13 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
     [Serializable, NetSerializable]
     public class RevolverBarrelComponentState : ComponentState
     {
-        public int CurrentSlot { get; }
+        public ushort CurrentSlot { get; }
         public FireRateSelector FireRateSelector { get; }
         public bool?[] Bullets { get; }
         public string SoundGunshot { get; }
 
         public RevolverBarrelComponentState(
-            int currentSlot,
+            ushort currentSlot,
             FireRateSelector fireRateSelector,
             bool?[] bullets,
             string soundGunshot) :

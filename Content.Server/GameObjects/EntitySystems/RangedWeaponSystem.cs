@@ -3,12 +3,14 @@ using System;
 using System.Collections.Generic;
 using Content.Server.GameObjects.Components.Projectiles;
 using Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition;
+using Content.Shared.Audio;
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using Content.Shared.GameObjects.EntitySystems;
 using Content.Shared.Physics;
 using JetBrains.Annotations;
 using Robust.Server.GameObjects.EntitySystems;
 using Robust.Server.Interfaces.GameObjects;
+using Robust.Shared.Audio;
 using Robust.Shared.GameObjects.Components;
 using Robust.Shared.GameObjects.EntitySystemMessages;
 using Robust.Shared.GameObjects.Systems;
@@ -18,6 +20,7 @@ using Robust.Shared.Interfaces.Timing;
 using Robust.Shared.IoC;
 using Robust.Shared.Log;
 using Robust.Shared.Maths;
+using Robust.Shared.Random;
 using Robust.Shared.Utility;
 
 namespace Content.Server.GameObjects.EntitySystems
@@ -37,7 +40,8 @@ namespace Content.Server.GameObjects.EntitySystems
         // (needs to sync via system or component spaghetti)
 
         [Dependency] private readonly IRobustRandom _robustRandom = default!;
-
+        [Dependency] private readonly IGameTiming _gameTiming = default!;
+        
         public override void Update(float frameTime)
         {
             base.Update(frameTime);
@@ -155,29 +159,48 @@ namespace Content.Server.GameObjects.EntitySystems
             return linspace;
         }
         
-        public override void PlaySound(IEntity? user, IEntity weapon, string? sound)
+        public override void PlaySound(IEntity? user, IEntity weapon, string? sound, bool randomPitch = false)
         {
             if (sound == null)
                 return;
 
             if (user != null && user.TryGetComponent(out IActorComponent? actorComponent))
             {
-                Get<AudioSystem>().PlayFromEntity(sound, weapon, excludedSession: actorComponent.playerSession);
+                Get<AudioSystem>().PlayFromEntity(sound, weapon, excludedSession: actorComponent.playerSession, audioParams: AudioParams.Default.WithPitchScale(_robustRandom.NextFloat() / 2 + 0.6f));
             }
             else
             {
-                Get<AudioSystem>().PlayFromEntity(sound, weapon);
+                Get<AudioSystem>().PlayFromEntity(sound, weapon, AudioHelpers.WithVariation(0.2f, _robustRandom));
             }
         }
 
-        public override void MuzzleFlash(IEntity? user, IEntity weapon, Angle? angle)
+        public override void MuzzleFlash(IEntity? user, IEntity weapon, string texture, Angle angle)
         {
-            // TODO: Copy existing.
-            var message = new EffectSystemMessage();
             IActorComponent? actorComponent = null;
             user?.TryGetComponent(out actorComponent);
+            
+            var offset = angle.ToVec().Normalized / 2;
 
+            var message = new EffectSystemMessage
+            {
+                EffectSprite = texture,
+                Born = _gameTiming.CurTime,
+                DeathTime = _gameTiming.CurTime + TimeSpan.FromSeconds(0.2),
+                AttachedEntityUid = weapon.Uid,
+                AttachedOffset = offset,
+                //Rotated from east facing
+                Rotation = (float) angle.Theta,
+                Color = Vector4.Multiply(new Vector4(255, 255, 255, 750), Vector4.One),
+                ColorDelta = new Vector4(0, 0, 0, -1500f),
+                Shaded = false
+            };
+            
             Get<EffectSystem>().CreateParticle(message, actorComponent?.playerSession);
+        }
+
+        public override void EjectCasings()
+        {
+            throw new NotImplementedException();
         }
     }
 }

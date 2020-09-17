@@ -22,7 +22,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
 {
     [RegisterComponent]
     [ComponentReference(typeof(SharedRangedWeapon))]
-    public sealed class ServerRevolver : SharedRevolverBarrelComponent, IServerRangedWeapon
+    public sealed class ServerRevolverBarrelComponent : SharedRevolverBarrelComponent, IServerRangedWeapon
     {
 
         public override bool Firing
@@ -58,7 +58,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
         public override void Initialize()
         {
             base.Initialize();
-            AmmoContainer = ContainerManagerComponent.Ensure<ContainerSlot>("weapon-ammo", Owner, out var existing);
+            AmmoContainer = ContainerManagerComponent.Ensure<Container>("weapon-ammo", Owner, out var existing);
 
             if (existing)
             {

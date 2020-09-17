@@ -119,6 +119,11 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         // Shooting
         // So I guess we'll try syncing start and stop fire, as well as fire angles
         public abstract bool Firing { get; set; }
+        
+        /// <summary>
+        ///     Filepath to MuzzleFlash texture
+        /// </summary>
+        public string? MuzzleFlash { get; set; }
 
         /// <summary>
         ///     The angle the shooter selected to fire at.
@@ -166,6 +171,12 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
 
                     return result;
                 });
+            
+            serializer.DataReadWriteFunction(
+                "muzzleFlash",
+                null,
+                value => MuzzleFlash = value,
+                () => MuzzleFlash);
             
             // Sounds
             serializer.DataReadWriteFunction(
@@ -317,7 +328,11 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
                 return false;
             }
 
-            EntitySystem.Get<SharedRangedWeaponSystem>().MuzzleFlash(Shooter(), Owner, FireAngle);
+            if (MuzzleFlash != null && FireAngle != null)
+            {
+                EntitySystem.Get<SharedRangedWeaponSystem>().MuzzleFlash(Shooter(), Owner, MuzzleFlash, FireAngle.Value);
+            }
+            
             AccumulatedShots += firedShots;
             // SO server-side we essentially need to backtrack by n firedShots to work out what to shoot for each one
             // Client side we'll just play the effects and shit unless we get client-side entity prediction in.
@@ -505,8 +520,8 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
 
     public abstract class SharedRevolverBarrelComponent : SharedRangedWeapon
     {
-        public override string Name => "RevolverWeapon";
-        public override uint? NetID => ContentNetIDs.MAGAZINE_BARREL;
+        public override string Name => "RevolverBarrel";
+        public override uint? NetID => ContentNetIDs.REVOLVER_BARREL;
 
         protected BallisticCaliber Caliber;
         
