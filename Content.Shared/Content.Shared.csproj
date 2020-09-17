@@ -33,5 +33,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Remove="GameObjects\Components\Weapons\Ranged\SharedRangedWeaponComponent.cs" />
+    <Compile Remove="GameObjects\Components\Weapons\Ranged\Barrels\SharedPumpBarrelComponent.cs" />
   </ItemGroup>
 </Project>

@@ -27,14 +27,16 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 
         public bool? ChamberContainer { get; private set; }
 
-        public Stack<bool?> AmmoContainer { get; private set; } = new Stack<bool?>();
+        public Stack<bool> AmmoContainer { get; private set; } = new Stack<bool>();
         
-        private Queue<bool?> _toFireAmmo = new Queue<bool?>();
+        private Queue<bool> _toFireAmmo = new Queue<bool>();
 
         public override void Initialize()
         {
             base.Initialize();
             _statusControl?.Update();
+            // TODO: TEMPORARY BEFORE PREDICTIONS
+            UnspawnedCount = 0;
         }
 
         protected override bool TryTakeAmmo()
@@ -46,7 +48,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             
             if (ChamberContainer != null)
             {
-                _toFireAmmo.Enqueue(ChamberContainer);
+                _toFireAmmo.Enqueue(ChamberContainer.Value);
                 if (!ManualCycle)
                 {
                     Cycle();
@@ -64,10 +66,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         {
             while (_toFireAmmo.Count > 0)
             {
-                var ammo = _toFireAmmo.Dequeue();
-
-                if (ammo == null)
-                    continue;
+                _toFireAmmo.Dequeue();
 
                 EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(Shooter(), Owner, SoundGunshot);
             }
@@ -75,6 +74,9 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         
         protected override void Cycle(bool manual = false)
         {
+            // Doesn't work coz no interact prediction
+            return;
+            
             if (ChamberContainer != null)
             {
                 if (AmmoContainer.TryPop(out var ammo))
@@ -100,8 +102,13 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             }
         }
 
+        // TODO: Need interaction prediction AHHHHHHHHHHHHHHHHHHHH
+        
+        // I know I know no deadcode but I need interaction predictions
         public override bool TryInsertBullet(InteractUsingEventArgs eventArgs)
         {
+            return true;
+            
             if (!eventArgs.Using.TryGetComponent(out SharedAmmoComponent ammoComponent))
             {
                 return false;
@@ -129,6 +136,8 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                 return;
 
             ChamberContainer = cast.Chamber;
+            AmmoContainer = cast.Ammo;
+            Capacity = cast.Capacity;
             _statusControl?.Update();
         }
 

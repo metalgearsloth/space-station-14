@@ -68,6 +68,25 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             {
                 // TODO: Log
             }
+            
+            Dirty();
+        }
+
+        public override ComponentState GetComponentState()
+        {
+            var chamber = !_chamberContainer.ContainedEntity?.GetComponent<SharedAmmoComponent>().Spent;
+            var ammo = new Stack<bool>();
+            foreach (var entity in _spawnedAmmo)
+            {
+                ammo.Push(!entity.GetComponent<SharedAmmoComponent>().Spent);
+            }
+
+            for (var i = 0; i < UnspawnedCount; i++)
+            {
+                ammo.Push(true);
+            }
+            
+            return new PumpBarrelComponentState(chamber, Selector, Capacity, ammo);
         }
 
         protected override bool TryTakeAmmo()
@@ -81,7 +100,6 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             if (chamberEntity != null)
             {
                 _toFireAmmo.Enqueue(chamberEntity);
-                _chamberContainer.Remove(chamberEntity);
                 if (!ManualCycle)
                 {
                     Cycle();
@@ -125,6 +143,9 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                     EntitySystem.Get<AudioSystem>().PlayAtCoords(SoundCycle, Owner.Transform.Coordinates, AudioParams.Default.WithVolume(-2));
                 }
             }
+            
+            // TODO: When interaction predictions are in remove this.
+            Dirty();
         }
 
         public override bool TryInsertBullet(InteractUsingEventArgs eventArgs)
@@ -149,6 +170,9 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                 {
                     EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(eventArgs.User, Owner, SoundInsert);
                 }
+                
+                // TODO: when interaction predictions are in remove this.
+                Dirty();
                 return true;
             }
 

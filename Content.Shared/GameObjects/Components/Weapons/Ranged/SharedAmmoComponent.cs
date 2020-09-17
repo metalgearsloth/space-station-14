@@ -14,33 +14,13 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
     public abstract class SharedAmmoComponent : Component
     {
         public override string Name => "Ammo";
-        
+
+        public override uint? NetID => ContentNetIDs.AMMO;
+
         [ViewVariables]
         public BallisticCaliber Caliber { get; private set; }
 
-        public bool Spent
-        {
-            get => _spent;
-            set
-            {
-                if (_spent == value)
-                {
-                    return;
-                }
-
-                _spent = value;
-
-                if (_spent)
-                {
-                    if (Caseless)
-                    {
-                        Owner.Delete();
-                        return;
-                    }
-                }
-            }
-        }
-        private bool _spent;
+        public virtual bool Spent { get; set; }
 
         public bool AmmoIsProjectile => _ammoIsProjectile;
         
@@ -155,6 +135,17 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
             }
 
             return true;
+        }
+    }
+
+    [Serializable, NetSerializable]
+    public sealed class AmmoComponentState : ComponentState
+    {
+        public bool Spent { get; }
+
+        public AmmoComponentState(bool spent) : base(ContentNetIDs.AMMO)
+        {
+            Spent = spent;
         }
     }
 }

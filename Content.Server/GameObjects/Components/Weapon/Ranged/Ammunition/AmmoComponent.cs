@@ -7,5 +7,35 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition
     [ComponentReference(typeof(SharedAmmoComponent))]
     internal sealed class AmmoComponent : SharedAmmoComponent
     {
+        public override bool Spent
+        {
+            get => _spent;
+            set
+            {
+                if (_spent == value)
+                {
+                    return;
+                }
+
+                _spent = value;
+
+                if (_spent)
+                {
+                    if (Caseless)
+                    {
+                        Owner.Delete();
+                        return;
+                    }
+                }
+                
+                Dirty();
+            }
+        }
+        private bool _spent;
+
+        public override ComponentState GetComponentState()
+        {
+            return new AmmoComponentState(Spent);
+        }
     }
 }

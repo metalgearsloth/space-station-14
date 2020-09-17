@@ -1,5 +1,8 @@
+using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Content.Shared.Interfaces.GameObjects.Components;
+using Robust.Shared.GameObjects;
 using Robust.Shared.Serialization;
 using Robust.Shared.ViewVariables;
 
@@ -10,7 +13,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         public override string Name => "PumpBarrel";
         public override uint? NetID => ContentNetIDs.PUMP_BARREL;
 
-        public ushort Capacity { get; private set; }
+        public ushort Capacity { get; protected set; }
 
         // Even a point having a chamber? I guess it makes some of the below code cleaner
 
@@ -59,6 +62,30 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         public override async Task<bool> InteractUsing(InteractUsingEventArgs eventArgs)
         {
             return TryInsertBullet(eventArgs);
+        }
+    }
+    
+    [Serializable, NetSerializable]
+    public class PumpBarrelComponentState : ComponentState
+    {
+        public bool? Chamber { get; }
+        public FireRateSelector FireRateSelector { get; }
+        
+        public ushort Capacity { get; }
+        
+        public Stack<bool> Ammo { get; }
+
+        public PumpBarrelComponentState(
+            bool? chamber,
+            FireRateSelector fireRateSelector,
+            ushort capacity,
+            Stack<bool> ammo) :
+            base(ContentNetIDs.PUMP_BARREL)
+        {
+            Chamber = chamber;
+            FireRateSelector = fireRateSelector;
+            Capacity = capacity;
+            Ammo = ammo;
         }
     }
 }
