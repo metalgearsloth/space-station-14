@@ -31,4 +31,7 @@
     <Folder Include="GameObjects\Components\Visualizers" />
     <Folder Include="GameObjects\Components\Weapons\Ranged\Ammunition" />
   </ItemGroup>
+  <ItemGroup>
+    <Compile Remove="GameObjects\Components\Weapons\Ranged\SharedRangedWeaponComponent.cs" />
+  </ItemGroup>
 </Project>

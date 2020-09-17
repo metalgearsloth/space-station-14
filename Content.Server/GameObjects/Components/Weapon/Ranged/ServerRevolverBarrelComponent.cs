@@ -23,8 +23,8 @@ using Robust.Shared.Utility;
 namespace Content.Server.GameObjects.Components.Weapon.Ranged
 {
     [RegisterComponent]
-    [ComponentReference(typeof(SharedRangedWeapon))]
-    public sealed class ServerRevolverBarrelComponent : SharedRevolverBarrelComponent, IServerRangedWeapon
+    [ComponentReference(typeof(SharedRangedWeaponComponent))]
+    public sealed class ServerRevolverBarrelComponent : SharedRevolverBarrelComponent
     {
         public override Angle? FireAngle { get; set; }
         

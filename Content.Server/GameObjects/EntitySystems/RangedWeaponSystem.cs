@@ -58,7 +58,7 @@ namespace Content.Server.GameObjects.EntitySystems
         private void HandleRangedAngleMessage(RangedAngleMessage message, EntitySessionEventArgs args)
         {
             var entity = _entityManager.GetEntity(message.Uid);
-            var weapon = entity.GetComponent<SharedRangedWeapon>();
+            var weapon = entity.GetComponent<SharedRangedWeaponComponent>();
             var shooter = weapon.Shooter();
 
             if (shooter != args.SenderSession.AttachedEntity)
@@ -78,7 +78,7 @@ namespace Content.Server.GameObjects.EntitySystems
             }
 
             var entity = _entityManager.GetEntity(message.Uid);
-            var weapon = entity.GetComponent<SharedRangedWeapon>();
+            var weapon = entity.GetComponent<SharedRangedWeaponComponent>();
             var shooter = weapon.Shooter();
 
             if (shooter != args.SenderSession.AttachedEntity)
@@ -95,7 +95,7 @@ namespace Content.Server.GameObjects.EntitySystems
         private void HandleStopFiringMessage(StopFiringMessage message, EntitySessionEventArgs args)
         {
             var entity = _entityManager.GetEntity(message.Uid);
-            var weapon = entity.GetComponent<SharedRangedWeapon>();
+            var weapon = entity.GetComponent<SharedRangedWeaponComponent>();
             var shooter = weapon.Shooter();
 
             if (shooter != args.SenderSession.AttachedEntity)
@@ -113,36 +113,36 @@ namespace Content.Server.GameObjects.EntitySystems
             base.Update(frameTime);
             var currentTime = IoCManager.Resolve<IGameTiming>().CurTime;
             
-            foreach (var comp in ComponentManager.EntityQuery<SharedRangedWeapon>())
+            foreach (var comp in ComponentManager.EntityQuery<SharedRangedWeaponComponent>())
             {
                 Update(comp, currentTime);
             }
         }
 
-        private void Update(SharedRangedWeapon weapon, TimeSpan currentTime)
+        private void Update(SharedRangedWeaponComponent weaponComponent, TimeSpan currentTime)
         {
-            if (weapon.FireAngle == null || (!weapon.Firing && weapon.ExpectedShots == 0))
+            if (weaponComponent.FireAngle == null || (!weaponComponent.Firing && weaponComponent.ExpectedShots == 0))
             {
                 return;
             }
 
             // TODO: Shitcode
-            var shooter = weapon.Shooter();
+            var shooter = weaponComponent.Shooter();
             if (shooter == null)
             {
                 return;
             }
 
-            if (!weapon.TryFire(currentTime, shooter, weapon.FireAngle!.Value) || (!weapon.Firing && weapon.ExpectedShots <= weapon.AccumulatedShots))
+            if (!weaponComponent.TryFire(currentTime, shooter, weaponComponent.FireAngle!.Value) || (!weaponComponent.Firing && weaponComponent.ExpectedShots <= weaponComponent.AccumulatedShots))
             {
                 // TODO: If these are different need to reconcile with client.
-                weapon.ExpectedShots -= weapon.ExpectedShots;
-                weapon.AccumulatedShots = 0;
+                weaponComponent.ExpectedShots -= weaponComponent.ExpectedShots;
+                weaponComponent.AccumulatedShots = 0;
 
-                if (weapon.ExpectedShots > 0)
+                if (weaponComponent.ExpectedShots > 0)
                 {
                     Logger.Warning("Desync shots fired");
-                    weapon.ExpectedShots = 0;
+                    weaponComponent.ExpectedShots = 0;
                 }
             }
         }

@@ -35,7 +35,7 @@ namespace Content.Client.GameObjects.EntitySystems
 
         private InputSystem _inputSystem = null!;
         private CombatModeSystem _combatModeSystem = null!;
-        private SharedRangedWeapon? _firingWeapon = null;
+        private SharedRangedWeaponComponent? _firingWeapon = null;
         private bool _lastFireResult = true;
 
         public override void Initialize()
@@ -47,7 +47,7 @@ namespace Content.Client.GameObjects.EntitySystems
             _combatModeSystem = EntitySystemManager.GetEntitySystem<CombatModeSystem>();
         }
 
-        private SharedRangedWeapon? GetRangedWeapon(IEntity entity)
+        private SharedRangedWeaponComponent? GetRangedWeapon(IEntity entity)
         {
             if (!entity.TryGetComponent(out HandsComponent? hands))
             {
@@ -55,7 +55,7 @@ namespace Content.Client.GameObjects.EntitySystems
             }
 
             var held = hands.ActiveHand;
-            if (held == null || !held.TryGetComponent(out SharedRangedWeapon? weapon))
+            if (held == null || !held.TryGetComponent(out SharedRangedWeaponComponent? weapon))
             {
                 return null;
             }
@@ -133,10 +133,10 @@ namespace Content.Client.GameObjects.EntitySystems
             }
         }
         
-        private void StopFiring(SharedRangedWeapon weapon)
+        private void StopFiring(SharedRangedWeaponComponent weaponComponent)
         {
-            RaiseNetworkEvent(new StopFiringMessage(weapon.Owner.Uid, weapon.ShotCounter));
-            weapon.Firing = false;
+            RaiseNetworkEvent(new StopFiringMessage(weaponComponent.Owner.Uid, weaponComponent.ShotCounter));
+            weaponComponent.Firing = false;
             // TODO: Stop precision mouse
         }
 

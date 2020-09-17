@@ -23,7 +23,7 @@ using Robust.Shared.Serialization;
 namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 {
     [RegisterComponent]
-    [ComponentReference(typeof(SharedRangedWeapon))]
+    [ComponentReference(typeof(SharedRangedWeaponComponent))]
     public class ClientRevolverBarrelComponent : SharedRevolverBarrelComponent, IItemStatus
     {
         // TODO: Need a way to make this common
