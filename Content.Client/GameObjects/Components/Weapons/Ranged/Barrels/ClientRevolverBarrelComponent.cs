@@ -26,10 +26,6 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
     [ComponentReference(typeof(SharedRangedWeaponComponent))]
     public class ClientRevolverBarrelComponent : SharedRevolverBarrelComponent, IItemStatus
     {
-        // TODO: Need a way to make this common
-
-        public Angle? FireAngle { get; set; }
-        
         private StatusControl _statusControl;
 
         /// <summary>
@@ -101,10 +97,9 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             }
         }
 
-        protected override ushort EjectAllSlots()
+        protected override void EjectAllSlots()
         {
-            // TODO: Predict
-            ushort count = 0;
+            // TODO: Does nothing because interactions aren't predicted
 
             for (var i = 0; i < Bullets.Length; i++)
             {
@@ -114,17 +109,18 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                     continue;
 
                 // TODO: Play SOUND. Once we have prediction and know what the ammo component is.
-                
-                count++;
+
                 Bullets[i] = null;
             }
 
             _statusControl?.Update();
-            return count;
+            return;
         }
 
         protected override bool TryInsertBullet(IEntity user, SharedAmmoComponent ammoComponent)
         {
+            // TODO: Interaction prediction
+            return true;
             if (!base.TryInsertBullet(user, ammoComponent))
             {
                 Owner.PopupMessage(user, Loc.GetString("Wrong caliber"));

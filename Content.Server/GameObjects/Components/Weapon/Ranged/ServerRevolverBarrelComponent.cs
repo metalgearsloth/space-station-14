@@ -3,6 +3,7 @@ using System;
 using Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition;
 using Content.Server.GameObjects.EntitySystems;
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
+using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
 using Content.Shared.GameObjects.EntitySystems;
 using Robust.Server.GameObjects.Components.Container;
 using Robust.Server.GameObjects.EntitySystems;
@@ -64,6 +65,17 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                     EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(user, Owner, SoundSpin, true);
                     break;
             }
+        }
+
+        public override ComponentState GetComponentState()
+        {
+            var bullets = new bool?[_ammoSlots.Length];
+            for (var i = 0; i < _ammoSlots.Length; i++)
+            {
+                bullets[i] = !_ammoSlots[i]?.GetComponent<SharedAmmoComponent>().Spent;
+            }
+            
+            return new RevolverBarrelComponentState(CurrentSlot, Selector, bullets, SoundGunshot);
         }
 
         public override void Initialize()
@@ -150,28 +162,44 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             }
         }
 
-        protected override ushort EjectAllSlots()
+        protected override void EjectAllSlots()
         {
-            ushort dumped = 0;
+            var gunSystem = EntitySystem.Get<SharedRangedWeaponSystem>();
+            // How many times we can play the sound
+            const ushort soundCap = 3;
+            ushort soundCount = 0;
             
             for (var i = 0; i < Capacity; i++)
             {
                 var entity = _ammoSlots[i];
                 if (entity == null)
                 {
-                    continue;
+                    if (UnspawnedCount > 0)
+                    {
+                        entity = Owner.EntityManager.SpawnEntity(FillPrototype, Owner.Transform.MapPosition);
+                        UnspawnedCount--;
+                    }
+                    else
+                    {
+                        continue;
+                    }
                 }
-
-                AmmoContainer.Remove(entity);
-                // TODO: MANAGER EjectCasing(entity);
-                NextFire = IoCManager.Resolve<IGameTiming>().CurTime;
+                else
+                {
+                    AmmoContainer.Remove(entity);
+                }
+                
+                // TODO: Set to user when prediction is in
                 _ammoSlots[i] = null;
-                dumped++;
+
+                gunSystem.EjectCasing(null, entity, soundCount < soundCap);
+                soundCount++;
             }
 
             // May as well point back at the end?
             CurrentSlot = (ushort) (_ammoSlots.Length - 1);
-            return dumped;
+            Dirty();
+            return;
         }
 
         protected override bool TryInsertBullet(IEntity user, SharedAmmoComponent ammoComponent)
@@ -191,6 +219,9 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                     _ammoSlots[i] = ammoComponent.Owner;
                     AmmoContainer.Insert(ammoComponent.Owner);
                     NextFire = IoCManager.Resolve<IGameTiming>().CurTime;
+                    EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(null, Owner, SoundInsert, true);
+                    // Won't need dirty once prediction is in, place we can pass in the actual user above.
+                    Dirty();
                     return true;
                 }
             }

@@ -11,6 +11,6 @@ namespace Content.Shared.GameObjects.EntitySystems
 
         public abstract void MuzzleFlash(IEntity? user, IEntity weapon, string texture, Angle angle);
 
-        public abstract void EjectCasing(IEntity? entity, IEntity casing, Direction[] ejectDirections = null);
+        public abstract void EjectCasing(IEntity? entity, IEntity casing, bool playSound = true, Direction[] ejectDirections = null);
     }
 }

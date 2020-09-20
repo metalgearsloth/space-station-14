@@ -1,3 +1,4 @@
+#nullable enable
 using System;
 using System.Threading.Tasks;
 using Content.Shared.Interfaces.GameObjects.Components;
@@ -58,7 +59,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         ///     Dumps all cartridges onto the ground.
         /// </summary>
         /// <returns>The number of cartridges ejected</returns>
-        protected abstract ushort EjectAllSlots();
+        protected abstract void EjectAllSlots();
 
         protected virtual bool TryInsertBullet(IEntity user, SharedAmmoComponent ammoComponent)
         {
@@ -70,7 +71,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         
         public override async Task<bool> InteractUsing(InteractUsingEventArgs eventArgs)
         {
-            if (!eventArgs.Target.TryGetComponent(out SharedAmmoComponent? ammoComponent))
+            if (!eventArgs.Using.TryGetComponent(out SharedAmmoComponent? ammoComponent))
             {
                 return false;
             }
