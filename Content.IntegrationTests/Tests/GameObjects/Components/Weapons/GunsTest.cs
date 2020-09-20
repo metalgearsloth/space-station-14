@@ -9,7 +9,7 @@ using Robust.Shared.Interfaces.Resources;
 using Robust.Shared.Map;
 using Robust.Shared.Prototypes;
 
-namespace Content.IntegrationTests.Tests
+namespace Content.IntegrationTests.Tests.GameObjects.Components.Weapons
 {
     [TestFixture]
     public sealed class GunsTest : ContentIntegrationTest
@@ -29,13 +29,13 @@ namespace Content.IntegrationTests.Tests
 
             server.Assert(() =>
             {
-                mapManager.CreateMap(new MapId(1));
+                var mapId = mapManager.CreateMap(new MapId(1));
                 
                 foreach (var proto in protoManager.EnumeratePrototypes<EntityPrototype>())
                 {
                     if (proto.Components.ContainsKey("BoltActionBarrel"))
                     {
-                        var entity = entityManager.SpawnEntity(proto.ID, mapManager.GetMapEntity(new MapId(1)).Transform.MapPosition);
+                        var entity = entityManager.SpawnEntity(proto.ID, mapManager.GetMapEntity(mapId).Transform.MapPosition);
 
                         if (!entity.TryGetComponent(out ServerBoltActionBarrelComponent? boltAction))
                             continue;
