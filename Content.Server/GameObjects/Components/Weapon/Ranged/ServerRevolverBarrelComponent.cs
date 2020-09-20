@@ -149,16 +149,17 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             for (var i = 0; i < shotCount; i++)
             {
                 slot = (ushort) (slot == 0 ? _ammoSlots.Length - 1 : slot - 1);
-                var ammo = _ammoSlots[slot];
+                var entity = _ammoSlots[slot];
 
-                if (ammo == null)
+                if (entity == null)
                     continue;
                 
-                var ammoComp = ammo.GetComponent<AmmoComponent>();
+                var ammo = entity.GetComponent<AmmoComponent>();
+                var sound = ammo.Spent ? SoundEmpty : SoundGunshot;
 
-                EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(Shooter(), Owner, SoundGunshot);
-                EntitySystem.Get<RangedWeaponSystem>().Shoot(Shooter(), direction, ammoComp);
-                ammoComp.Spent = true;
+                EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(Shooter(), Owner, sound);
+                EntitySystem.Get<RangedWeaponSystem>().Shoot(Shooter(), direction, ammo);
+                ammo.Spent = true;
             }
         }
 

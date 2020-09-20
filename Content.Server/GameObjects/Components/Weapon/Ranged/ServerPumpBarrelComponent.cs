@@ -190,6 +190,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                 if (ammo == null)
                     continue;
 
+                // TODO: This should be removed elsewhere
                 if (_ammoContainer.Contains(ammo))
                     _ammoContainer.Remove(ammo);
                 

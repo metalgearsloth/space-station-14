@@ -1,49 +1,225 @@
-﻿using Content.Client.UserInterface.Stylesheets;
+﻿#nullable enable
+using Content.Client.UserInterface.Stylesheets;
 using Content.Client.Utility;
-using Content.Shared.GameObjects;
 using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
 using Robust.Client.Graphics;
 using Robust.Client.UserInterface;
 using Robust.Client.UserInterface.Controls;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Maths;
-using Robust.Shared.ViewVariables;
 using System;
+using System.Collections.Generic;
+using Content.Shared.GameObjects.EntitySystems;
+using Content.Shared.GameObjects.Verbs;
+using Content.Shared.Interfaces;
+using Robust.Client.GameObjects;
+using Robust.Shared.GameObjects.Systems;
+using Robust.Shared.Interfaces.GameObjects;
+using Robust.Shared.Localization;
+using Robust.Shared.Serialization;
+using Robust.Shared.Utility;
 
 namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 {
     [RegisterComponent]
-    public class ClientBoltActionBarrelComponent : Component, IItemStatus
+    public class ClientBoltActionBarrelComponent : SharedBoltActionBarrelComponent, IExamine, IItemStatus
     {
-        public override string Name => "BoltActionBarrel";
-        public override uint? NetID => ContentNetIDs.BOLTACTION_BARREL;
 
-        private StatusControl _statusControl;
+        private bool? _chamber;
+        private Stack<bool?> _ammo = new Stack<bool?>();
+        
+        private Queue<bool> _toFireAmmo = new Queue<bool>();
 
-        /// <summary>
-        ///     chambered is true when a bullet is chambered
-        ///     spent is true when the chambered bullet is spent
-        /// </summary>
-        [ViewVariables]
-        public (bool chambered, bool spent) Chamber { get; private set; }
+        private StatusControl? _statusControl;
 
-        /// <summary>
-        ///     Count of bullets in the magazine.
-        /// </summary>
-        /// <remarks>
-        ///     Null if no magazine is inserted.
-        /// </remarks>
-        [ViewVariables]
-        public (int count, int max)? MagazineCount { get; private set; }
+        public override void ExposeData(ObjectSerializer serializer)
+        {
+            base.ExposeData(serializer);
+        }
 
-        public override void HandleComponentState(ComponentState curState, ComponentState nextState)
+        public override void HandleComponentState(ComponentState? curState, ComponentState? nextState)
         {
            if (!(curState is BoltActionBarrelComponentState cast))
                 return;
 
-            Chamber = cast.Chamber;
-            MagazineCount = cast.Magazine;
+           _chamber = cast.Chamber;
+           _ammo = cast.Bullets;
             _statusControl?.Update();
+            UpdateAppearance();
+        }
+
+        protected override void SetBolt(bool value)
+        {
+            if (BoltOpen == value)
+            {
+                return;
+            }
+
+            var gunSystem = EntitySystem.Get<SharedRangedWeaponSystem>();
+
+            if (value)
+            {
+                TryEjectChamber();
+                if (SoundBoltOpen != null)
+                {
+                    gunSystem.PlaySound(null, Owner, SoundBoltOpen);
+                }
+            }
+            else
+            {
+                TryFeedChamber();
+                if (SoundBoltClosed != null)
+                {
+                    gunSystem.PlaySound(null, Owner, SoundBoltClosed);
+                }
+            }
+
+            BoltOpen = value;
+            UpdateAppearance();
+        }
+
+        private void UpdateAppearance()
+        {
+            if (!Owner.TryGetComponent(out AppearanceComponent? appearanceComponent))
+            {
+                return;
+            }
+            
+            // TODO: Port
+            appearanceComponent.SetData(BarrelBoltVisuals.BoltOpen, BoltOpen);
+            throw new NotImplementedException();
+        }
+
+        protected override bool TryTakeAmmo()
+        {
+            if (!base.TryTakeAmmo())
+            {
+                return false;
+            }
+
+            if (_chamber != null)
+            {
+                _toFireAmmo.Enqueue(_chamber.Value);
+                _chamber = null;
+
+                if (AutoCycle)
+                {
+                    Cycle();
+                }
+                return true;
+            }
+
+            return false;
+        }
+
+        protected override void Cycle(bool manual = false)
+        {
+            TryEjectChamber();
+            TryFeedChamber();
+            var shooter = Shooter();
+
+            if (_chamber == null && manual)
+            {
+                SetBolt(true);
+                if (shooter != null)
+                {
+                    Owner.PopupMessage(shooter, Loc.GetString("Bolt opened"));
+                }
+                return;
+            }
+
+            //AudioParams.Default.WithVolume(-2)
+            EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(shooter, Owner, SoundCycle, true);
+        }
+
+        protected override bool TryInsertBullet(IEntity user, IEntity ammo)
+        {
+            throw new NotImplementedException();
+        }
+
+        protected override void TryEjectChamber()
+        {
+            _chamber = null;
+        }
+
+        protected override void TryFeedChamber()
+        {
+            if (_ammo.TryPop(out var ammo))
+            {
+                _chamber = ammo;
+                EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(Shooter(), Owner, SoundCycle, true);
+                return;
+            }
+
+            if (UnspawnedCount > 0)
+            {
+                _chamber = true;
+                EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(Shooter(), Owner, SoundCycle, true);
+                UnspawnedCount--;
+            }
+        }
+
+        protected override void Shoot(int shotCount, Angle direction)
+        {
+            DebugTools.Assert(shotCount == _toFireAmmo.Count);
+
+            while (_toFireAmmo.Count > 0)
+            {
+                var entity = _toFireAmmo.Dequeue();
+                var sound = entity ? SoundGunshot : SoundEmpty;
+                
+                EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(Shooter(), Owner, sound);
+            }
+            
+            UpdateAppearance();
+            _statusControl?.Update();
+        }
+
+        void IExamine.Examine(FormattedMessage message, bool inDetailsRange)
+        {
+            message.AddMarkup(Loc.GetString("\nIt uses [color=white]{0}[/color] ammo.", Caliber));
+        }
+
+        [Verb]
+        private sealed class OpenBoltVerb : Verb<ClientBoltActionBarrelComponent>
+        {
+            protected override void GetData(IEntity user, ClientBoltActionBarrelComponent component, VerbData data)
+            {
+                if (!ActionBlockerSystem.CanInteract(user))
+                {
+                    data.Visibility = VerbVisibility.Invisible;
+                    return;
+                }
+
+                data.Text = Loc.GetString("Open bolt");
+                data.Visibility = component.BoltOpen ? VerbVisibility.Invisible : VerbVisibility.Visible;
+            }
+
+            protected override void Activate(IEntity user, ClientBoltActionBarrelComponent component)
+            {
+                component.SetBolt(true);
+            }
+        }
+
+        [Verb]
+        private sealed class CloseBoltVerb : Verb<ClientBoltActionBarrelComponent>
+        {
+            protected override void GetData(IEntity user, ClientBoltActionBarrelComponent component, VerbData data)
+            {
+                if (!ActionBlockerSystem.CanInteract(user))
+                {
+                    data.Visibility = VerbVisibility.Invisible;
+                    return;
+                }
+
+                data.Text = Loc.GetString("Close bolt");
+                data.Visibility = component.BoltOpen ? VerbVisibility.Visible : VerbVisibility.Invisible;
+            }
+
+            protected override void Activate(IEntity user, ClientBoltActionBarrelComponent component)
+            {
+                component.SetBolt(false);
+            }
         }
 
         public Control MakeControl()
@@ -119,20 +295,24 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             public void Update()
             {
                 _chamberedBullet.ModulateSelfOverride =
-                    _parent.Chamber.chambered ?
-                    _parent.Chamber.spent ? Color.Red : Color.FromHex("#d7df60")
+                    _parent._chamber != null ?
+                    !_parent._chamber.Value ? Color.Red : Color.FromHex("#d7df60")
                     : Color.Black;
 
                 _bulletsListTop.RemoveAllChildren();
                 _bulletsListBottom.RemoveAllChildren();
 
+                /*
                 if (_parent.MagazineCount == null)
                 {
                     _noMagazineLabel.Visible = true;
                     return;
                 }
+                */
 
-                var (count, capacity) = _parent.MagazineCount.Value;
+
+                var count = _parent._ammo.Count;
+                var capacity = _parent.Capacity;
 
                 _noMagazineLabel.Visible = false;
 
