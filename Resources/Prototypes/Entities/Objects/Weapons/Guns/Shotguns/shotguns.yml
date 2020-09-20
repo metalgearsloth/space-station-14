@@ -49,7 +49,6 @@
     state: icon
   - type: Item
     sprite: Objects/Weapons/Guns/Shotguns/bojevic.rsi
-  - type: RangedWeapon
   - type: MagazineBarrel
     currentSelector: Automatic
     allSelectors:
@@ -94,7 +93,6 @@
   - type: Item
     sprite: Objects/Weapons/Guns/Shotguns/db_shotgun.rsi
     state: icon
-  - type: RangedWeapon
   - type: BoltActionBarrel
     caliber: Shotgun
     currentSelector: Single

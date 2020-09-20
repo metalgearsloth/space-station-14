@@ -1,19 +1,18 @@
-﻿using Content.Client.UserInterface.Stylesheets;
+﻿#nullable enable
+using Content.Client.UserInterface.Stylesheets;
 using Content.Client.Utility;
-using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
 using Robust.Client.Graphics;
 using Robust.Client.UserInterface;
 using Robust.Client.UserInterface.Controls;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Maths;
-using Robust.Shared.ViewVariables;
 using System;
 using System.Collections.Generic;
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using Content.Shared.GameObjects.EntitySystems;
 using Content.Shared.Interfaces;
-using Content.Shared.Interfaces.GameObjects.Components;
 using Robust.Shared.GameObjects.Systems;
+using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Localization;
 using Robust.Shared.Utility;
 
@@ -23,7 +22,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
     [ComponentReference(typeof(SharedRangedWeaponComponent))]
     public class ClientPumpBarrelComponent : SharedPumpBarrelComponent, IItemStatus, IExamine
     {
-        private StatusControl _statusControl;
+        private StatusControl? _statusControl;
 
         public bool? ChamberContainer { get; private set; }
 
@@ -105,32 +104,32 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         // TODO: Need interaction prediction AHHHHHHHHHHHHHHHHHHHH
         
         // I know I know no deadcode but I need interaction predictions
-        public override bool TryInsertBullet(InteractUsingEventArgs eventArgs)
+        public override bool TryInsertBullet(IEntity user, IEntity ammo)
         {
             return true;
             
-            if (!eventArgs.Using.TryGetComponent(out SharedAmmoComponent ammoComponent))
+            if (!ammo.TryGetComponent(out SharedAmmoComponent? ammoComponent))
             {
                 return false;
             }
 
             if (ammoComponent.Caliber != Caliber)
             {
-                Owner.PopupMessage(eventArgs.User, Loc.GetString("Wrong caliber"));
+                Owner.PopupMessage(user, Loc.GetString("Wrong caliber"));
                 return false;
             }
 
             if (AmmoContainer.Count < Capacity - 1)
             {
                 AmmoContainer.Push(!ammoComponent.Spent);
-                EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(eventArgs.User, Owner, SoundInsert);
+                EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(user, Owner, SoundInsert);
                 return true;
             }
 
             return false;
         }
 
-        public override void HandleComponentState(ComponentState curState, ComponentState nextState)
+        public override void HandleComponentState(ComponentState? curState, ComponentState? nextState)
         {
             if (!(curState is PumpBarrelComponentState cast))
                 return;

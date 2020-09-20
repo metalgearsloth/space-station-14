@@ -22,7 +22,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
 
         protected abstract ushort Capacity { get; }
 
-        protected string? FillPrototype;
+        public string? FillPrototype;
         
         /// <summary>
         ///     To avoid spawning entities in until necessary we'll just keep a counter for the unspawned default ammo.

@@ -232,13 +232,15 @@ namespace Content.Server.GameObjects.EntitySystems
             if (sound == null)
                 return;
 
+            var audioParams = AudioHelpers.WithVariation(0.2f, _robustRandom);
+            
             if (user != null && user.TryGetComponent(out IActorComponent? actorComponent))
             {
-                Get<AudioSystem>().PlayFromEntity(sound, weapon, excludedSession: actorComponent.playerSession, audioParams: AudioParams.Default.WithPitchScale(_robustRandom.NextFloat() / 2 + 0.6f));
+                Get<AudioSystem>().PlayFromEntity(sound, weapon, excludedSession: actorComponent.playerSession, audioParams: audioParams);
             }
             else
             {
-                Get<AudioSystem>().PlayFromEntity(sound, weapon, AudioHelpers.WithVariation(0.2f, _robustRandom));
+                Get<AudioSystem>().PlayFromEntity(sound, weapon, audioParams);
             }
         }
 

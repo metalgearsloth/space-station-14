@@ -1,8 +1,10 @@
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Robust.Shared.GameObjects;
+using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Serialization;
 using Robust.Shared.ViewVariables;
 
@@ -21,15 +23,15 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         protected BallisticCaliber Caliber;
 
         [ViewVariables]
-        protected string FillPrototype;
+        public string? FillPrototype;
         [ViewVariables]
         protected ushort UnspawnedCount;
 
         protected bool ManualCycle;
 
         // Sounds
-        protected string SoundCycle;
-        protected string SoundInsert;
+        public string? SoundCycle;
+        public string? SoundInsert;
 
         public override void ExposeData(ObjectSerializer serializer)
         {
@@ -51,7 +53,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
 
         protected abstract void Cycle(bool manual = false);
 
-        public abstract bool TryInsertBullet(InteractUsingEventArgs eventArgs);
+        public abstract bool TryInsertBullet(IEntity user, IEntity ammo);
 
         public override bool UseEntity(UseEntityEventArgs eventArgs)
         {
@@ -61,7 +63,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
 
         public override async Task<bool> InteractUsing(InteractUsingEventArgs eventArgs)
         {
-            return TryInsertBullet(eventArgs);
+            return TryInsertBullet(eventArgs.User, eventArgs.Using);
         }
     }
     

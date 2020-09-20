@@ -54,7 +54,6 @@
   - type: Item
     size: 24
     sprite: Objects/Weapons/Guns/SMGs/atreides.rsi
-  - type: RangedWeapon
   - type: MagazineBarrel
     currentSelector: Automatic
     allSelectors:
@@ -95,7 +94,6 @@
   - type: Item
     size: 24
     sprite: Objects/Weapons/Guns/SMGs/c20r.rsi
-  - type: RangedWeapon
   - type: MagazineBarrel
     currentSelector: Automatic
     allSelectors:
@@ -138,7 +136,6 @@
   - type: Item
     size: 24
     sprite: Objects/Weapons/Guns/SMGs/drozd.rsi
-  - type: RangedWeapon
   - type: MagazineBarrel
     fireRate: 6
     currentSelector: Automatic
@@ -184,7 +181,6 @@
   - type: Item
     size: 24
     sprite: Objects/Weapons/Guns/SMGs/wt550.rsi
-  - type: RangedWeapon
   - type: MagazineBarrel
     currentSelector: Automatic
     allSelectors:
@@ -221,7 +217,6 @@
   - type: Item
     size: 24
     sprite: Objects/Weapons/Guns/SMGs/zoric.rsi
-  - type: RangedWeapon
   - type: MagazineBarrel
     currentSelector: Automatic
     allSelectors:

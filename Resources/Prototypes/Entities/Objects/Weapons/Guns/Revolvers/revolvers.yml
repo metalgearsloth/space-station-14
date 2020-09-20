@@ -38,6 +38,7 @@
     - Single
     fillPrototype: CartridgeMagnum
     caliber: Magnum
+    fireRate: 2
     capacity: 5
     autoCycle: true
     soundGunshot: /Audio/Weapons/Guns/Gunshots/revolver.ogg

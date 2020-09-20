@@ -3,9 +3,6 @@ using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
 using Content.Shared.GameObjects.EntitySystems;
 using Content.Shared.Interfaces;
 using Robust.Server.GameObjects.Components.Container;
-using Robust.Server.GameObjects.EntitySystems;
-using Robust.Shared.Audio;
-using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
 using Robust.Shared.GameObjects.Systems;
 using Robust.Shared.Interfaces.GameObjects;
@@ -14,14 +11,15 @@ using System.Collections.Generic;
 using Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition;
 using Content.Server.GameObjects.EntitySystems;
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
-using Content.Shared.Interfaces.GameObjects.Components;
+using Robust.Shared.Interfaces.Network;
 using Robust.Shared.Maths;
-using Robust.Shared.Serialization;
+using Robust.Shared.Players;
 using Robust.Shared.Utility;
 
 namespace Content.Server.GameObjects.Components.Weapon.Ranged
 {
     [RegisterComponent]
+    [ComponentReference(typeof(SharedRangedWeaponComponent))]
     public class ServerBoltActionBarrelComponent : SharedBoltActionBarrelComponent
     {
         private ContainerSlot? _chamberContainer;
@@ -30,24 +28,26 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
         
         private Queue<IEntity> _toFireAmmo = new Queue<IEntity>();
 
-        public override void ExposeData(ObjectSerializer serializer)
-        {
-            base.ExposeData(serializer);
-        }
-
         public override void Initialize()
         {
             base.Initialize();
             _chamberContainer = ContainerManagerComponent.Ensure<ContainerSlot>("bolt-chamber", Owner, out var existing);
+            _ammoContainer = ContainerManagerComponent.Ensure<Container>("bolt-ammo", Owner, out existing);
 
             if (existing)
             {
                 UnspawnedCount--;
             }
+            else if (UnspawnedCount > 0)
+            {
+                // TODO: Do this on pump and revolver
+                var entity = Owner.EntityManager.SpawnEntity(FillPrototype, Owner.Transform.MapPosition);
+                _chamberContainer?.Insert(entity);
+                UnspawnedCount--;
+            }
+            
 
-            _ammoContainer = ContainerManagerComponent.Ensure<Container>("bolt-ammo", Owner, out existing);
-
-            if (existing)
+            if (existing && _ammoContainer != null)
             {
                 foreach (var entity in _ammoContainer.ContainedEntities)
                 {
@@ -57,6 +57,20 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             }
             
             Dirty();
+        }
+
+        public override void HandleNetworkMessage(ComponentMessage message, INetChannel netChannel, ICommonSession? session = null)
+        {
+            base.HandleNetworkMessage(message, netChannel, session);
+            if (session?.AttachedEntity != Shooter())
+                return;
+
+            switch (message)
+            {
+                case BoltChangedComponentMessage msg:
+                    SetBolt(msg.BoltOpen);
+                    break;
+            }
         }
 
         public override ComponentState GetComponentState()
@@ -73,8 +87,8 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             {
                 ammo.Push(true);
             }
-            
-            return new BoltActionBarrelComponentState(chamber, Selector, ammo, SoundGunshot);
+
+            return new BoltActionBarrelComponentState(BoltOpen, chamber, Selector, ammo, SoundGunshot);
         }
 
         protected override void SetBolt(bool value)
@@ -91,7 +105,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                 TryEjectChamber();
                 if (SoundBoltOpen != null)
                 {
-                    gunSystem.PlaySound(null, Owner, SoundBoltOpen);
+                    gunSystem.PlaySound(Shooter(), Owner, SoundBoltOpen);
                 }
             }
             else
@@ -99,7 +113,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                 TryFeedChamber();
                 if (SoundBoltClosed != null)
                 {
-                    gunSystem.PlaySound(null, Owner, SoundBoltClosed);
+                    gunSystem.PlaySound(Shooter(), Owner, SoundBoltClosed);
                 }
             }
 
@@ -125,8 +139,9 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             }
             else
             {
+                // TODO: Need this because interaction prediction
                 //AudioParams.Default.WithVolume(-2)
-                EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(shooter, Owner, SoundCycle, true);
+                EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(null, Owner, SoundCycle, true);
             }
 
             Dirty();
@@ -150,6 +165,11 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                     Cycle();
                 }
                 return true;
+            }
+
+            if (AutoCycle && _spawnedAmmo.Count > 0)
+            {
+                Cycle();
             }
 
             return false;
@@ -201,7 +221,33 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
 
         protected override bool TryInsertBullet(IEntity user, IEntity ammo)
         {
-            throw new System.NotImplementedException();
+            // TODO: Also check this out on the revolver for prediction.
+            if (!ammo.TryGetComponent(out SharedAmmoComponent? ammoComponent))
+            {
+                return false;
+            }
+
+            if (ammoComponent.Caliber != Caliber)
+            {
+                return false;
+            }
+
+            if (_ammoContainer?.ContainedEntities.Count < Capacity - 1)
+            {
+                _ammoContainer?.Insert(ammo);
+                _spawnedAmmo.Push(ammo);
+
+                if (SoundInsert != null)
+                {
+                    EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(user, Owner, SoundInsert);
+                }
+                
+                // TODO: when interaction predictions are in remove this.
+                Dirty();
+                return true;
+            }
+
+            return false;
         }
     }
 }

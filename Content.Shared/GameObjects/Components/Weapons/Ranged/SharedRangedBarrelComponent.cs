@@ -136,8 +136,8 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         public ushort AccumulatedShots { get; set; }
         
         // Sounds
-        protected string? SoundGunshot { get; set; }
-        protected string? SoundEmpty { get; set; }
+        public string? SoundGunshot { get; protected set; }
+        public string? SoundEmpty { get; protected set; }
         
         public override void ExposeData(ObjectSerializer serializer)
         {

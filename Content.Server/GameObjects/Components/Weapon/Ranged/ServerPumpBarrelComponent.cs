@@ -1,4 +1,4 @@
-using System;
+
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using Robust.Server.GameObjects.Components.Container;
 using Robust.Shared.GameObjects;
@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition;
 using Content.Server.GameObjects.EntitySystems;
 using Content.Shared.GameObjects.EntitySystems;
-using Content.Shared.Interfaces.GameObjects.Components;
 using Robust.Server.GameObjects.EntitySystems;
 using Robust.Shared.Audio;
 using Robust.Shared.GameObjects.Systems;
@@ -147,11 +146,11 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             // TODO: When interaction predictions are in remove this.
             Dirty();
         }
-
-        public override bool TryInsertBullet(InteractUsingEventArgs eventArgs)
+        
+        public override bool TryInsertBullet(IEntity user, IEntity ammo)
         {
             // TODO: Also check this out on the revolver for prediction.
-            if (!eventArgs.Using.TryGetComponent(out SharedAmmoComponent ammoComponent))
+            if (!ammo.TryGetComponent(out SharedAmmoComponent? ammoComponent))
             {
                 return false;
             }
@@ -163,12 +162,12 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
 
             if (_ammoContainer.ContainedEntities.Count < Capacity - 1)
             {
-                _ammoContainer.Insert(eventArgs.Using);
-                _spawnedAmmo.Push(eventArgs.Using);
+                _ammoContainer.Insert(ammo);
+                _spawnedAmmo.Push(ammo);
 
                 if (SoundInsert != null)
                 {
-                    EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(eventArgs.User, Owner, SoundInsert);
+                    EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(user, Owner, SoundInsert);
                 }
                 
                 // TODO: when interaction predictions are in remove this.

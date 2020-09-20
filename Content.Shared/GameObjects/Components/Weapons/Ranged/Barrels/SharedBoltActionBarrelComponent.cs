@@ -1,4 +1,5 @@
-﻿using Robust.Shared.GameObjects;
+﻿#nullable enable
+using Robust.Shared.GameObjects;
 using Robust.Shared.Serialization;
 using System;
 using System.Collections.Generic;
@@ -19,19 +20,14 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         public override string Name => "BoltActionBarrel";
         public override uint? NetID => ContentNetIDs.BOLTACTION_BARREL;
 
+        [ViewVariables]
         public ushort Capacity { get; set; }
-
-        /* TODO: Server
-        private ContainerSlot _chamberContainer;
-        private Stack<IEntity> _spawnedAmmo;
-        private Container _ammoContainer;
-        */
 
         [ViewVariables]
         protected BallisticCaliber Caliber;
 
         [ViewVariables]
-        protected string FillPrototype;
+        public string? FillPrototype;
         [ViewVariables]
         protected int UnspawnedCount;
 
@@ -41,54 +37,34 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         protected float AmmoSpreadRatio;
 
         // Sounds
-        protected string SoundCycle;
-        protected string SoundBoltOpen;
-        protected string SoundBoltClosed;
-        protected string SoundInsert;
+        public string? SoundCycle;
+        public string? SoundBoltOpen;
+        public string? SoundBoltClosed;
+        public string? SoundInsert;
 
         public override void ExposeData(ObjectSerializer serializer)
         {
             base.ExposeData(serializer);
-            serializer.DataField(ref Caliber, "caliber", BallisticCaliber.Unspecified);
+            serializer.DataReadWriteFunction("caliber", BallisticCaliber.Unspecified, value => Caliber = value, () => Caliber);
             serializer.DataReadWriteFunction("capacity", Capacity, value => Capacity = value, () => Capacity);
-            serializer.DataField(ref FillPrototype, "fillPrototype", null);
-            serializer.DataField(ref AutoCycle, "autoCycle", false);
+            serializer.DataReadWriteFunction("fillPrototype", null, value => FillPrototype = value, () => FillPrototype);
+            serializer.DataReadWriteFunction("autoCycle", false, value => AutoCycle = value, () => AutoCycle);
             serializer.DataReadWriteFunction("ammoSpreadRatio", 1.0f, value => AmmoSpreadRatio = value, () => AmmoSpreadRatio);
 
-            serializer.DataField(ref SoundCycle, "soundCycle", "/Audio/Weapons/Guns/Cock/sf_rifle_cock.ogg");
-            serializer.DataField(ref SoundBoltOpen, "soundBoltOpen", "/Audio/Weapons/Guns/Bolt/rifle_bolt_open.ogg");
-            serializer.DataField(ref SoundBoltClosed, "soundBoltClosed", "/Audio/Weapons/Guns/Bolt/rifle_bolt_closed.ogg");
-            serializer.DataField(ref SoundInsert, "soundInsert", "/Audio/Weapons/Guns/MagIn/bullet_insert.ogg");
+            serializer.DataReadWriteFunction("soundCycle", "/Audio/Weapons/Guns/Cock/sf_rifle_cock.ogg", value => SoundCycle = value, () => SoundCycle);
+            serializer.DataReadWriteFunction("soundBoltOpen", "/Audio/Weapons/Guns/Bolt/rifle_bolt_open.ogg", value => SoundBoltOpen = value, () => SoundBoltOpen);
+            serializer.DataReadWriteFunction("soundBoltClosed", "/Audio/Weapons/Guns/Bolt/rifle_bolt_closed.ogg", value => SoundBoltClosed = value, () => SoundBoltClosed);
+            serializer.DataReadWriteFunction("soundInsert", "/Audio/Weapons/Guns/MagIn/bullet_insert.ogg", value => SoundInsert = value, () => SoundInsert);
         }
 
-        /*
-        public override ComponentState GetComponentState()
+        public override void Initialize()
         {
-            (int, int)? count = (ShotsLeft, Capacity);
-            var chamberedExists = _chamberContainer.ContainedEntity != null;
-            // (Is one chambered?, is the bullet spend)
-            var chamber = (chamberedExists, false);
-            if (chamberedExists && _chamberContainer.ContainedEntity.TryGetComponent<AmmoComponent>(out var ammo))
+            base.Initialize();
+            if (FillPrototype != null)
             {
-                chamber.Item2 = ammo.Spent;
+                // TODO: Update revolvers and pump to do this
+                UnspawnedCount += Capacity;
             }
-
-            return new BoltActionBarrelComponentState(
-                chamber,
-                FireRateSelector,
-                count,
-                SoundGunshot);
-        }
-        */
-        
-        protected override bool CanFire(IEntity entity)
-        {
-            if (!base.CanFire(entity))
-            {
-                return false;
-            }
-
-            return !BoltOpen;
         }
 
         protected abstract void SetBolt(bool value);
@@ -97,29 +73,21 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
 
         protected abstract void TryFeedChamber();
 
-        /*
+        protected abstract void Cycle(bool manual = false);
+
+        protected abstract bool TryInsertBullet(IEntity user, IEntity ammo);
+
         protected override bool TryTakeAmmo()
         {
             if (!base.TryTakeAmmo())
             {
                 return false;
             }
-
-            if (_autoCycle)
-            {
-                Cycle();
-            }
-            else
-            {
-                Dirty();
-            }
-        }
-        */
-
-        protected abstract void Cycle(bool manual = false);
-
-        protected abstract bool TryInsertBullet(IEntity user, IEntity ammo);
             
+            // TODO: Any guns that use UnspawnedAmmo should try and spawn one into the chamber if possible.
+            return !BoltOpen;
+        }
+
         /*
         public bool TryInsertBullet(IEntity user, IEntity ammo)
         {
@@ -176,50 +144,6 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
             return TryInsertBullet(eventArgs.User, eventArgs.Using);
         }
 
-        /*
-        private bool TryEjectChamber()
-        {
-            var chamberedEntity = _chamberContainer.ContainedEntity;
-            if (chamberedEntity != null)
-            {
-                if (!_chamberContainer.Remove(chamberedEntity))
-                {
-                    return false;
-                }
-                if (!chamberedEntity.GetComponent<AmmoComponent>().Caseless)
-                {
-                    EjectCasing(chamberedEntity);
-                }
-                return true;
-            }
-            return false;
-        }
-        */
-
-        /*
-        private bool TryFeedChamber()
-        {
-            if (_chamberContainer.ContainedEntity != null)
-            {
-                return false;
-            }
-            if (_spawnedAmmo.TryPop(out var next))
-            {
-                _ammoContainer.Remove(next);
-                _chamberContainer.Insert(next);
-                return true;
-            }
-            else if (UnspawnedCount > 0)
-            {
-                UnspawnedCount--;
-                var ammoEntity = Owner.EntityManager.SpawnEntity(FillPrototype, Owner.Transform.Coordinates);
-                _chamberContainer.Insert(ammoEntity);
-                return true;
-            }
-            return false;
-        }
-        */
-
         public override bool UseEntity(UseEntityEventArgs eventArgs)
         {
             if (BoltOpen)
@@ -237,24 +161,39 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
     }
 
     [Serializable, NetSerializable]
-    public class BoltActionBarrelComponentState : ComponentState
+    public sealed class BoltActionBarrelComponentState : ComponentState
     {
+        public bool BoltOpen { get; }
         public bool? Chamber { get; }
         public FireRateSelector FireRateSelector { get; }
         public Stack<bool?> Bullets { get; }
-        public string SoundGunshot { get; }
+        public string? SoundGunshot { get; }
 
         public BoltActionBarrelComponentState(
+            bool boltOpen,
             bool? chamber,
             FireRateSelector fireRateSelector,
-            Stack<bool?> magazine,
-            string soundGunshot) :
+            Stack<bool?> bullets,
+            string? soundGunshot) :
             base(ContentNetIDs.BOLTACTION_BARREL)
         {
+            BoltOpen = boltOpen;
             Chamber = chamber;
             FireRateSelector = fireRateSelector;
-            Bullets = Bullets;
+            Bullets = bullets;
             SoundGunshot = soundGunshot;
+        }
+    }
+
+    [Serializable, NetSerializable]
+    public sealed class BoltChangedComponentMessage : ComponentMessage
+    {
+        public bool BoltOpen { get; }
+
+        public BoltChangedComponentMessage(bool boltOpen)
+        {
+            BoltOpen = boltOpen;
+            Directed = true;
         }
     }
 }

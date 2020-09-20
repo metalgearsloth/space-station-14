@@ -9,6 +9,7 @@ using Robust.Shared.GameObjects;
 using Robust.Shared.Maths;
 using System;
 using System.Collections.Generic;
+using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using Content.Shared.GameObjects.EntitySystems;
 using Content.Shared.GameObjects.Verbs;
 using Content.Shared.Interfaces;
@@ -22,6 +23,7 @@ using Robust.Shared.Utility;
 namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 {
     [RegisterComponent]
+    [ComponentReference(typeof(SharedRangedWeaponComponent))]
     public class ClientBoltActionBarrelComponent : SharedBoltActionBarrelComponent, IExamine, IItemStatus
     {
 
@@ -32,9 +34,18 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 
         private StatusControl? _statusControl;
 
-        public override void ExposeData(ObjectSerializer serializer)
+        // TODO: Do this on pump I think
+        /// <summary>
+        ///     Not including chamber
+        /// </summary>
+        private int ShotsLeft => _ammo.Count + UnspawnedCount;
+
+        public override void Initialize()
         {
-            base.ExposeData(serializer);
+            base.Initialize();
+            // TODO: Temporary, til container prediction and probs entity spawning prediction
+            UnspawnedCount = 0;
+            UpdateAppearance();
         }
 
         public override void HandleComponentState(ComponentState? curState, ComponentState? nextState)
@@ -44,8 +55,8 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 
            _chamber = cast.Chamber;
            _ammo = cast.Bullets;
+           SetBolt(cast.BoltOpen);
             _statusControl?.Update();
-            UpdateAppearance();
         }
 
         protected override void SetBolt(bool value)
@@ -62,7 +73,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                 TryEjectChamber();
                 if (SoundBoltOpen != null)
                 {
-                    gunSystem.PlaySound(null, Owner, SoundBoltOpen);
+                    gunSystem.PlaySound(Shooter(), Owner, SoundBoltOpen);
                 }
             }
             else
@@ -70,12 +81,13 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                 TryFeedChamber();
                 if (SoundBoltClosed != null)
                 {
-                    gunSystem.PlaySound(null, Owner, SoundBoltClosed);
+                    gunSystem.PlaySound(Shooter(), Owner, SoundBoltClosed);
                 }
             }
 
             BoltOpen = value;
             UpdateAppearance();
+            _statusControl?.Update();
         }
 
         private void UpdateAppearance()
@@ -85,9 +97,9 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                 return;
             }
             
-            // TODO: Port
             appearanceComponent.SetData(BarrelBoltVisuals.BoltOpen, BoltOpen);
-            throw new NotImplementedException();
+            appearanceComponent.SetData(AmmoVisuals.AmmoCount, ShotsLeft + (_chamber != null ? 1 : 0));
+            appearanceComponent.SetData(AmmoVisuals.AmmoMax, (int) Capacity);
         }
 
         protected override bool TryTakeAmmo()
@@ -107,6 +119,11 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                     Cycle();
                 }
                 return true;
+            }
+            
+            if (AutoCycle && _ammo.Count > 0)
+            {
+                Cycle();
             }
 
             return false;
@@ -129,7 +146,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             }
 
             //AudioParams.Default.WithVolume(-2)
-            EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(shooter, Owner, SoundCycle, true);
+            //EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(shooter, Owner, SoundCycle, true);
         }
 
         protected override bool TryInsertBullet(IEntity user, IEntity ammo)
@@ -185,7 +202,8 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         {
             protected override void GetData(IEntity user, ClientBoltActionBarrelComponent component, VerbData data)
             {
-                if (!ActionBlockerSystem.CanInteract(user))
+                // TODO: Check shooter on the other verbs
+                if (!ActionBlockerSystem.CanInteract(user) || component.Shooter() != user)
                 {
                     data.Visibility = VerbVisibility.Invisible;
                     return;
@@ -198,6 +216,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             protected override void Activate(IEntity user, ClientBoltActionBarrelComponent component)
             {
                 component.SetBolt(true);
+                component.SendNetworkMessage(new BoltChangedComponentMessage(component.BoltOpen));
             }
         }
 
@@ -206,7 +225,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         {
             protected override void GetData(IEntity user, ClientBoltActionBarrelComponent component, VerbData data)
             {
-                if (!ActionBlockerSystem.CanInteract(user))
+                if (!ActionBlockerSystem.CanInteract(user) || component.Shooter() != user)
                 {
                     data.Visibility = VerbVisibility.Invisible;
                     return;
@@ -219,6 +238,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             protected override void Activate(IEntity user, ClientBoltActionBarrelComponent component)
             {
                 component.SetBolt(false);
+                component.SendNetworkMessage(new BoltChangedComponentMessage(component.BoltOpen));
             }
         }
 
@@ -302,17 +322,9 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                 _bulletsListTop.RemoveAllChildren();
                 _bulletsListBottom.RemoveAllChildren();
 
-                /*
-                if (_parent.MagazineCount == null)
-                {
-                    _noMagazineLabel.Visible = true;
-                    return;
-                }
-                */
-
-
-                var count = _parent._ammo.Count;
-                var capacity = _parent.Capacity;
+                var count = _parent.ShotsLeft;
+                // Excluding chamber
+                var capacity = _parent.Capacity - 1;
 
                 _noMagazineLabel.Visible = false;
 
