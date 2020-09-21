@@ -4,6 +4,13 @@ using Robust.Shared.Serialization;
 
 namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
 {
+    public sealed class SharedMagazineBarrelComponent : Component
+    {
+        public override string Name => "MagazineBarrel";
+
+        public override uint? NetID => ContentNetIDs.MAGAZINE_BARREL;
+    }
+    
     [Serializable, NetSerializable]
     public enum AmmoVisuals
     {
