@@ -12,7 +12,7 @@
         public const uint INVENTORY = 1006;
         public const uint POWER_DEBUG_TOOL = 1007;
         // 1008
-        // 1009
+        public const uint SPEED_LOADER = 1009;
         public const uint RANGED_MAGAZINE = 1010;
         public const uint CAMERA_RECOIL = 1011;
         public const uint SOUND = 1012;

@@ -24,7 +24,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         public ushort Capacity { get; set; }
 
         [ViewVariables]
-        protected BallisticCaliber Caliber;
+        public BallisticCaliber Caliber;
 
         [ViewVariables]
         public string? FillPrototype;
@@ -75,7 +75,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
 
         protected abstract void Cycle(bool manual = false);
 
-        protected abstract bool TryInsertBullet(IEntity user, IEntity ammo);
+        public abstract bool TryInsertBullet(IEntity user, IEntity ammo);
 
         protected override bool TryTakeAmmo()
         {

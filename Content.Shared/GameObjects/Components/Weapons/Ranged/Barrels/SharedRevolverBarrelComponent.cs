@@ -13,7 +13,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         public override string Name => "RevolverBarrel";
         public override uint? NetID => ContentNetIDs.REVOLVER_BARREL;
 
-        protected BallisticCaliber Caliber;
+        public BallisticCaliber Caliber;
         
         /// <summary>
         ///     What slot will be used for the next bullet.
@@ -27,7 +27,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         /// <summary>
         ///     To avoid spawning entities in until necessary we'll just keep a counter for the unspawned default ammo.
         /// </summary>
-        protected ushort UnspawnedCount;
+        protected int UnspawnedCount;
 
         // Sounds
         protected string? SoundEject;
@@ -61,7 +61,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         /// <returns>The number of cartridges ejected</returns>
         protected abstract void EjectAllSlots();
 
-        protected virtual bool TryInsertBullet(IEntity user, SharedAmmoComponent ammoComponent)
+        public virtual bool TryInsertBullet(IEntity user, SharedAmmoComponent ammoComponent)
         {
             if (ammoComponent.Caliber != Caliber)
                 return false;

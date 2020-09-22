@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -25,7 +25,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         [ViewVariables]
         public string? FillPrototype;
         [ViewVariables]
-        protected ushort UnspawnedCount;
+        protected int UnspawnedCount;
 
         protected bool ManualCycle;
 
