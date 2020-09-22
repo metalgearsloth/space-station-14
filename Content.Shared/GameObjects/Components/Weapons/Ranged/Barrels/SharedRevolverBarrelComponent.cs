@@ -6,7 +6,7 @@ using Robust.Shared.GameObjects;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Serialization;
 
-namespace Content.Shared.GameObjects.Components.Weapons.Ranged
+namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
 {
     public abstract class SharedRevolverBarrelComponent : SharedRangedWeaponComponent
     {
@@ -92,13 +92,13 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         public ushort CurrentSlot { get; }
         public FireRateSelector FireRateSelector { get; }
         public bool?[] Bullets { get; }
-        public string SoundGunshot { get; }
+        public string? SoundGunshot { get; }
 
         public RevolverBarrelComponentState(
             ushort currentSlot,
             FireRateSelector fireRateSelector,
             bool?[] bullets,
-            string soundGunshot) :
+            string? soundGunshot) :
             base(ContentNetIDs.REVOLVER_BARREL)
         {
             CurrentSlot = currentSlot;
