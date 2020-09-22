@@ -12,8 +12,11 @@ using System.Collections.Generic;
 using Content.Server.GameObjects.Components.GUI;
 using Content.Server.GameObjects.Components.Items.Storage;
 using Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition;
+using Content.Server.GameObjects.EntitySystems;
 using Robust.Server.GameObjects.EntitySystems;
 using Robust.Shared.Audio;
+using Robust.Shared.Maths;
+using Robust.Shared.Utility;
 
 namespace Content.Server.GameObjects.Components.Weapon.Ranged
 {
@@ -22,6 +25,8 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
     {
         private ContainerSlot? _chamberContainer;
         private ContainerSlot? _magazineContainer;
+        
+        private Queue<IEntity> _toFireAmmo = new Queue<IEntity>();
 
         public override void Initialize()
         {
@@ -37,6 +42,70 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                 _magazineContainer.Insert(mag);
             }
             
+            Dirty();
+        }
+
+        protected override void SetBolt(bool value)
+        {
+            if (BoltOpen == value)
+            {
+                return;
+            }
+
+            var gunSystem = EntitySystem.Get<SharedRangedWeaponSystem>();
+
+            if (value)
+            {
+                TryEjectChamber();
+                if (SoundBoltOpen != null)
+                {
+                    gunSystem.PlaySound(Shooter(), Owner, SoundBoltOpen);
+                }
+            }
+            else
+            {
+                TryFeedChamber();
+                if (SoundBoltClosed != null)
+                {
+                    gunSystem.PlaySound(Shooter(), Owner, SoundBoltClosed);
+                }
+            }
+
+            BoltOpen = value;
+            Dirty();
+        }
+
+        protected override void Cycle(bool manual = false)
+        {
+            var chamberedEntity = _chamberContainer?.ContainedEntity;
+            
+            if (chamberedEntity != null)
+            {
+                _chamberContainer?.Remove(chamberedEntity);
+                var ammoComponent = chamberedEntity.GetComponent<SharedAmmoComponent>();
+                if (!ammoComponent.Caseless)
+                {
+                    EntitySystem.Get<SharedRangedWeaponSystem>().EjectCasing(Shooter(), chamberedEntity);
+                }
+            }
+
+            var mag = _magazineContainer?.ContainedEntity;
+            var magComp = mag?.GetComponent<SharedMagazineComponent>();
+            
+            if (mag != null && magComp.TryPop(out var next))
+            {
+                _chamberContainer?.Insert(next);
+            }
+
+            if (manual)
+            {
+                if (SoundCycle != null)
+                {
+                    EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundCycle, Owner, AudioParams.Default.WithVolume(-2));
+                }
+            }
+            
+            // TODO: When interaction predictions are in remove this.
             Dirty();
         }
 
@@ -198,6 +267,40 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             }
 
             return false;
+        }
+
+        protected override bool TryTakeAmmo()
+        {
+            if (!base.TryTakeAmmo())
+            {
+                return false;
+            }
+
+            var chamberEntity = _chamberContainer?.ContainedEntity;
+            if (chamberEntity != null)
+            {
+                _toFireAmmo.Enqueue(chamberEntity);
+                Cycle();
+                return true;
+            }
+
+            return false;
+        }
+
+        protected override void Shoot(int shotCount, Angle direction)
+        {
+            DebugTools.Assert(shotCount == _toFireAmmo.Count);
+
+            while (_toFireAmmo.Count > 0)
+            {
+                var entity = _toFireAmmo.Dequeue();
+                var ammo = entity.GetComponent<AmmoComponent>();
+                var sound = ammo.Spent ? SoundEmpty : SoundGunshot;
+                
+                EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(Shooter(), Owner, sound);
+                EntitySystem.Get<RangedWeaponSystem>().Shoot(Shooter(), direction, ammo, AmmoSpreadRatio);
+                ammo.Spent = true;
+            }
         }
     }
 }

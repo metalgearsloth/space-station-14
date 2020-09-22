@@ -3,9 +3,13 @@ using System.Collections.Generic;
 using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
 using Content.Shared.GameObjects.EntitySystems;
 using Robust.Client.GameObjects;
+using Robust.Client.GameObjects.EntitySystems;
+using Robust.Shared.Audio;
 using Robust.Shared.GameObjects;
 using Robust.Shared.GameObjects.Systems;
+using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Localization;
+using Robust.Shared.Maths;
 using Robust.Shared.Utility;
 
 namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
@@ -16,6 +20,8 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         private bool? _chamber;
 
         private Stack<bool>? _magazine;
+        
+        private Queue<bool> _toFireAmmo = new Queue<bool>();
         
         private int ShotsLeft => 0;
 
@@ -46,12 +52,51 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 
         protected override void Cycle(bool manual = false)
         {
-            throw new System.NotImplementedException();
+            _chamber = null;
+            
+            if (_magazine != null && _magazine.TryPop(out var next))
+            {
+                _chamber = next;
+            }
+
+            if (manual)
+            {
+                if (SoundCycle != null)
+                {
+                    EntitySystem.Get<AudioSystem>().Play(SoundCycle, Owner, AudioParams.Default.WithVolume(-2));
+                }
+            }
+            
+            UpdateAppearance();
         }
 
         protected override void SetBolt(bool value)
         {
-            throw new System.NotImplementedException();
+            if (BoltOpen == value)
+            {
+                return;
+            }
+
+            var gunSystem = EntitySystem.Get<SharedRangedWeaponSystem>();
+
+            if (value)
+            {
+                TryEjectChamber();
+                if (SoundBoltOpen != null)
+                {
+                    gunSystem.PlaySound(Shooter(), Owner, SoundBoltOpen);
+                }
+            }
+            else
+            {
+                TryFeedChamber();
+                if (SoundBoltClosed != null)
+                {
+                    gunSystem.PlaySound(Shooter(), Owner, SoundBoltClosed);
+                }
+            }
+
+            BoltOpen = value;
         }
 
         protected override void TryEjectChamber()
@@ -74,12 +119,60 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 
             _chamber = nextCartridge;
 
-            if (AutoEjectMag && _magazine != null && _magazine?.Count == 0)
+            if (AutoEjectMag && _magazine != null && _magazine.Count == 0)
             {
                 EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(Shooter(), Owner, SoundAutoEject, true);
             }
         }
 
+        protected override void RemoveMagazine(IEntity user)
+        {
+            _magazine = null;
+        }
+
+        protected override bool TryInsertMag(IEntity user, IEntity mag)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        protected override bool TryInsertAmmo(IEntity user, IEntity ammo)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        protected override bool TryTakeAmmo()
+        {
+            if (!base.TryTakeAmmo())
+            {
+                return false;
+            }
+            
+            if (_chamber != null)
+            {
+                _toFireAmmo.Enqueue(_chamber.Value);
+                Cycle();
+                return true;
+            }
+
+            return false;
+        }
+
+        protected override void Shoot(int shotCount, Angle direction)
+        {
+            DebugTools.Assert(shotCount == _toFireAmmo.Count);
+
+            while (_toFireAmmo.Count > 0)
+            {
+                var entity = _toFireAmmo.Dequeue();
+                var sound = entity ? SoundGunshot : SoundEmpty;
+                
+                EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(Shooter(), Owner, sound);
+            }
+            
+            UpdateAppearance();
+            // TODO: Status control
+        }
+        
         void IExamine.Examine(FormattedMessage message, bool inDetailsInRange)
         {
             message.AddMarkup(Loc.GetString("\nIt uses [color=white]{0}[/color] ammo.", Caliber));

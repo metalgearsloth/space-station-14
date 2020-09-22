@@ -42,10 +42,13 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         // If the bolt needs to be open before we can insert / remove the mag (i.e. for LMGs)
         public bool MagNeedsOpenBolt { get; private set; }
 
+        protected float AmmoSpreadRatio;
+
         // Sounds
         protected string? SoundBoltOpen;
         protected string? SoundBoltClosed;
         protected string? SoundRack;
+        protected string? SoundCycle;
         protected string? SoundMagInsert;
         protected string? SoundMagEject;
         protected string? SoundAutoEject;
@@ -65,6 +68,8 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
             serializer.DataField(ref _caliber, "caliber", BallisticCaliber.Unspecified);
             serializer.DataField(ref MagFillPrototype, "magFillPrototype", null);
             serializer.DataField(ref AutoEjectMag, "autoEjectMag", false);
+            
+            serializer.DataReadWriteFunction("ammoSpreadRatio", 1.0f, value => AmmoSpreadRatio = value, () => AmmoSpreadRatio);
             
             serializer.DataField(ref SoundBoltOpen, "soundBoltOpen", null);
             serializer.DataField(ref SoundBoltClosed, "soundBoltClosed", null);
@@ -93,48 +98,6 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         protected abstract void SetBolt(bool value);
 
         protected abstract void Cycle(bool manual = false);
-
-        /*
-        private void Cycle(bool manual = false)
-        {
-            if (BoltOpen)
-            {
-                return;
-            }
-
-            TryEjectChamber();
-
-            TryFeedChamber();
-
-            var soundSystem = EntitySystem.Get<AudioSystem>();
-
-            if (_chamberContainer.ContainedEntity == null && !BoltOpen)
-            {
-                if (SoundBoltOpen != null)
-                {
-                    soundSystem.PlayAtCoords(SoundBoltOpen, Owner.Transform.Coordinates, AudioParams.Default.WithVolume(-5));
-                }
-
-                if (ContainerHelpers.TryGetContainer(Owner, out var container))
-                {
-                    Owner.PopupMessage(container.Owner, Loc.GetString("Bolt open"));
-                }
-                BoltOpen = true;
-                return;
-            }
-
-            if (manual)
-            {
-                if (SoundRack != null)
-                {
-                    soundSystem.PlayAtCoords(SoundRack, Owner.Transform.Coordinates, AudioParams.Default.WithVolume(-2));
-                }
-            }
-
-            Dirty();
-            UpdateAppearance();
-        }
-        */
 
         public override bool UseEntity(UseEntityEventArgs eventArgs)
         {
