@@ -90,9 +90,10 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             }
 
             var mag = _magazineContainer?.ContainedEntity;
-            var magComp = mag?.GetComponent<SharedMagazineComponent>();
+            // TODO: Change to Shared when predicted
+            var magComp = mag?.GetComponent<ServerRangedMagazineComponent>();
             
-            if (mag != null && magComp.TryPop(out var next))
+            if (magComp != null && magComp.TryPop(out var next))
             {
                 _chamberContainer?.Insert(next);
             }
@@ -105,7 +106,6 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                 }
             }
             
-            // TODO: When interaction predictions are in remove this.
             Dirty();
         }
 
@@ -142,7 +142,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
 
             // Try and pull a round from the magazine to replace the chamber if possible
             var magazine = _magazineContainer?.ContainedEntity;
-            var nextCartridge = magazine?.GetComponent<SharedMagazineComponent>();
+            var nextCartridge = magazine?.GetComponent<SharedRangedMagazineComponent>();
 
             if (nextCartridge == null)
             {
@@ -151,7 +151,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
 
             _chamberContainer?.Insert(nextCartridge.Owner);
 
-            if (AutoEjectMag && magazine != null && magazine.GetComponent<SharedMagazineComponent>().ShotsLeft == 0)
+            if (AutoEjectMag && magazine != null && magazine.GetComponent<SharedRangedMagazineComponent>().ShotsLeft == 0)
             {
                 if (SoundAutoEject != null)
                 {
@@ -199,7 +199,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             // TODO: Popups temporary until prediction
             
             // Insert magazine
-            if (mag.TryGetComponent(out SharedMagazineComponent? magazineComponent))
+            if (mag.TryGetComponent(out SharedRangedMagazineComponent? magazineComponent))
             {
                 if ((MagazineTypes & magazineComponent.MagazineType) == 0)
                 {

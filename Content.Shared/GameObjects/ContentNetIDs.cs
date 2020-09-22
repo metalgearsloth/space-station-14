@@ -13,7 +13,7 @@
         public const uint POWER_DEBUG_TOOL = 1007;
         // 1008
         // 1009
-        // 1010
+        public const uint RANGED_MAGAZINE = 1010;
         public const uint CAMERA_RECOIL = 1011;
         public const uint SOUND = 1012;
         public const uint ITEM = 1013;
