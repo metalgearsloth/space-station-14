@@ -3,8 +3,10 @@ using System;
 using System.Collections.Generic;
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
+using Content.Shared.Interfaces.GameObjects.Components;
 using Robust.Client.GameObjects;
 using Robust.Shared.GameObjects;
+using Robust.Shared.Interfaces.GameObjects;
 
 namespace Content.Client.GameObjects.Components.Weapons.Ranged
 {
@@ -19,7 +21,32 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged
         public override void Initialize()
         {
             base.Initialize();
-            UnspawnedCount = 0;
+            // At least until prediction is in we'll just assume an appearance
+            if (FillPrototype == null)
+            {
+                UnspawnedCount = 0;
+            }
+            else
+            {
+                UnspawnedCount += Capacity;
+            }
+            
+            UpdateAppearance();
+        }
+
+        public override bool TryInsertAmmo(IEntity user, SharedAmmoComponent ammoComponent)
+        {
+            throw new NotImplementedException();
+        }
+
+        protected override bool UseEntity(IEntity user)
+        {
+            throw new NotImplementedException();
+        }
+
+        protected override void AfterInteract(AfterInteractEventArgs eventArgs)
+        {
+            throw new NotImplementedException();
         }
 
         public override void HandleComponentState(ComponentState? curState, ComponentState? nextState)
@@ -29,8 +56,11 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged
             {
                 return;
             }
-            
-            throw new InvalidOperationException();
+
+            UnspawnedCount = 0;
+            _spawnedAmmo = cast.Ammo;
+            Capacity = cast.Capacity;
+            UpdateAppearance();
         }
 
         private void UpdateAppearance()

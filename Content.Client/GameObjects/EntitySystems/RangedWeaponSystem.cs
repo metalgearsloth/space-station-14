@@ -4,6 +4,7 @@ using Content.Client.GameObjects.Components.Items;
 using Content.Shared.Audio;
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using Content.Shared.GameObjects.EntitySystems;
+using JetBrains.Annotations;
 using Robust.Client.GameObjects;
 using Robust.Client.GameObjects.EntitySystems;
 using Robust.Client.Interfaces.Graphics.ClientEye;
@@ -23,6 +24,7 @@ using Robust.Shared.Random;
 
 namespace Content.Client.GameObjects.EntitySystems
 {
+    [UsedImplicitly]
     internal sealed class RangedWeaponSystem : SharedRangedWeaponSystem
     {
         
@@ -30,7 +32,6 @@ namespace Content.Client.GameObjects.EntitySystems
         [Dependency] private readonly IEyeManager _eyeManager = default!;
         [Dependency] private readonly IInputManager _inputManager = default!;
         [Dependency] private readonly IGameTiming _gameTiming = default!;
-        [Dependency] private readonly IPrototypeManager _prototypeManager = default!;
         [Dependency] private readonly IRobustRandom _robustRandom = default!;
 
         private InputSystem _inputSystem = null!;
@@ -170,25 +171,9 @@ namespace Content.Client.GameObjects.EntitySystems
         }
 
         // TODO: Won't be used until container prediction
-        public override void EjectCasing(IEntity? user, IEntity casing, bool playSound = true, Direction[] ejectDirections = null)
+        public override void EjectCasing(IEntity? user, IEntity casing, bool playSound = true, Direction[]? ejectDirections = null)
         {
-            ejectDirections ??= new[] {Direction.East, Direction.North, Direction.South, Direction.West};
-
-            const float ejectOffset = 0.2f;
-            
-            var ammo = casing.GetComponent<SharedAmmoComponent>();
-            var offsetPos = (_robustRandom.NextFloat() * ejectOffset, _robustRandom.NextFloat() * ejectOffset);
-            casing.Transform.Coordinates = casing.Transform.Coordinates.Offset(offsetPos);
-            casing.Transform.LocalRotation = _robustRandom.Pick(ejectDirections).ToAngle();
-
-            if (ammo.SoundCollectionEject == null || !playSound)
-            {
-                return;
-            }
-
-            var soundCollection = _prototypeManager.Index<SoundCollectionPrototype>(ammo.SoundCollectionEject);
-            var randomFile = _robustRandom.Pick(soundCollection.PickFiles);
-            Get<AudioSystem>().Play(randomFile, casing, AudioHelpers.WithVariation(0.2f, _robustRandom).WithVolume(-1));
+            throw new InvalidOperationException();
         }
     }
 }

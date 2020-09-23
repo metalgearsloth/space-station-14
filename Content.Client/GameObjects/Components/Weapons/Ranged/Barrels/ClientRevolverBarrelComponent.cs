@@ -117,33 +117,10 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             return;
         }
 
-        protected override bool TryInsertBullet(IEntity user, SharedAmmoComponent ammoComponent)
+        public override bool TryInsertBullet(IEntity user, SharedAmmoComponent ammoComponent)
         {
-            // TODO: Interaction prediction
+            // TODO: Interaction prediction here and elsewhere etc.
             return true;
-            if (!base.TryInsertBullet(user, ammoComponent))
-            {
-                Owner.PopupMessage(user, Loc.GetString("Wrong caliber"));
-                return false;
-            }
-            
-            for (var i = Bullets.Length - 1; i >= 0; i--)
-            {
-                var slot = Bullets[i];
-                if (slot == null)
-                {
-                    CurrentSlot = (byte) i;
-                    Bullets[i] = !ammoComponent.Spent;
-                    // TODO: CLIENT-SIDE PREDICTED CONTAINERS HERE
-                    var extraTime = FireRate > 0 ? TimeSpan.FromSeconds(1 / FireRate) : TimeSpan.FromSeconds(0.3);
-                    
-                    NextFire = IoCManager.Resolve<IGameTiming>().CurTime + extraTime;
-                    _statusControl?.Update();
-                    return true;
-                }
-            }
-            
-            return false;
         }
         
         private void Spin()

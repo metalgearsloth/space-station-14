@@ -5,8 +5,14 @@ using Robust.Shared.GameObjects;
 using Robust.Shared.Interfaces.GameObjects;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using Content.Server.GameObjects.Components.GUI;
+using Content.Server.GameObjects.Components.Items.Storage;
 using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
+using Content.Shared.GameObjects.EntitySystems;
+using Content.Shared.Interfaces;
 using Content.Shared.Interfaces.GameObjects.Components;
+using Robust.Shared.GameObjects.Systems;
+using Robust.Shared.Localization;
 
 namespace Content.Server.GameObjects.Components.Weapon.Ranged
 {
@@ -33,6 +39,8 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                     _spawnedAmmo.Push(ammo);
                 }
             }
+            
+            Dirty();
         }
 
         public override ComponentState GetComponentState()
@@ -71,12 +79,48 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             return false;
         }
 
-        protected void AfterInteract(AfterInteractEventArgs eventArgs)
+        public override bool TryInsertAmmo(IEntity user, SharedAmmoComponent ammoComponent)
+        {
+            if (!base.TryInsertAmmo(user, ammoComponent))
+                return false;
+
+            if (ShotsLeft >= Capacity)
+            {
+                Owner.PopupMessage(user, Loc.GetString("Already full"));
+                return false;
+            }
+
+            _ammoContainer.Insert(ammoComponent.Owner);
+            _spawnedAmmo.Push(ammoComponent.Owner);
+            return true;
+        }
+
+        protected override bool UseEntity(IEntity user)
+        {
+            if (!user.TryGetComponent(out HandsComponent? handsComponent))
+                return false;
+
+            if (!TryPop(out var ammo))
+                return false;
+
+            var itemComponent = ammo.GetComponent<ItemComponent>();
+            if (!handsComponent.CanPutInHand(itemComponent))
+            {
+                EntitySystem.Get<SharedRangedWeaponSystem>().EjectCasing(user, ammo);
+            }
+            else
+            {
+                handsComponent.PutInHand(itemComponent);
+            }
+
+            Dirty();
+            return true;
+        }
+
+        protected override void AfterInteract(AfterInteractEventArgs eventArgs)
         {
             if (eventArgs.Target == null)
-            {
                 return;
-            }
 
             // This area is dirty but not sure of an easier way to do it besides add an interface or somethin
             bool changed = false;
@@ -91,15 +135,15 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                     if (!TryPop(out var ammo))
                         break;
 
-                    // TODO: Update this I guess to make it consistent
-                    if (revolverBarrel.TryInsertBullet(eventArgs.User, ammo))
+                    var ammoComponent = ammo.GetComponent<SharedAmmoComponent>();
+                    if (revolverBarrel.TryInsertBullet(eventArgs.User, ammoComponent))
                     {
                         changed = true;
                         continue;
                     }
 
                     // Take the ammo back
-                    TryInsertAmmo(eventArgs.User, ammo);
+                    TryInsertAmmo(eventArgs.User, ammoComponent);
                     break;
                 }
             } 
@@ -111,18 +155,17 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                 for (var i = 0; i < Capacity; i++)
                 {
                     if (!TryPop(out var ammo))
-                    {
                         break;
-                    }
-
-                    if (boltActionBarrel.TryInsertBullet(eventArgs.User, ammo))
+                    
+                    var ammoComponent = ammo.GetComponent<SharedAmmoComponent>();
+                    if (boltActionBarrel.TryInsertBullet(eventArgs.User, ammoComponent))
                     {
                         changed = true;
                         continue;
                     }
 
                     // Take the ammo back
-                    TryInsertAmmo(eventArgs.User, ammo);
+                    TryInsertAmmo(eventArgs.User, ammoComponent);
                     break;
                 }
 

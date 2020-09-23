@@ -1,4 +1,4 @@
-using Content.Client.GameObjects.Components.Weapons.Ranged.Barrels.Visualizers;
+#nullable enable
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
 using Robust.Client.GameObjects;
@@ -31,7 +31,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged
                     }
                 }
                 
-                if (Owner.TryGetComponent(out AppearanceComponent appearanceComponent))
+                if (Owner.TryGetComponent(out AppearanceComponent? appearanceComponent))
                 {
                     appearanceComponent.SetData(AmmoVisuals.Spent, value);
                 }

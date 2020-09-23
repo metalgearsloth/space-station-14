@@ -203,7 +203,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             return;
         }
 
-        protected override bool TryInsertBullet(IEntity user, SharedAmmoComponent ammoComponent)
+        public override bool TryInsertBullet(IEntity user, SharedAmmoComponent ammoComponent)
         {
             if (!base.TryInsertBullet(user, ammoComponent))
                 return false;

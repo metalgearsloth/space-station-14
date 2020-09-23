@@ -75,7 +75,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
 
         protected abstract void Cycle(bool manual = false);
 
-        public abstract bool TryInsertBullet(IEntity user, IEntity ammo);
+        public abstract bool TryInsertBullet(IEntity user, SharedAmmoComponent ammoComponent);
 
         protected override bool TryTakeAmmo()
         {
@@ -141,7 +141,10 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
 
         public override async Task<bool> InteractUsing(InteractUsingEventArgs eventArgs)
         {
-            return TryInsertBullet(eventArgs.User, eventArgs.Using);
+            if (!eventArgs.Using.TryGetComponent(out SharedAmmoComponent? ammoComponent))
+                return false;
+            
+            return TryInsertBullet(eventArgs.User, ammoComponent);
         }
 
         public override bool UseEntity(UseEntityEventArgs eventArgs)

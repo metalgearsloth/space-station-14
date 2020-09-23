@@ -8,6 +8,7 @@ using Robust.Shared.GameObjects;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Localization;
 using Robust.Shared.Serialization;
+using Robust.Shared.ViewVariables;
 
 namespace Content.Shared.GameObjects.Components.Weapons.Ranged
 {
@@ -16,8 +17,11 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         public override string Name => "SpeedLoader";
         public override uint? NetID => ContentNetIDs.SPEED_LOADER;
 
-        protected BallisticCaliber Caliber { get; set; }
-        public ushort Capacity { get; set; }
+        [ViewVariables]
+        protected BallisticCaliber Caliber { get; private set; }
+        
+        [ViewVariables]
+        public ushort Capacity { get; protected set; }
         
         /*
         private Container _ammoContainer;
@@ -52,67 +56,34 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
             }
         }
 
-        public bool TryInsertAmmo(IEntity user, IEntity entity)
+        public virtual bool TryInsertAmmo(IEntity user, SharedAmmoComponent ammoComponent)
         {
-            if (!entity.TryGetComponent(out AmmoComponent ammoComponent))
-            {
-                return false;
-            }
-
             if (ammoComponent.Caliber != Caliber)
             {
                 Owner.PopupMessage(user, Loc.GetString("Wrong caliber"));
-                return false;
+                return false;   
             }
 
-            if (AmmoLeft >= Capacity)
-            {
-                Owner.PopupMessage(user, Loc.GetString("No room"));
-                return false;
-            }
-
-            _spawnedAmmo.Push(entity);
-            _ammoContainer.Insert(entity);
-            UpdateAppearance();
-            return true;
-
-        }
-
-        private bool UseEntity(IEntity user)
-        {
-            if (!user.TryGetComponent(out HandsComponent handsComponent))
-            {
-                return false;
-            }
-
-            var ammo = TakeAmmo();
-            if (ammo == null)
-            {
-                return false;
-            }
-
-            var itemComponent = ammo.GetComponent<ItemComponent>();
-            if (!handsComponent.CanPutInHand(itemComponent))
-            {
-                ServerRangedBarrelComponent.EjectCasing(ammo);
-            }
-            else
-            {
-                handsComponent.PutInHand(itemComponent);
-            }
-
-            UpdateAppearance();
             return true;
         }
+
+        protected abstract bool UseEntity(IEntity user);
 
         void IAfterInteract.AfterInteract(AfterInteractEventArgs eventArgs)
         {
-            // TODO:
+            AfterInteract(eventArgs);
         }
+
+        protected abstract void AfterInteract(AfterInteractEventArgs eventArgs);
 
         async Task<bool> IInteractUsing.InteractUsing(InteractUsingEventArgs eventArgs)
         {
-            return TryInsertAmmo(eventArgs.User, eventArgs.Using);
+            if (eventArgs.Using.TryGetComponent(out SharedAmmoComponent? ammoComponent))
+            {
+                return TryInsertAmmo(eventArgs.User, ammoComponent);
+            }
+
+            return false;
         }
 
         bool IUse.UseEntity(UseEntityEventArgs eventArgs)

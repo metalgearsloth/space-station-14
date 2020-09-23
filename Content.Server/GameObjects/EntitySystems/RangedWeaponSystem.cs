@@ -268,7 +268,7 @@ namespace Content.Server.GameObjects.EntitySystems
             Get<EffectSystem>().CreateParticle(message, actorComponent?.playerSession);
         }
 
-        public override void EjectCasing(IEntity? user, IEntity casing, bool playSound = true, Direction[] ejectDirections = null)
+        public override void EjectCasing(IEntity? user, IEntity casing, bool playSound = true, Direction[]? ejectDirections = null)
         {
             ejectDirections ??= new[] {Direction.East, Direction.North, Direction.South, Direction.West};
 

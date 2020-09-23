@@ -219,14 +219,8 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             }
         }
 
-        protected override bool TryInsertBullet(IEntity user, IEntity ammo)
+        public override bool TryInsertBullet(IEntity user, SharedAmmoComponent ammoComponent)
         {
-            // TODO: Also check this out on the revolver for prediction.
-            if (!ammo.TryGetComponent(out SharedAmmoComponent? ammoComponent))
-            {
-                return false;
-            }
-
             if (ammoComponent.Caliber != Caliber)
             {
                 return false;
@@ -234,8 +228,8 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
 
             if (_ammoContainer?.ContainedEntities.Count < Capacity - 1)
             {
-                _ammoContainer?.Insert(ammo);
-                _spawnedAmmo.Push(ammo);
+                _ammoContainer?.Insert(ammoComponent.Owner);
+                _spawnedAmmo.Push(ammoComponent.Owner);
 
                 if (SoundInsert != null)
                 {

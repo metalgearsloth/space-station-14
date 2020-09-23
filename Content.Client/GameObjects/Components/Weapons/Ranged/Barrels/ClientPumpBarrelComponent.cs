@@ -34,8 +34,21 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         {
             base.Initialize();
             _statusControl?.Update();
-            // TODO: TEMPORARY BEFORE PREDICTIONS
-            UnspawnedCount = 0;
+            if (FillPrototype == null)
+            {
+                UnspawnedCount = 0;
+            }
+            else
+            {
+                UnspawnedCount += Capacity;
+            }
+
+            UpdateAppearance();
+        }
+
+        private void UpdateAppearance()
+        {
+            throw new NotImplementedException();
         }
 
         protected override bool TryTakeAmmo()
@@ -73,32 +86,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         
         protected override void Cycle(bool manual = false)
         {
-            // Doesn't work coz no interact prediction
-            return;
-            
-            if (ChamberContainer != null)
-            {
-                if (AmmoContainer.TryPop(out var ammo))
-                {
-                    ChamberContainer = ammo;
-                }
-
-                ChamberContainer = null;
-            }
-
-            if (UnspawnedCount > 0)
-            {
-                UnspawnedCount--;
-                AmmoContainer.Push(true);
-            }
-
-            if (manual)
-            {
-                if (SoundCycle != null)
-                {
-                    EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(Shooter(), Owner, SoundCycle, true);
-                }
-            }
+            throw new NotImplementedException();
         }
 
         // TODO: Need interaction prediction AHHHHHHHHHHHHHHHHHHHH
@@ -106,27 +94,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         // I know I know no deadcode but I need interaction predictions
         public override bool TryInsertBullet(IEntity user, IEntity ammo)
         {
-            return true;
-            
-            if (!ammo.TryGetComponent(out SharedAmmoComponent? ammoComponent))
-            {
-                return false;
-            }
-
-            if (ammoComponent.Caliber != Caliber)
-            {
-                Owner.PopupMessage(user, Loc.GetString("Wrong caliber"));
-                return false;
-            }
-
-            if (AmmoContainer.Count < Capacity - 1)
-            {
-                AmmoContainer.Push(!ammoComponent.Spent);
-                EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(user, Owner, SoundInsert);
-                return true;
-            }
-
-            return false;
+            throw new NotImplementedException();
         }
 
         public override void HandleComponentState(ComponentState? curState, ComponentState? nextState)

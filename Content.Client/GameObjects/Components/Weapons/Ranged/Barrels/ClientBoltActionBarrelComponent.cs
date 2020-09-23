@@ -43,8 +43,14 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         public override void Initialize()
         {
             base.Initialize();
-            // TODO: Temporary, til container prediction and probs entity spawning prediction
-            UnspawnedCount = 0;
+            if (FillPrototype == null)
+            {
+                UnspawnedCount = 0;
+            }
+            else
+            {
+                UnspawnedCount += Capacity;
+            }
             UpdateAppearance();
         }
 
@@ -53,6 +59,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
            if (!(curState is BoltActionBarrelComponentState cast))
                 return;
 
+           UnspawnedCount = 0;
            _chamber = cast.Chamber;
            _ammo = cast.Bullets;
            SetBolt(cast.BoltOpen);
@@ -149,7 +156,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             //EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(shooter, Owner, SoundCycle, true);
         }
 
-        protected override bool TryInsertBullet(IEntity user, IEntity ammo)
+        public override bool TryInsertBullet(IEntity user, SharedAmmoComponent ammoComponent)
         {
             throw new NotImplementedException();
         }
