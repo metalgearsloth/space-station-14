@@ -13,6 +13,7 @@ using Content.Server.GameObjects.Components.GUI;
 using Content.Server.GameObjects.Components.Items.Storage;
 using Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition;
 using Content.Server.GameObjects.EntitySystems;
+using Content.Shared.Audio;
 using Robust.Server.GameObjects.EntitySystems;
 using Robust.Shared.Audio;
 using Robust.Shared.Maths;
@@ -293,13 +294,29 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
 
             while (_toFireAmmo.Count > 0)
             {
-                var entity = _toFireAmmo.Dequeue();
-                var ammo = entity.GetComponent<AmmoComponent>();
-                var sound = ammo.Spent ? SoundEmpty : SoundGunshot;
-                
-                EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(Shooter(), Owner, sound);
-                EntitySystem.Get<RangedWeaponSystem>().Shoot(Shooter(), direction, ammo, AmmoSpreadRatio);
-                ammo.Spent = true;
+                var ammo = _toFireAmmo.Dequeue();
+
+                if (ammo == null)
+                    continue;
+
+                var ammoComp = ammo.GetComponent<AmmoComponent>();
+                if (ammoComp.Spent)
+                {
+                    if (SoundEmpty != null)
+                    {
+                        EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundEmpty, Owner, AudioHelpers.WithVariation(EmptyVariation));
+                    }
+                }
+                else
+                {
+                    if (SoundGunshot != null)
+                    {
+                        EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundGunshot, Owner, AudioHelpers.WithVariation(GunshotVariation));
+                    }
+                    
+                    EntitySystem.Get<RangedWeaponSystem>().Shoot(Shooter(), direction, ammoComp, AmmoSpreadRatio);
+                    ammoComp.Spent = true;
+                }
             }
         }
     }

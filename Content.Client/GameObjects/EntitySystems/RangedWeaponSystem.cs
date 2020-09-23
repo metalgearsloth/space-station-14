@@ -5,29 +5,23 @@ using Content.Shared.Audio;
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using Content.Shared.GameObjects.EntitySystems;
 using JetBrains.Annotations;
-using Robust.Client.GameObjects;
 using Robust.Client.GameObjects.EntitySystems;
 using Robust.Client.Interfaces.Graphics.ClientEye;
 using Robust.Client.Interfaces.Input;
 using Robust.Client.Player;
-using Robust.Shared.Audio;
 using Robust.Shared.GameObjects.EntitySystemMessages;
-using Robust.Shared.GameObjects.Systems;
 using Robust.Shared.Input;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Interfaces.Random;
 using Robust.Shared.Interfaces.Timing;
 using Robust.Shared.IoC;
 using Robust.Shared.Maths;
-using Robust.Shared.Prototypes;
-using Robust.Shared.Random;
 
 namespace Content.Client.GameObjects.EntitySystems
 {
     [UsedImplicitly]
     internal sealed class RangedWeaponSystem : SharedRangedWeaponSystem
     {
-        
         [Dependency] private readonly IPlayerManager _playerManager = default!;
         [Dependency] private readonly IEyeManager _eyeManager = default!;
         [Dependency] private readonly IInputManager _inputManager = default!;

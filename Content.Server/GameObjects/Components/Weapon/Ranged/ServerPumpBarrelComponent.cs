@@ -7,6 +7,7 @@ using Robust.Shared.Maths;
 using System.Collections.Generic;
 using Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition;
 using Content.Server.GameObjects.EntitySystems;
+using Content.Shared.Audio;
 using Content.Shared.GameObjects.EntitySystems;
 using Robust.Server.GameObjects.EntitySystems;
 using Robust.Shared.Audio;
@@ -20,13 +21,15 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
     [ComponentReference(typeof(SharedRangedWeaponComponent))]
     public sealed class ServerPumpBarrelComponent : SharedPumpBarrelComponent
     {
-        private ContainerSlot _chamberContainer;
-        private Container _ammoContainer;
+        private ContainerSlot _chamberContainer = default!;
+        private Container _ammoContainer = default!;
         private Stack<IEntity> _spawnedAmmo = new Stack<IEntity>();
         
         private Queue<IEntity> _toFireAmmo = new Queue<IEntity>();
 
         private float _ammoSpreadRatio;
+
+        protected override int ShotsLeft => UnspawnedCount + _spawnedAmmo.Count;
 
         public override void ExposeData(ObjectSerializer serializer)
         {
@@ -37,6 +40,14 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
         public override void Initialize()
         {
             base.Initialize();
+            if (FillPrototype == null)
+            {
+                UnspawnedCount = 0;
+            }
+            else
+            {
+                UnspawnedCount += Capacity + 1;
+            }
 
             _ammoContainer =
                 ContainerManagerComponent.Ensure<Container>($"{Name}-ammo-container", Owner, out var existing);
@@ -53,21 +64,17 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             _chamberContainer =
                 ContainerManagerComponent.Ensure<ContainerSlot>($"{Name}-chamber-container", Owner, out existing);
             
-            if (existing)
+            if (!existing && FillPrototype != null)
+            {
+                var ammo = Owner.EntityManager.SpawnEntity(FillPrototype, Owner.Transform.Coordinates);
+                _chamberContainer.Insert(ammo);
+                UnspawnedCount--;
+            } 
+            else if (existing)
             {
                 UnspawnedCount--;
             }
 
-            if (FillPrototype == null)
-            {
-                UnspawnedCount = 0;
-            }
-
-            if (false)
-            {
-                // TODO: Log
-            }
-            
             Dirty();
         }
 
@@ -99,6 +106,8 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             if (chamberEntity != null)
             {
                 _toFireAmmo.Enqueue(chamberEntity);
+                _chamberContainer.Remove(chamberEntity);
+                
                 if (!ManualCycle)
                 {
                     Cycle();
@@ -160,17 +169,17 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                 return false;
             }
 
-            if (_ammoContainer.ContainedEntities.Count < Capacity - 1)
+            if (_ammoContainer.ContainedEntities.Count < Capacity)
             {
                 _ammoContainer.Insert(ammo);
                 _spawnedAmmo.Push(ammo);
 
                 if (SoundInsert != null)
                 {
-                    EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(user, Owner, SoundInsert);
+                    // TODO: Copy stuff from existing with variation, same with alllll the others.
+                    EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundInsert, Owner);
                 }
                 
-                // TODO: when interaction predictions are in remove this.
                 Dirty();
                 return true;
             }
@@ -189,15 +198,24 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                 if (ammo == null)
                     continue;
 
-                // TODO: This should be removed elsewhere
-                if (_ammoContainer.Contains(ammo))
-                    _ammoContainer.Remove(ammo);
-                
                 var ammoComp = ammo.GetComponent<AmmoComponent>();
-
-                EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(Shooter(), Owner, SoundGunshot);
-                EntitySystem.Get<RangedWeaponSystem>().Shoot(Shooter(), direction, ammoComp, _ammoSpreadRatio);
-                ammoComp.Spent = true;
+                if (ammoComp.Spent)
+                {
+                    if (SoundEmpty != null)
+                    {
+                        EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundEmpty, Owner, AudioHelpers.WithVariation(EmptyVariation));
+                    }
+                }
+                else
+                {
+                    if (SoundGunshot != null)
+                    {
+                        EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundGunshot, Owner, AudioHelpers.WithVariation(GunshotVariation));
+                    }
+                    
+                    EntitySystem.Get<RangedWeaponSystem>().Shoot(Shooter(), direction, ammoComp, _ammoSpreadRatio);
+                    ammoComp.Spent = true;
+                }
             }
         }
     }

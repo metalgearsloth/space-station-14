@@ -8,9 +8,12 @@ using Robust.Shared.GameObjects;
 using Robust.Shared.Maths;
 using System;
 using System.Collections.Generic;
+using Content.Shared.Audio;
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
+using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
 using Content.Shared.GameObjects.EntitySystems;
-using Content.Shared.Interfaces;
+using Robust.Client.GameObjects;
+using Robust.Client.GameObjects.EntitySystems;
 using Robust.Shared.GameObjects.Systems;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Localization;
@@ -30,25 +33,25 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         
         private Queue<bool> _toFireAmmo = new Queue<bool>();
 
+        protected override int ShotsLeft => UnspawnedCount + AmmoContainer.Count;
+
         public override void Initialize()
         {
             base.Initialize();
-            _statusControl?.Update();
-            if (FillPrototype == null)
-            {
-                UnspawnedCount = 0;
-            }
-            else
-            {
-                UnspawnedCount += Capacity;
-            }
-
+            // TODO: Update the others to just do this
+            UnspawnedCount = 0;
             UpdateAppearance();
         }
 
         private void UpdateAppearance()
         {
-            throw new NotImplementedException();
+            if (!Owner.TryGetComponent(out AppearanceComponent? appearanceComponent))
+            {
+                return;
+            }
+            
+            appearanceComponent?.SetData(AmmoVisuals.AmmoCount, ShotsLeft);
+            appearanceComponent?.SetData(AmmoVisuals.AmmoMax, Capacity);
         }
 
         protected override bool TryTakeAmmo()
@@ -78,9 +81,23 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         {
             while (_toFireAmmo.Count > 0)
             {
-                _toFireAmmo.Dequeue();
+                var ammo = _toFireAmmo.Dequeue();
 
-                EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(Shooter(), Owner, SoundGunshot);
+                if (ammo)
+                {
+                    if (SoundGunshot != null)
+                    {
+                        // TODO: COPY AUDIO PROFILE AND VARIATION
+                        EntitySystem.Get<AudioSystem>().Play(SoundGunshot, Owner, AudioHelpers.WithVariation(GunshotVariation));
+                    }
+                }
+                else
+                {
+                    if (SoundEmpty != null)
+                    {
+                        EntitySystem.Get<AudioSystem>().Play(SoundEmpty, Owner, AudioHelpers.WithVariation(EmptyVariation));
+                    }
+                }
             }
         }
         
@@ -101,11 +118,12 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         {
             if (!(curState is PumpBarrelComponentState cast))
                 return;
-
+            
             ChamberContainer = cast.Chamber;
             AmmoContainer = cast.Ammo;
             Capacity = cast.Capacity;
             _statusControl?.Update();
+            UpdateAppearance();
         }
 
         public Control MakeControl()
@@ -187,16 +205,15 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 
                 _bulletsListTop.RemoveAllChildren();
                 _bulletsListBottom.RemoveAllChildren();
+                var capacity = _parent.Capacity;
 
                 if (_parent.Capacity == 1)
                 {
                     _noMagazineLabel.Visible = true;
                     return;
                 }
-
-                var capacity = _parent.Capacity;
-                var count = _parent.AmmoContainer.Count + _parent.UnspawnedCount;
-
+                
+                var count = _parent.ShotsLeft;
                 _noMagazineLabel.Visible = false;
 
                 string texturePath;

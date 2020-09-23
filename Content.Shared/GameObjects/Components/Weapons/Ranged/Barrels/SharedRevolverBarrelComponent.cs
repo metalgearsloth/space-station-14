@@ -109,11 +109,11 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
     }
     
     [Serializable, NetSerializable]
-    public sealed class RevolverSpinMessage : ComponentMessage
+    public sealed class ChangeSlotMessage : ComponentMessage
     {
         public ushort Slot { get; }
         
-        public RevolverSpinMessage(ushort slot)
+        public ChangeSlotMessage(ushort slot)
         {
             Slot = slot;
             Directed = true;

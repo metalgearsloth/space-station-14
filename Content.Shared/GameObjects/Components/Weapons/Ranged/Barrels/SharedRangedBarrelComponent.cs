@@ -125,12 +125,12 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         /// </summary>
         public string? MuzzleFlash { get; set; }
 
+        // TODO: Change to MapCoordinates
         /// <summary>
         ///     The angle the shooter selected to fire at.
         /// </summary>
         public Angle? FireAngle { get; set; }
-
-        // TODO: A few of these are server-only so need to move in the refactor
+        
         public ushort ExpectedShots { get; set; }
         
         public ushort AccumulatedShots { get; set; }
@@ -138,6 +138,11 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         // Sounds
         public string? SoundGunshot { get; protected set; }
         public string? SoundEmpty { get; protected set; }
+        
+        // Audio profile
+        protected const float GunshotVariation = 0.1f;
+        protected const float EmptyVariation = 0.1f;
+        protected const float CycleVariation = 0.1f;
         
         public override void ExposeData(ObjectSerializer serializer)
         {
@@ -207,6 +212,11 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
 
             return container.Owner;
         }
+
+        /// <summary>
+        ///     Called by the ranged weapon system if no bullets were fired by the gun
+        /// </summary>
+        protected virtual void NoShotsFired() {}
 
         protected virtual bool CanFire(IEntity entity)
         {
@@ -294,15 +304,11 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
             // No ammo :(
             if (firedShots == 0)
             {
+                NoShotsFired();
                 EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(Shooter(), Owner, SoundEmpty);
                 return false;
             }
 
-            if (MuzzleFlash != null && FireAngle != null)
-            {
-                EntitySystem.Get<SharedRangedWeaponSystem>().MuzzleFlash(Shooter(), Owner, MuzzleFlash, FireAngle.Value);
-            }
-            
             AccumulatedShots += firedShots;
             // SO server-side we essentially need to backtrack by n firedShots to work out what to shoot for each one
             // Client side we'll just play the effects and shit unless we get client-side entity prediction in.
@@ -319,6 +325,14 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         /// <param name="shotCount"></param>
         /// <param name="direction"></param>
         protected abstract void Shoot(int shotCount, Angle direction);
+
+        protected void MuzzleFlashEffect(Angle angle)
+        {
+            if (MuzzleFlash != null)
+            {
+                EntitySystem.Get<SharedRangedWeaponSystem>().MuzzleFlash(Shooter(), Owner, MuzzleFlash, angle);
+            }
+        }
 
         void IHandSelected.HandSelected(HandSelectedEventArgs eventArgs)
         {

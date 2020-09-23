@@ -286,14 +286,9 @@ namespace Content.Server.GameObjects.EntitySystems
 
             var soundCollection = _prototypeManager.Index<SoundCollectionPrototype>(ammo.SoundCollectionEject);
             var randomFile = _robustRandom.Pick(soundCollection.PickFiles);
-            IPlayerSession? excludedSession = null;
-            
-            if (user != null && user.TryGetComponent(out IActorComponent? actorComponent))
-            {
-                excludedSession = actorComponent?.playerSession;
-            }
+            // Don't use excluded til cartridges predicted
 
-            Get<AudioSystem>().PlayFromEntity(randomFile, casing, AudioHelpers.WithVariation(0.2f, _robustRandom).WithVolume(-1), excludedSession: excludedSession);
+            Get<AudioSystem>().PlayFromEntity(randomFile, casing, AudioHelpers.WithVariation(0.2f, _robustRandom).WithVolume(-1));
         }
     }
 }

@@ -24,6 +24,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 {
     [RegisterComponent]
     [ComponentReference(typeof(SharedRangedWeaponComponent))]
+    [ComponentReference(typeof(SharedRevolverBarrelComponent))]
     public class ClientRevolverBarrelComponent : SharedRevolverBarrelComponent, IItemStatus
     {
         private StatusControl _statusControl;
@@ -82,6 +83,12 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             return false;
         }
 
+        protected override void NoShotsFired()
+        {
+            base.NoShotsFired();
+            SendNetworkMessage(new ChangeSlotMessage(CurrentSlot));
+        }
+
         protected override void Shoot(int shotCount, Angle direction)
         {
             var shooter = Shooter();
@@ -127,7 +134,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         {
             CurrentSlot = (ushort) IoCManager.Resolve<IRobustRandom>().Next(Bullets.Length - 1);
             _statusControl?.Update(true);
-            SendNetworkMessage(new RevolverSpinMessage(CurrentSlot));
+            SendNetworkMessage(new ChangeSlotMessage(CurrentSlot));
             EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(Shooter(), Owner, SoundSpin, true);
         }
 

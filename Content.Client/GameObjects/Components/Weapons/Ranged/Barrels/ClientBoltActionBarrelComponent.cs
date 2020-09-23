@@ -9,21 +9,23 @@ using Robust.Shared.GameObjects;
 using Robust.Shared.Maths;
 using System;
 using System.Collections.Generic;
+using Content.Shared.Audio;
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using Content.Shared.GameObjects.EntitySystems;
 using Content.Shared.GameObjects.Verbs;
 using Content.Shared.Interfaces;
 using Robust.Client.GameObjects;
+using Robust.Client.GameObjects.EntitySystems;
 using Robust.Shared.GameObjects.Systems;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Localization;
-using Robust.Shared.Serialization;
 using Robust.Shared.Utility;
 
 namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 {
     [RegisterComponent]
     [ComponentReference(typeof(SharedRangedWeaponComponent))]
+    [ComponentReference(typeof(SharedBoltActionBarrelComponent))]
     public class ClientBoltActionBarrelComponent : SharedBoltActionBarrelComponent, IExamine, IItemStatus
     {
 
@@ -189,10 +191,23 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 
             while (_toFireAmmo.Count > 0)
             {
-                var entity = _toFireAmmo.Dequeue();
-                var sound = entity ? SoundGunshot : SoundEmpty;
-                
-                EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(Shooter(), Owner, sound);
+                var ammo = _toFireAmmo.Dequeue();
+
+                if (ammo)
+                {
+                    if (SoundGunshot != null)
+                    {
+                        // TODO: COPY AUDIO PROFILE AND VARIATION
+                        EntitySystem.Get<AudioSystem>().Play(SoundGunshot, Owner, AudioHelpers.WithVariation(GunshotVariation));
+                    }
+                }
+                else
+                {
+                    if (SoundEmpty != null)
+                    {
+                        EntitySystem.Get<AudioSystem>().Play(SoundEmpty, Owner, AudioHelpers.WithVariation(EmptyVariation));
+                    }
+                }
             }
             
             UpdateAppearance();

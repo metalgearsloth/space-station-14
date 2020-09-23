@@ -20,10 +20,11 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
 {
     [RegisterComponent]
     [ComponentReference(typeof(SharedRangedWeaponComponent))]
+    [ComponentReference(typeof(SharedBoltActionBarrelComponent))]
     public class ServerBoltActionBarrelComponent : SharedBoltActionBarrelComponent
     {
-        private ContainerSlot? _chamberContainer;
-        private Container? _ammoContainer;
+        private ContainerSlot _chamberContainer = default!;
+        private Container _ammoContainer = default!;
         private Stack<IEntity> _spawnedAmmo = new Stack<IEntity>();
         
         private Queue<IEntity> _toFireAmmo = new Queue<IEntity>();

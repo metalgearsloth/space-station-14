@@ -25,6 +25,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
 {
     [RegisterComponent]
     [ComponentReference(typeof(SharedRangedWeaponComponent))]
+    [ComponentReference(typeof(SharedRevolverBarrelComponent))]
     public sealed class ServerRevolverBarrelComponent : SharedRevolverBarrelComponent
     {
         private IEntity?[] _ammoSlots = null!;
@@ -60,7 +61,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
 
             switch (message)
             {
-                case RevolverSpinMessage msg:
+                case ChangeSlotMessage msg:
                     CurrentSlot = msg.Slot;
                     EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(user, Owner, SoundSpin, true);
                     break;

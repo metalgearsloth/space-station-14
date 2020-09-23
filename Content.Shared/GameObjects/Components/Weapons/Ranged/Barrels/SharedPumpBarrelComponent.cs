@@ -15,6 +15,9 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         public override string Name => "PumpBarrel";
         public override uint? NetID => ContentNetIDs.PUMP_BARREL;
 
+        /// <summary>
+        ///     Excluding chamber
+        /// </summary>
         public ushort Capacity { get; protected set; }
 
         // Even a point having a chamber? I guess it makes some of the below code cleaner
@@ -26,6 +29,11 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         public string? FillPrototype;
         [ViewVariables]
         protected int UnspawnedCount;
+        
+        /// <summary>
+        ///     Excluding chamber
+        /// </summary>
+        protected abstract int ShotsLeft { get; }
 
         protected bool ManualCycle;
 
@@ -43,12 +51,6 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
 
             serializer.DataField(ref SoundCycle, "soundCycle", "/Audio/Weapons/Guns/Cock/sf_rifle_cock.ogg");
             serializer.DataField(ref SoundInsert, "soundInsert", "/Audio/Weapons/Guns/MagIn/bullet_insert.ogg");
-        }
-
-        public override void Initialize()
-        {
-            base.Initialize();
-            UnspawnedCount = FillPrototype != null ? Capacity : (ushort) 0;
         }
 
         protected abstract void Cycle(bool manual = false);
