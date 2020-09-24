@@ -79,6 +79,8 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 
         protected override void Shoot(int shotCount, Angle direction)
         {
+            DebugTools.Assert(_toFireAmmo.Count == shotCount);
+        
             while (_toFireAmmo.Count > 0)
             {
                 var ammo = _toFireAmmo.Dequeue();
