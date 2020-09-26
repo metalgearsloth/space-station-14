@@ -8,10 +8,12 @@ using Robust.Shared.Maths;
 using Robust.Shared.ViewVariables;
 using System;
 using Content.Client.GameObjects.Components.Mobs;
+using Content.Shared.Audio;
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using Content.Shared.GameObjects.EntitySystems;
 using Content.Shared.GameObjects.Verbs;
 using Content.Shared.Interfaces;
+using Robust.Client.GameObjects.EntitySystems;
 using Robust.Shared.GameObjects.Systems;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Interfaces.Random;
@@ -98,9 +100,12 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                 recoilComponent.Kick(-direction.ToVec().Normalized * 1.1f);
             }
 
-            for (var i = 0; i < shotCount; i++)
+            if (SoundGunshot != null)
             {
-                EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(shooter, Owner, SoundGunshot);
+                for (var i = 0; i < shotCount; i++)
+                {
+                    EntitySystem.Get<AudioSystem>().Play(SoundGunshot, Owner, AudioHelpers.WithVariation(GunshotVariation));
+                }
             }
         }
 
@@ -135,7 +140,10 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             CurrentSlot = (ushort) IoCManager.Resolve<IRobustRandom>().Next(Bullets.Length - 1);
             _statusControl?.Update(true);
             SendNetworkMessage(new ChangeSlotMessage(CurrentSlot));
-            EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(Shooter(), Owner, SoundSpin, true);
+            if (SoundSpin != null)
+            {
+                EntitySystem.Get<AudioSystem>().Play(SoundSpin, Owner);
+            }
         }
 
         // Item status etc.

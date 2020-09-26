@@ -75,14 +75,12 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                 return;
             }
 
-            var gunSystem = EntitySystem.Get<SharedRangedWeaponSystem>();
-
             if (value)
             {
                 TryEjectChamber();
                 if (SoundBoltOpen != null)
                 {
-                    gunSystem.PlaySound(Shooter(), Owner, SoundBoltOpen);
+                    EntitySystem.Get<AudioSystem>().Play(SoundBoltOpen, Owner, AudioHelpers.WithVariation(BoltToggleVariation));
                 }
             }
             else
@@ -90,7 +88,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                 TryFeedChamber();
                 if (SoundBoltClosed != null)
                 {
-                    gunSystem.PlaySound(Shooter(), Owner, SoundBoltClosed);
+                    EntitySystem.Get<AudioSystem>().Play(SoundBoltClosed, Owner, AudioHelpers.WithVariation(BoltToggleVariation));
                 }
             }
 
@@ -173,14 +171,22 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             if (_ammo.TryPop(out var ammo))
             {
                 _chamber = ammo;
-                EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(Shooter(), Owner, SoundCycle, true);
+                if (SoundCycle != null)
+                {
+                    EntitySystem.Get<AudioSystem>().Play(SoundCycle, Owner, AudioHelpers.WithVariation(CycleVariation));
+                }
+                
                 return;
             }
 
             if (UnspawnedCount > 0)
             {
                 _chamber = true;
-                EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(Shooter(), Owner, SoundCycle, true);
+                if (SoundCycle != null)
+                {
+                    EntitySystem.Get<AudioSystem>().Play(SoundCycle, Owner, AudioHelpers.WithVariation(CycleVariation));
+                }
+                
                 UnspawnedCount--;
             }
         }

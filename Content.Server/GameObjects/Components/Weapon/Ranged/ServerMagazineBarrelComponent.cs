@@ -17,6 +17,7 @@ using Content.Shared.Audio;
 using Robust.Server.GameObjects.EntitySystems;
 using Robust.Server.Interfaces.GameObjects;
 using Robust.Server.Interfaces.Player;
+using Robust.Server.Player;
 using Robust.Shared.Audio;
 using Robust.Shared.Maths;
 using Robust.Shared.Utility;
@@ -55,14 +56,12 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                 return;
             }
 
-            var gunSystem = EntitySystem.Get<SharedRangedWeaponSystem>();
-
             if (value)
             {
                 TryEjectChamber();
                 if (SoundBoltOpen != null)
                 {
-                    gunSystem.PlaySound(Shooter(), Owner, SoundBoltOpen);
+                    EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundBoltOpen, Owner, AudioHelpers.WithVariation(BoltToggleVariation), excludedSession: Shooter().PlayerSession());
                 }
             }
             else
@@ -70,7 +69,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                 TryFeedChamber();
                 if (SoundBoltClosed != null)
                 {
-                    gunSystem.PlaySound(Shooter(), Owner, SoundBoltClosed);
+                    EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundBoltClosed, Owner, AudioHelpers.WithVariation(BoltToggleVariation), excludedSession: Shooter().PlayerSession());
                 }
             }
 
@@ -158,7 +157,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             {
                 if (SoundAutoEject != null)
                 {
-                    EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(Shooter(), Owner, SoundAutoEject, true);
+                    EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundAutoEject, Owner, AudioHelpers.WithVariation(AutoEjectVariation), excludedSession: Shooter().PlayerSession());
                 }
 
                 _magazineContainer?.Remove(magazine);
@@ -224,7 +223,10 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
 
                 if (_magazineContainer?.ContainedEntity == null)
                 {
-                    EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(Shooter(), Owner, SoundMagInsert, true);
+                    if (SoundMagInsert != null)
+                    {
+                        EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundMagInsert, Owner, AudioHelpers.WithVariation(MagVariation), excludedSession: Shooter().PlayerSession());
+                    }
 
                     Owner.PopupMessage(user, Loc.GetString("Magazine inserted"));
                     _magazineContainer?.Insert(user);
@@ -272,6 +274,30 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             return false;
         }
 
+        protected override bool UseEntity(IEntity user)
+        {
+            // Behavior:
+            // If bolt open just close it
+            // If bolt closed then cycle
+            //     If we cycle then get next round
+            //         If no more round then open bolt
+
+            if (BoltOpen)
+            {
+                if (SoundBoltClosed != null)
+                    EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundBoltClosed, Owner, AudioHelpers.WithVariation(BoltToggleVariation));
+                
+                Owner.PopupMessage(user, Loc.GetString("Bolt closed"));
+                BoltOpen = false;
+                return true;
+            }
+
+            // Could play a rack-slide specific sound here if you're so inclined (if the chamber is empty but rounds are available)
+
+            Cycle(true);
+            return true;
+        }
+
         protected override bool TryTakeAmmo()
         {
             if (!base.TryTakeAmmo())
@@ -293,6 +319,13 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
         protected override void Shoot(int shotCount, Angle direction)
         {
             DebugTools.Assert(shotCount == _toFireAmmo.Count);
+            var shooter = Shooter();
+            IPlayerSession? excludedSession = null;
+
+            if (shooter != null && shooter.TryGetComponent(out IActorComponent? actorComponent))
+            {
+                excludedSession = actorComponent.playerSession;
+            }
 
             while (_toFireAmmo.Count > 0)
             {
@@ -302,14 +335,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                     continue;
 
                 var ammoComp = ammo.GetComponent<AmmoComponent>();
-                var shooter = Shooter();
-                IPlayerSession? excludedSession = null;
 
-                if (shooter != null && shooter.TryGetComponent(out IActorComponent? actorComponent))
-                {
-                    excludedSession = actorComponent.playerSession;
-                }
-                
                 if (ammoComp.Spent)
                 {
                     if (SoundEmpty != null)

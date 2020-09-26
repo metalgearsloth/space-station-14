@@ -135,14 +135,6 @@ namespace Content.Client.GameObjects.EntitySystems
             // TODO: Stop precision mouse
         }
 
-        public override void PlaySound(IEntity? user, IEntity weapon, string? sound, bool randomPitch = false)
-        {
-            if (sound == null)
-                return;
-
-            Get<AudioSystem>().Play(sound, weapon, AudioHelpers.WithVariation(0.2f, _robustRandom));
-        }
-
         public override void MuzzleFlash(IEntity? user, IEntity weapon, string texture, Angle angle)
         {
             var offset = angle.ToVec().Normalized / 2;

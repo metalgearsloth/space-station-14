@@ -34,6 +34,8 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         protected string? SoundInsert;
         protected string? SoundSpin;
 
+        protected const float SpinVariation = 0.1f;
+
         public override void ExposeData(ObjectSerializer serializer)
         {
             base.ExposeData(serializer);

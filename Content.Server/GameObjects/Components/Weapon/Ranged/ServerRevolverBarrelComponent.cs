@@ -2,6 +2,7 @@
 using System;
 using Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition;
 using Content.Server.GameObjects.EntitySystems;
+using Content.Shared.Audio;
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
 using Content.Shared.GameObjects.EntitySystems;
@@ -9,6 +10,7 @@ using Robust.Server.GameObjects.Components.Container;
 using Robust.Server.GameObjects.EntitySystems;
 using Robust.Server.Interfaces.GameObjects;
 using Robust.Server.Interfaces.Player;
+using Robust.Server.Player;
 using Robust.Shared.GameObjects;
 using Robust.Shared.GameObjects.Systems;
 using Robust.Shared.Interfaces.GameObjects;
@@ -63,7 +65,9 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             {
                 case ChangeSlotMessage msg:
                     CurrentSlot = msg.Slot;
-                    EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(user, Owner, SoundSpin, true);
+                    if (SoundSpin != null)
+                        EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundSpin, Owner, AudioHelpers.WithVariation(SpinVariation), excludedSession: Shooter().PlayerSession());
+                    
                     break;
             }
         }
@@ -157,8 +161,10 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                 
                 var ammo = entity.GetComponent<AmmoComponent>();
                 var sound = ammo.Spent ? SoundEmpty : SoundGunshot;
-
-                EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(Shooter(), Owner, sound);
+                
+                if (sound != null)
+                    EntitySystem.Get<AudioSystem>().PlayFromEntity(sound, Owner, AudioHelpers.WithVariation(GunshotVariation), excludedSession: Shooter().PlayerSession());
+                
                 EntitySystem.Get<RangedWeaponSystem>().Shoot(Shooter(), direction, ammo);
                 ammo.Spent = true;
             }
@@ -221,7 +227,9 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                     _ammoSlots[i] = ammoComponent.Owner;
                     AmmoContainer.Insert(ammoComponent.Owner);
                     NextFire = IoCManager.Resolve<IGameTiming>().CurTime;
-                    EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(null, Owner, SoundInsert, true);
+                    if (SoundInsert != null)
+                        EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundInsert, Owner, AudioHelpers.WithVariation(InsertVariation), excludedSession: Shooter().PlayerSession());
+                    
                     // Won't need dirty once prediction is in, place we can pass in the actual user above.
                     Dirty();
                     return true;

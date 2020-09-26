@@ -53,6 +53,9 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         protected string? SoundMagEject;
         protected string? SoundAutoEject;
 
+        protected const float AutoEjectVariation = 0.1f;
+        protected const float MagVariation = 0.1f;
+
         public override void ExposeData(ObjectSerializer serializer)
         {
             base.ExposeData(serializer);
@@ -101,26 +104,10 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
 
         public override bool UseEntity(UseEntityEventArgs eventArgs)
         {
-            // Behavior:
-            // If bolt open just close it
-            // If bolt closed then cycle
-            //     If we cycle then get next round
-            //         If no more round then open bolt
-
-            if (BoltOpen)
-            {
-                
-                EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(Shooter(), Owner, SoundBoltClosed,  true);
-                Owner.PopupMessage(eventArgs.User, Loc.GetString("Bolt closed"));
-                BoltOpen = false;
-                return true;
-            }
-
-            // Could play a rack-slide specific sound here if you're so inclined (if the chamber is empty but rounds are available)
-
-            Cycle(true);
-            return true;
+            return UseEntity(eventArgs.User);
         }
+
+        protected abstract bool UseEntity(IEntity user);
 
         protected override bool TryTakeAmmo()
         {

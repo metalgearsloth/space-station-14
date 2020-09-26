@@ -1,5 +1,6 @@
 #nullable enable
 using System.Collections.Generic;
+using Content.Shared.Audio;
 using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
 using Content.Shared.GameObjects.EntitySystems;
 using Robust.Client.GameObjects;
@@ -77,14 +78,12 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                 return;
             }
 
-            var gunSystem = EntitySystem.Get<SharedRangedWeaponSystem>();
-
             if (value)
             {
                 TryEjectChamber();
                 if (SoundBoltOpen != null)
                 {
-                    gunSystem.PlaySound(Shooter(), Owner, SoundBoltOpen);
+                    EntitySystem.Get<AudioSystem>().Play(SoundBoltOpen, Owner, AudioHelpers.WithVariation(BoltToggleVariation));
                 }
             }
             else
@@ -92,7 +91,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                 TryFeedChamber();
                 if (SoundBoltClosed != null)
                 {
-                    gunSystem.PlaySound(Shooter(), Owner, SoundBoltClosed);
+                    EntitySystem.Get<AudioSystem>().Play(SoundBoltClosed, Owner, AudioHelpers.WithVariation(BoltToggleVariation));
                 }
             }
 
@@ -119,9 +118,9 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 
             _chamber = nextCartridge;
 
-            if (AutoEjectMag && _magazine != null && _magazine.Count == 0)
+            if (AutoEjectMag && _magazine != null && _magazine.Count == 0 && SoundAutoEject != null)
             {
-                EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(Shooter(), Owner, SoundAutoEject, true);
+                EntitySystem.Get<AudioSystem>().Play(SoundAutoEject, Owner, AudioHelpers.WithVariation(AutoEjectVariation));
             }
         }
 
@@ -136,6 +135,11 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         }
 
         protected override bool TryInsertAmmo(IEntity user, IEntity ammo)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        protected override bool UseEntity(IEntity user)
         {
             throw new System.NotImplementedException();
         }
@@ -165,8 +169,12 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             {
                 var entity = _toFireAmmo.Dequeue();
                 var sound = entity ? SoundGunshot : SoundEmpty;
+                var variation = entity ? GunshotVariation : EmptyVariation;
+
+                if (sound == null)
+                    break;
                 
-                EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(Shooter(), Owner, sound);
+                EntitySystem.Get<AudioSystem>().Play(sound, Owner, AudioHelpers.WithVariation(variation));
             }
             
             UpdateAppearance();

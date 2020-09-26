@@ -10,12 +10,9 @@ using Content.Shared.Physics;
 using JetBrains.Annotations;
 using Robust.Server.GameObjects.EntitySystems;
 using Robust.Server.Interfaces.GameObjects;
-using Robust.Server.Interfaces.Player;
-using Robust.Shared.Audio;
 using Robust.Shared.GameObjects;
 using Robust.Shared.GameObjects.Components;
 using Robust.Shared.GameObjects.EntitySystemMessages;
-using Robust.Shared.GameObjects.Systems;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Interfaces.Random;
 using Robust.Shared.Interfaces.Timing;
@@ -225,23 +222,6 @@ namespace Content.Server.GameObjects.EntitySystems
                 linspace.Add(Angle.FromDegrees(start + (end - start) * i / (intervals - 1)));
             }
             return linspace;
-        }
-        
-        public override void PlaySound(IEntity? user, IEntity weapon, string? sound, bool randomPitch = false)
-        {
-            if (sound == null)
-                return;
-
-            var audioParams = AudioHelpers.WithVariation(0.2f, _robustRandom);
-            
-            if (user != null && user.TryGetComponent(out IActorComponent? actorComponent))
-            {
-                Get<AudioSystem>().PlayFromEntity(sound, weapon, excludedSession: actorComponent.playerSession, audioParams: audioParams);
-            }
-            else
-            {
-                Get<AudioSystem>().PlayFromEntity(sound, weapon, audioParams);
-            }
         }
 
         public override void MuzzleFlash(IEntity? user, IEntity weapon, string texture, Angle angle)

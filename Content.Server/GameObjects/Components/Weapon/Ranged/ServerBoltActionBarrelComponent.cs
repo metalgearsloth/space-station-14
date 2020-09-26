@@ -15,6 +15,7 @@ using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using Robust.Server.GameObjects.EntitySystems;
 using Robust.Server.Interfaces.GameObjects;
 using Robust.Server.Interfaces.Player;
+using Robust.Server.Player;
 using Robust.Shared.Interfaces.Network;
 using Robust.Shared.Maths;
 using Robust.Shared.Players;
@@ -103,14 +104,12 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                 return;
             }
 
-            var gunSystem = EntitySystem.Get<SharedRangedWeaponSystem>();
-
             if (value)
             {
                 TryEjectChamber();
                 if (SoundBoltOpen != null)
                 {
-                    gunSystem.PlaySound(Shooter(), Owner, SoundBoltOpen);
+                    EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundBoltOpen, Owner, AudioHelpers.WithVariation(BoltToggleVariation), excludedSession: Shooter().PlayerSession());
                 }
             }
             else
@@ -118,7 +117,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                 TryFeedChamber();
                 if (SoundBoltClosed != null)
                 {
-                    gunSystem.PlaySound(Shooter(), Owner, SoundBoltClosed);
+                    EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundBoltClosed, Owner, AudioHelpers.WithVariation(BoltToggleVariation), excludedSession: Shooter().PlayerSession());
                 }
             }
 
@@ -142,12 +141,10 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                 }
                 return;
             }
-            else
-            {
-                // TODO: Need this because interaction prediction
-                //AudioParams.Default.WithVolume(-2)
-                EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(null, Owner, SoundCycle, true);
-            }
+
+            // TODO: Need this because interaction prediction
+            if (SoundCycle != null)
+                EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundCycle, Owner, AudioHelpers.WithVariation(CycleVariation));
 
             Dirty();
         }
@@ -195,7 +192,9 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             if (_spawnedAmmo.TryPop(out var ammo))
             {
                 _chamberContainer?.Insert(ammo);
-                EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(Shooter(), Owner, SoundCycle, true);
+                if (SoundCycle != null)
+                    EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundCycle, Owner, AudioHelpers.WithVariation(CycleVariation), excludedSession: Shooter().PlayerSession());
+                
                 return;
             }
 
@@ -203,7 +202,9 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             {
                 var entity = Owner.EntityManager.SpawnEntity(FillPrototype, Owner.Transform.MapPosition);
                 _chamberContainer?.Insert(entity);
-                EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(Shooter(), Owner, SoundCycle, true);
+                if (SoundCycle != null)
+                    EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundCycle, Owner, AudioHelpers.WithVariation(CycleVariation), excludedSession: Shooter().PlayerSession());
+                
                 UnspawnedCount--;
             }
         }
@@ -261,10 +262,8 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                 _spawnedAmmo.Push(ammoComponent.Owner);
 
                 if (SoundInsert != null)
-                {
-                    EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(user, Owner, SoundInsert);
-                }
-                
+                    EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundInsert, Owner, AudioHelpers.WithVariation(InsertVariation), excludedSession: user.PlayerSession());
+
                 // TODO: when interaction predictions are in remove this.
                 Dirty();
                 return true;

@@ -143,6 +143,8 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         protected const float GunshotVariation = 0.1f;
         protected const float EmptyVariation = 0.1f;
         protected const float CycleVariation = 0.1f;
+        protected const float BoltToggleVariation = 0.1f;
+        protected const float InsertVariation = 0.1f;
         
         public override void ExposeData(ObjectSerializer serializer)
         {
@@ -305,7 +307,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
             if (firedShots == 0)
             {
                 NoShotsFired();
-                EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(Shooter(), Owner, SoundEmpty);
+                // EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(Shooter(), Owner, SoundEmpty);
                 return false;
             }
 
