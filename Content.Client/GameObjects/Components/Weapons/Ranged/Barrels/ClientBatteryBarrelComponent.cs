@@ -1,5 +1,5 @@
-﻿using Content.Client.UserInterface.Stylesheets;
-using Content.Shared.GameObjects;
+﻿#nullable enable
+using Content.Client.UserInterface.Stylesheets;
 using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
 using Robust.Client.Graphics.Drawing;
 using Robust.Client.UserInterface;
@@ -8,16 +8,17 @@ using Robust.Shared.GameObjects;
 using Robust.Shared.Maths;
 using Robust.Shared.ViewVariables;
 using System;
+using Content.Shared.GameObjects.Components.Weapons.Ranged;
+using Robust.Client.GameObjects;
 
 namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 {
     [RegisterComponent]
-    public class ClientBatteryBarrelComponent : Component, IItemStatus
+    [ComponentReference(typeof(SharedRangedWeaponComponent))]
+    public class ClientBatteryBarrelComponent : SharedBatteryBarrelComponent, IItemStatus
     {
-        public override string Name => "BatteryBarrel";
-        public override uint? NetID => ContentNetIDs.BATTERY_BARREL;
 
-        private StatusControl _statusControl;
+        private StatusControl? _statusControl;
 
         /// <summary>
         ///     Count of bullets in the magazine.
@@ -28,13 +29,22 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         [ViewVariables]
         public (int count, int max)? MagazineCount { get; private set; }
 
-        public override void HandleComponentState(ComponentState curState, ComponentState nextState)
+        public override void HandleComponentState(ComponentState? curState, ComponentState? nextState)
         {
             if (!(curState is BatteryBarrelComponentState cast))
                 return;
 
             MagazineCount = cast.Magazine;
             _statusControl?.Update();
+        }
+
+        private void UpdateAppearance()
+        {
+            if (!Owner.TryGetComponent(out AppearanceComponent? appearanceComponent))
+                return;
+            
+            // TODO:
+            throw new NotImplementedException();
         }
 
         public Control MakeControl()
