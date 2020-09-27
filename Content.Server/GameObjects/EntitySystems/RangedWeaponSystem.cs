@@ -4,10 +4,12 @@ using System.Collections.Generic;
 using Content.Server.GameObjects.Components.Projectiles;
 using Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition;
 using Content.Shared.Audio;
+using Content.Shared.GameObjects.Components.Projectiles;
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using Content.Shared.GameObjects.EntitySystems;
 using Content.Shared.Physics;
 using JetBrains.Annotations;
+using Microsoft.CodeAnalysis;
 using Robust.Server.GameObjects.EntitySystems;
 using Robust.Server.Interfaces.GameObjects;
 using Robust.Shared.GameObjects;
@@ -144,7 +146,14 @@ namespace Content.Server.GameObjects.EntitySystems
             }
         }
 
-        public void Shoot(IEntity? user, Angle angle, AmmoComponent ammoComponent, float spreadRatio = 1.0f)
+        public override void ShootHitscan(IEntity? user, HitscanPrototype hitscan, Angle angle, float damageRatio = 1, float alphaRatio = 1)
+        {
+            throw new NotImplementedException();
+            // TODO: Travel and thingo effect
+            // Maybe shooting should also do muzzle flashes
+        }
+
+        public override void ShootAmmo(IEntity? user, Angle angle, SharedAmmoComponent ammoComponent, float spreadRatio = 1.0f)
         {
             // BIG FAT TODO: NEED TO GET RECOIL HERE
             if (!ammoComponent.CanFire())
@@ -156,7 +165,7 @@ namespace Content.Server.GameObjects.EntitySystems
 
             if (ammoComponent.AmmoIsProjectile)
             {
-                Fire(user, ammoComponent.Owner, angle, ammoComponent.Velocity);
+                ShootProjectile(user,  angle, ammoComponent.Owner.GetComponent<SharedProjectileComponent>(), ammoComponent.Velocity);
                 return;
             }
 
@@ -181,36 +190,36 @@ namespace Content.Server.GameObjects.EntitySystems
                 {
                     projectileAngle = angle;
                 }
+                
+                var hitscan = IoCManager.Resolve<IPrototypeManager>().Index<HitscanPrototype>(ammoComponent.ProjectileId);
 
-                Fire(user, projectile, projectileAngle, ammoComponent.Velocity);
+                if (hitscan != null)
+                {
+                    ShootHitscan(user, hitscan, angle);
+                }
+                else
+                {
+                    // TODO: Go User -> Projectile -> Angle
+                    ShootProjectile(user, projectileAngle, projectile.GetComponent<SharedProjectileComponent>(), ammoComponent.Velocity);
+                }
             }
         }
 
-        /// <summary>
-        ///     Sends out a particular bullet projectile.
-        /// </summary>
-        /// <param name="shooter"></param>
-        /// <param name="bullet"></param>
-        /// <param name="angle"></param>
-        /// <param name="velocity"></param>
-        private void Fire(IEntity? shooter, IEntity bullet, Angle angle, float velocity)
+        public override void ShootProjectile(IEntity? user, Angle angle, SharedProjectileComponent projectileComponent, float velocity)
         {
-            var collidableComponent = bullet.GetComponent<ICollidableComponent>();
+            var collidableComponent = projectileComponent.Owner.GetComponent<ICollidableComponent>();
             collidableComponent.Status = BodyStatus.InAir;
 
-            var projectileComponent = bullet.GetComponent<ProjectileComponent>();
-            
-            if (shooter != null)
-                projectileComponent.IgnoreEntity(shooter);
+            if (user != null)
+                projectileComponent.IgnoreEntity(user);
 
-            bullet
-                .GetComponent<ICollidableComponent>()
+            collidableComponent
                 .EnsureController<BulletController>()
                 .LinearVelocity = angle.ToVec() * velocity;
 
-            bullet.Transform.LocalRotation = angle.Theta;
+            projectileComponent.Owner.Transform.LocalRotation = angle.Theta;
         }
-        
+
         private List<Angle> Linspace(double start, double end, int intervals)
         {
             DebugTools.Assert(intervals > 1);

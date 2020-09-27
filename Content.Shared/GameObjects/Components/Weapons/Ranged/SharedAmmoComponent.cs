@@ -1,7 +1,9 @@
 #nullable enable
 using System;
 using Robust.Shared.GameObjects;
+using Robust.Shared.IoC;
 using Robust.Shared.Log;
+using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization;
 using Robust.Shared.Utility;
 using Robust.Shared.ViewVariables;
@@ -46,10 +48,12 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         public byte ProjectilesFired { get; private set; }
 
         /// <summary>
-        ///     Prototype ID of the entity to be spawned.
+        ///     Prototype ID of the entity to be spawned (projectile or hitscan).
         /// </summary>
         [ViewVariables]
         public string ProjectileId { get; private set; } = default!;
+
+        public bool IsHitscan => IoCManager.Resolve<IPrototypeManager>().Index<HitscanPrototype>(ProjectileId) != null;
         
         /// <summary>
         ///     How far apart each entity is if multiple are shot, like with a shotgun.

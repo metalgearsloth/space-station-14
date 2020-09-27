@@ -25,17 +25,19 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         /// </summary>
         /// <remarks>
         ///     Null if no magazine is inserted.
+        ///     Didn't call it Capacity because that's the battery capacity rather than shots left capacity like the other guns.
         /// </remarks>
         [ViewVariables]
-        public (int count, int max)? MagazineCount { get; private set; }
+        public (int Count, int Max)? PowerCell { get; private set; }
 
         public override void HandleComponentState(ComponentState? curState, ComponentState? nextState)
         {
             if (!(curState is BatteryBarrelComponentState cast))
                 return;
 
-            MagazineCount = cast.Magazine;
+            PowerCell = cast.PowerCell;
             _statusControl?.Update();
+            UpdateAppearance();
         }
 
         private void UpdateAppearance()
@@ -43,8 +45,9 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             if (!Owner.TryGetComponent(out AppearanceComponent? appearanceComponent))
                 return;
             
-            // TODO:
-            throw new NotImplementedException();
+            appearanceComponent?.SetData(MagazineBarrelVisuals.MagLoaded, PowerCell != null);
+            appearanceComponent?.SetData(AmmoVisuals.AmmoCount, PowerCell?.Count ?? 0);
+            appearanceComponent?.SetData(AmmoVisuals.AmmoMax, PowerCell?.Max ?? 0);
         }
 
         public Control MakeControl()
@@ -111,14 +114,14 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             {
                 _bulletsList.RemoveAllChildren();
 
-                if (_parent.MagazineCount == null)
+                if (_parent.PowerCell == null)
                 {
                     _noBatteryLabel.Visible = true;
                     _ammoCount.Visible = false;
                     return;
                 }
 
-                var (count, capacity) = _parent.MagazineCount.Value;
+                var (count, capacity) = _parent.PowerCell.Value;
 
                 _noBatteryLabel.Visible = false;
                 _ammoCount.Visible = true;
