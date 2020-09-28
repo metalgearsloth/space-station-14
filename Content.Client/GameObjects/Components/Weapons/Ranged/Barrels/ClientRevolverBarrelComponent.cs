@@ -1,4 +1,5 @@
-﻿using Content.Client.Utility;
+﻿#nullable enable
+using Content.Client.Utility;
 using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
 using Robust.Client.Graphics;
 using Robust.Client.UserInterface;
@@ -6,18 +7,16 @@ using Robust.Client.UserInterface.Controls;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Maths;
 using Robust.Shared.ViewVariables;
-using System;
+using System.Collections.Generic;
 using Content.Client.GameObjects.Components.Mobs;
 using Content.Shared.Audio;
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using Content.Shared.GameObjects.EntitySystems;
 using Content.Shared.GameObjects.Verbs;
-using Content.Shared.Interfaces;
 using Robust.Client.GameObjects.EntitySystems;
 using Robust.Shared.GameObjects.Systems;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Interfaces.Random;
-using Robust.Shared.Interfaces.Timing;
 using Robust.Shared.IoC;
 using Robust.Shared.Localization;
 using Robust.Shared.Serialization;
@@ -29,7 +28,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
     [ComponentReference(typeof(SharedRevolverBarrelComponent))]
     public class ClientRevolverBarrelComponent : SharedRevolverBarrelComponent, IItemStatus
     {
-        private StatusControl _statusControl;
+        private StatusControl? _statusControl;
 
         /// <summary>
         /// A array that lists the bullet states
@@ -38,7 +37,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         /// null means no bullet
         /// </summary>
         [ViewVariables]
-        public bool?[] Bullets { get; private set; }
+        public bool?[] Bullets { get; private set; } = default!;
 
         protected override ushort Capacity => (ushort) Bullets.Length;
         
@@ -89,23 +88,36 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         {
             base.NoShotsFired();
             SendNetworkMessage(new ChangeSlotMessage(CurrentSlot));
+            // TODO: Could probably just do this server-side.
         }
 
-        protected override void Shoot(int shotCount, Angle direction)
+        protected override void Shoot(int shotCount, List<Angle> spreads)
         {
             var shooter = Shooter();
-            
-            if (shooter != null && shooter.TryGetComponent(out CameraRecoilComponent recoilComponent))
-            {
-                recoilComponent.Kick(-direction.ToVec().Normalized * 1.1f);
-            }
+            CameraRecoilComponent? cameraRecoilComponent = null;
+            shooter?.TryGetComponent(out cameraRecoilComponent);
 
-            if (SoundGunshot != null)
+            for (var i = 0; i < shotCount; i++)
             {
-                for (var i = 0; i < shotCount; i++)
+                string? sound;
+                float variation;
+                
+                if (Bullets[i] == true)
                 {
-                    EntitySystem.Get<AudioSystem>().Play(SoundGunshot, Owner, AudioHelpers.WithVariation(GunshotVariation));
+                    sound = SoundGunshot;
+                    variation = GunshotVariation;
+                    cameraRecoilComponent?.Kick(-spreads[i].ToVec().Normalized * RecoilMultiplier);
                 }
+                else
+                {
+                    sound = SoundEmpty;
+                    variation = EmptyVariation;
+                }
+
+                if (sound == null)
+                    break;
+                
+                EntitySystem.Get<AudioSystem>().Play(sound, Owner, AudioHelpers.WithVariation(variation));
             }
         }
 
@@ -147,7 +159,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         }
 
         // Item status etc.
-        public override void HandleComponentState(ComponentState curState, ComponentState nextState)
+        public override void HandleComponentState(ComponentState? curState, ComponentState? nextState)
         {
             if (!(curState is RevolverBarrelComponentState cast))
                 return;
@@ -248,7 +260,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                     Color color;
                     var bulletTexture = texture;
 
-                    if (bulletSpent.HasValue)
+                    if (bulletSpent != null)
                     {
                         if (bulletSpent.Value)
                         {

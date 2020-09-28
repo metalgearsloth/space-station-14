@@ -12,7 +12,17 @@ namespace Content.Shared.GameObjects.EntitySystems
     {
         protected const float EffectDuration = 0.5f;
         
-        public abstract void MuzzleFlash(IEntity? user, SharedRangedWeaponComponent weapon, string? texture, Angle angle, TimeSpan? currentTime = null, float alphaRatio = 1.0f);
+        /// <summary>
+        ///     Show the muzzle flash parented to the weapon.
+        /// </summary>
+        /// <param name="user"></param>
+        /// <param name="weapon"></param>
+        /// <param name="texture"></param>
+        /// <param name="angle"></param>
+        /// <param name="predicted">As the impact and travel effects aren't predicted yet we can't predict hitscan stuff very well</param>
+        /// <param name="currentTime"></param>
+        /// <param name="alphaRatio"></param>
+        public abstract void MuzzleFlash(IEntity? user, SharedRangedWeaponComponent weapon, string? texture, Angle angle, bool predicted = true, TimeSpan? currentTime = null, float alphaRatio = 1.0f);
 
         public abstract void EjectCasing(IEntity? user, IEntity casing, bool playSound = true, Direction[]? ejectDirections = null);
 

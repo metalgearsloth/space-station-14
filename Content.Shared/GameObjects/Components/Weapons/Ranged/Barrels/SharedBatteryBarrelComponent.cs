@@ -24,9 +24,23 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         // Could use an interface instead but eh, if there's more than hitscan / projectiles in the future you can change it.
         protected bool AmmoIsHitscan;
         
+        /// <summary>
+        ///     How much charge we've used for this shoot.
+        /// </summary>
+        protected float ToFireCharge;
+        
         // Sounds
         protected string? SoundPowerCellInsert;
         protected string? SoundPowerCellEject;
+
+        public override void ExposeData(ObjectSerializer serializer)
+        {
+            base.ExposeData(serializer);
+            serializer.DataField(ref AmmoPrototype, "ammoPrototype", string.Empty);
+            serializer.DataField(ref LowerChargeLimit, "lowerChargeLimit", 10);
+            serializer.DataField(ref SoundPowerCellInsert, "soundPowerCellInsert", null);
+            serializer.DataField(ref SoundPowerCellEject, "soundPowerCellEject", null);
+        }
 
         public override void Initialize()
         {
@@ -52,11 +66,11 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
     public sealed class BatteryBarrelComponentState : ComponentState
     {
         public FireRateSelector FireRateSelector { get; }
-        public (int count, int max)? PowerCell { get; }
+        public (float current, float max)? PowerCell { get; }
 
         public BatteryBarrelComponentState(
             FireRateSelector fireRateSelector,
-            (int count, int max)? powerCell) :
+            (float current, float max)? powerCell) :
             base(ContentNetIDs.BATTERY_BARREL)
         {
             FireRateSelector = fireRateSelector;

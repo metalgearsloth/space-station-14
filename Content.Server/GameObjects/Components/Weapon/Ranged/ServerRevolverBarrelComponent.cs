@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using System.Collections.Generic;
 using Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition;
 using Content.Server.GameObjects.EntitySystems;
 using Content.Shared.Audio;
@@ -143,7 +144,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             return true;
         }
 
-        protected override void Shoot(int shotCount, Angle direction)
+        protected override void Shoot(int shotCount, List<Angle> spreads)
         {
             // TODO: Copy existing shooting code rather than re-inventing the wheel
             // Feed in the ammo and do what you need to do with it.

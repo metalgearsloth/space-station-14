@@ -45,36 +45,6 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
         ///     The pre-spawned prototype to use
         /// </summary>
         private string? _powerCellPrototype;
-        
-        // TODO: Need to send charge to client so they know the alpha on firings.
-        /// <summary>
-        ///     How much charge we've used for this shoot.
-        /// </summary>
-        private float _toFireCharge;
-
-        public int ShotsLeft
-        {
-            get
-            {
-                var powerCell = _powerCellContainer.ContainedEntity;
-                if (powerCell == null)
-                    return 0;
-
-                return (int) Math.Ceiling(powerCell.GetComponent<BatteryComponent>().CurrentCharge / BaseFireCost);
-            }
-        }
-
-        public int Capacity
-        {
-            get
-            {
-                var powerCell = _powerCellContainer.ContainedEntity;
-                if (powerCell == null)
-                    return 0;
-                
-                return (int) Math.Ceiling(powerCell.GetComponent<BatteryComponent>().MaxCharge / (float) BaseFireCost);
-            }
-        }
 
         public override void ExposeData(ObjectSerializer serializer)
         {
@@ -83,19 +53,25 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             serializer.DataField(ref _powerCellPrototype, "powerCellPrototype", null);
             serializer.DataField(ref _powerCellRemovable, "powerCellRemovable", false);
             serializer.DataReadWriteFunction("fireCost", (uint) 300, value => BaseFireCost = value, () => BaseFireCost);
-            serializer.DataField(ref AmmoPrototype, "ammoPrototype", null);
-            serializer.DataField(ref LowerChargeLimit, "lowerChargeLimit", 10);
-            serializer.DataField(ref SoundPowerCellInsert, "soundPowerCellInsert", null);
-            serializer.DataField(ref SoundPowerCellEject, "soundPowerCellEject", null);
         }
 
         public override ComponentState GetComponentState()
         {
-            (int, int)? count = (ShotsLeft, Capacity);
+            (float currentCharge, float maxCharge)? cell;
+            
+            if (PowerCell == null)
+            {
+                cell = null;
+            }
+            else
+            {
+                var powerCell = PowerCell;
+                cell = (powerCell.CurrentCharge, powerCell.MaxCharge);
+            }
 
             return new BatteryBarrelComponentState(
                 Selector,
-                count);
+                cell);
         }
 
         public override void Initialize()
@@ -195,20 +171,20 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             // Multiply the entity's damage / whatever by the percentage of charge the shot has.
             var chargeChange = Math.Min(battery.CurrentCharge, BaseFireCost);
             battery.UseCharge(chargeChange);
-            _toFireCharge += chargeChange;
+            ToFireCharge += chargeChange;
 
             Dirty();
             return true;
         }
 
-        protected override void Shoot(int shotCount, Angle direction)
+        protected override void Shoot(int shotCount, List<Angle> spreads)
         {
-            DebugTools.Assert(_toFireCharge > 0);
+            DebugTools.Assert(ToFireCharge > 0);
 
-            while (_toFireCharge > 0)
+            while (ToFireCharge > 0)
             {
-                var fireCharge = Math.Min(BaseFireCost, _toFireCharge);
-                _toFireCharge -= fireCharge;
+                var fireCharge = Math.Min(BaseFireCost, ToFireCharge);
+                ToFireCharge -= fireCharge;
                 var energyRatio = fireCharge / BaseFireCost;
 
                 if (AmmoIsHitscan)

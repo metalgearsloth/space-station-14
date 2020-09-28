@@ -8,8 +8,16 @@ using Robust.Shared.GameObjects;
 using Robust.Shared.Maths;
 using Robust.Shared.ViewVariables;
 using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using Content.Client.GameObjects.Components.Mobs;
+using Content.Shared.Audio;
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
+using Content.Shared.Interfaces.GameObjects.Components;
 using Robust.Client.GameObjects;
+using Robust.Client.GameObjects.EntitySystems;
+using Robust.Shared.GameObjects.Systems;
+using Robust.Shared.Utility;
 
 namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 {
@@ -17,7 +25,6 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
     [ComponentReference(typeof(SharedRangedWeaponComponent))]
     public class ClientBatteryBarrelComponent : SharedBatteryBarrelComponent, IItemStatus
     {
-
         private StatusControl? _statusControl;
 
         /// <summary>
@@ -28,7 +35,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         ///     Didn't call it Capacity because that's the battery capacity rather than shots left capacity like the other guns.
         /// </remarks>
         [ViewVariables]
-        public (int Count, int Max)? PowerCell { get; private set; }
+        public (float CurrentCharge, float MaxCharge)? PowerCell { get; private set; }
 
         public override void HandleComponentState(ComponentState? curState, ComponentState? nextState)
         {
@@ -44,10 +51,69 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         {
             if (!Owner.TryGetComponent(out AppearanceComponent? appearanceComponent))
                 return;
+
+            var count = PowerCell?.CurrentCharge / BaseFireCost ?? 0;
+            var max = PowerCell?.MaxCharge / BaseFireCost ?? 0;
             
             appearanceComponent?.SetData(MagazineBarrelVisuals.MagLoaded, PowerCell != null);
-            appearanceComponent?.SetData(AmmoVisuals.AmmoCount, PowerCell?.Count ?? 0);
-            appearanceComponent?.SetData(AmmoVisuals.AmmoMax, PowerCell?.Max ?? 0);
+            appearanceComponent?.SetData(AmmoVisuals.AmmoCount, count);
+            appearanceComponent?.SetData(AmmoVisuals.AmmoMax, max);
+        }
+
+        protected override bool TryTakeAmmo()
+        {
+            if (!base.TryTakeAmmo())
+                return false;
+            
+            if (PowerCell == null)
+                return false;
+
+            var (currentCharge, maxCharge) = PowerCell.Value;
+            if (currentCharge < LowerChargeLimit)
+                return false;
+
+            var fireCharge = Math.Min(currentCharge, BaseFireCost);
+            
+            ToFireCharge += fireCharge;
+            PowerCell = (currentCharge - fireCharge, maxCharge);
+            return true;
+        }
+
+        protected override void Shoot(int shotCount, List<Angle> spreads)
+        {
+            DebugTools.Assert(ToFireCharge > 0);
+            
+            var shooter = Shooter();
+            CameraRecoilComponent? cameraRecoilComponent = null;
+            shooter?.TryGetComponent(out cameraRecoilComponent);
+
+            for (var i = 0; i < shotCount; i++)
+            {
+                var fireCharge = Math.Min(BaseFireCost, ToFireCharge);
+                ToFireCharge -= fireCharge;
+
+                cameraRecoilComponent?.Kick(-spreads[i].ToVec().Normalized * RecoilMultiplier * fireCharge / BaseFireCost);
+
+                if (SoundGunshot == null)
+                    continue;
+                
+                // TODO: Could look at modifying volume based on charge %
+                EntitySystem.Get<AudioSystem>().Play(SoundGunshot, Owner, AudioHelpers.WithVariation(GunshotVariation));
+                // TODO: Show effect here once we can get the spread predicted.
+            }
+
+            UpdateAppearance();
+            _statusControl?.Update();
+        }
+
+        public override Task<bool> InteractUsing(InteractUsingEventArgs eventArgs)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override bool UseEntity(UseEntityEventArgs eventArgs)
+        {
+            throw new NotImplementedException();
         }
 
         public Control MakeControl()
@@ -121,7 +187,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                     return;
                 }
 
-                var (count, capacity) = _parent.PowerCell.Value;
+                var (count, capacity) = ((int) (_parent.PowerCell.Value.CurrentCharge / _parent.BaseFireCost), (int) (_parent.PowerCell.Value.MaxCharge / _parent.BaseFireCost));
 
                 _noBatteryLabel.Visible = false;
                 _ammoCount.Visible = true;

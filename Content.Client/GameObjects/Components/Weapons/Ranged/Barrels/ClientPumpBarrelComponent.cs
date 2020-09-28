@@ -8,6 +8,7 @@ using Robust.Shared.GameObjects;
 using Robust.Shared.Maths;
 using System;
 using System.Collections.Generic;
+using Content.Client.GameObjects.Components.Mobs;
 using Content.Shared.Audio;
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
@@ -77,30 +78,39 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             return false;
         }
 
-        protected override void Shoot(int shotCount, Angle direction)
+        protected override void Shoot(int shotCount, List<Angle> spreads)
         {
-            DebugTools.Assert(_toFireAmmo.Count == shotCount);
-        
-            while (_toFireAmmo.Count > 0)
+            DebugTools.Assert(shotCount == _toFireAmmo.Count);
+            var shooter = Shooter();
+            CameraRecoilComponent? cameraRecoilComponent = null;
+            shooter?.TryGetComponent(out cameraRecoilComponent);
+
+            for (var i = 0; i < shotCount; i++)
             {
                 var ammo = _toFireAmmo.Dequeue();
+                string? sound;
+                float variation;
 
                 if (ammo)
                 {
-                    if (SoundGunshot != null)
-                    {
-                        // TODO: COPY AUDIO PROFILE AND VARIATION
-                        EntitySystem.Get<AudioSystem>().Play(SoundGunshot, Owner, AudioHelpers.WithVariation(GunshotVariation));
-                    }
+                    sound = SoundGunshot;
+                    variation = GunshotVariation;
+                    cameraRecoilComponent?.Kick(-spreads[i].ToVec().Normalized * RecoilMultiplier);
                 }
                 else
                 {
-                    if (SoundEmpty != null)
-                    {
-                        EntitySystem.Get<AudioSystem>().Play(SoundEmpty, Owner, AudioHelpers.WithVariation(EmptyVariation));
-                    }
+                    sound = SoundEmpty;
+                    variation = EmptyVariation;
                 }
+
+                if (sound == null)
+                    continue;
+                
+                EntitySystem.Get<AudioSystem>().Play(sound, Owner, AudioHelpers.WithVariation(variation));
             }
+
+            UpdateAppearance();
+            _statusControl?.Update();
         }
         
         protected override void Cycle(bool manual = false)

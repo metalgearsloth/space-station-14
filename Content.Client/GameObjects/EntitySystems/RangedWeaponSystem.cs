@@ -12,7 +12,6 @@ using Robust.Client.Player;
 using Robust.Shared.GameObjects.EntitySystemMessages;
 using Robust.Shared.Input;
 using Robust.Shared.Interfaces.GameObjects;
-using Robust.Shared.Interfaces.Random;
 using Robust.Shared.Interfaces.Timing;
 using Robust.Shared.IoC;
 using Robust.Shared.Maths;
@@ -26,11 +25,11 @@ namespace Content.Client.GameObjects.EntitySystems
         [Dependency] private readonly IEyeManager _eyeManager = default!;
         [Dependency] private readonly IInputManager _inputManager = default!;
         [Dependency] private readonly IGameTiming _gameTiming = default!;
-        [Dependency] private readonly IRobustRandom _robustRandom = default!;
 
-        private InputSystem _inputSystem = null!;
-        private CombatModeSystem _combatModeSystem = null!;
-        private SharedRangedWeaponComponent? _firingWeapon = null;
+        private InputSystem _inputSystem = default!;
+        private CombatModeSystem _combatModeSystem = default!;
+        private SharedRangedWeaponComponent? _firingWeapon;
+        
         private bool _lastFireResult = true;
 
         public override void Initialize()
@@ -45,15 +44,12 @@ namespace Content.Client.GameObjects.EntitySystems
         private SharedRangedWeaponComponent? GetRangedWeapon(IEntity entity)
         {
             if (!entity.TryGetComponent(out HandsComponent? hands))
-            {
                 return null;
-            }
+            
 
             var held = hands.ActiveHand;
             if (held == null || !held.TryGetComponent(out SharedRangedWeaponComponent? weapon))
-            {
                 return null;
-            }
 
             return weapon;
         }
@@ -63,10 +59,8 @@ namespace Content.Client.GameObjects.EntitySystems
             base.Update(frameTime);
 
             if (!_gameTiming.IsFirstTimePredicted)
-            {
                 return;
-            }
-            
+
             var state = _inputSystem.CmdStates.GetState(EngineKeyFunctions.Use);
             if (!_combatModeSystem.IsInCombatMode() || state != BoundKeyState.Down)
             {
@@ -79,6 +73,7 @@ namespace Content.Client.GameObjects.EntitySystems
                     _firingWeapon.ShotCounter = 0;
                     _firingWeapon = null;
                 }
+                
                 return;
             }
 
@@ -131,9 +126,12 @@ namespace Content.Client.GameObjects.EntitySystems
             RaiseNetworkEvent(new StopFiringMessage(weaponComponent.Owner.Uid, weaponComponent.ShotCounter));
             weaponComponent.Firing = false;
         }
-
-        public override void MuzzleFlash(IEntity? user, IEntity weapon, string texture, Angle angle)
+        
+        public override void MuzzleFlash(IEntity? user, SharedRangedWeaponComponent weapon, string? texture, Angle angle, bool predicted = true, TimeSpan? currentTime = null, float alphaRatio = 1)
         {
+            if (texture == null || !predicted)
+                return;
+            
             var offset = angle.ToVec().Normalized / 2;
 
             var message = new EffectSystemMessage
@@ -141,11 +139,11 @@ namespace Content.Client.GameObjects.EntitySystems
                 EffectSprite = texture,
                 Born = _gameTiming.CurTime,
                 DeathTime = _gameTiming.CurTime + TimeSpan.FromSeconds(0.2),
-                AttachedEntityUid = weapon.Uid,
+                AttachedEntityUid = weapon.Owner.Uid,
                 AttachedOffset = offset,
                 //Rotated from east facing
                 Rotation = (float) angle.Theta,
-                Color = Vector4.Multiply(new Vector4(255, 255, 255, 750), Vector4.One),
+                Color = Vector4.Multiply(new Vector4(255, 255, 255, 750), alphaRatio),
                 ColorDelta = new Vector4(0, 0, 0, -1500f),
                 Shaded = false
             };
@@ -159,17 +157,17 @@ namespace Content.Client.GameObjects.EntitySystems
             throw new InvalidOperationException();
         }
 
-        public override void ShootHitscan(IEntity? user, HitscanPrototype hitscan, Angle angle, float damageRatio = 1, float alphaRatio = 1)
+        public override void ShootHitscan(IEntity? user, SharedRangedWeaponComponent weapon, HitscanPrototype hitscan, Angle angle, float damageRatio = 1, float alphaRatio = 1)
         {
             throw new NotImplementedException();
         }
 
-        public override void ShootAmmo(IEntity? user, Angle angle, SharedAmmoComponent ammoComponent, float spreadRatio = 1)
+        public override void ShootAmmo(IEntity? user, SharedRangedWeaponComponent weapon, Angle angle, SharedAmmoComponent ammoComponent, float spreadRatio = 1)
         {
             throw new NotImplementedException();
         }
 
-        public override void ShootProjectile(IEntity? user, Angle angle, SharedProjectileComponent projectileComponent, float velocity)
+        public override void ShootProjectile(IEntity? user, SharedRangedWeaponComponent weapon, Angle angle, SharedProjectileComponent projectileComponent, float velocity)
         {
             throw new NotImplementedException();
         }

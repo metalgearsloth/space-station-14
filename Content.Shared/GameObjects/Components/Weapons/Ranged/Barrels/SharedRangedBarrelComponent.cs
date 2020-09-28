@@ -8,6 +8,7 @@ using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
 using Robust.Shared.GameObjects.Systems;
 using Robust.Shared.Interfaces.GameObjects;
+using Robust.Shared.Interfaces.Random;
 using Robust.Shared.Interfaces.Timing;
 using Robust.Shared.IoC;
 using Robust.Shared.Log;
@@ -150,10 +151,12 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         private float _angleIncrease;
         // Multiplies the ammo spread to get the final spread of each pellet
         private float _spreadRatio;
+        
+        protected float RecoilMultiplier { get; set; }
 
         // Sounds
-        public string? SoundGunshot { get; protected set; }
-        public string? SoundEmpty { get; protected set; }
+        public string? SoundGunshot { get; private set; }
+        public string? SoundEmpty { get; private set; }
         
         // Audio profile
         protected const float GunshotVariation = 0.1f;
@@ -236,6 +239,12 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
                 value => MuzzleFlash = value,
                 () => MuzzleFlash);
             
+            serializer.DataReadWriteFunction(
+                "recoilMultiplier",
+                1.1f,
+                value => RecoilMultiplier = value,
+                () => RecoilMultiplier);
+            
             // Sounds
             serializer.DataReadWriteFunction(
                 "soundGunshot",
@@ -313,17 +322,19 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         ///     Try to shoot the gun for this tick.
         /// </summary>
         /// <param name="currentTime"></param>
-        /// <param name="entity"></param>
+        /// <param name="user"></param>
         /// <param name="coordinates"></param>
         /// <returns>false if firing is impossible, true if firing is possible but delayed or we did fire</returns>
-        public bool TryFire(TimeSpan currentTime, IEntity entity, MapCoordinates coordinates)
+        public bool TryFire(TimeSpan currentTime, IEntity user, MapCoordinates coordinates)
         {
+            var lastFire = NextFire;
+            
             if (ShotCounter == 0 && NextFire <= currentTime)
             {
                 NextFire = currentTime;
             }
             
-            if (!CanFire(entity))
+            if (!CanFire(user))
             {
                 return false;
             }
@@ -360,7 +371,8 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
             }
 
             AccumulatedShots += firedShots;
-            var spread = GetWeaponSpread(coordinates, firedShots);
+            var direction = coordinates.Position - Owner.Transform.MapPosition.Position;
+            var spread = GetWeaponSpread(currentTime, lastFire, direction.ToAngle(), firedShots);
             // SO server-side we essentially need to backtrack by n firedShots to work out what to shoot for each one
             // Client side we'll just play the effects and shit unless we get client-side entity prediction in.
             Shoot(firedShots, spread);
@@ -368,15 +380,33 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
             return true;
         }
 
-        private List<Angle> GetWeaponSpread(MapCoordinates coordinates, ushort shots)
+        private List<Angle> GetWeaponSpread(TimeSpan currentTime, TimeSpan lastFire, Angle direction, ushort shots)
         {
-            // TODO: Could also predict this client-side.
-            
+            // TODO: Could also predict this client-side. Probably need to use System.Random and seeds but out of scope for this big pr.
+            // If we're sure no desyncs occur then we could just use the Uid to get the seed probably.
+            var robustRandom = IoCManager.Resolve<IRobustRandom>();
             var spreads = new List<Angle>(shots);
-            
+
             for (ushort i = 0; i < shots; i++)
             {
+                double timeSinceLastFire;
+
+                if (i == 0)
+                {
+                    // Rollback to first shot fired.
+                    timeSinceLastFire = (currentTime - lastFire).TotalSeconds - 1 / FireRate * shots;
+                }
+                else
+                {
+                    timeSinceLastFire = 1 / FireRate;
+                }
                 
+                var newTheta = MathHelper.Clamp(_currentAngle.Theta + _angleIncrease - _angleDecay * timeSinceLastFire, _minAngle.Theta, _maxAngle.Theta);
+                _currentAngle = new Angle(newTheta);
+
+                var random = (robustRandom.NextDouble() - 0.5) * 2;
+                var angle = Angle.FromDegrees(direction.Degrees + _currentAngle.Degrees * random);
+                spreads.Add(angle); 
             }
             
             return spreads;
@@ -388,8 +418,8 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         ///     Server-side this will work out each bullet to spawn and fire them.
         /// </summary>
         /// <param name="shotCount"></param>
-        /// <param name="fireAngles"></param>
-        protected abstract void Shoot(int shotCount, List<Angle> fireAngles);
+        /// <param name="spreads"></param>
+        protected abstract void Shoot(int shotCount, List<Angle> spreads);
 
         void IHandSelected.HandSelected(HandSelectedEventArgs eventArgs)
         {

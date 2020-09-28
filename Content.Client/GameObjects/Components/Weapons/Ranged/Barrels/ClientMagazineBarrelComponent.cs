@@ -1,5 +1,6 @@
-#nullable enable
+﻿#nullable enable
 using System.Collections.Generic;
+using Content.Client.GameObjects.Components.Mobs;
 using Content.Shared.Audio;
 using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
 using Content.Shared.GameObjects.EntitySystems;
@@ -18,6 +19,8 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
     [RegisterComponent]
     public sealed class ClientMagazineBarrelComponent : SharedMagazineBarrelComponent, IExamine
     {
+        // TODO private StatusControl? _statusControl;
+        
         private bool? _chamber;
 
         private Stack<bool>? _magazine;
@@ -161,24 +164,39 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             return false;
         }
 
-        protected override void Shoot(int shotCount, Angle direction)
+        protected override void Shoot(int shotCount, List<Angle> spreads)
         {
             DebugTools.Assert(shotCount == _toFireAmmo.Count);
+            var shooter = Shooter();
+            CameraRecoilComponent? cameraRecoilComponent = null;
+            shooter?.TryGetComponent(out cameraRecoilComponent);
 
-            while (_toFireAmmo.Count > 0)
+            for (var i = 0; i < shotCount; i++)
             {
-                var entity = _toFireAmmo.Dequeue();
-                var sound = entity ? SoundGunshot : SoundEmpty;
-                var variation = entity ? GunshotVariation : EmptyVariation;
+                var ammo = _toFireAmmo.Dequeue();
+                string? sound;
+                float variation;
+
+                if (ammo)
+                {
+                    sound = SoundGunshot;
+                    variation = GunshotVariation;
+                    cameraRecoilComponent?.Kick(-spreads[i].ToVec().Normalized * RecoilMultiplier);
+                }
+                else
+                {
+                    sound = SoundEmpty;
+                    variation = EmptyVariation;
+                }
 
                 if (sound == null)
-                    break;
+                    continue;
                 
                 EntitySystem.Get<AudioSystem>().Play(sound, Owner, AudioHelpers.WithVariation(variation));
             }
-            
+
             UpdateAppearance();
-            // TODO: Status control
+            //_statusControl?.Update();
         }
         
         void IExamine.Examine(FormattedMessage message, bool inDetailsInRange)

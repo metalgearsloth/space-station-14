@@ -170,7 +170,7 @@ namespace Content.Server.GameObjects.EntitySystems
             }
 
             // Fire effects
-            MuzzleFlash(user, weapon, hitscan.MuzzleEffect, angle, currentTime, alphaRatio);
+            MuzzleFlash(user, weapon, hitscan.MuzzleEffect, angle, false, currentTime, alphaRatio);
             TravelFlash(user, weapon.Owner, hitscan, angle, distance, currentTime, alphaRatio);
             ImpactFlash(user, weapon.Owner, hitscan, angle, distance, currentTime, alphaRatio: alphaRatio);
         }
@@ -255,7 +255,7 @@ namespace Content.Server.GameObjects.EntitySystems
             return linspace;
         }
 
-        public override void MuzzleFlash(IEntity? user, SharedRangedWeaponComponent weapon, string? texture, Angle angle, TimeSpan? currentTime = null, float alphaRatio = 1.0f)
+        public override void MuzzleFlash(IEntity? user, SharedRangedWeaponComponent weapon, string? texture, Angle angle, bool predicted = true, TimeSpan? currentTime = null, float alphaRatio = 1.0f)
         {
             if (texture == null)
                 return;
@@ -276,7 +276,7 @@ namespace Content.Server.GameObjects.EntitySystems
                 Shaded = false
             };
             
-            _effectSystem.CreateParticle(message, user?.PlayerSession());
+            _effectSystem.CreateParticle(message, predicted ? user?.PlayerSession() : null);
         }
 
         private void TravelFlash(IEntity? user, IEntity weapon, HitscanPrototype hitscan, Angle angle, float distance, TimeSpan? currentTime = null, float alphaRatio = 1.0f)
@@ -299,7 +299,7 @@ namespace Content.Server.GameObjects.EntitySystems
                 Shaded = false
             };
 
-            _effectSystem.CreateParticle(message, user?.PlayerSession());
+            _effectSystem.CreateParticle(message);
         }
 
         private void ImpactFlash(IEntity? user, IEntity weapon, HitscanPrototype hitscan, Angle angle, float distance, TimeSpan? currentTime = null, float offset = 0.0f, float alphaRatio = 1.0f)
@@ -324,7 +324,7 @@ namespace Content.Server.GameObjects.EntitySystems
                 Shaded = false
             };
 
-            _effectSystem.CreateParticle(message, user?.PlayerSession());
+            _effectSystem.CreateParticle(message);
         }
 
         public override void EjectCasing(IEntity? user, IEntity casing, bool playSound = true, Direction[]? ejectDirections = null)

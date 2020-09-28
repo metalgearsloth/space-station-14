@@ -189,7 +189,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             return false;
         }
 
-        protected override void Shoot(int shotCount, Angle direction)
+        protected override void Shoot(int shotCount, List<Angle> spreads)
         {
             DebugTools.Assert(shotCount == _toFireAmmo.Count);
 
