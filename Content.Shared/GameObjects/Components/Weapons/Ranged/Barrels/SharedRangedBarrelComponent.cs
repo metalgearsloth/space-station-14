@@ -105,6 +105,11 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         public FireRateSelector Selector { get; protected set; }
         
         /// <summary>
+        ///     All available fire selectors
+        /// </summary>
+        public FireRateSelector AllSelectors { get; protected set; }
+        
+        /// <summary>
         ///     The earliest time the gun can fire next.
         /// </summary>
         public TimeSpan NextFire { get; protected set; }
@@ -137,6 +142,9 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         
         public int AccumulatedShots { get; set; }
         
+        /// <summary>
+        ///     Multiplies the ammo spread to get the final spread of each pellet
+        /// </summary>
         public float AmmoSpreadRatio { get; set; }
         
          // Recoil / spray control
@@ -151,9 +159,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         /// How quickly the angle's theta builds for every shot fired in radians
         /// </summary>
         private float _angleIncrease;
-        // Multiplies the ammo spread to get the final spread of each pellet
-        private float _spreadRatio;
-        
+
         protected float RecoilMultiplier { get; set; }
 
         // Sounds
@@ -186,14 +192,14 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
             serializer.DataReadWriteFunction(
                 "allSelectors", 
                 new List<FireRateSelector>(),
-                selectors => selectors.ForEach(value => Selector |= value),
+                selectors => selectors.ForEach(value => AllSelectors |= value),
                 () =>
                 {
                     var result = new List<FireRateSelector>();
                     
-                    foreach (FireRateSelector selector in Enum.GetValues(typeof(FireRateSelector)))
+                    foreach (var selector in (FireRateSelector[]) Enum.GetValues(typeof(FireRateSelector)))
                     {
-                        if ((selector & Selector) != 0)
+                        if ((AllSelectors & selector) != 0)
                             result.Add(selector);
                     }
 
@@ -232,14 +238,6 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
                 angle => _angleDecay = angle * (float) Math.PI / 180f,
                 () => MathF.Round(_angleDecay / ((float) Math.PI / 180f), 2));
 
-            serializer.DataField(ref _spreadRatio, "ammoSpreadRatio", 1.0f);
-
-            // For simplicity we'll enforce it this way; ammo determines max spread
-            if (_spreadRatio > 1.0f)
-            {
-                throw new InvalidOperationException("SpreadRatio must be <= 1.0f for guns");
-            }
-            
             serializer.DataReadWriteFunction(
                 "muzzleFlash",
                 "Objects/Weapons/Guns/Projectiles/bullet_muzzle.png",
@@ -334,6 +332,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         /// <returns>false if firing is impossible, true if firing is possible but delayed or we did fire</returns>
         public bool TryFire(TimeSpan currentTime, IEntity user, MapCoordinates coordinates)
         {
+            // TODO: bracketless ifs and also need to test ammoSpreadRatio <= 1.0f in tests
             var lastFire = NextFire;
             
             if (ShotCounter == 0 && NextFire <= currentTime)
@@ -389,6 +388,8 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
 
         private List<Angle> GetWeaponSpread(TimeSpan currentTime, TimeSpan lastFire, Angle direction, int shots)
         {
+            // TODO: Fix this
+            
             // TODO: Could also predict this client-side. Probably need to use System.Random and seeds but out of scope for this big pr.
             // If we're sure no desyncs occur then we could just use the Uid to get the seed probably.
             var robustRandom = IoCManager.Resolve<IRobustRandom>();

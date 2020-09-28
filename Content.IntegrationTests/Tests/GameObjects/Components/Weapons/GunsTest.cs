@@ -201,7 +201,7 @@ namespace Content.IntegrationTests.Tests.GameObjects.Components.Weapons
                             boltAction.SoundGunshot, 
                             boltAction.SoundEmpty, 
                             
-                            boltAction.SoundCycle,
+                            boltAction.SoundRack,
                             boltAction.SoundInsert,
                             boltAction.SoundBoltClosed,
                             boltAction.SoundBoltOpen,
@@ -231,7 +231,7 @@ namespace Content.IntegrationTests.Tests.GameObjects.Components.Weapons
                             magazine.SoundBoltOpen,
                             magazine.SoundBoltClosed,
                             magazine.SoundRack,
-                            magazine.SoundCycle,
+                            magazine.SoundRack,
                             magazine.SoundMagInsert,
                             magazine.SoundMagEject,
                             magazine.SoundAutoEject,
@@ -258,7 +258,7 @@ namespace Content.IntegrationTests.Tests.GameObjects.Components.Weapons
                             pump.SoundGunshot, 
                             pump.SoundEmpty, 
                             
-                            pump.SoundCycle,
+                            pump.SoundRack,
                             pump.SoundInsert,
                         })
                         {

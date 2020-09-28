@@ -28,8 +28,8 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
     [ComponentReference(typeof(SharedRangedWeaponComponent))]
     public sealed class ServerMagazineBarrelComponent : SharedMagazineBarrelComponent
     {
-        private ContainerSlot? _chamberContainer;
-        private ContainerSlot? _magazineContainer;
+        private ContainerSlot _chamberContainer = default!;
+        private ContainerSlot _magazineContainer = default!;
         
         private Queue<IEntity> _toFireAmmo = new Queue<IEntity>();
 
@@ -50,12 +50,40 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             Dirty();
         }
 
+        public override ComponentState GetComponentState()
+        {
+            var chamber = !_chamberContainer.ContainedEntity?.GetComponent<SharedAmmoComponent>().Spent;
+            var ammo = new Stack<bool>();
+            var mag = _magazineContainer.ContainedEntity?.GetComponent<ServerRangedMagazineComponent>();
+
+            if (mag == null)
+            {
+                ammo = null;
+            }
+            else
+            {
+                var shotsLeft = mag.ShotsLeft;
+                var count = 0;
+
+                foreach (var entity in mag.SpawnedAmmo)
+                {
+                    ammo.Push(!entity.GetComponent<SharedAmmoComponent>().Spent);
+                    count++;
+                }
+
+                for (var i = 0; i < shotsLeft - count; i++)
+                {
+                    ammo.Push(true);
+                }
+            }
+
+            return new MagazineBarrelComponentState(BoltOpen, chamber, Selector, ammo);
+        }
+
         protected override void SetBolt(bool value)
         {
             if (BoltOpen == value)
-            {
                 return;
-            }
 
             if (value)
             {
@@ -80,32 +108,14 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
 
         protected override void Cycle(bool manual = false)
         {
-            var chamberedEntity = _chamberContainer?.ContainedEntity;
-            
-            if (chamberedEntity != null)
-            {
-                _chamberContainer?.Remove(chamberedEntity);
-                var ammoComponent = chamberedEntity.GetComponent<SharedAmmoComponent>();
-                if (!ammoComponent.Caseless)
-                {
-                    EntitySystem.Get<SharedRangedWeaponSystem>().EjectCasing(Shooter(), chamberedEntity);
-                }
-            }
-
-            var mag = _magazineContainer?.ContainedEntity;
-            // TODO: Change to Shared when predicted
-            var magComp = mag?.GetComponent<ServerRangedMagazineComponent>();
-            
-            if (magComp != null && magComp.TryPop(out var next))
-            {
-                _chamberContainer?.Insert(next);
-            }
+            TryEjectChamber();
+            TryFeedChamber();
 
             if (manual)
             {
-                if (SoundCycle != null)
+                if (SoundRack != null)
                 {
-                    EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundCycle, Owner, AudioParams.Default.WithVolume(-2));
+                    EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundRack, Owner, AudioParams.Default.WithVolume(-2));
                 }
             }
             
@@ -118,10 +128,8 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             if (chamberEntity != null)
             {
                 if (!_chamberContainer?.Remove(chamberEntity) == true)
-                {
                     return;
-                }
-                
+
                 var ammoComponent = chamberEntity.GetComponent<SharedAmmoComponent>();
                 if (!ammoComponent.Caseless)
                 {
@@ -129,6 +137,8 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                 }
                 else
                 {
+                    // TODO: Uhh this is megasketch and probably needs a bool override if its during shooting or even remove it from here
+                    // TODO: Pretty sure all muzzles are being parented when they shouldn't be
                     chamberEntity.Delete();
                 }
                 
@@ -139,29 +149,24 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
         protected override void TryFeedChamber()
         {
             if (_chamberContainer?.ContainedEntity != null)
-            {
                 return;
-            }
 
             // Try and pull a round from the magazine to replace the chamber if possible
-            var magazine = _magazineContainer?.ContainedEntity;
-            var nextCartridge = magazine?.GetComponent<SharedRangedMagazineComponent>();
+            var magazine = _magazineContainer?.ContainedEntity?.GetComponent<ServerRangedMagazineComponent>();
+            IEntity? nextCartridge = null;
+            magazine?.TryPop(out nextCartridge);
 
             if (nextCartridge == null)
-            {
                 return;
-            }
 
-            _chamberContainer?.Insert(nextCartridge.Owner);
+            _chamberContainer?.Insert(nextCartridge);
 
-            if (AutoEjectMag && magazine != null && magazine.GetComponent<SharedRangedMagazineComponent>().ShotsLeft == 0)
+            if (AutoEjectMag && magazine != null && magazine.ShotsLeft == 0)
             {
                 if (SoundAutoEject != null)
-                {
                     EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundAutoEject, Owner, AudioHelpers.WithVariation(AutoEjectVariation), excludedSession: Shooter().PlayerSession());
-                }
 
-                _magazineContainer?.Remove(magazine);
+                _magazineContainer?.Remove(magazine.Owner);
             }
             return;
         }
@@ -169,11 +174,8 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
         protected override void RemoveMagazine(IEntity user)
         {
             var mag = _magazineContainer?.ContainedEntity;
-
             if (mag == null)
-            {
                 return;
-            }
 
             if (MagNeedsOpenBolt && !BoltOpen)
             {
@@ -184,15 +186,11 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             _magazineContainer?.Remove(mag);
             
             if (SoundMagEject != null)
-            {
                 // TODO: Variation
-                EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundMagEject, Owner, AudioParams.Default.WithVolume(-2));
-            }
+                EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundMagEject, Owner, AudioHelpers.WithVariation(0.1f));
 
             if (user.TryGetComponent(out HandsComponent? handsComponent))
-            {
                 handsComponent.PutInHandOrDrop(mag.GetComponent<ItemComponent>());
-            }
 
             Dirty();
         }
@@ -302,9 +300,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
         protected override bool TryTakeAmmo()
         {
             if (!base.TryTakeAmmo())
-            {
                 return false;
-            }
 
             var chamberEntity = _chamberContainer?.ContainedEntity;
             if (chamberEntity != null)
@@ -314,6 +310,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                 return true;
             }
 
+            Cycle();
             return false;
         }
 

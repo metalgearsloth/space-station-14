@@ -34,7 +34,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         protected bool AutoCycle;
 
         // Sounds
-        public string? SoundCycle { get; private set; }
+        public string? SoundRack { get; private set; }
         public string? SoundBoltOpen { get; private set; }
         public string? SoundBoltClosed { get; private set; }
         public string? SoundInsert { get; private set; }
@@ -47,7 +47,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
             serializer.DataReadWriteFunction("fillPrototype", null, value => FillPrototype = value, () => FillPrototype);
             serializer.DataReadWriteFunction("autoCycle", false, value => AutoCycle = value, () => AutoCycle);
 
-            serializer.DataReadWriteFunction("soundCycle", "/Audio/Weapons/Guns/Cock/sf_rifle_cock.ogg", value => SoundCycle = value, () => SoundCycle);
+            serializer.DataReadWriteFunction("soundRack", "/Audio/Weapons/Guns/Cock/sf_rifle_cock.ogg", value => SoundRack = value, () => SoundRack);
             serializer.DataReadWriteFunction("soundBoltOpen", "/Audio/Weapons/Guns/Bolt/rifle_bolt_open.ogg", value => SoundBoltOpen = value, () => SoundBoltOpen);
             serializer.DataReadWriteFunction("soundBoltClosed", "/Audio/Weapons/Guns/Bolt/rifle_bolt_closed.ogg", value => SoundBoltClosed = value, () => SoundBoltClosed);
             serializer.DataReadWriteFunction("soundInsert", "/Audio/Weapons/Guns/MagIn/bullet_insert.ogg", value => SoundInsert = value, () => SoundInsert);

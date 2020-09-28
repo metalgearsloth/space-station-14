@@ -39,7 +39,6 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         public string? SoundBoltOpen { get; private set; }
         public string? SoundBoltClosed { get; private set; }
         public string? SoundRack { get; private set; }
-        public string? SoundCycle { get; private set; }
         public string? SoundMagInsert { get; private set; }
         public string? SoundMagEject { get; private set; }
         public string? SoundAutoEject { get; private set; }
@@ -66,7 +65,6 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
             serializer.DataReadWriteFunction("soundBoltOpen", null, value => SoundBoltOpen = value, () => SoundBoltOpen);
             serializer.DataReadWriteFunction("soundBoltClosed", null, value => SoundBoltClosed = value, () => SoundBoltClosed);
             serializer.DataReadWriteFunction("soundRack", null, value => SoundRack = value, () => SoundRack);
-            serializer.DataReadWriteFunction("soundCycle", null, value => SoundCycle = value, () => SoundCycle);
             serializer.DataReadWriteFunction("soundMagInsert", null, value => SoundMagInsert = value, () => SoundMagInsert);
             serializer.DataReadWriteFunction("soundMagEject", null, value => SoundMagEject = value, () => SoundMagEject);
             serializer.DataReadWriteFunction("soundAutoEject", null, value => SoundAutoEject = value, () => SoundAutoEject);
@@ -76,7 +74,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         {
             var types = new List<MagazineType>();
 
-            foreach (MagazineType mag in Enum.GetValues(typeof(MagazineType)))
+            foreach (var mag in (MagazineType[]) Enum.GetValues(typeof(MagazineType)))
             {
                 if ((MagazineTypes & mag) != 0)
                 {
@@ -176,22 +174,22 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
     [Serializable, NetSerializable]
     public class MagazineBarrelComponentState : ComponentState
     {
-        public bool Chambered { get; }
+        public bool BoltOpen { get; }
+        public bool? Chambered { get; }
         public FireRateSelector FireRateSelector { get; }
-        public (int count, int max)? Magazine { get; }
-        public string SoundGunshot { get; }
-        
+        public Stack<bool>? Magazine { get; }
+
         public MagazineBarrelComponentState(
-            bool chambered, 
+            bool boltOpen,
+            bool? chambered, 
             FireRateSelector fireRateSelector, 
-            (int count, int max)? magazine,
-            string soundGunshot) : 
+            Stack<bool>? magazine) : 
             base(ContentNetIDs.MAGAZINE_BARREL)
         {
+            BoltOpen = boltOpen;
             Chambered = chambered;
             FireRateSelector = fireRateSelector;
             Magazine = magazine;
-            SoundGunshot = soundGunshot;
         }
     }
 }

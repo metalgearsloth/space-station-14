@@ -149,9 +149,9 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
 
             if (manual)
             {
-                if (SoundCycle != null)
+                if (SoundRack != null)
                 {
-                    EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundCycle, Owner, AudioHelpers.WithVariation(CycleVariation));
+                    EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundRack, Owner, AudioHelpers.WithVariation(CycleVariation));
                 }
             }
             

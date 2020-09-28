@@ -212,10 +212,8 @@ namespace Content.Server.GameObjects.EntitySystems
                 {
                     projectileAngle = angle;
                 }
-                
-                var hitscan = _prototypeManager.Index<HitscanPrototype>(ammoComponent.ProjectileId);
 
-                if (hitscan != null)
+                if (_prototypeManager.TryIndex(ammoComponent.ProjectileId, out HitscanPrototype hitscan))
                 {
                     ShootHitscan(user, weapon, hitscan, angle);
                 }

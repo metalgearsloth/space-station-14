@@ -34,9 +34,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         private void UpdateAppearance()
         {
             if (!Owner.TryGetComponent(out AppearanceComponent? appearanceComponent))
-            {
                 return;
-            }
             
             appearanceComponent.SetData(BarrelBoltVisuals.BoltOpen, BoltOpen);
             appearanceComponent.SetData(MagazineBarrelVisuals.MagLoaded, _magazine != null);
@@ -49,28 +47,23 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             base.HandleComponentState(curState, nextState);
 
             if (!(curState is MagazineBarrelComponentState cast))
-            {
                 return;
-            }
-            
-            // TODO
+
+            SetBolt(cast.BoltOpen);
+            _chamber = cast.Chambered;
+            _magazine = cast.Magazine;
+            UpdateAppearance();
         }
 
         protected override void Cycle(bool manual = false)
         {
-            _chamber = null;
-            
-            if (_magazine != null && _magazine.TryPop(out var next))
-            {
-                _chamber = next;
-            }
+            TryEjectChamber();
+            TryFeedChamber();
 
             if (manual)
             {
-                if (SoundCycle != null)
-                {
-                    EntitySystem.Get<AudioSystem>().Play(SoundCycle, Owner, AudioParams.Default.WithVolume(-2));
-                }
+                if (SoundRack != null)
+                    EntitySystem.Get<AudioSystem>().Play(SoundRack, Owner, AudioParams.Default.WithVolume(-2));
             }
             
             UpdateAppearance();
@@ -79,25 +72,19 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         protected override void SetBolt(bool value)
         {
             if (BoltOpen == value)
-            {
                 return;
-            }
 
             if (value)
             {
                 TryEjectChamber();
                 if (SoundBoltOpen != null)
-                {
                     EntitySystem.Get<AudioSystem>().Play(SoundBoltOpen, Owner, AudioHelpers.WithVariation(BoltToggleVariation));
-                }
             }
             else
             {
                 TryFeedChamber();
                 if (SoundBoltClosed != null)
-                {
                     EntitySystem.Get<AudioSystem>().Play(SoundBoltClosed, Owner, AudioHelpers.WithVariation(BoltToggleVariation));
-                }
             }
 
             BoltOpen = value;
@@ -111,10 +98,8 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         protected override void TryFeedChamber()
         {
             if (_chamber != null)
-            {
                 return;
-            }
-            
+
             // Try and pull a round from the magazine to replace the chamber if possible
             if (_magazine == null || !_magazine.TryPop(out var nextCartridge))
             {
@@ -152,10 +137,8 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         protected override bool TryTakeAmmo()
         {
             if (!base.TryTakeAmmo())
-            {
                 return false;
-            }
-            
+
             if (_chamber != null)
             {
                 _toFireAmmo.Enqueue(_chamber.Value);
@@ -163,6 +146,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                 return true;
             }
 
+            Cycle();
             return false;
         }
 

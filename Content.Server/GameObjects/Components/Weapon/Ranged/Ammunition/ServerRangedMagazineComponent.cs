@@ -19,6 +19,8 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition
     public class ServerRangedMagazineComponent : SharedRangedMagazineComponent
     {
         private Container _ammoContainer = default!;
+
+        public IReadOnlyCollection<IEntity> SpawnedAmmo => _spawnedAmmo;
         private Stack<IEntity> _spawnedAmmo = new Stack<IEntity>();
         
         public override int ShotsLeft => _spawnedAmmo.Count + UnspawnedCount;
@@ -53,7 +55,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition
                 ammo.Push(true);
             }
                 
-            return new RangedMagazineComponentState(Capacity, ammo);
+            return new RangedMagazineComponentState(ammo);
         }
 
         public bool TryPop([NotNullWhen(true)] out IEntity? entity)

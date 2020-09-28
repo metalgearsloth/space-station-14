@@ -38,7 +38,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         protected bool ManualCycle;
 
         // Sounds
-        public string? SoundCycle { get; private set; }
+        public string? SoundRack { get; private set; }
         public string? SoundInsert { get; private set; }
 
         public override void ExposeData(ObjectSerializer serializer)
@@ -49,7 +49,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
             serializer.DataField(ref FillPrototype, "fillPrototype", null);
             serializer.DataField(ref ManualCycle, "manualCycle", true);
 
-            serializer.DataReadWriteFunction("soundCycle", "/Audio/Weapons/Guns/Cock/sf_rifle_cock.ogg", value => SoundCycle = value, () => SoundCycle);
+            serializer.DataReadWriteFunction("soundRack", "/Audio/Weapons/Guns/Cock/sf_rifle_cock.ogg", value => SoundRack = value, () => SoundRack);
             serializer.DataReadWriteFunction("soundInsert", "/Audio/Weapons/Guns/MagIn/bullet_insert.ogg", value => SoundInsert = value, () => SoundInsert);
         }
 

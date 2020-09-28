@@ -44,8 +44,12 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged
             {
                 return;
             }
+
+            if (_spawnedAmmo == cast.SpawnedAmmo)
+                return;
             
-            throw new NotImplementedException();
+            _spawnedAmmo = cast.SpawnedAmmo;
+            UpdateAppearance();
         }
 
         public bool TryPop(out bool entity)

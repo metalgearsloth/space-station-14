@@ -15,6 +15,7 @@ using Robust.Shared.ViewVariables;
 namespace Content.Server.GameObjects.Components.Projectiles
 {
     [RegisterComponent]
+    [ComponentReference(typeof(SharedProjectileComponent))]
     public class ProjectileComponent : SharedProjectileComponent, ICollideBehavior
     {
         [ViewVariables]

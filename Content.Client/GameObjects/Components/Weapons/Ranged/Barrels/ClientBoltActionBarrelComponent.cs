@@ -72,9 +72,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         protected override void SetBolt(bool value)
         {
             if (BoltOpen == value)
-            {
                 return;
-            }
 
             if (value)
             {
@@ -152,9 +150,6 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                 }
                 return;
             }
-
-            //AudioParams.Default.WithVolume(-2)
-            //EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(shooter, Owner, SoundCycle, true);
         }
 
         public override bool TryInsertBullet(IEntity user, SharedAmmoComponent ammoComponent)
@@ -172,9 +167,9 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             if (_ammo.TryPop(out var ammo))
             {
                 _chamber = ammo;
-                if (SoundCycle != null)
+                if (SoundRack != null)
                 {
-                    EntitySystem.Get<AudioSystem>().Play(SoundCycle, Owner, AudioHelpers.WithVariation(CycleVariation));
+                    EntitySystem.Get<AudioSystem>().Play(SoundRack, Owner, AudioHelpers.WithVariation(CycleVariation));
                 }
                 
                 return;
@@ -183,9 +178,9 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             if (UnspawnedCount > 0)
             {
                 _chamber = true;
-                if (SoundCycle != null)
+                if (SoundRack != null)
                 {
-                    EntitySystem.Get<AudioSystem>().Play(SoundCycle, Owner, AudioHelpers.WithVariation(CycleVariation));
+                    EntitySystem.Get<AudioSystem>().Play(SoundRack, Owner, AudioHelpers.WithVariation(CycleVariation));
                 }
                 
                 UnspawnedCount--;

@@ -73,13 +73,10 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
     [Serializable, NetSerializable]
     public sealed class RangedMagazineComponentState : ComponentState
     {
-        public int Capacity { get; }
-
         public Stack<bool> SpawnedAmmo { get; }
         
-        public RangedMagazineComponentState(int capacity, Stack<bool> spawnedAmmo) : base(ContentNetIDs.RANGED_MAGAZINE)
+        public RangedMagazineComponentState(Stack<bool> spawnedAmmo) : base(ContentNetIDs.RANGED_MAGAZINE)
         {
-            Capacity = capacity;
             SpawnedAmmo = spawnedAmmo;
         }
     }

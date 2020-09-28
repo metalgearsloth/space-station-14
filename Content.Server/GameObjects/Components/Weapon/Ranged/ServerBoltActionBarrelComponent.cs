@@ -143,8 +143,8 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             }
 
             // TODO: Need this because interaction prediction
-            if (SoundCycle != null)
-                EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundCycle, Owner, AudioHelpers.WithVariation(CycleVariation));
+            if (SoundRack != null)
+                EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundRack, Owner, AudioHelpers.WithVariation(CycleVariation));
 
             Dirty();
         }
@@ -192,8 +192,8 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             if (_spawnedAmmo.TryPop(out var ammo))
             {
                 _chamberContainer?.Insert(ammo);
-                if (SoundCycle != null)
-                    EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundCycle, Owner, AudioHelpers.WithVariation(CycleVariation), excludedSession: Shooter().PlayerSession());
+                if (SoundRack != null)
+                    EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundRack, Owner, AudioHelpers.WithVariation(CycleVariation), excludedSession: Shooter().PlayerSession());
                 
                 return;
             }
@@ -202,8 +202,8 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             {
                 var entity = Owner.EntityManager.SpawnEntity(FillPrototype, Owner.Transform.MapPosition);
                 _chamberContainer?.Insert(entity);
-                if (SoundCycle != null)
-                    EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundCycle, Owner, AudioHelpers.WithVariation(CycleVariation), excludedSession: Shooter().PlayerSession());
+                if (SoundRack != null)
+                    EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundRack, Owner, AudioHelpers.WithVariation(CycleVariation), excludedSession: Shooter().PlayerSession());
                 
                 UnspawnedCount--;
             }

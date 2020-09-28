@@ -50,7 +50,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
                 () =>
                 {
                     var result = new List<CollisionGroup>();
-                    foreach (CollisionGroup value in Enum.GetValues(typeof(CollisionGroup)))
+                    foreach (var value in (CollisionGroup[]) Enum.GetValues(typeof(CollisionGroup)))
                     {
                         if ((value & CollisionMask) == 0)
                             continue;
