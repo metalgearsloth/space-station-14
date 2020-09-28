@@ -44,9 +44,9 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
     [Serializable, NetSerializable]
     public class RangedShotsLeftMessage : ComponentMessage
     {
-        public ushort ShotsLeft { get; }
+        public int ShotsLeft { get; }
 
-        public RangedShotsLeftMessage(ushort shotsLeft)
+        public RangedShotsLeftMessage(int shotsLeft)
         {
             ShotsLeft = shotsLeft;
         }
@@ -74,9 +74,9 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         /// <summary>
         ///     We'll send the amount of shots we expected so the server can try to reconcile it.
         /// </summary>
-        public ushort Shots { get; }
+        public int Shots { get; }
 
-        public StopFiringMessage(EntityUid uid, ushort shots)
+        public StopFiringMessage(EntityUid uid, int shots)
         {
             Uid = uid;
             Shots = shots;
@@ -117,7 +117,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         /// <summary>
         ///     Keep a running track of how many shots we've fired for single-shot (etc.) weapons.
         /// </summary>
-        public ushort ShotCounter;
+        public int ShotCounter;
         
         // Shooting
         // So I guess we'll try syncing start and stop fire, as well as fire angles
@@ -133,9 +133,9 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         /// </summary>
         public MapCoordinates? FireCoordinates { get; set; }
         
-        public ushort ExpectedShots { get; set; }
+        public int ExpectedShots { get; set; }
         
-        public ushort AccumulatedShots { get; set; }
+        public int AccumulatedShots { get; set; }
         
         public float AmmoSpreadRatio { get; set; }
         
@@ -351,7 +351,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
                 return true;
             }
 
-            ushort firedShots = 0;
+            var firedShots = 0;
 
             // To handle guns with firerates higher than framerate / tickrate
             while (NextFire <= currentTime)
@@ -387,14 +387,14 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
             return true;
         }
 
-        private List<Angle> GetWeaponSpread(TimeSpan currentTime, TimeSpan lastFire, Angle direction, ushort shots)
+        private List<Angle> GetWeaponSpread(TimeSpan currentTime, TimeSpan lastFire, Angle direction, int shots)
         {
             // TODO: Could also predict this client-side. Probably need to use System.Random and seeds but out of scope for this big pr.
             // If we're sure no desyncs occur then we could just use the Uid to get the seed probably.
             var robustRandom = IoCManager.Resolve<IRobustRandom>();
             var spreads = new List<Angle>(shots);
 
-            for (ushort i = 0; i < shots; i++)
+            for (var i = 0; i < shots; i++)
             {
                 double timeSinceLastFire;
 

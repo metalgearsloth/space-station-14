@@ -1,6 +1,8 @@
 #nullable enable
 using System.Threading.Tasks;
 using Content.Server.GameObjects.Components.Weapon.Ranged;
+using Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition;
+using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using NUnit.Framework;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Interfaces.GameObjects;
@@ -33,6 +35,35 @@ namespace Content.IntegrationTests.Tests.GameObjects.Components.Weapons
                 
                 foreach (var proto in protoManager.EnumeratePrototypes<EntityPrototype>())
                 {
+                    if (proto.Abstract)
+                        continue;
+                    
+                    if (proto.Components.ContainsKey("Ammo"))
+                    {
+                        var entity = entityManager.SpawnEntity(proto.ID, mapManager.GetMapEntity(mapId).Transform.MapPosition);
+
+                        if (!entity.TryGetComponent(out AmmoComponent? ammo))
+                            continue;
+
+                        Assert.That(ammo.AmmoIsProjectile || 
+                                    protoManager.HasIndex<EntityPrototype>(ammo.ProjectileId), $"{proto.ID} does not have a valid ProjectileID");
+
+                        continue;
+                    }
+                    
+                    if (proto.Components.ContainsKey("BatteryBarrel"))
+                    {
+                        var entity = entityManager.SpawnEntity(proto.ID, mapManager.GetMapEntity(mapId).Transform.MapPosition);
+
+                        if (!entity.TryGetComponent(out ServerBatteryBarrelComponent? battery))
+                            continue;
+
+                        Assert.That(protoManager.HasIndex<HitscanPrototype>(battery.AmmoPrototype) ||
+                                    protoManager.HasIndex<EntityPrototype>(battery.AmmoPrototype), $"{proto.ID} does not have a valid AmmoPrototype");
+
+                        continue;
+                    }
+                    
                     if (proto.Components.ContainsKey("BoltActionBarrel"))
                     {
                         var entity = entityManager.SpawnEntity(proto.ID, mapManager.GetMapEntity(mapId).Transform.MapPosition);
@@ -41,7 +72,20 @@ namespace Content.IntegrationTests.Tests.GameObjects.Components.Weapons
                             continue;
 
                         Assert.That(boltAction.FillPrototype == null ||
-                                    protoManager.HasIndex<EntityPrototype>(boltAction.FillPrototype), $"{proto.ID} does not have valid FillPrototype");
+                                    protoManager.HasIndex<EntityPrototype>(boltAction.FillPrototype), $"{proto.ID} does not have a valid FillPrototype");
+
+                        continue;
+                    }
+                    
+                    if (proto.Components.ContainsKey("MagazineBarrel"))
+                    {
+                        var entity = entityManager.SpawnEntity(proto.ID, mapManager.GetMapEntity(mapId).Transform.MapPosition);
+
+                        if (!entity.TryGetComponent(out ServerMagazineBarrelComponent? magazine))
+                            continue;
+
+                        Assert.That(magazine.MagFillPrototype == null ||
+                                    protoManager.HasIndex<EntityPrototype>(magazine.MagFillPrototype), $"{proto.ID} does not have a valid MagFillPrototype");
 
                         continue;
                     }
@@ -54,9 +98,20 @@ namespace Content.IntegrationTests.Tests.GameObjects.Components.Weapons
                             continue;
 
                         Assert.That(pump.FillPrototype == null ||
-                                    protoManager.HasIndex<EntityPrototype>(pump.FillPrototype), $"{proto.ID} does not have valid FillPrototype");
+                                    protoManager.HasIndex<EntityPrototype>(pump.FillPrototype), $"{proto.ID} does not have a valid FillPrototype");
 
                         continue;
+                    }
+                    
+                    if (proto.Components.ContainsKey("RangedMagazine"))
+                    {
+                        var entity = entityManager.SpawnEntity(proto.ID, mapManager.GetMapEntity(new MapId(1)).Transform.MapPosition);
+
+                        if (!entity.TryGetComponent(out ServerRangedMagazineComponent? magazine))
+                            continue;
+
+                        Assert.That(magazine.FillPrototype == null ||
+                                    protoManager.HasIndex<EntityPrototype>(magazine.FillPrototype), $"{proto.ID} does not have a valid FillPrototype");
                     }
                     
                     if (proto.Components.ContainsKey("RevolverBarrel"))
@@ -67,7 +122,18 @@ namespace Content.IntegrationTests.Tests.GameObjects.Components.Weapons
                             continue;
 
                         Assert.That(revolver.FillPrototype == null ||
-                                    protoManager.HasIndex<EntityPrototype>(revolver.FillPrototype), $"{proto.ID} does not have valid FillPrototype");
+                                    protoManager.HasIndex<EntityPrototype>(revolver.FillPrototype), $"{proto.ID} does not have a valid FillPrototype");
+                    }
+                    
+                    if (proto.Components.ContainsKey("SpeedLoader"))
+                    {
+                        var entity = entityManager.SpawnEntity(proto.ID, mapManager.GetMapEntity(new MapId(1)).Transform.MapPosition);
+
+                        if (!entity.TryGetComponent(out ServerSpeedLoaderComponent? speedLoader))
+                            continue;
+
+                        Assert.That(speedLoader.FillPrototype == null ||
+                                    protoManager.HasIndex<EntityPrototype>(speedLoader.FillPrototype), $"{proto.ID} does not have a valid FillPrototype");
                     }
                 }
             });
@@ -95,6 +161,34 @@ namespace Content.IntegrationTests.Tests.GameObjects.Components.Weapons
                 
                 foreach (var proto in protoManager.EnumeratePrototypes<EntityPrototype>())
                 {
+                    if (proto.Abstract)
+                        continue;
+                    
+                    if (proto.Components.ContainsKey("BatteryBarrel"))
+                    {
+                        var entity = entityManager.SpawnEntity(proto.ID, mapManager.GetMapEntity(new MapId(1)).Transform.MapPosition);
+
+                        if (!entity.TryGetComponent(out ServerBatteryBarrelComponent? battery))
+                            continue;
+
+                        foreach (var soundPath in new[]
+                        {
+                            battery.SoundGunshot,
+                            battery.SoundEmpty,
+                            
+                            battery.SoundPowerCellInsert,
+                            battery.SoundPowerCellEject,
+                        })
+                        {
+                            if (soundPath == null)
+                                continue;
+                            
+                            Assert.That(resourceManager.ContentFileExists(soundPath), $"Unable to find file {soundPath} for {proto.ID}");
+                        }
+
+                        continue;
+                    }
+                    
                     if (proto.Components.ContainsKey("BoltActionBarrel"))
                     {
                         var entity = entityManager.SpawnEntity(proto.ID, mapManager.GetMapEntity(new MapId(1)).Transform.MapPosition);
@@ -106,10 +200,41 @@ namespace Content.IntegrationTests.Tests.GameObjects.Components.Weapons
                         {
                             boltAction.SoundGunshot, 
                             boltAction.SoundEmpty, 
+                            
                             boltAction.SoundCycle,
                             boltAction.SoundInsert,
                             boltAction.SoundBoltClosed,
                             boltAction.SoundBoltOpen,
+                        })
+                        {
+                            if (soundPath == null)
+                                continue;
+                            
+                            Assert.That(resourceManager.ContentFileExists(soundPath), $"Unable to find file {soundPath} for {proto.ID}");
+                        }
+
+                        continue;
+                    }
+                    
+                    if (proto.Components.ContainsKey("MagazineBarrel"))
+                    {
+                        var entity = entityManager.SpawnEntity(proto.ID, mapManager.GetMapEntity(new MapId(1)).Transform.MapPosition);
+
+                        if (!entity.TryGetComponent(out ServerMagazineBarrelComponent? magazine))
+                            continue;
+
+                        foreach (var soundPath in new[]
+                        {
+                            magazine.SoundGunshot,
+                            magazine.SoundEmpty,
+                            
+                            magazine.SoundBoltOpen,
+                            magazine.SoundBoltClosed,
+                            magazine.SoundRack,
+                            magazine.SoundCycle,
+                            magazine.SoundMagInsert,
+                            magazine.SoundMagEject,
+                            magazine.SoundAutoEject,
                         })
                         {
                             if (soundPath == null)
@@ -132,6 +257,7 @@ namespace Content.IntegrationTests.Tests.GameObjects.Components.Weapons
                         {
                             pump.SoundGunshot, 
                             pump.SoundEmpty, 
+                            
                             pump.SoundCycle,
                             pump.SoundInsert,
                         })
@@ -156,6 +282,10 @@ namespace Content.IntegrationTests.Tests.GameObjects.Components.Weapons
                         {
                             revolver.SoundGunshot, 
                             revolver.SoundEmpty,
+                            
+                            revolver.SoundInsert,
+                            revolver.SoundEject,
+                            revolver.SoundSpin,
                         })
                         {
                             if (soundPath == null)

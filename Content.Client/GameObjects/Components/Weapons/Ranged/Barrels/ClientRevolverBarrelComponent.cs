@@ -39,8 +39,6 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         [ViewVariables]
         public bool?[] Bullets { get; private set; } = default!;
 
-        protected override ushort Capacity => (ushort) Bullets.Length;
-        
         public override void ExposeData(ObjectSerializer serializer)
         {
             base.ExposeData(serializer);
@@ -149,7 +147,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         
         private void Spin()
         {
-            CurrentSlot = (ushort) IoCManager.Resolve<IRobustRandom>().Next(Bullets.Length - 1);
+            CurrentSlot = IoCManager.Resolve<IRobustRandom>().Next(Bullets.Length - 1);
             _statusControl?.Update(true);
             SendNetworkMessage(new ChangeSlotMessage(CurrentSlot));
             if (SoundSpin != null)

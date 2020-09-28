@@ -17,28 +17,21 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         public override string Name => "SpeedLoader";
         public override uint? NetID => ContentNetIDs.SPEED_LOADER;
 
-        [ViewVariables]
-        protected BallisticCaliber Caliber { get; private set; }
+        [ViewVariables] protected BallisticCaliber Caliber { get; private set; }
         
-        [ViewVariables]
-        public ushort Capacity { get; protected set; }
-        
-        /*
-        private Container _ammoContainer;
-        private Stack<IEntity> _spawnedAmmo;
-        */
-        
+        [ViewVariables] public int Capacity { get; protected set; }
+
         protected int UnspawnedCount;
 
         public abstract int ShotsLeft { get; }
 
-        protected string? FillPrototype;
+        public string? FillPrototype { get; private set; }
 
         public override void ExposeData(ObjectSerializer serializer)
         {
             base.ExposeData(serializer);
             serializer.DataReadWriteFunction("caliber", BallisticCaliber.Unspecified, value => Caliber = value, () => Caliber);
-            serializer.DataReadWriteFunction("capacity", (ushort) 6, value => Capacity = value, () => Capacity);
+            serializer.DataReadWriteFunction("capacity", 6, value => Capacity = value, () => Capacity);
             serializer.DataReadWriteFunction("fillPrototype", null, value => FillPrototype = value, () => FillPrototype);
         }
 
@@ -95,11 +88,11 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
     [Serializable, NetSerializable]
     public sealed class SpeedLoaderComponentState : ComponentState
     {
-        public ushort Capacity { get; }
+        public int Capacity { get; }
         
         public Stack<bool> Ammo { get; }
         
-        public SpeedLoaderComponentState(ushort capacity, Stack<bool> ammo) : base(ContentNetIDs.SPEED_LOADER)
+        public SpeedLoaderComponentState(int capacity, Stack<bool> ammo) : base(ContentNetIDs.SPEED_LOADER)
         {
             Capacity = capacity;
             Ammo = ammo;

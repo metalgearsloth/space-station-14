@@ -151,7 +151,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             {
                 if (SoundCycle != null)
                 {
-                    EntitySystem.Get<AudioSystem>().PlayAtCoords(SoundCycle, Owner.Transform.Coordinates, AudioParams.Default.WithVolume(-2));
+                    EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundCycle, Owner, AudioHelpers.WithVariation(CycleVariation));
                 }
             }
             
@@ -203,21 +203,13 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                     continue;
 
                 var ammoComp = ammo.GetComponent<AmmoComponent>();
+                var sound = ammoComp.Spent ? SoundEmpty : SoundGunshot;
+                
+                if (sound != null)
+                    EntitySystem.Get<AudioSystem>().PlayFromEntity(sound, Owner, AudioHelpers.WithVariation(GunshotVariation), excludedSession: shooter.PlayerSession());
 
-                if (ammoComp.Spent)
+                if (!ammoComp.Spent)
                 {
-                    if (SoundEmpty != null)
-                    {
-                        EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundEmpty, Owner, AudioHelpers.WithVariation(EmptyVariation), excludedSession: shooter?.PlayerSession());
-                    }
-                }
-                else
-                {
-                    if (SoundGunshot != null)
-                    {
-                        EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundGunshot, Owner, AudioHelpers.WithVariation(GunshotVariation), excludedSession: shooter?.PlayerSession());
-                    }
-                    
                     EntitySystem.Get<RangedWeaponSystem>().ShootAmmo(shooter, this, spreads[i], ammoComp);
                     ammoComp.Spent = true;
                 }

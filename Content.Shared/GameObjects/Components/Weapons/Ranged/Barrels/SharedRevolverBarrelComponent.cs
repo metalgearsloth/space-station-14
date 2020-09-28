@@ -18,9 +18,9 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         /// <summary>
         ///     What slot will be used for the next bullet.
         /// </summary>
-        protected ushort CurrentSlot = 0;
+        protected int CurrentSlot = 0;
 
-        protected abstract ushort Capacity { get; }
+        protected int Capacity { get; }
 
         public string? FillPrototype;
         
@@ -30,9 +30,9 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         protected int UnspawnedCount;
 
         // Sounds
-        protected string? SoundEject;
-        protected string? SoundInsert;
-        protected string? SoundSpin;
+        public string? SoundEject { get; private set; }
+        public string? SoundInsert { get; private set; }
+        public string? SoundSpin { get; private set; }
 
         protected const float SpinVariation = 0.1f;
 
@@ -43,19 +43,16 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
             serializer.DataField(ref Caliber, "caliber", BallisticCaliber.Unspecified);
             serializer.DataField(ref FillPrototype, "fillPrototype", null);
 
-            // Sounds
-            serializer.DataField(ref SoundEject, "soundEject", "/Audio/Weapons/Guns/MagOut/revolver_magout.ogg");
-            serializer.DataField(ref SoundInsert, "soundInsert", "/Audio/Weapons/Guns/MagIn/revolver_magin.ogg");
-            serializer.DataField(ref SoundSpin, "soundSpin", "/Audio/Weapons/Guns/Misc/revolver_spin.ogg");
+            serializer.DataReadWriteFunction("soundEject", "/Audio/Weapons/Guns/MagOut/revolver_magout.ogg", value => SoundEject = value, () => SoundEject);
+            serializer.DataReadWriteFunction("soundInsert", "/Audio/Weapons/Guns/MagIn/revolver_magin.ogg", value => SoundInsert = value, () => SoundInsert);
+            serializer.DataReadWriteFunction("soundSpin", "/Audio/Weapons/Guns/Misc/revolver_spin.ogg", value => SoundSpin = value, () => SoundSpin);
         }
 
         protected void Cycle()
         {
             // Move up a slot
-            CurrentSlot = (ushort) ((CurrentSlot + 1) % Capacity);
+            CurrentSlot = (CurrentSlot + 1) % Capacity;
         }
-
-        // TODO: EJECTCASING should be on like a GunManager.
 
         /// <summary>
         ///     Dumps all cartridges onto the ground.
@@ -91,13 +88,13 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
     [Serializable, NetSerializable]
     public class RevolverBarrelComponentState : ComponentState
     {
-        public ushort CurrentSlot { get; }
+        public int CurrentSlot { get; }
         public FireRateSelector FireRateSelector { get; }
         public bool?[] Bullets { get; }
         public string? SoundGunshot { get; }
 
         public RevolverBarrelComponentState(
-            ushort currentSlot,
+            int currentSlot,
             FireRateSelector fireRateSelector,
             bool?[] bullets,
             string? soundGunshot) :
@@ -113,9 +110,9 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
     [Serializable, NetSerializable]
     public sealed class ChangeSlotMessage : ComponentMessage
     {
-        public ushort Slot { get; }
+        public int Slot { get; }
         
-        public ChangeSlotMessage(ushort slot)
+        public ChangeSlotMessage(int slot)
         {
             Slot = slot;
             Directed = true;

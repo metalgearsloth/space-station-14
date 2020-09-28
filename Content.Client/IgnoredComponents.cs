@@ -82,7 +82,6 @@
             "Bucket",
             "Puddle",
             "CanSpill",
-            "Hitscan",
             "ExplosiveProjectile",
             "StunnableProjectile",
             "RandomPottedPlant",

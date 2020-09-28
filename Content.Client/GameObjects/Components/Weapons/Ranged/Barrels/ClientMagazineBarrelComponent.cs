@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Content.Client.GameObjects.Components.Mobs;
 using Content.Shared.Audio;
+using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
 using Content.Shared.GameObjects.EntitySystems;
 using Robust.Client.GameObjects;
@@ -17,6 +18,7 @@ using Robust.Shared.Utility;
 namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 {
     [RegisterComponent]
+    [ComponentReference(typeof(SharedRangedWeaponComponent))]
     public sealed class ClientMagazineBarrelComponent : SharedMagazineBarrelComponent, IExamine
     {
         // TODO private StatusControl? _statusControl;

@@ -18,7 +18,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         /// <summary>
         ///     Excluding chamber
         /// </summary>
-        public ushort Capacity { get; protected set; }
+        public int Capacity { get; protected set; }
 
         // Even a point having a chamber? I guess it makes some of the below code cleaner
 
@@ -38,19 +38,19 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         protected bool ManualCycle;
 
         // Sounds
-        public string? SoundCycle;
-        public string? SoundInsert;
+        public string? SoundCycle { get; private set; }
+        public string? SoundInsert { get; private set; }
 
         public override void ExposeData(ObjectSerializer serializer)
         {
             base.ExposeData(serializer);
-            serializer.DataReadWriteFunction("capacity", (ushort) 1, value => Capacity = value, () => Capacity);
+            serializer.DataReadWriteFunction("capacity", 1, value => Capacity = value, () => Capacity);
             serializer.DataField(ref Caliber, "caliber", BallisticCaliber.Unspecified);
             serializer.DataField(ref FillPrototype, "fillPrototype", null);
             serializer.DataField(ref ManualCycle, "manualCycle", true);
 
-            serializer.DataField(ref SoundCycle, "soundCycle", "/Audio/Weapons/Guns/Cock/sf_rifle_cock.ogg");
-            serializer.DataField(ref SoundInsert, "soundInsert", "/Audio/Weapons/Guns/MagIn/bullet_insert.ogg");
+            serializer.DataReadWriteFunction("soundCycle", "/Audio/Weapons/Guns/Cock/sf_rifle_cock.ogg", value => SoundCycle = value, () => SoundCycle);
+            serializer.DataReadWriteFunction("soundInsert", "/Audio/Weapons/Guns/MagIn/bullet_insert.ogg", value => SoundInsert = value, () => SoundInsert);
         }
 
         protected abstract void Cycle(bool manual = false);
@@ -75,14 +75,14 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         public bool? Chamber { get; }
         public FireRateSelector FireRateSelector { get; }
         
-        public ushort Capacity { get; }
+        public int Capacity { get; }
         
         public Stack<bool> Ammo { get; }
 
         public PumpBarrelComponentState(
             bool? chamber,
             FireRateSelector fireRateSelector,
-            ushort capacity,
+            int capacity,
             Stack<bool> ammo) :
             base(ContentNetIDs.PUMP_BARREL)
         {

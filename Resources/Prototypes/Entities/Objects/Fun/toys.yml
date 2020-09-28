@@ -559,7 +559,6 @@
     size: 24
     sprite: Objects/Fun/toys.rsi
     HeldPrefix: foamcrossbow
-  - type: RangedWeapon
   - type: RevolverBarrel
     caliber: Rocket
     currentSelector: Single
@@ -569,7 +568,7 @@
     capacity: 1
     soundEmpty: /Audio/Weapons/Guns/Empty/empty.ogg
     soundGunshot: /Audio/Weapons/Guns/Gunshots/click.ogg
-    soundInsert: /Audio/Weapons/Guns/MagIn/drawbow2.ogg
+    # soundInsert: /Audio/Weapons/Guns/MagIn/drawbow2.ogg
 
 - type: entity
   name: ToyGunBase
@@ -602,7 +601,6 @@
     size: 24
     sprite: Objects/Fun/toys.rsi
     state: base
-  - type: RangedWeapon
   - type: BoltActionBarrel
     currentSelector: Single
     allSelectors:

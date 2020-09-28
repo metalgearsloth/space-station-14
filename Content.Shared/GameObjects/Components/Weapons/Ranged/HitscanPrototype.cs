@@ -9,7 +9,7 @@ using YamlDotNet.RepresentationModel;
 
 namespace Content.Shared.GameObjects.Components.Weapons.Ranged
 {
-    [Prototype("Hitscan")]
+    [Prototype("hitscan")]
     public sealed class HitscanPrototype : IPrototype, IIndexedPrototype
     {
         public string ID { get; private set; } = default!;

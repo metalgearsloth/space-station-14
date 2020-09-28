@@ -25,6 +25,7 @@ using Robust.Shared.Utility;
 namespace Content.Server.GameObjects.Components.Weapon.Ranged
 {
     [RegisterComponent]
+    [ComponentReference(typeof(SharedRangedWeaponComponent))]
     public sealed class ServerMagazineBarrelComponent : SharedMagazineBarrelComponent
     {
         private ContainerSlot? _chamberContainer;
@@ -329,21 +330,13 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                     continue;
 
                 var ammoComp = ammo.GetComponent<AmmoComponent>();
+                var sound = ammoComp.Spent ? SoundEmpty : SoundGunshot;
+                
+                if (sound != null)
+                    EntitySystem.Get<AudioSystem>().PlayFromEntity(sound, Owner, AudioHelpers.WithVariation(GunshotVariation), excludedSession: shooter.PlayerSession());
 
-                if (ammoComp.Spent)
+                if (!ammoComp.Spent)
                 {
-                    if (SoundEmpty != null)
-                    {
-                        EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundEmpty, Owner, AudioHelpers.WithVariation(EmptyVariation), excludedSession: shooter.PlayerSession());
-                    }
-                }
-                else
-                {
-                    if (SoundGunshot != null)
-                    {
-                        EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundGunshot, Owner, AudioHelpers.WithVariation(GunshotVariation), excludedSession: shooter.PlayerSession());
-                    }
-                    
                     EntitySystem.Get<RangedWeaponSystem>().ShootAmmo(shooter, this, spreads[i], ammoComp);
                     ammoComp.Spent = true;
                 }

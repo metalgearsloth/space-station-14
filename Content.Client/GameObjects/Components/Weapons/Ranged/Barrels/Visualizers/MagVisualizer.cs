@@ -57,7 +57,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels.Visualize
 
             if (_magLoaded)
             {
-                if (!component.TryGetData(AmmoVisuals.AmmoMax, out ushort capacity))
+                if (!component.TryGetData(AmmoVisuals.AmmoMax, out int capacity))
                 {
                     return;
                 }

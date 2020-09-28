@@ -35,8 +35,6 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
 
         private IContainer AmmoContainer { get; set; } = default!;
 
-        protected override ushort Capacity => (ushort) _ammoSlots.Length;
-
         public override void ExposeData(ObjectSerializer serializer)
         {
             base.ExposeData(serializer);
@@ -103,7 +101,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
 
             if (FillPrototype != null)
             {
-                UnspawnedCount += (ushort) _ammoSlots.Length;
+                UnspawnedCount += _ammoSlots.Length;
             }
         }
 
@@ -155,20 +153,23 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
 
             for (var i = 0; i < shotCount; i++)
             {
-                slot = (ushort) (slot == 0 ? _ammoSlots.Length - 1 : slot - 1);
-                var entity = _ammoSlots[slot];
+                slot = (slot == 0 ? _ammoSlots.Length - 1 : slot - 1);
+                var ammo = _ammoSlots[slot];
 
-                if (entity == null)
+                if (ammo == null)
                     continue;
                 
-                var ammo = entity.GetComponent<AmmoComponent>();
-                var sound = ammo.Spent ? SoundEmpty : SoundGunshot;
+                var ammoComp = ammo.GetComponent<AmmoComponent>();
+                var sound = ammoComp.Spent ? SoundEmpty : SoundGunshot;
                 
                 if (sound != null)
                     EntitySystem.Get<AudioSystem>().PlayFromEntity(sound, Owner, AudioHelpers.WithVariation(GunshotVariation), excludedSession: shooter.PlayerSession());
-                
-                EntitySystem.Get<RangedWeaponSystem>().ShootAmmo(shooter, this, spreads[i], ammo);
-                ammo.Spent = true;
+
+                if (!ammoComp.Spent)
+                {
+                    EntitySystem.Get<RangedWeaponSystem>().ShootAmmo(shooter, this, spreads[i], ammoComp);
+                    ammoComp.Spent = true;
+                }
             }
         }
 
@@ -176,8 +177,8 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
         {
             var gunSystem = EntitySystem.Get<SharedRangedWeaponSystem>();
             // How many times we can play the sound
-            const ushort soundCap = 3;
-            ushort soundCount = 0;
+            const byte soundCap = 3;
+            byte soundCount = 0;
             
             for (var i = 0; i < Capacity; i++)
             {
@@ -207,7 +208,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             }
 
             // May as well point back at the end?
-            CurrentSlot = (ushort) (_ammoSlots.Length - 1);
+            CurrentSlot = _ammoSlots.Length - 1;
             Dirty();
         }
 

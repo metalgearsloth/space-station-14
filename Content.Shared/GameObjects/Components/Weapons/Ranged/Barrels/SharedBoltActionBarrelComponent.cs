@@ -20,8 +20,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         public override string Name => "BoltActionBarrel";
         public override uint? NetID => ContentNetIDs.BOLTACTION_BARREL;
 
-        [ViewVariables]
-        public ushort Capacity { get; set; }
+        [ViewVariables] public int Capacity { get; set; }
 
         [ViewVariables]
         public BallisticCaliber Caliber;
@@ -34,13 +33,11 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         public bool BoltOpen { get; protected set; }
         protected bool AutoCycle;
 
-        protected float AmmoSpreadRatio;
-
         // Sounds
-        public string? SoundCycle;
-        public string? SoundBoltOpen;
-        public string? SoundBoltClosed;
-        public string? SoundInsert;
+        public string? SoundCycle { get; private set; }
+        public string? SoundBoltOpen { get; private set; }
+        public string? SoundBoltClosed { get; private set; }
+        public string? SoundInsert { get; private set; }
 
         public override void ExposeData(ObjectSerializer serializer)
         {
@@ -49,7 +46,6 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
             serializer.DataReadWriteFunction("capacity", Capacity, value => Capacity = value, () => Capacity);
             serializer.DataReadWriteFunction("fillPrototype", null, value => FillPrototype = value, () => FillPrototype);
             serializer.DataReadWriteFunction("autoCycle", false, value => AutoCycle = value, () => AutoCycle);
-            serializer.DataReadWriteFunction("ammoSpreadRatio", 1.0f, value => AmmoSpreadRatio = value, () => AmmoSpreadRatio);
 
             serializer.DataReadWriteFunction("soundCycle", "/Audio/Weapons/Guns/Cock/sf_rifle_cock.ogg", value => SoundCycle = value, () => SoundCycle);
             serializer.DataReadWriteFunction("soundBoltOpen", "/Audio/Weapons/Guns/Bolt/rifle_bolt_open.ogg", value => SoundBoltOpen = value, () => SoundBoltOpen);

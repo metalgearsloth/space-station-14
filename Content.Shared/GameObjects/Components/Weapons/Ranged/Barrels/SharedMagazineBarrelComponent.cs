@@ -20,21 +20,14 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
 
         public override uint? NetID => ContentNetIDs.MAGAZINE_BARREL;
 
-        /*
-        [ViewVariables]
-        private ContainerSlot _chamberContainer;
-        [ViewVariables] public bool HasMagazine => _magazineContainer.ContainedEntity != null;
-        private ContainerSlot _magazineContainer;
-        */
+        // TODO: Just make properties
+        // TODO: Add VV to a bunch of shit
+        [ViewVariables] public MagazineType MagazineTypes { get; private set; }
+        [ViewVariables] public BallisticCaliber Caliber { get; private set; }
 
-        [ViewVariables] public MagazineType MagazineTypes => _magazineTypes;
-        private MagazineType _magazineTypes;
-        [ViewVariables] public BallisticCaliber Caliber => _caliber;
-        private BallisticCaliber _caliber;
+        public int Capacity { get; set; }
 
-        public ushort Capacity { get; set; }
-
-        protected string? MagFillPrototype;
+        public string? MagFillPrototype { get; private set; }
 
         public bool BoltOpen { get; protected set; }
 
@@ -42,16 +35,14 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         // If the bolt needs to be open before we can insert / remove the mag (i.e. for LMGs)
         public bool MagNeedsOpenBolt { get; private set; }
 
-        protected float AmmoSpreadRatio;
-
         // Sounds
-        protected string? SoundBoltOpen;
-        protected string? SoundBoltClosed;
-        protected string? SoundRack;
-        protected string? SoundCycle;
-        protected string? SoundMagInsert;
-        protected string? SoundMagEject;
-        protected string? SoundAutoEject;
+        public string? SoundBoltOpen { get; private set; }
+        public string? SoundBoltClosed { get; private set; }
+        public string? SoundRack { get; private set; }
+        public string? SoundCycle { get; private set; }
+        public string? SoundMagInsert { get; private set; }
+        public string? SoundMagEject { get; private set; }
+        public string? SoundAutoEject { get; private set; }
 
         protected const float AutoEjectVariation = 0.1f;
         protected const float MagVariation = 0.1f;
@@ -63,23 +54,22 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
             serializer.DataReadWriteFunction(
                 "magazineTypes",
                 new List<MagazineType>(),
-                types => types.ForEach(mag => _magazineTypes |= mag), GetMagazineTypes);
+                types => types.ForEach(mag => MagazineTypes |= mag), GetMagazineTypes);
 
             serializer.DataReadWriteFunction("magNeedsOpenBolt", false, value => MagNeedsOpenBolt = value,
                 () => MagNeedsOpenBolt);
             
-            serializer.DataField(ref _caliber, "caliber", BallisticCaliber.Unspecified);
-            serializer.DataField(ref MagFillPrototype, "magFillPrototype", null);
+            serializer.DataReadWriteFunction("caliber", BallisticCaliber.Unspecified, value => Caliber = value, () => Caliber);
+            serializer.DataReadWriteFunction("magFillPrototype", null, value => MagFillPrototype = value, () => MagFillPrototype);
             serializer.DataField(ref AutoEjectMag, "autoEjectMag", false);
-            
-            serializer.DataReadWriteFunction("ammoSpreadRatio", 1.0f, value => AmmoSpreadRatio = value, () => AmmoSpreadRatio);
-            
-            serializer.DataField(ref SoundBoltOpen, "soundBoltOpen", null);
-            serializer.DataField(ref SoundBoltClosed, "soundBoltClosed", null);
-            serializer.DataField(ref SoundRack, "soundRack", null);
-            serializer.DataField(ref SoundMagInsert, "soundMagInsert", null);
-            serializer.DataField(ref SoundMagEject, "soundMagEject", null);
-            serializer.DataField(ref SoundAutoEject, "soundAutoEject", "/Audio/Weapons/Guns/EmptyAlarm/smg_empty_alarm.ogg");
+
+            serializer.DataReadWriteFunction("soundBoltOpen", null, value => SoundBoltOpen = value, () => SoundBoltOpen);
+            serializer.DataReadWriteFunction("soundBoltClosed", null, value => SoundBoltClosed = value, () => SoundBoltClosed);
+            serializer.DataReadWriteFunction("soundRack", null, value => SoundRack = value, () => SoundRack);
+            serializer.DataReadWriteFunction("soundCycle", null, value => SoundCycle = value, () => SoundCycle);
+            serializer.DataReadWriteFunction("soundMagInsert", null, value => SoundMagInsert = value, () => SoundMagInsert);
+            serializer.DataReadWriteFunction("soundMagEject", null, value => SoundMagEject = value, () => SoundMagEject);
+            serializer.DataReadWriteFunction("soundAutoEject", null, value => SoundAutoEject = value, () => SoundAutoEject);
         }
 
         protected List<MagazineType> GetMagazineTypes()
@@ -88,7 +78,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
 
             foreach (MagazineType mag in Enum.GetValues(typeof(MagazineType)))
             {
-                if ((_magazineTypes & mag) != 0)
+                if ((MagazineTypes & mag) != 0)
                 {
                     types.Add(mag);
                 }
@@ -96,8 +86,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
 
             return types;
         }
-
-        // TODO: Copy these 2 from bolt
+        
         protected abstract void SetBolt(bool value);
 
         protected abstract void Cycle(bool manual = false);
