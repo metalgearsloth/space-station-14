@@ -1,9 +1,11 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Content.Server.GameObjects.Components.Projectiles;
 using Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition;
 using Content.Shared.Audio;
+using Content.Shared.GameObjects.Components.Damage;
 using Content.Shared.GameObjects.Components.Projectiles;
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using Content.Shared.GameObjects.EntitySystems;
@@ -17,6 +19,7 @@ using Robust.Shared.GameObjects;
 using Robust.Shared.GameObjects.Components;
 using Robust.Shared.GameObjects.EntitySystemMessages;
 using Robust.Shared.Interfaces.GameObjects;
+using Robust.Shared.Interfaces.Physics;
 using Robust.Shared.Interfaces.Random;
 using Robust.Shared.Interfaces.Timing;
 using Robust.Shared.IoC;
@@ -43,6 +46,7 @@ namespace Content.Server.GameObjects.EntitySystems
         // (needs to sync via system or component spaghetti)
 
         [Dependency] private readonly IEntityManager _entityManager = default!;
+        [Dependency] private readonly IPhysicsManager _physicsManager = default!;
         [Dependency] private readonly IPrototypeManager _prototypeManager = default!;
         [Dependency] private readonly IRobustRandom _robustRandom = default!;
         [Dependency] private readonly IGameTiming _gameTiming = default!;
@@ -145,30 +149,46 @@ namespace Content.Server.GameObjects.EntitySystems
             }
         }
 
-        public override void ShootHitscan(IEntity? user, IEntity weapon, HitscanPrototype hitscan, Angle angle, float damageRatio = 1, float alphaRatio = 1)
+        public override void ShootHitscan(IEntity? user, SharedRangedWeaponComponent weapon, HitscanPrototype hitscan, Angle angle, float damageRatio = 1, float alphaRatio = 1)
         {
             var currentTime = _gameTiming.CurTime;
-            var distance = 0.0f;
-            
+            var ray = new CollisionRay(weapon.Owner.Transform.MapPosition.Position, angle.ToVec(), (int) hitscan.CollisionMask);
+            var rayCastResults = _physicsManager.IntersectRay(weapon.Owner.Transform.MapID, ray, hitscan.MaxLength, user, false).ToArray();
+            float distance = hitscan.MaxLength;
+
+            if (rayCastResults.Length >= 1)
+            {
+                var result = rayCastResults[0];
+                distance = result.HitEntity != null ? result.Distance : hitscan.MaxLength;
+
+                if (result.HitEntity == null || !result.HitEntity.TryGetComponent(out IDamageableComponent? damageable))
+                    return;
+
+                damageable.ChangeDamage(hitscan.DamageType, (int) Math.Round(hitscan.Damage, MidpointRounding.AwayFromZero), false, user);
+                //I used Math.Round over Convert.toInt32, as toInt32 always rounds to
+                //even numbers if halfway between two numbers, rather than rounding to nearest
+            }
+
             // Fire effects
             MuzzleFlash(user, weapon, hitscan.MuzzleEffect, angle, currentTime, alphaRatio);
-            TravelFlash(user, weapon, hitscan, angle, distance, currentTime, alphaRatio);
-            ImpactFlash(user, weapon, hitscan, angle, distance, currentTime, alphaRatio);
+            TravelFlash(user, weapon.Owner, hitscan, angle, distance, currentTime, alphaRatio);
+            ImpactFlash(user, weapon.Owner, hitscan, angle, distance, currentTime, alphaRatio: alphaRatio);
         }
 
         public override void ShootAmmo(IEntity? user, SharedRangedWeaponComponent weapon, Angle angle, SharedAmmoComponent ammoComponent, float spreadRatio = 1.0f)
         {
-            // BIG FAT TODO: NEED TO GET RECOIL HERE
             if (!ammoComponent.CanFire())
                 return;
 
             List<Angle>? sprayAngleChange = null;
             var count = ammoComponent.ProjectilesFired;
             var evenSpreadAngle = ammoComponent.EvenSpreadAngle;
+            
+            // TODO: Calculate angle here... or on the weapon.
 
             if (ammoComponent.AmmoIsProjectile)
             {
-                ShootProjectile(user,  angle, ammoComponent.Owner.GetComponent<SharedProjectileComponent>(), ammoComponent.Velocity);
+                ShootProjectile(user, weapon, angle, ammoComponent.Owner.GetComponent<SharedProjectileComponent>(), ammoComponent.Velocity);
                 return;
             }
 
@@ -194,21 +214,20 @@ namespace Content.Server.GameObjects.EntitySystems
                     projectileAngle = angle;
                 }
                 
-                var hitscan = IoCManager.Resolve<IPrototypeManager>().Index<HitscanPrototype>(ammoComponent.ProjectileId);
+                var hitscan = _prototypeManager.Index<HitscanPrototype>(ammoComponent.ProjectileId);
 
                 if (hitscan != null)
                 {
-                    ShootHitscan(user, hitscan, angle);
+                    ShootHitscan(user, weapon, hitscan, angle);
                 }
                 else
                 {
-                    // TODO: Go User -> Projectile -> Angle
-                    ShootProjectile(user, projectileAngle, projectile.GetComponent<SharedProjectileComponent>(), ammoComponent.Velocity);
+                    ShootProjectile(user, weapon, projectileAngle, projectile.GetComponent<SharedProjectileComponent>(), ammoComponent.Velocity);
                 }
             }
         }
 
-        public override void ShootProjectile(IEntity? user, Angle angle, SharedProjectileComponent projectileComponent, float velocity)
+        public override void ShootProjectile(IEntity? user, SharedRangedWeaponComponent weapon, Angle angle, SharedProjectileComponent projectileComponent, float velocity)
         {
             var collidableComponent = projectileComponent.Owner.GetComponent<ICollidableComponent>();
             collidableComponent.Status = BodyStatus.InAir;
@@ -236,7 +255,7 @@ namespace Content.Server.GameObjects.EntitySystems
             return linspace;
         }
 
-        public override void MuzzleFlash(IEntity? user, IEntity weapon, string? texture, Angle angle, TimeSpan? currentTime = null, float effectDuration = 0.2f)
+        public override void MuzzleFlash(IEntity? user, SharedRangedWeaponComponent weapon, string? texture, Angle angle, TimeSpan? currentTime = null, float alphaRatio = 1.0f)
         {
             if (texture == null)
                 return;
@@ -247,12 +266,12 @@ namespace Content.Server.GameObjects.EntitySystems
             {
                 EffectSprite = texture,
                 Born = currentTime.Value,
-                DeathTime = _gameTiming.CurTime + TimeSpan.FromSeconds(effectDuration),
-                AttachedEntityUid = weapon.Uid,
+                DeathTime = _gameTiming.CurTime + TimeSpan.FromSeconds(EffectDuration),
+                AttachedEntityUid = weapon.Owner.Uid,
                 AttachedOffset = offset,
                 //Rotated from east facing
                 Rotation = (float) angle.Theta,
-                Color = Vector4.Multiply(new Vector4(255, 255, 255, 750), Vector4.One),
+                Color = Vector4.Multiply(new Vector4(255, 255, 255, 750), alphaRatio),
                 ColorDelta = new Vector4(0, 0, 0, -1500f),
                 Shaded = false
             };
@@ -271,7 +290,7 @@ namespace Content.Server.GameObjects.EntitySystems
             {
                 EffectSprite = hitscan.TravelEffect,
                 Born = _gameTiming.CurTime,
-                DeathTime = TimeSpan.FromSeconds(currentTime.Value.TotalSeconds + hitscan.Duration),
+                DeathTime = currentTime.Value + TimeSpan.FromSeconds(EffectDuration),
                 Coordinates = weapon.Transform.Coordinates.Offset(angle.ToVec() * distance),
                 //Rotated from east facing
                 Rotation = (float) angle.FlipPositive(),
@@ -295,7 +314,7 @@ namespace Content.Server.GameObjects.EntitySystems
             {
                 EffectSprite = hitscan.ImpactEffect,
                 Born = _gameTiming.CurTime,
-                DeathTime = TimeSpan.FromSeconds(currentTime.Value.TotalSeconds + hitscan.Duration),
+                DeathTime = currentTime.Value + TimeSpan.FromSeconds(EffectDuration),
                 Size = new Vector2(distance - offset, 1.0f),
                 Coordinates = weapon.Transform.Coordinates.Offset(midpointOffset),
                 //Rotated from east facing

@@ -10,7 +10,9 @@ namespace Content.Shared.GameObjects.EntitySystems
 {
     public abstract class SharedRangedWeaponSystem : EntitySystem
     {
-        public abstract void MuzzleFlash(IEntity? user, IEntity weapon, string? texture, Angle angle, TimeSpan? currentTime = null, float effectDuration = 0.2f);
+        protected const float EffectDuration = 0.5f;
+        
+        public abstract void MuzzleFlash(IEntity? user, SharedRangedWeaponComponent weapon, string? texture, Angle angle, TimeSpan? currentTime = null, float alphaRatio = 1.0f);
 
         public abstract void EjectCasing(IEntity? user, IEntity casing, bool playSound = true, Direction[]? ejectDirections = null);
 
@@ -18,11 +20,12 @@ namespace Content.Shared.GameObjects.EntitySystems
         ///     Shoot a hitscan weapon (e.g. laser).
         /// </summary>
         /// <param name="user"></param>
+        /// <param name="weapon"></param>
         /// <param name="hitscan"></param>
         /// <param name="angle"></param>
         /// <param name="damageRatio"></param>
         /// <param name="alphaRatio"></param>
-        public abstract void ShootHitscan(IEntity? user, IEntity weapon, HitscanPrototype hitscan, Angle angle, float damageRatio = 1.0f, float alphaRatio = 1.0f);
+        public abstract void ShootHitscan(IEntity? user, SharedRangedWeaponComponent weapon, HitscanPrototype hitscan, Angle angle, float damageRatio = 1.0f, float alphaRatio = 1.0f);
 
         /// <summary>
         ///     If you want to pull out the projectile from ammo and shoot it.
@@ -41,6 +44,7 @@ namespace Content.Shared.GameObjects.EntitySystems
         /// <param name="weapon"></param>
         /// <param name="angle"></param>
         /// <param name="projectileComponent"></param>
+        /// <param name="velocity"></param>
         public abstract void ShootProjectile(IEntity? user, SharedRangedWeaponComponent weapon, Angle angle, SharedProjectileComponent projectileComponent, float velocity);
     }
 }

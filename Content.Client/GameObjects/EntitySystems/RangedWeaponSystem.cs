@@ -85,23 +85,17 @@ namespace Content.Client.GameObjects.EntitySystems
 
             var player = _playerManager.LocalPlayer?.ControlledEntity;
             if (player == null)
-            {
                 return;
-            }
 
             var lastFiringWeapon = _firingWeapon;
             _firingWeapon = GetRangedWeapon(player);
 
             if (lastFiringWeapon != _firingWeapon && lastFiringWeapon != null)
-            {
                 StopFiring(lastFiringWeapon);
-            }
-            
+
             if (_firingWeapon == null)
-            {
                 return;
-            }
-            
+
             // We'll block any more firings so a single shot weapon doesn't spam the SoundEmpty for example.
             if (!_lastFireResult)
             {
