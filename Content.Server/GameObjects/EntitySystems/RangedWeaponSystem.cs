@@ -49,12 +49,12 @@ namespace Content.Server.GameObjects.EntitySystems
         public override void Initialize()
         {
             base.Initialize();
-            SubscribeNetworkEvent<RangedAngleMessage>(HandleRangedAngleMessage);
+            SubscribeNetworkEvent<RangedCoordinatesMessage>(HandleRangedAngleMessage);
             SubscribeNetworkEvent<StartFiringMessage>(HandleStartFiringMessage);
             SubscribeNetworkEvent<StopFiringMessage>(HandleStopFiringMessage);
         }
 
-        private void HandleRangedAngleMessage(RangedAngleMessage message, EntitySessionEventArgs args)
+        private void HandleRangedAngleMessage(RangedCoordinatesMessage message, EntitySessionEventArgs args)
         {
             var entity = _entityManager.GetEntity(message.Uid);
             var weapon = entity.GetComponent<SharedRangedWeaponComponent>();
@@ -66,12 +66,12 @@ namespace Content.Server.GameObjects.EntitySystems
                 return;
             }
 
-            weapon.FireAngle = message.Angle;
+            weapon.FireCoordinates = message.Coordinates;
         }
         
         private void HandleStartFiringMessage(StartFiringMessage message, EntitySessionEventArgs args)
         {
-            if (message.FireAngle == null)
+            if (message.FireCoordinates == null)
             {
                 return;
             }
@@ -87,7 +87,7 @@ namespace Content.Server.GameObjects.EntitySystems
             }
 
             weapon.Firing = true;
-            weapon.FireAngle = message.FireAngle;
+            weapon.FireCoordinates = message.FireCoordinates;
             weapon.ShotCounter = 0;
         }
         
@@ -120,21 +120,15 @@ namespace Content.Server.GameObjects.EntitySystems
 
         private void Update(SharedRangedWeaponComponent weaponComponent, TimeSpan currentTime)
         {
-            if (weaponComponent.FireAngle == null || (!weaponComponent.Firing && weaponComponent.ExpectedShots == 0))
-            {
+            if (weaponComponent.FireCoordinates == null || (!weaponComponent.Firing && weaponComponent.ExpectedShots == 0))
                 return;
-            }
 
-            // TODO: Shitcode
             var shooter = weaponComponent.Shooter();
             if (shooter == null)
-            {
                 return;
-            }
-
-            if (!weaponComponent.TryFire(currentTime, shooter, weaponComponent.FireAngle!.Value) || (!weaponComponent.Firing && weaponComponent.ExpectedShots <= weaponComponent.AccumulatedShots))
+            
+            if (!weaponComponent.TryFire(currentTime, shooter, weaponComponent.FireCoordinates!.Value) || (!weaponComponent.Firing && weaponComponent.ExpectedShots <= weaponComponent.AccumulatedShots))
             {
-                // TODO: If these are different need to reconcile with client.
                 weaponComponent.ExpectedShots -= weaponComponent.ExpectedShots;
                 weaponComponent.AccumulatedShots = 0;
 

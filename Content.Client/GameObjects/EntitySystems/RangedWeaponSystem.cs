@@ -104,23 +104,27 @@ namespace Content.Client.GameObjects.EntitySystems
             // We'll block any more firings so a single shot weapon doesn't spam the SoundEmpty for example.
             if (!_lastFireResult)
             {
-                _firingWeapon.FireAngle = null;
+                _firingWeapon.FireCoordinates = null;
                 StopFiring(_firingWeapon);
                 return;
             }
             
             var currentTime = _gameTiming.CurTime;
-            var mousePos = _eyeManager.ScreenToMap(_inputManager.MouseScreenPosition);
-            var angle = (mousePos.Position - player.Transform.MapPosition.Position).ToAngle();
+            var mouseCoordinates = _eyeManager.ScreenToMap(_inputManager.MouseScreenPosition);
+            
             // Update server as well if necessary
-            _firingWeapon.FireAngle = angle;
+            if (_firingWeapon.FireCoordinates != mouseCoordinates)
+            {
+                _firingWeapon.FireCoordinates = mouseCoordinates;
+                RaiseNetworkEvent(new RangedCoordinatesMessage(_firingWeapon.Owner.Uid, mouseCoordinates));
+            }
 
-            _lastFireResult = _firingWeapon.TryFire(currentTime, player, angle);
+            _lastFireResult = _firingWeapon.TryFire(currentTime, player, mouseCoordinates);
             _firingWeapon.Firing = _lastFireResult;
             
             if (_firingWeapon.Firing)
             {
-                RaiseNetworkEvent(new StartFiringMessage(_firingWeapon.Owner.Uid, _firingWeapon.FireAngle.Value));
+                RaiseNetworkEvent(new StartFiringMessage(_firingWeapon.Owner.Uid, _firingWeapon.FireCoordinates.Value));
             }
             else
             {
@@ -132,7 +136,6 @@ namespace Content.Client.GameObjects.EntitySystems
         {
             RaiseNetworkEvent(new StopFiringMessage(weaponComponent.Owner.Uid, weaponComponent.ShotCounter));
             weaponComponent.Firing = false;
-            // TODO: Stop precision mouse
         }
 
         public override void MuzzleFlash(IEntity? user, IEntity weapon, string texture, Angle angle)

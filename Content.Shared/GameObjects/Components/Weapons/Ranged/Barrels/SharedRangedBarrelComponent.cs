@@ -10,6 +10,7 @@ using Robust.Shared.GameObjects.Systems;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Interfaces.Timing;
 using Robust.Shared.IoC;
+using Robust.Shared.Map;
 using Robust.Shared.Maths;
 using Robust.Shared.Serialization;
 using Component = Robust.Shared.GameObjects.Component;
@@ -54,12 +55,12 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
     {
         public EntityUid Uid { get; }
         
-        public Angle FireAngle { get; }
+        public MapCoordinates FireCoordinates { get; }
 
-        public StartFiringMessage(EntityUid uid, Angle fireAngle)
+        public StartFiringMessage(EntityUid uid, MapCoordinates fireCoordinates)
         {
             Uid = uid;
-            FireAngle = fireAngle;
+            FireCoordinates = fireCoordinates;
         }
     }
 
@@ -81,16 +82,16 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
     }
 
     [Serializable, NetSerializable]
-    public class RangedAngleMessage : EntitySystemMessage
+    public class RangedCoordinatesMessage : EntitySystemMessage
     {
         public EntityUid Uid { get; }
         
-        public Angle? Angle { get; }
+        public MapCoordinates? Coordinates { get; }
 
-        public RangedAngleMessage(EntityUid uid, Angle? angle)
+        public RangedCoordinatesMessage(EntityUid uid, MapCoordinates? coordinates)
         {
             Uid = uid;
-            Angle = angle;
+            Coordinates = coordinates;
         }
     }
 
@@ -124,12 +125,11 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         ///     Filepath to MuzzleFlash texture
         /// </summary>
         public string? MuzzleFlash { get; set; }
-
-        // TODO: Change to MapCoordinates
+        
         /// <summary>
         ///     The angle the shooter selected to fire at.
         /// </summary>
-        public Angle? FireAngle { get; set; }
+        public MapCoordinates? FireCoordinates { get; set; }
         
         public ushort ExpectedShots { get; set; }
         
@@ -222,7 +222,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
 
         protected virtual bool CanFire(IEntity entity)
         {
-            if (FireRate <= 0.0f || FireAngle == null)
+            if (FireRate <= 0.0f || FireCoordinates == null)
             {
                 return false;
             }
@@ -261,15 +261,15 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
                     throw new ArgumentOutOfRangeException();
             }
         }
-        
+
         /// <summary>
-        ///     
+        ///     Try to shoot the gun for this tick.
         /// </summary>
         /// <param name="currentTime"></param>
         /// <param name="entity"></param>
-        /// <param name="direction"></param>
+        /// <param name="position"></param>
         /// <returns>false if firing is impossible, true if firing is possible but delayed or we did fire</returns>
-        public bool TryFire(TimeSpan currentTime, IEntity entity, Angle direction)
+        public bool TryFire(TimeSpan currentTime, IEntity entity, MapCoordinates position)
         {
             if (ShotCounter == 0 && NextFire <= currentTime)
             {
@@ -314,7 +314,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
             AccumulatedShots += firedShots;
             // SO server-side we essentially need to backtrack by n firedShots to work out what to shoot for each one
             // Client side we'll just play the effects and shit unless we get client-side entity prediction in.
-            Shoot(firedShots, direction);
+            Shoot(firedShots, position);
 
             return true;
         }
@@ -326,7 +326,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         /// </summary>
         /// <param name="shotCount"></param>
         /// <param name="direction"></param>
-        protected abstract void Shoot(int shotCount, Angle direction);
+        protected abstract void Shoot(int shotCount, MapCoordinates position);
 
         protected void MuzzleFlashEffect(Angle angle)
         {
@@ -345,7 +345,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         {
             ShotCounter = 0;
             NextFire = IoCManager.Resolve<IGameTiming>().CurTime;
-            FireAngle = null;
+            FireCoordinates = null;
         }
 
         public abstract Task<bool> InteractUsing(InteractUsingEventArgs eventArgs);
