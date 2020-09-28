@@ -320,14 +320,8 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
         {
             DebugTools.Assert(shotCount == _toFireAmmo.Count);
             var shooter = Shooter();
-            IPlayerSession? excludedSession = null;
 
-            if (shooter != null && shooter.TryGetComponent(out IActorComponent? actorComponent))
-            {
-                excludedSession = actorComponent.playerSession;
-            }
-
-            while (_toFireAmmo.Count > 0)
+            for (var i = 0; i < shotCount; i++)
             {
                 var ammo = _toFireAmmo.Dequeue();
 
@@ -340,17 +334,17 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                 {
                     if (SoundEmpty != null)
                     {
-                        EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundEmpty, Owner, AudioHelpers.WithVariation(EmptyVariation), excludedSession: excludedSession);
+                        EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundEmpty, Owner, AudioHelpers.WithVariation(EmptyVariation), excludedSession: shooter.PlayerSession());
                     }
                 }
                 else
                 {
                     if (SoundGunshot != null)
                     {
-                        EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundGunshot, Owner, AudioHelpers.WithVariation(GunshotVariation), excludedSession: excludedSession);
+                        EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundGunshot, Owner, AudioHelpers.WithVariation(GunshotVariation), excludedSession: shooter.PlayerSession());
                     }
                     
-                    EntitySystem.Get<RangedWeaponSystem>().Shoot(Shooter(), direction, ammoComp, AmmoSpreadRatio);
+                    EntitySystem.Get<RangedWeaponSystem>().ShootAmmo(shooter, this, spreads[i], ammoComp);
                     ammoComp.Spent = true;
                 }
             }

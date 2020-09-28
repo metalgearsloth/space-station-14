@@ -175,7 +175,7 @@ namespace Content.Server.GameObjects.EntitySystems
             ImpactFlash(user, weapon.Owner, hitscan, angle, distance, currentTime, alphaRatio: alphaRatio);
         }
 
-        public override void ShootAmmo(IEntity? user, SharedRangedWeaponComponent weapon, Angle angle, SharedAmmoComponent ammoComponent, float spreadRatio = 1.0f)
+        public override void ShootAmmo(IEntity? user, SharedRangedWeaponComponent weapon, Angle angle, SharedAmmoComponent ammoComponent)
         {
             if (!ammoComponent.CanFire())
                 return;
@@ -183,8 +183,7 @@ namespace Content.Server.GameObjects.EntitySystems
             List<Angle>? sprayAngleChange = null;
             var count = ammoComponent.ProjectilesFired;
             var evenSpreadAngle = ammoComponent.EvenSpreadAngle;
-            
-            // TODO: Calculate angle here... or on the weapon.
+            var spreadRatio = weapon.AmmoSpreadRatio;
 
             if (ammoComponent.AmmoIsProjectile)
             {

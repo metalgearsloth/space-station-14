@@ -32,6 +32,9 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         // Sounds
         protected string? SoundPowerCellInsert;
         protected string? SoundPowerCellEject;
+        
+        // Audio profile
+        protected const float EjectVariation = 0.1f;
 
         public override void ExposeData(ObjectSerializer serializer)
         {

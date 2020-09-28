@@ -162,7 +162,7 @@ namespace Content.Client.GameObjects.EntitySystems
             throw new NotImplementedException();
         }
 
-        public override void ShootAmmo(IEntity? user, SharedRangedWeaponComponent weapon, Angle angle, SharedAmmoComponent ammoComponent, float spreadRatio = 1)
+        public override void ShootAmmo(IEntity? user, SharedRangedWeaponComponent weapon, Angle angle, SharedAmmoComponent ammoComponent)
         {
             throw new NotImplementedException();
         }

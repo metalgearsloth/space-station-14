@@ -18,7 +18,7 @@ namespace Content.Server.GameObjects.Components.Projectiles
     public class ProjectileComponent : SharedProjectileComponent, ICollideBehavior
     {
         [ViewVariables]
-        public Dictionary<DamageType, int> Damages { get; private set; } = new Dictionary<DamageType, int>();
+        public Dictionary<DamageType, int> Damages { get; set; } = new Dictionary<DamageType, int>();
 
         private bool DeleteOnCollide { get; set; } = true;
 

@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Content.Client.GameObjects.Components.Mobs;
 using Content.Shared.Audio;
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
+using Content.Shared.GameObjects.EntitySystems;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Robust.Client.GameObjects;
 using Robust.Client.GameObjects.EntitySystems;
@@ -52,8 +53,8 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             if (!Owner.TryGetComponent(out AppearanceComponent? appearanceComponent))
                 return;
 
-            var count = PowerCell?.CurrentCharge / BaseFireCost ?? 0;
-            var max = PowerCell?.MaxCharge / BaseFireCost ?? 0;
+            var count = (int) MathF.Ceiling(PowerCell?.CurrentCharge / BaseFireCost ?? 0);
+            var max = (int) MathF.Ceiling(PowerCell?.MaxCharge / BaseFireCost ?? 0);
             
             appearanceComponent?.SetData(MagazineBarrelVisuals.MagLoaded, PowerCell != null);
             appearanceComponent?.SetData(AmmoVisuals.AmmoCount, count);
@@ -99,9 +100,11 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                 
                 // TODO: Could look at modifying volume based on charge %
                 EntitySystem.Get<AudioSystem>().Play(SoundGunshot, Owner, AudioHelpers.WithVariation(GunshotVariation));
-                // TODO: Show effect here once we can get the spread predicted.
+
+                // TODO: Show effect here once we can get the full hitscan predicted
             }
 
+            ToFireCharge = 0.0f;
             UpdateAppearance();
             _statusControl?.Update();
         }
@@ -187,14 +190,15 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                     return;
                 }
 
-                var (count, capacity) = ((int) (_parent.PowerCell.Value.CurrentCharge / _parent.BaseFireCost), (int) (_parent.PowerCell.Value.MaxCharge / _parent.BaseFireCost));
+                var count = (int) MathF.Ceiling(_parent.PowerCell.Value.CurrentCharge / _parent.BaseFireCost);
+                var max = (int) MathF.Ceiling(_parent.PowerCell.Value.MaxCharge / _parent.BaseFireCost);
 
                 _noBatteryLabel.Visible = false;
                 _ammoCount.Visible = true;
 
                 _ammoCount.Text = $"x{count:00}";
-                capacity = Math.Min(capacity, 8);
-                FillBulletRow(_bulletsList, count, capacity);
+                max = Math.Min(max, 8);
+                FillBulletRow(_bulletsList, count, max);
             }
 
             private static void FillBulletRow(Control container, int count, int capacity)

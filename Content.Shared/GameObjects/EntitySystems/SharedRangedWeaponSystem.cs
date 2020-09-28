@@ -44,8 +44,7 @@ namespace Content.Shared.GameObjects.EntitySystems
         /// <param name="weapon"></param>
         /// <param name="angle"></param>
         /// <param name="ammoComponent"></param>
-        /// <param name="spreadRatio"></param>
-        public abstract void ShootAmmo(IEntity? user, SharedRangedWeaponComponent weapon, Angle angle, SharedAmmoComponent ammoComponent, float spreadRatio = 1.0f);
+        public abstract void ShootAmmo(IEntity? user, SharedRangedWeaponComponent weapon, Angle angle, SharedAmmoComponent ammoComponent);
 
         /// <summary>
         ///     Shoot the projectile directly

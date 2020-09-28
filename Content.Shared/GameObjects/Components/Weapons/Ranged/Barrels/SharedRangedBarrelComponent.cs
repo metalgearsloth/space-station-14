@@ -137,6 +137,8 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         
         public ushort AccumulatedShots { get; set; }
         
+        public float AmmoSpreadRatio { get; set; }
+        
          // Recoil / spray control
         private Angle _minAngle;
         private Angle _maxAngle;
@@ -197,6 +199,11 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
 
                     return result;
                 });
+            
+            serializer.DataReadWriteFunction("ammoSpreadRatio",
+                1.0f,
+                value => AmmoSpreadRatio = value,
+                () => AmmoSpreadRatio);
             
             // This hard-to-read area's dealing with recoil
             // Use degrees in yaml as it's easier to read compared to "0.0125f"

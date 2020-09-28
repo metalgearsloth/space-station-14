@@ -148,9 +148,8 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             if (!hands.PutInHand(cell.Owner.GetComponent<ItemComponent>()))
                 cell.Owner.Transform.Coordinates = user.Transform.Coordinates;
             
-
             if (SoundPowerCellEject != null)
-                EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundPowerCellEject, Owner, AudioHelpers.WithVariation());
+                EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundPowerCellEject, Owner, AudioHelpers.WithVariation(EjectVariation));
             
             return true;
         }
@@ -180,21 +179,33 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
         protected override void Shoot(int shotCount, List<Angle> spreads)
         {
             DebugTools.Assert(ToFireCharge > 0);
+            IPrototypeManager? prototypeManager = null;
+            var shooter = Shooter();
+            
+            if (AmmoIsHitscan)
+            {
+                prototypeManager = IoCManager.Resolve<IPrototypeManager>();
+            }
+
+            var count = 0;
 
             while (ToFireCharge > 0)
             {
                 var fireCharge = Math.Min(BaseFireCost, ToFireCharge);
                 ToFireCharge -= fireCharge;
                 var energyRatio = fireCharge / BaseFireCost;
+                var direction = spreads[count];
+                count++;
 
-                if (AmmoIsHitscan)
+                if (prototypeManager != null)
                 {
-                    var prototype = IoCManager.Resolve<IPrototypeManager>().Index<HitscanPrototype>(AmmoPrototype);
-                    EntitySystem.Get<SharedRangedWeaponSystem>().ShootHitscan(Shooter(), prototype, direction, energyRatio, energyRatio);
+                    var prototype = prototypeManager.Index<HitscanPrototype>(AmmoPrototype);
+                    EntitySystem.Get<SharedRangedWeaponSystem>().ShootHitscan(Shooter(), this, prototype, direction, energyRatio, energyRatio);
                 }
                 else
                 {
                     var entity = Owner.EntityManager.SpawnEntity(AmmoPrototype, Owner.Transform.Coordinates);
+                    var ammoComponent = entity.GetComponent<SharedAmmoComponent>();
                     var projectileComponent = entity.GetComponent<ProjectileComponent>();
                     
                     if (energyRatio < 1.0)
@@ -208,11 +219,11 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                         projectileComponent.Damages = newDamages;
                     }
                     
-                    // TODO: Need to handle recoil via SharedRangedWeapon
-                    EntitySystem.Get<SharedRangedWeaponSystem>().ShootProjectile(Shooter(), direction, projectileComponent);
-                    // TODO: Shoot projectile directly EntitySystem.Get<SharedRangedWeaponSystem>()
+                    EntitySystem.Get<SharedRangedWeaponSystem>().ShootAmmo(shooter, this, direction, ammoComponent);
                 }
-            } 
+            }
+
+            ToFireCharge = 0.0f;
         }
 
         public override async Task<bool> InteractUsing(InteractUsingEventArgs eventArgs)

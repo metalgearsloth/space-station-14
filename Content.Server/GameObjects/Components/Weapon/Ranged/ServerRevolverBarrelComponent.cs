@@ -151,6 +151,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             // Also TODO: Make this common to all projectile guns
             shotCount = Math.Min(shotCount, _ammoSlots.Length);
             var slot = CurrentSlot;
+            var shooter = Shooter();
 
             for (var i = 0; i < shotCount; i++)
             {
@@ -164,9 +165,9 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                 var sound = ammo.Spent ? SoundEmpty : SoundGunshot;
                 
                 if (sound != null)
-                    EntitySystem.Get<AudioSystem>().PlayFromEntity(sound, Owner, AudioHelpers.WithVariation(GunshotVariation), excludedSession: Shooter().PlayerSession());
+                    EntitySystem.Get<AudioSystem>().PlayFromEntity(sound, Owner, AudioHelpers.WithVariation(GunshotVariation), excludedSession: shooter.PlayerSession());
                 
-                EntitySystem.Get<RangedWeaponSystem>().Shoot(Shooter(), direction, ammo);
+                EntitySystem.Get<RangedWeaponSystem>().ShootAmmo(shooter, this, spreads[i], ammo);
                 ammo.Spent = true;
             }
         }
@@ -208,7 +209,6 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             // May as well point back at the end?
             CurrentSlot = (ushort) (_ammoSlots.Length - 1);
             Dirty();
-            return;
         }
 
         public override bool TryInsertBullet(IEntity user, SharedAmmoComponent ammoComponent)

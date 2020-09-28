@@ -12,6 +12,7 @@ using Content.Shared.GameObjects.EntitySystems;
 using Robust.Server.GameObjects.EntitySystems;
 using Robust.Server.Interfaces.GameObjects;
 using Robust.Server.Interfaces.Player;
+using Robust.Server.Player;
 using Robust.Shared.Audio;
 using Robust.Shared.GameObjects.Systems;
 using Robust.Shared.Serialization;
@@ -192,8 +193,9 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
         protected override void Shoot(int shotCount, List<Angle> spreads)
         {
             DebugTools.Assert(shotCount == _toFireAmmo.Count);
+            var shooter = Shooter();
 
-            while (_toFireAmmo.Count > 0)
+            for (var i = 0; i < shotCount; i++)
             {
                 var ammo = _toFireAmmo.Dequeue();
 
@@ -201,29 +203,22 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                     continue;
 
                 var ammoComp = ammo.GetComponent<AmmoComponent>();
-                var shooter = Shooter();
-                IPlayerSession? excludedSession = null;
 
-                if (shooter != null && shooter.TryGetComponent(out IActorComponent? actorComponent))
-                {
-                    excludedSession = actorComponent.playerSession;
-                }
-                
                 if (ammoComp.Spent)
                 {
                     if (SoundEmpty != null)
                     {
-                        EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundEmpty, Owner, AudioHelpers.WithVariation(EmptyVariation), excludedSession: excludedSession);
+                        EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundEmpty, Owner, AudioHelpers.WithVariation(EmptyVariation), excludedSession: shooter?.PlayerSession());
                     }
                 }
                 else
                 {
                     if (SoundGunshot != null)
                     {
-                        EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundGunshot, Owner, AudioHelpers.WithVariation(GunshotVariation), excludedSession: excludedSession);
+                        EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundGunshot, Owner, AudioHelpers.WithVariation(GunshotVariation), excludedSession: shooter?.PlayerSession());
                     }
                     
-                    EntitySystem.Get<RangedWeaponSystem>().Shoot(Shooter(), direction, ammoComp, _ammoSpreadRatio);
+                    EntitySystem.Get<RangedWeaponSystem>().ShootAmmo(shooter, this, spreads[i], ammoComp);
                     ammoComp.Spent = true;
                 }
             }
