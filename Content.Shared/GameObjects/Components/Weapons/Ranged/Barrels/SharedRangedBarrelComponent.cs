@@ -10,6 +10,7 @@ using Robust.Shared.GameObjects.Systems;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Interfaces.Timing;
 using Robust.Shared.IoC;
+using Robust.Shared.Log;
 using Robust.Shared.Map;
 using Robust.Shared.Maths;
 using Robust.Shared.Serialization;
@@ -135,6 +136,21 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         
         public ushort AccumulatedShots { get; set; }
         
+         // Recoil / spray control
+        private Angle _minAngle;
+        private Angle _maxAngle;
+        private Angle _currentAngle = Angle.Zero;
+        /// <summary>
+        /// How slowly the angle's theta decays per second in radians
+        /// </summary>
+        private float _angleDecay;
+        /// <summary>
+        /// How quickly the angle's theta builds for every shot fired in radians
+        /// </summary>
+        private float _angleIncrease;
+        // Multiplies the ammo spread to get the final spread of each pellet
+        private float _spreadRatio;
+
         // Sounds
         public string? SoundGunshot { get; protected set; }
         public string? SoundEmpty { get; protected set; }
@@ -179,6 +195,41 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
                     return result;
                 });
             
+            // This hard-to-read area's dealing with recoil
+            // Use degrees in yaml as it's easier to read compared to "0.0125f"
+            serializer.DataReadWriteFunction(
+                "minAngle",
+                0,
+                angle => _minAngle = Angle.FromDegrees(angle / 2f),
+                () => _minAngle.Degrees * 2);
+
+            // Random doubles it as it's +/- so uhh we'll just half it here for readability
+            serializer.DataReadWriteFunction(
+                "maxAngle",
+                45,
+                angle => _maxAngle = Angle.FromDegrees(angle / 2f),
+                () => _maxAngle.Degrees * 2);
+
+            serializer.DataReadWriteFunction(
+                "angleIncrease",
+                40 / FireRate,
+                angle => _angleIncrease = angle * (float) Math.PI / 180f,
+                () => MathF.Round(_angleIncrease / ((float) Math.PI / 180f), 2));
+
+            serializer.DataReadWriteFunction(
+                "angleDecay",
+                20f,
+                angle => _angleDecay = angle * (float) Math.PI / 180f,
+                () => MathF.Round(_angleDecay / ((float) Math.PI / 180f), 2));
+
+            serializer.DataField(ref _spreadRatio, "ammoSpreadRatio", 1.0f);
+
+            // For simplicity we'll enforce it this way; ammo determines max spread
+            if (_spreadRatio > 1.0f)
+            {
+                throw new InvalidOperationException("SpreadRatio must be <= 1.0f for guns");
+            }
+            
             serializer.DataReadWriteFunction(
                 "muzzleFlash",
                 "Objects/Weapons/Guns/Projectiles/bullet_muzzle.png",
@@ -200,11 +251,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
                 () => SoundEmpty
             );
         }
-
-        /// <summary>
-        ///     Lord help me this is bad.
-        /// </summary>
-        /// <returns></returns>
+        
         public IEntity? Shooter()
         {
             if (!ContainerHelpers.TryGetContainer(Owner, out var container))
@@ -267,9 +314,9 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         /// </summary>
         /// <param name="currentTime"></param>
         /// <param name="entity"></param>
-        /// <param name="position"></param>
+        /// <param name="coordinates"></param>
         /// <returns>false if firing is impossible, true if firing is possible but delayed or we did fire</returns>
-        public bool TryFire(TimeSpan currentTime, IEntity entity, MapCoordinates position)
+        public bool TryFire(TimeSpan currentTime, IEntity entity, MapCoordinates coordinates)
         {
             if (ShotCounter == 0 && NextFire <= currentTime)
             {
@@ -307,16 +354,32 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
             if (firedShots == 0)
             {
                 NoShotsFired();
+                // TODO: FIGURE THIS SHIT OUT
                 // EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(Shooter(), Owner, SoundEmpty);
                 return false;
             }
 
             AccumulatedShots += firedShots;
+            var spread = GetWeaponSpread(coordinates, firedShots);
             // SO server-side we essentially need to backtrack by n firedShots to work out what to shoot for each one
             // Client side we'll just play the effects and shit unless we get client-side entity prediction in.
-            Shoot(firedShots, position);
+            Shoot(firedShots, spread);
 
             return true;
+        }
+
+        private List<Angle> GetWeaponSpread(MapCoordinates coordinates, ushort shots)
+        {
+            // TODO: Could also predict this client-side.
+            
+            var spreads = new List<Angle>(shots);
+            
+            for (ushort i = 0; i < shots; i++)
+            {
+                
+            }
+            
+            return spreads;
         }
 
         /// <summary>
@@ -325,8 +388,8 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         ///     Server-side this will work out each bullet to spawn and fire them.
         /// </summary>
         /// <param name="shotCount"></param>
-        /// <param name="coordinates"></param>
-        protected abstract void Shoot(int shotCount, MapCoordinates coordinates);
+        /// <param name="fireAngles"></param>
+        protected abstract void Shoot(int shotCount, List<Angle> fireAngles);
 
         void IHandSelected.HandSelected(HandSelectedEventArgs eventArgs)
         {

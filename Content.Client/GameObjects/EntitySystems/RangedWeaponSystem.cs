@@ -1,7 +1,6 @@
 ﻿#nullable enable
 using System;
 using Content.Client.GameObjects.Components.Items;
-using Content.Shared.Audio;
 using Content.Shared.GameObjects.Components.Projectiles;
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using Content.Shared.GameObjects.EntitySystems;
