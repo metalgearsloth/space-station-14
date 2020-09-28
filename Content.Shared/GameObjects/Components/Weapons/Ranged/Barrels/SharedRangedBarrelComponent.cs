@@ -325,16 +325,8 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         ///     Server-side this will work out each bullet to spawn and fire them.
         /// </summary>
         /// <param name="shotCount"></param>
-        /// <param name="direction"></param>
-        protected abstract void Shoot(int shotCount, MapCoordinates position);
-
-        protected void MuzzleFlashEffect(Angle angle)
-        {
-            if (MuzzleFlash != null)
-            {
-                EntitySystem.Get<SharedRangedWeaponSystem>().MuzzleFlash(Shooter(), Owner, MuzzleFlash, angle);
-            }
-        }
+        /// <param name="coordinates"></param>
+        protected abstract void Shoot(int shotCount, MapCoordinates coordinates);
 
         void IHandSelected.HandSelected(HandSelectedEventArgs eventArgs)
         {

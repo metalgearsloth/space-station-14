@@ -2,6 +2,7 @@
 using System;
 using Content.Client.GameObjects.Components.Items;
 using Content.Shared.Audio;
+using Content.Shared.GameObjects.Components.Projectiles;
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using Content.Shared.GameObjects.EntitySystems;
 using JetBrains.Annotations;
@@ -163,6 +164,21 @@ namespace Content.Client.GameObjects.EntitySystems
         public override void EjectCasing(IEntity? user, IEntity casing, bool playSound = true, Direction[]? ejectDirections = null)
         {
             throw new InvalidOperationException();
+        }
+
+        public override void ShootHitscan(IEntity? user, HitscanPrototype hitscan, Angle angle, float damageRatio = 1, float alphaRatio = 1)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void ShootAmmo(IEntity? user, Angle angle, SharedAmmoComponent ammoComponent, float spreadRatio = 1)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void ShootProjectile(IEntity? user, Angle angle, SharedProjectileComponent projectileComponent, float velocity)
+        {
+            throw new NotImplementedException();
         }
     }
 }

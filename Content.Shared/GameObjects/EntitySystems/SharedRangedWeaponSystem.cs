@@ -1,4 +1,5 @@
 #nullable enable
+using System;
 using Content.Shared.GameObjects.Components.Projectiles;
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using Robust.Shared.GameObjects.Systems;
@@ -9,7 +10,7 @@ namespace Content.Shared.GameObjects.EntitySystems
 {
     public abstract class SharedRangedWeaponSystem : EntitySystem
     {
-        public abstract void MuzzleFlash(IEntity? user, IEntity weapon, string texture, Angle angle);
+        public abstract void MuzzleFlash(IEntity? user, IEntity weapon, string? texture, Angle angle, TimeSpan? currentTime = null, float effectDuration = 0.2f);
 
         public abstract void EjectCasing(IEntity? user, IEntity casing, bool playSound = true, Direction[]? ejectDirections = null);
 
@@ -21,23 +22,25 @@ namespace Content.Shared.GameObjects.EntitySystems
         /// <param name="angle"></param>
         /// <param name="damageRatio"></param>
         /// <param name="alphaRatio"></param>
-        public abstract void ShootHitscan(IEntity? user, HitscanPrototype hitscan, Angle angle, float damageRatio = 1.0f, float alphaRatio = 1.0f);
+        public abstract void ShootHitscan(IEntity? user, IEntity weapon, HitscanPrototype hitscan, Angle angle, float damageRatio = 1.0f, float alphaRatio = 1.0f);
 
         /// <summary>
         ///     If you want to pull out the projectile from ammo and shoot it.
         /// </summary>
         /// <param name="user"></param>
+        /// <param name="weapon"></param>
         /// <param name="angle"></param>
         /// <param name="ammoComponent"></param>
         /// <param name="spreadRatio"></param>
-        public abstract void ShootAmmo(IEntity? user, Angle angle, SharedAmmoComponent ammoComponent, float spreadRatio = 1.0f);
+        public abstract void ShootAmmo(IEntity? user, SharedRangedWeaponComponent weapon, Angle angle, SharedAmmoComponent ammoComponent, float spreadRatio = 1.0f);
 
         /// <summary>
         ///     Shoot the projectile directly
         /// </summary>
         /// <param name="user"></param>
+        /// <param name="weapon"></param>
         /// <param name="angle"></param>
         /// <param name="projectileComponent"></param>
-        public abstract void ShootProjectile(IEntity? user, Angle angle, SharedProjectileComponent projectileComponent, float velocity);
+        public abstract void ShootProjectile(IEntity? user, SharedRangedWeaponComponent weapon, Angle angle, SharedProjectileComponent projectileComponent, float velocity);
     }
 }

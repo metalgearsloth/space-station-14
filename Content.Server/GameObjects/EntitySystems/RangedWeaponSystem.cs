@@ -12,6 +12,7 @@ using JetBrains.Annotations;
 using Microsoft.CodeAnalysis;
 using Robust.Server.GameObjects.EntitySystems;
 using Robust.Server.Interfaces.GameObjects;
+using Robust.Server.Player;
 using Robust.Shared.GameObjects;
 using Robust.Shared.GameObjects.Components;
 using Robust.Shared.GameObjects.EntitySystemMessages;
@@ -46,12 +47,16 @@ namespace Content.Server.GameObjects.EntitySystems
         [Dependency] private readonly IRobustRandom _robustRandom = default!;
         [Dependency] private readonly IGameTiming _gameTiming = default!;
 
+        private EffectSystem _effectSystem = default!;
+
         public override void Initialize()
         {
             base.Initialize();
             SubscribeNetworkEvent<RangedCoordinatesMessage>(HandleRangedAngleMessage);
             SubscribeNetworkEvent<StartFiringMessage>(HandleStartFiringMessage);
             SubscribeNetworkEvent<StopFiringMessage>(HandleStopFiringMessage);
+
+            _effectSystem = Get<EffectSystem>();
         }
 
         private void HandleRangedAngleMessage(RangedCoordinatesMessage message, EntitySessionEventArgs args)
@@ -140,14 +145,18 @@ namespace Content.Server.GameObjects.EntitySystems
             }
         }
 
-        public override void ShootHitscan(IEntity? user, HitscanPrototype hitscan, Angle angle, float damageRatio = 1, float alphaRatio = 1)
+        public override void ShootHitscan(IEntity? user, IEntity weapon, HitscanPrototype hitscan, Angle angle, float damageRatio = 1, float alphaRatio = 1)
         {
-            throw new NotImplementedException();
-            // TODO: Travel and thingo effect
-            // Maybe shooting should also do muzzle flashes
+            var currentTime = _gameTiming.CurTime;
+            var distance = 0.0f;
+            
+            // Fire effects
+            MuzzleFlash(user, weapon, hitscan.MuzzleEffect, angle, currentTime, alphaRatio);
+            TravelFlash(user, weapon, hitscan, angle, distance, currentTime, alphaRatio);
+            ImpactFlash(user, weapon, hitscan, angle, distance, currentTime, alphaRatio);
         }
 
-        public override void ShootAmmo(IEntity? user, Angle angle, SharedAmmoComponent ammoComponent, float spreadRatio = 1.0f)
+        public override void ShootAmmo(IEntity? user, SharedRangedWeaponComponent weapon, Angle angle, SharedAmmoComponent ammoComponent, float spreadRatio = 1.0f)
         {
             // BIG FAT TODO: NEED TO GET RECOIL HERE
             if (!ammoComponent.CanFire())
@@ -227,18 +236,18 @@ namespace Content.Server.GameObjects.EntitySystems
             return linspace;
         }
 
-        public override void MuzzleFlash(IEntity? user, IEntity weapon, string texture, Angle angle)
+        public override void MuzzleFlash(IEntity? user, IEntity weapon, string? texture, Angle angle, TimeSpan? currentTime = null, float effectDuration = 0.2f)
         {
-            IActorComponent? actorComponent = null;
-            user?.TryGetComponent(out actorComponent);
-            
-            var offset = angle.ToVec().Normalized / 2;
+            if (texture == null)
+                return;
 
+            currentTime ??= _gameTiming.CurTime;
+            var offset = angle.ToVec().Normalized / 2;
             var message = new EffectSystemMessage
             {
                 EffectSprite = texture,
-                Born = _gameTiming.CurTime,
-                DeathTime = _gameTiming.CurTime + TimeSpan.FromSeconds(0.2),
+                Born = currentTime.Value,
+                DeathTime = _gameTiming.CurTime + TimeSpan.FromSeconds(effectDuration),
                 AttachedEntityUid = weapon.Uid,
                 AttachedOffset = offset,
                 //Rotated from east facing
@@ -248,7 +257,55 @@ namespace Content.Server.GameObjects.EntitySystems
                 Shaded = false
             };
             
-            Get<EffectSystem>().CreateParticle(message, actorComponent?.playerSession);
+            _effectSystem.CreateParticle(message, user?.PlayerSession());
+        }
+
+        private void TravelFlash(IEntity? user, IEntity weapon, HitscanPrototype hitscan, Angle angle, float distance, TimeSpan? currentTime = null, float alphaRatio = 1.0f)
+        {
+            if (hitscan.TravelEffect == null)
+                return;
+            
+            currentTime ??= _gameTiming.CurTime;
+
+            var message = new EffectSystemMessage
+            {
+                EffectSprite = hitscan.TravelEffect,
+                Born = _gameTiming.CurTime,
+                DeathTime = TimeSpan.FromSeconds(currentTime.Value.TotalSeconds + hitscan.Duration),
+                Coordinates = weapon.Transform.Coordinates.Offset(angle.ToVec() * distance),
+                //Rotated from east facing
+                Rotation = (float) angle.FlipPositive(),
+                Color = Vector4.Multiply(new Vector4(255, 255, 255, 750), alphaRatio),
+                ColorDelta = new Vector4(0, 0, 0, -1500f),
+                Shaded = false
+            };
+
+            _effectSystem.CreateParticle(message, user?.PlayerSession());
+        }
+
+        private void ImpactFlash(IEntity? user, IEntity weapon, HitscanPrototype hitscan, Angle angle, float distance, TimeSpan? currentTime = null, float offset = 0.0f, float alphaRatio = 1.0f)
+        {
+            if (hitscan.ImpactEffect == null)
+                return;
+
+            currentTime ??= _gameTiming.CurTime;
+            var midpointOffset = angle.ToVec() * distance / 2;
+
+            var message = new EffectSystemMessage
+            {
+                EffectSprite = hitscan.ImpactEffect,
+                Born = _gameTiming.CurTime,
+                DeathTime = TimeSpan.FromSeconds(currentTime.Value.TotalSeconds + hitscan.Duration),
+                Size = new Vector2(distance - offset, 1.0f),
+                Coordinates = weapon.Transform.Coordinates.Offset(midpointOffset),
+                //Rotated from east facing
+                Rotation = (float) angle.FlipPositive(),
+                Color = Vector4.Multiply(new Vector4(255, 255, 255, 750), alphaRatio),
+                ColorDelta = new Vector4(0, 0, 0, -1500f),
+                Shaded = false
+            };
+
+            _effectSystem.CreateParticle(message, user?.PlayerSession());
         }
 
         public override void EjectCasing(IEntity? user, IEntity casing, bool playSound = true, Direction[]? ejectDirections = null)

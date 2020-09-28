@@ -17,6 +17,15 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         // Muzzle -> Travel -> Impact for hitscans forms the full laser.
         // Muzzle is declared elsewhere
 
+        /// <summary>
+        ///     How long the effects last.
+        /// </summary>
+        public float Duration { get; private set; } = 0.5f;
+
+        /// <summary>
+        ///     Overrides the weapon's muzzle-flash if it uses hitscan.
+        /// </summary>
+        public string? MuzzleEffect { get; private set; } = "";
         public string? TravelEffect { get; private set; } = "Objects/Weapons/Guns/Projectiles/laser.png";
         public string? ImpactEffect { get; private set; }
 
@@ -36,6 +45,8 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
             var serializer = YamlObjectSerializer.NewReader(mapping);
 
             serializer.DataReadWriteFunction("id", ID, value => ID = value, () => ID);
+            serializer.DataReadWriteFunction("duration", Duration, value => Duration = value, () => Duration);
+            serializer.DataReadWriteFunction("muzzleEffect", MuzzleEffect, value => MuzzleEffect = value, () => MuzzleEffect);
             serializer.DataReadWriteFunction("travelEffect", TravelEffect, value => TravelEffect = value, () => TravelEffect);
             serializer.DataReadWriteFunction("impactEffect", ImpactEffect, value => ImpactEffect = value, () => ImpactEffect);
             serializer.DataReadWriteFunction(
