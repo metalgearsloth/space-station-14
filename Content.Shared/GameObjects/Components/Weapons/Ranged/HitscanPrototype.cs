@@ -45,7 +45,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
             serializer.DataReadWriteFunction("impactEffect", ImpactEffect, value => ImpactEffect = value, () => ImpactEffect);
             serializer.DataReadWriteFunction(
                 "collisionMask", 
-                new List<CollisionGroup>(), 
+                new List<CollisionGroup> {CollisionGroup.Opaque}, 
                 value => value.ForEach(mask => CollisionMask |= mask),
                 () =>
                 {

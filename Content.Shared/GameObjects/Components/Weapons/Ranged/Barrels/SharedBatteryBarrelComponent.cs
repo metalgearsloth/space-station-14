@@ -13,9 +13,16 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         public override string Name => "BatteryBarrel";
         public override uint? NetID => ContentNetIDs.BATTERY_BARREL;
         
-        // The minimum change we need before we can fire
+        /// <summary>
+        ///     The minimum change we need before we can fire
+        /// </summary>
         [ViewVariables] protected float LowerChargeLimit;
-        [ViewVariables] protected uint BaseFireCost;
+        
+        /// <summary>
+        ///     How much energy it costs to fire a full shot.
+        ///     We can also fire partial shots if LowerChargeLimit is met.
+        /// </summary>
+        [ViewVariables] protected float BaseFireCost;
         
         // What gets fired
         [ViewVariables] public string AmmoPrototype { get; private set; } = default!;
@@ -36,9 +43,16 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
             base.ExposeData(serializer);
             serializer.DataReadWriteFunction("ammoPrototype", string.Empty, value => AmmoPrototype = value, () => AmmoPrototype);
             serializer.DataField(ref LowerChargeLimit, "lowerChargeLimit", 10);
+            serializer.DataField(ref BaseFireCost, "baseFireCost", 300.0f);
             
             serializer.DataReadWriteFunction("soundPowerCellInsert", null, value => SoundPowerCellInsert = value, () => SoundPowerCellInsert);
             serializer.DataReadWriteFunction("soundPowerCellEject", null, value => SoundPowerCellEject = value, () => SoundPowerCellEject);
+        }
+
+        public override void Initialize()
+        {
+            base.Initialize();
+            AmmoIsHitscan = IoCManager.Resolve<IPrototypeManager>().HasIndex<HitscanPrototype>(AmmoPrototype);
         }
     }
     

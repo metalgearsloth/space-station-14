@@ -49,7 +49,6 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
 
             serializer.DataField(ref _powerCellPrototype, "powerCellPrototype", null);
             serializer.DataField(ref _powerCellRemovable, "powerCellRemovable", false);
-            serializer.DataReadWriteFunction("fireCost", (uint) 300, value => BaseFireCost = value, () => BaseFireCost);
         }
 
         public override ComponentState GetComponentState()
@@ -168,7 +167,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             }
             else
             {
-                var entity = Owner.EntityManager.SpawnEntity(AmmoPrototype, Owner.Transform.Coordinates);
+                var entity = Owner.EntityManager.SpawnEntity(AmmoPrototype, Owner.Transform.MapPosition);
                 var ammoComponent = entity.GetComponent<SharedAmmoComponent>();
                 var projectileComponent = entity.GetComponent<ProjectileComponent>();
                 

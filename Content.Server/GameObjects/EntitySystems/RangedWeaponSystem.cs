@@ -170,7 +170,7 @@ namespace Content.Server.GameObjects.EntitySystems
             }
 
             // Fire effects
-            MuzzleFlash(user, weapon, angle, currentTime,false, alphaRatio);
+            HitscanMuzzleFlash(user, weapon, hitscan.MuzzleEffect, angle, currentTime,alphaRatio);
             TravelFlash(user, weapon.Owner, hitscan, angle, distance, currentTime, alphaRatio);
             ImpactFlash(user, weapon.Owner, hitscan, angle, distance, currentTime, alphaRatio: alphaRatio);
         }
@@ -276,6 +276,28 @@ namespace Content.Server.GameObjects.EntitySystems
             
             _effectSystem.CreateParticle(message, predicted ? user?.PlayerSession() : null);
         }
+        
+        private void HitscanMuzzleFlash(IEntity? user, SharedRangedWeaponComponent weapon, string? texture, Angle angle, TimeSpan? currentTime = null, float alphaRatio = 1.0f)
+        {
+            if (texture == null)
+                return;
+
+            currentTime ??= _gameTiming.CurTime;
+            var message = new EffectSystemMessage
+            {
+                EffectSprite = texture,
+                Born = currentTime.Value,
+                DeathTime = _gameTiming.CurTime + TimeSpan.FromSeconds(1),
+                Coordinates = weapon.Owner.Transform.Coordinates.Offset(angle.ToVec().Normalized * 0.5f),
+                //Rotated from east facing
+                Rotation = (float) angle.Theta,
+                Color = Vector4.Multiply(new Vector4(255, 255, 255, 750), alphaRatio),
+                ColorDelta = new Vector4(0, 0, 0, -1500f),
+                Shaded = false
+            };
+            
+            _effectSystem.CreateParticle(message);
+        }
 
         private void TravelFlash(IEntity? user, IEntity weapon, HitscanPrototype hitscan, Angle angle, float distance, TimeSpan? currentTime = null, float alphaRatio = 1.0f)
         {
@@ -288,8 +310,8 @@ namespace Content.Server.GameObjects.EntitySystems
             {
                 EffectSprite = hitscan.TravelEffect,
                 Born = _gameTiming.CurTime,
-                DeathTime = currentTime.Value + TimeSpan.FromSeconds(EffectDuration),
-                Coordinates = weapon.Transform.Coordinates.Offset(angle.ToVec() * distance),
+                DeathTime = currentTime.Value + TimeSpan.FromSeconds(1),
+                Coordinates = weapon.Transform.Coordinates.Offset(angle.ToVec() * distance / 2),
                 //Rotated from east facing
                 Rotation = (float) angle.FlipPositive(),
                 Color = Vector4.Multiply(new Vector4(255, 255, 255, 750), alphaRatio),
@@ -306,15 +328,14 @@ namespace Content.Server.GameObjects.EntitySystems
                 return;
 
             currentTime ??= _gameTiming.CurTime;
-            var midpointOffset = angle.ToVec() * distance / 2;
 
             var message = new EffectSystemMessage
             {
                 EffectSprite = hitscan.ImpactEffect,
                 Born = _gameTiming.CurTime,
-                DeathTime = currentTime.Value + TimeSpan.FromSeconds(EffectDuration),
+                DeathTime = currentTime.Value + TimeSpan.FromSeconds(1),
                 Size = new Vector2(distance - offset, 1.0f),
-                Coordinates = weapon.Transform.Coordinates.Offset(midpointOffset),
+                Coordinates = weapon.Transform.Coordinates.Offset(angle.ToVec().Normalized * distance),
                 //Rotated from east facing
                 Rotation = (float) angle.FlipPositive(),
                 Color = Vector4.Multiply(new Vector4(255, 255, 255, 750), alphaRatio),
