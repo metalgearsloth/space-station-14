@@ -28,15 +28,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
         private Container _ammoContainer = default!;
         private Stack<IEntity> _spawnedAmmo = new Stack<IEntity>();
 
-        private float _ammoSpreadRatio;
-
         protected override int ShotsLeft => UnspawnedCount + _spawnedAmmo.Count;
-
-        public override void ExposeData(ObjectSerializer serializer)
-        {
-            base.ExposeData(serializer);
-            serializer.DataReadWriteFunction("ammoSpreadRatio", 1.0f, value => _ammoSpreadRatio = value, () => _ammoSpreadRatio);
-        }
 
         public override void Initialize()
         {
@@ -117,6 +109,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             if (!ammoComp.Spent)
             {
                 EntitySystem.Get<RangedWeaponSystem>().ShootAmmo(shooter, this, angle, ammoComp);
+                EntitySystem.Get<SharedRangedWeaponSystem>().MuzzleFlash(shooter, this, angle);
                 ammoComp.Spent = true;
             }
 

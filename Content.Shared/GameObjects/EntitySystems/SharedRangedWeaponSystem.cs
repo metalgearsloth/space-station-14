@@ -11,18 +11,17 @@ namespace Content.Shared.GameObjects.EntitySystems
     public abstract class SharedRangedWeaponSystem : EntitySystem
     {
         protected const float EffectDuration = 0.5f;
-        
+
         /// <summary>
-        ///     Show the muzzle flash parented to the weapon.
+        ///     Show the muzzle flash for the weapon.
         /// </summary>
         /// <param name="user"></param>
         /// <param name="weapon"></param>
-        /// <param name="texture"></param>
         /// <param name="angle"></param>
-        /// <param name="predicted">As the impact and travel effects aren't predicted yet we can't predict hitscan stuff very well</param>
+        /// <param name="predicted">Whether we also need to show the effect for the client. Eventually this shouldn't be needed (when we can predict hitscan / weapon recoil)</param>
         /// <param name="currentTime"></param>
         /// <param name="alphaRatio"></param>
-        public abstract void MuzzleFlash(IEntity? user, SharedRangedWeaponComponent weapon, string? texture, Angle angle, bool predicted = true, TimeSpan? currentTime = null, float alphaRatio = 1.0f);
+        public abstract void MuzzleFlash(IEntity? user, SharedRangedWeaponComponent weapon, Angle angle, TimeSpan? currentTime = null, bool predicted = true, float alphaRatio = 1.0f);
 
         public abstract void EjectCasing(IEntity? user, IEntity casing, bool playSound = true, Direction[]? ejectDirections = null);
 

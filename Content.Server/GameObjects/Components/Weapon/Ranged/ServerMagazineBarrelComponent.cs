@@ -15,12 +15,9 @@ using Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition;
 using Content.Server.GameObjects.EntitySystems;
 using Content.Shared.Audio;
 using Robust.Server.GameObjects.EntitySystems;
-using Robust.Server.Interfaces.GameObjects;
-using Robust.Server.Interfaces.Player;
 using Robust.Server.Player;
 using Robust.Shared.Audio;
 using Robust.Shared.Maths;
-using Robust.Shared.Utility;
 
 namespace Content.Server.GameObjects.Components.Weapon.Ranged
 {
@@ -302,11 +299,16 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             
             var chamberEntity = _chamberContainer?.ContainedEntity;
             Cycle();
-            
-            if (chamberEntity == null)
-                return true;
-            
             var shooter = Shooter();
+
+            if (chamberEntity == null)
+            {
+                if (SoundEmpty != null)
+                    EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundEmpty, Owner, AudioHelpers.WithVariation(EmptyVariation), excludedSession: shooter.PlayerSession());
+                
+                return true;
+            }
+
             var ammoComp = chamberEntity.GetComponent<AmmoComponent>();
             var sound = ammoComp.Spent ? SoundEmpty : SoundGunshot;
             
@@ -316,6 +318,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             if (!ammoComp.Spent)
             {
                 EntitySystem.Get<RangedWeaponSystem>().ShootAmmo(shooter, this, angle, ammoComp);
+                EntitySystem.Get<SharedRangedWeaponSystem>().MuzzleFlash(shooter, this, angle);
                 ammoComp.Spent = true;
             }
 

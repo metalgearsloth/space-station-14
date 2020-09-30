@@ -127,8 +127,9 @@ namespace Content.Client.GameObjects.EntitySystems
             weaponComponent.Firing = false;
         }
         
-        public override void MuzzleFlash(IEntity? user, SharedRangedWeaponComponent weapon, string? texture, Angle angle, bool predicted = true, TimeSpan? currentTime = null, float alphaRatio = 1)
+        public override void MuzzleFlash(IEntity? user, SharedRangedWeaponComponent weapon, Angle angle, TimeSpan? currentTime = null, bool predicted = true, float alphaRatio = 1)
         {
+            var texture = weapon.MuzzleFlash;
             if (texture == null || !predicted)
                 return;
             

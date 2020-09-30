@@ -135,10 +135,15 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 
             var chamber = _chamber;
             Cycle();
-            
+
             if (chamber == null)
+            {
+                if (SoundEmpty != null)
+                    EntitySystem.Get<AudioSystem>().Play(SoundEmpty, Owner, AudioHelpers.WithVariation(EmptyVariation));
+                
                 return true;
-            
+            }
+
             var shooter = Shooter();
             CameraRecoilComponent? cameraRecoilComponent = null;
             shooter?.TryGetComponent(out cameraRecoilComponent);
@@ -151,6 +156,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                 sound = SoundGunshot;
                 variation = GunshotVariation;
                 cameraRecoilComponent?.Kick(angle.ToVec().Normalized * RecoilMultiplier);
+                EntitySystem.Get<SharedRangedWeaponSystem>().MuzzleFlash(shooter, this, angle);
             }
             else
             {

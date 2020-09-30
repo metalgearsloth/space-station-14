@@ -143,6 +143,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             {
                 EntitySystem.Get<RangedWeaponSystem>().ShootAmmo(shooter, this, angle, ammoComp);
                 ammoComp.Spent = true;
+                EntitySystem.Get<SharedRangedWeaponSystem>().MuzzleFlash(shooter, this, angle);
             }
 
             return true;

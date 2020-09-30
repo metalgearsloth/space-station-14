@@ -170,7 +170,7 @@ namespace Content.Server.GameObjects.EntitySystems
             }
 
             // Fire effects
-            MuzzleFlash(user, weapon, hitscan.MuzzleEffect, angle, false, currentTime, alphaRatio);
+            MuzzleFlash(user, weapon, angle, currentTime,false, alphaRatio);
             TravelFlash(user, weapon.Owner, hitscan, angle, distance, currentTime, alphaRatio);
             ImpactFlash(user, weapon.Owner, hitscan, angle, distance, currentTime, alphaRatio: alphaRatio);
         }
@@ -252,8 +252,9 @@ namespace Content.Server.GameObjects.EntitySystems
             return linspace;
         }
 
-        public override void MuzzleFlash(IEntity? user, SharedRangedWeaponComponent weapon, string? texture, Angle angle, bool predicted = true, TimeSpan? currentTime = null, float alphaRatio = 1.0f)
+        public override void MuzzleFlash(IEntity? user, SharedRangedWeaponComponent weapon, Angle angle, TimeSpan? currentTime = null, bool predicted = true, float alphaRatio = 1.0f)
         {
+            var texture = weapon.MuzzleFlash;
             if (texture == null)
                 return;
 

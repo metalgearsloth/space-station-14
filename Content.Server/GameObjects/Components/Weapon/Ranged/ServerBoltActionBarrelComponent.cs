@@ -81,7 +81,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
 
             foreach (var entity in _spawnedAmmo)
             {
-                ammo.Push(entity.GetComponent<SharedAmmoComponent>().Spent);
+                ammo.Push(!entity.GetComponent<SharedAmmoComponent>().Spent);
             }
 
             for (var i = 0; i < UnspawnedCount; i++)
@@ -147,7 +147,8 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                 return false;
             
             var chamberEntity = _chamberContainer?.ContainedEntity;
-            Cycle();
+            if (AutoCycle)
+                Cycle();
             
             if (chamberEntity == null)
                 return true;
@@ -162,6 +163,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             if (!ammoComp.Spent)
             {
                 EntitySystem.Get<RangedWeaponSystem>().ShootAmmo(shooter, this, angle, ammoComp);
+                EntitySystem.Get<SharedRangedWeaponSystem>().MuzzleFlash(shooter, this, angle);
                 ammoComp.Spent = true;
             }
 
@@ -211,7 +213,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                 _spawnedAmmo.Push(ammoComponent.Owner);
 
                 if (SoundInsert != null)
-                    EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundInsert, Owner, AudioHelpers.WithVariation(InsertVariation), excludedSession: user.PlayerSession());
+                    EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundInsert, Owner, AudioHelpers.WithVariation(InsertVariation));
 
                 // TODO: when interaction predictions are in remove this.
                 Dirty();

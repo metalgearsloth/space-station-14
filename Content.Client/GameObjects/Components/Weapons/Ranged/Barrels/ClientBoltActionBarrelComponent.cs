@@ -34,8 +34,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         private Stack<bool?> _ammo = new Stack<bool?>();
 
         private StatusControl? _statusControl;
-
-        // TODO: Do this on pump I think
+        
         /// <summary>
         ///     Not including chamber
         /// </summary>
@@ -44,14 +43,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         public override void Initialize()
         {
             base.Initialize();
-            if (FillPrototype == null)
-            {
-                UnspawnedCount = 0;
-            }
-            else
-            {
-                UnspawnedCount += Capacity;
-            }
+            UnspawnedCount = 0;
             UpdateAppearance();
         }
 
@@ -112,8 +104,10 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                 return false;
 
             var chamber = _chamber;
-            Cycle();
             
+            if (AutoCycle)
+                Cycle();
+
             if (chamber == null)
                 return true;
             
@@ -129,6 +123,10 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                 sound = SoundGunshot;
                 variation = GunshotVariation;
                 cameraRecoilComponent?.Kick(angle.ToVec().Normalized * RecoilMultiplier);
+                EntitySystem.Get<SharedRangedWeaponSystem>().MuzzleFlash(shooter, this, angle);
+                if (!AutoCycle)
+                    _chamber = false;
+                
             }
             else
             {
@@ -138,7 +136,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 
             if (sound != null)
                 EntitySystem.Get<AudioSystem>().Play(sound, Owner, AudioHelpers.WithVariation(variation));
-            
+
             UpdateAppearance();
             _statusControl?.Update();
             return true;

@@ -1,4 +1,5 @@
 ﻿#nullable enable
+using System;
 using Content.Client.Utility;
 using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
 using Robust.Client.Graphics;
@@ -63,9 +64,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             var currentAmmo = Ammo[CurrentSlot];
             if (currentAmmo == null)
                 return true;
-            
-            Cycle();
-            
+
             var shooter = Shooter();
             CameraRecoilComponent? cameraRecoilComponent = null;
             shooter?.TryGetComponent(out cameraRecoilComponent);
@@ -78,6 +77,8 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                 sound = SoundGunshot;
                 variation = GunshotVariation;
                 cameraRecoilComponent?.Kick(angle.ToVec().Normalized * RecoilMultiplier);
+                EntitySystem.Get<SharedRangedWeaponSystem>().MuzzleFlash(shooter, this, angle);
+                Ammo[CurrentSlot] = false;
             }
             else
             {
@@ -88,8 +89,14 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             if (sound != null)
                 EntitySystem.Get<AudioSystem>().Play(sound, Owner, AudioHelpers.WithVariation(variation));
             
+            Cycle();
             _statusControl?.Update();
-            return false;
+            return true;
+        }
+
+        protected override Angle GetWeaponSpread(TimeSpan currentTime, TimeSpan lastFire, Angle angle, IRobustRandom robustRandom)
+        {
+            return angle;
         }
 
         protected override void NoShotsFired()

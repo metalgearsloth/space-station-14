@@ -30,14 +30,13 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 
         private bool? _chamber;
 
-        public Stack<bool> AmmoContainer { get; private set; } = new Stack<bool>();
+        private Stack<bool> _ammoContainer = new Stack<bool>();
 
-        protected override int ShotsLeft => UnspawnedCount + AmmoContainer.Count;
+        protected override int ShotsLeft => _ammoContainer.Count + UnspawnedCount;
 
         public override void Initialize()
         {
             base.Initialize();
-            // TODO: Update the others to just do this
             UnspawnedCount = 0;
             UpdateAppearance();
         }
@@ -45,10 +44,8 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         private void UpdateAppearance()
         {
             if (!Owner.TryGetComponent(out AppearanceComponent? appearanceComponent))
-            {
                 return;
-            }
-            
+
             appearanceComponent?.SetData(AmmoVisuals.AmmoCount, ShotsLeft);
             appearanceComponent?.SetData(AmmoVisuals.AmmoMax, Capacity);
         }
@@ -76,6 +73,8 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                 sound = SoundGunshot;
                 variation = GunshotVariation;
                 cameraRecoilComponent?.Kick(angle.ToVec().Normalized * RecoilMultiplier);
+                EntitySystem.Get<SharedRangedWeaponSystem>().MuzzleFlash(shooter, this, angle);
+                _chamber = false;
             }
             else
             {
@@ -110,7 +109,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                 return;
             
             _chamber = cast.Chamber;
-            AmmoContainer = cast.Ammo;
+            _ammoContainer = cast.Ammo;
             Capacity = cast.Capacity;
             _statusControl?.Update();
             UpdateAppearance();

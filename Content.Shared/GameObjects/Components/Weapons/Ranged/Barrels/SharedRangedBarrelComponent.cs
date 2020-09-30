@@ -2,16 +2,13 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Content.Shared.GameObjects.EntitySystems;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
-using Robust.Shared.GameObjects.Systems;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Interfaces.Random;
 using Robust.Shared.Interfaces.Timing;
 using Robust.Shared.IoC;
-using Robust.Shared.Log;
 using Robust.Shared.Map;
 using Robust.Shared.Maths;
 using Robust.Shared.Serialization;
@@ -334,6 +331,9 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
             if (ShotCounter == 0 && NextFire <= currentTime)
                 NextFire = currentTime;
 
+            if (!CanFire())
+                return false;
+            
             if (currentTime < NextFire)
                 return true;
 
@@ -360,7 +360,19 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
             return true;
         }
 
-        private Angle GetWeaponSpread(TimeSpan currentTime, TimeSpan lastFire, Angle direction, IRobustRandom robustRandom)
+        /// <summary>
+        ///     Get the adjusted weapon angle with recoil
+        /// </summary>
+        /// <remarks>
+        ///     The only reason this is virtual is because client-side randomness isnt deterministic so we can't show an accurate muzzle flash.
+        ///     As such (for now) client-side guns will override.
+        /// </remarks>
+        /// <param name="currentTime"></param>
+        /// <param name="lastFire"></param>
+        /// <param name="angle"></param>
+        /// <param name="robustRandom"></param>
+        /// <returns></returns>
+        protected virtual Angle GetWeaponSpread(TimeSpan currentTime, TimeSpan lastFire, Angle angle, IRobustRandom robustRandom)
         {
             // TODO: Fix this
             // TODO: Could also predict this client-side. Probably need to use System.Random and seeds but out of scope for this big pr.
@@ -373,7 +385,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
             _currentAngle = new Angle(newTheta);
 
             var random = (robustRandom.NextDouble() - 0.5) * 2;
-            return Angle.FromDegrees(direction.Degrees + _currentAngle.Degrees * random);
+            return Angle.FromDegrees(angle.Degrees + _currentAngle.Degrees * random);
         }
 
         void IHandSelected.HandSelected(HandSelectedEventArgs eventArgs)
