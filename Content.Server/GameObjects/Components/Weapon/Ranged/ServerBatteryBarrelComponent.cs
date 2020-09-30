@@ -163,7 +163,6 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             {
                 var prototype = prototypeManager.Index<HitscanPrototype>(AmmoPrototype);
                 EntitySystem.Get<SharedRangedWeaponSystem>().ShootHitscan(Shooter(), this, prototype, angle, energyRatio, energyRatio);
-                EntitySystem.Get<SharedRangedWeaponSystem>().MuzzleFlash(shooter, this, angle, predicted: false);
             }
             else
             {

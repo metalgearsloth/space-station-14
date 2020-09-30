@@ -283,12 +283,14 @@ namespace Content.Server.GameObjects.EntitySystems
                 return;
 
             currentTime ??= _gameTiming.CurTime;
+            var parent = user ?? weapon.Owner;
+            
             var message = new EffectSystemMessage
             {
                 EffectSprite = texture,
                 Born = currentTime.Value,
-                DeathTime = _gameTiming.CurTime + TimeSpan.FromSeconds(1),
-                Coordinates = weapon.Owner.Transform.Coordinates.Offset(angle.ToVec().Normalized * 0.5f),
+                DeathTime = _gameTiming.CurTime + TimeSpan.FromSeconds(EffectDuration),
+                Coordinates = parent.Transform.Coordinates.Offset(angle.ToVec().Normalized * 0.5f),
                 //Rotated from east facing
                 Rotation = (float) angle.Theta,
                 Color = Vector4.Multiply(new Vector4(255, 255, 255, 750), alphaRatio),
@@ -305,13 +307,16 @@ namespace Content.Server.GameObjects.EntitySystems
                 return;
             
             currentTime ??= _gameTiming.CurTime;
+            var parent = user ?? weapon;
+            const float offset = 0.5f;
 
             var message = new EffectSystemMessage
             {
                 EffectSprite = hitscan.TravelEffect,
                 Born = _gameTiming.CurTime,
-                DeathTime = currentTime.Value + TimeSpan.FromSeconds(1),
-                Coordinates = weapon.Transform.Coordinates.Offset(angle.ToVec() * distance / 2),
+                DeathTime = currentTime.Value + TimeSpan.FromSeconds(EffectDuration),
+                Size = new Vector2(distance - offset, 1f),
+                Coordinates = parent.Transform.Coordinates.Offset(angle.ToVec() * (distance + offset) / 2),
                 //Rotated from east facing
                 Rotation = (float) angle.FlipPositive(),
                 Color = Vector4.Multiply(new Vector4(255, 255, 255, 750), alphaRatio),
@@ -322,20 +327,20 @@ namespace Content.Server.GameObjects.EntitySystems
             _effectSystem.CreateParticle(message);
         }
 
-        private void ImpactFlash(IEntity? user, IEntity weapon, HitscanPrototype hitscan, Angle angle, float distance, TimeSpan? currentTime = null, float offset = 0.0f, float alphaRatio = 1.0f)
+        private void ImpactFlash(IEntity? user, IEntity weapon, HitscanPrototype hitscan, Angle angle, float distance, TimeSpan? currentTime = null, float alphaRatio = 1.0f)
         {
             if (hitscan.ImpactEffect == null)
                 return;
 
             currentTime ??= _gameTiming.CurTime;
+            var parent = user ?? weapon;
 
             var message = new EffectSystemMessage
             {
                 EffectSprite = hitscan.ImpactEffect,
                 Born = _gameTiming.CurTime,
-                DeathTime = currentTime.Value + TimeSpan.FromSeconds(1),
-                Size = new Vector2(distance - offset, 1.0f),
-                Coordinates = weapon.Transform.Coordinates.Offset(angle.ToVec().Normalized * distance),
+                DeathTime = currentTime.Value + TimeSpan.FromSeconds(EffectDuration),
+                Coordinates = parent.Transform.Coordinates.Offset(angle.ToVec().Normalized * distance),
                 //Rotated from east facing
                 Rotation = (float) angle.FlipPositive(),
                 Color = Vector4.Multiply(new Vector4(255, 255, 255, 750), alphaRatio),
