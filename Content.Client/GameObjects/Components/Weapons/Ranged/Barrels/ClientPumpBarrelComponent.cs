@@ -28,11 +28,9 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
     {
         private StatusControl? _statusControl;
 
-        public bool? ChamberContainer { get; private set; }
+        private bool? _chamber;
 
         public Stack<bool> AmmoContainer { get; private set; } = new Stack<bool>();
-        
-        private Queue<bool> _toFireAmmo = new Queue<bool>();
 
         protected override int ShotsLeft => UnspawnedCount + AmmoContainer.Count;
 
@@ -55,64 +53,44 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             appearanceComponent?.SetData(AmmoVisuals.AmmoMax, Capacity);
         }
 
-        protected override bool TryTakeAmmo()
+        protected override bool TryShoot(Angle angle)
         {
-            if (!base.TryTakeAmmo())
-            {
+            if (!base.TryShoot(angle))
                 return false;
-            }
+
+            var chamber = _chamber;
+            Cycle();
             
-            if (ChamberContainer != null)
-            {
-                _toFireAmmo.Enqueue(ChamberContainer.Value);
-                if (!ManualCycle)
-                {
-                    Cycle();
-                }
-
-                ChamberContainer = null;
-                _statusControl?.Update();
+            if (chamber == null)
                 return true;
-            }
-
-            return false;
-        }
-
-        protected override void Shoot(int shotCount, List<Angle> spreads)
-        {
-            DebugTools.Assert(shotCount == _toFireAmmo.Count);
+            
             var shooter = Shooter();
             CameraRecoilComponent? cameraRecoilComponent = null;
             shooter?.TryGetComponent(out cameraRecoilComponent);
+            
+            string? sound;
+            float variation;
 
-            for (var i = 0; i < shotCount; i++)
+            if (chamber.Value)
             {
-                var ammo = _toFireAmmo.Dequeue();
-                string? sound;
-                float variation;
-
-                if (ammo)
-                {
-                    sound = SoundGunshot;
-                    variation = GunshotVariation;
-                    cameraRecoilComponent?.Kick(-spreads[i].ToVec().Normalized * RecoilMultiplier);
-                }
-                else
-                {
-                    sound = SoundEmpty;
-                    variation = EmptyVariation;
-                }
-
-                if (sound == null)
-                    continue;
-                
-                EntitySystem.Get<AudioSystem>().Play(sound, Owner, AudioHelpers.WithVariation(variation));
+                sound = SoundGunshot;
+                variation = GunshotVariation;
+                cameraRecoilComponent?.Kick(angle.ToVec().Normalized * RecoilMultiplier);
+            }
+            else
+            {
+                sound = SoundEmpty;
+                variation = EmptyVariation;
             }
 
+            if (sound != null)
+                EntitySystem.Get<AudioSystem>().Play(sound, Owner, AudioHelpers.WithVariation(variation));
+            
             UpdateAppearance();
             _statusControl?.Update();
+            return true;
         }
-        
+
         protected override void Cycle(bool manual = false)
         {
             throw new NotImplementedException();
@@ -131,7 +109,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             if (!(curState is PumpBarrelComponentState cast))
                 return;
             
-            ChamberContainer = cast.Chamber;
+            _chamber = cast.Chamber;
             AmmoContainer = cast.Ammo;
             Capacity = cast.Capacity;
             _statusControl?.Update();
@@ -211,8 +189,8 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             public void Update()
             {
                 _chamberedBullet.ModulateSelfOverride =
-                    _parent.ChamberContainer != null ?
-                    !_parent.ChamberContainer.Value ? Color.Red : Color.FromHex("#d7df60")
+                    _parent._chamber != null ?
+                    !_parent._chamber.Value ? Color.Red : Color.FromHex("#d7df60")
                     : Color.Black;
 
                 _bulletsListTop.RemoveAllChildren();

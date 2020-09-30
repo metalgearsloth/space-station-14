@@ -61,9 +61,9 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             appearanceComponent?.SetData(AmmoVisuals.AmmoMax, max);
         }
 
-        protected override bool TryTakeAmmo()
+        protected override bool TryShoot(Angle angle)
         {
-            if (!base.TryTakeAmmo())
+            if (!base.TryShoot(angle))
                 return false;
             
             if (PowerCell == null)
@@ -71,42 +71,30 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 
             var (currentCharge, maxCharge) = PowerCell.Value;
             if (currentCharge < LowerChargeLimit)
+            {
+                if (SoundEmpty != null)
+                    EntitySystem.Get<AudioSystem>().Play(SoundEmpty, Owner, AudioHelpers.WithVariation(EmptyVariation));
+                
                 return false;
-
-            var fireCharge = Math.Min(currentCharge, BaseFireCost);
+            }
             
-            ToFireCharge += fireCharge;
-            PowerCell = (currentCharge - fireCharge, maxCharge);
-            return true;
-        }
-
-        protected override void Shoot(int shotCount, List<Angle> spreads)
-        {
-            DebugTools.Assert(ToFireCharge > 0);
+            var chargeChange = Math.Min(currentCharge, BaseFireCost);
+            PowerCell = (currentCharge - chargeChange, maxCharge);
             
             var shooter = Shooter();
             CameraRecoilComponent? cameraRecoilComponent = null;
             shooter?.TryGetComponent(out cameraRecoilComponent);
 
-            for (var i = 0; i < shotCount; i++)
-            {
-                var fireCharge = Math.Min(BaseFireCost, ToFireCharge);
-                ToFireCharge -= fireCharge;
+            cameraRecoilComponent?.Kick(angle.ToVec().Normalized * RecoilMultiplier * chargeChange / BaseFireCost);
 
-                cameraRecoilComponent?.Kick(-spreads[i].ToVec().Normalized * RecoilMultiplier * fireCharge / BaseFireCost);
-
-                if (SoundGunshot == null)
-                    continue;
-                
-                // TODO: Could look at modifying volume based on charge %
+            if (SoundGunshot != null)
                 EntitySystem.Get<AudioSystem>().Play(SoundGunshot, Owner, AudioHelpers.WithVariation(GunshotVariation));
-
-                // TODO: Show effect here once we can get the full hitscan predicted
-            }
-
-            ToFireCharge = 0.0f;
+            
+            // TODO: Show effect here once we can get the full hitscan predicted
+            
             UpdateAppearance();
             _statusControl?.Update();
+            return true;
         }
 
         public override Task<bool> InteractUsing(InteractUsingEventArgs eventArgs)

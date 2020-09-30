@@ -27,8 +27,6 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
         private ContainerSlot _chamberContainer = default!;
         private Container _ammoContainer = default!;
         private Stack<IEntity> _spawnedAmmo = new Stack<IEntity>();
-        
-        private Queue<IEntity> _toFireAmmo = new Queue<IEntity>();
 
         private float _ammoSpreadRatio;
 
@@ -98,27 +96,31 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             return new PumpBarrelComponentState(chamber, Selector, Capacity, ammo);
         }
 
-        protected override bool TryTakeAmmo()
+        protected override bool TryShoot(Angle angle)
         {
-            if (!base.TryTakeAmmo())
-            {
+            if (!base.TryShoot(angle))
                 return false;
-            }
-
-            var chamberEntity = _chamberContainer.ContainedEntity;
-            if (chamberEntity != null)
-            {
-                _toFireAmmo.Enqueue(chamberEntity);
-                _chamberContainer.Remove(chamberEntity);
-                
-                if (!ManualCycle)
-                {
-                    Cycle();
-                }
+            
+            var chamberEntity = _chamberContainer?.ContainedEntity;
+            Cycle();
+            
+            if (chamberEntity == null)
                 return true;
+            
+            var shooter = Shooter();
+            var ammoComp = chamberEntity.GetComponent<AmmoComponent>();
+            var sound = ammoComp.Spent ? SoundEmpty : SoundGunshot;
+            
+            if (sound != null)
+                EntitySystem.Get<AudioSystem>().PlayFromEntity(sound, Owner, AudioHelpers.WithVariation(GunshotVariation), excludedSession: shooter.PlayerSession());
+
+            if (!ammoComp.Spent)
+            {
+                EntitySystem.Get<RangedWeaponSystem>().ShootAmmo(shooter, this, angle, ammoComp);
+                ammoComp.Spent = true;
             }
 
-            return false;
+            return true;
         }
 
         protected override void Cycle(bool manual = false)
@@ -150,9 +152,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             if (manual)
             {
                 if (SoundRack != null)
-                {
                     EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundRack, Owner, AudioHelpers.WithVariation(CycleVariation));
-                }
             }
             
             // TODO: When interaction predictions are in remove this.
@@ -188,32 +188,6 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             }
 
             return false;
-        }
-
-        protected override void Shoot(int shotCount, List<Angle> spreads)
-        {
-            DebugTools.Assert(shotCount == _toFireAmmo.Count);
-            var shooter = Shooter();
-
-            for (var i = 0; i < shotCount; i++)
-            {
-                var ammo = _toFireAmmo.Dequeue();
-
-                if (ammo == null)
-                    continue;
-
-                var ammoComp = ammo.GetComponent<AmmoComponent>();
-                var sound = ammoComp.Spent ? SoundEmpty : SoundGunshot;
-                
-                if (sound != null)
-                    EntitySystem.Get<AudioSystem>().PlayFromEntity(sound, Owner, AudioHelpers.WithVariation(GunshotVariation), excludedSession: shooter.PlayerSession());
-
-                if (!ammoComp.Spent)
-                {
-                    EntitySystem.Get<RangedWeaponSystem>().ShootAmmo(shooter, this, spreads[i], ammoComp);
-                    ammoComp.Spent = true;
-                }
-            }
         }
     }
 }

@@ -26,9 +26,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         private bool? _chamber;
 
         private Stack<bool>? _magazine;
-        
-        private Queue<bool> _toFireAmmo = new Queue<bool>();
-        
+
         private int ShotsLeft => 0;
 
         private void UpdateAppearance()
@@ -102,16 +100,12 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 
             // Try and pull a round from the magazine to replace the chamber if possible
             if (_magazine == null || !_magazine.TryPop(out var nextCartridge))
-            {
                 return;
-            }
 
             _chamber = nextCartridge;
 
             if (AutoEjectMag && _magazine != null && _magazine.Count == 0 && SoundAutoEject != null)
-            {
                 EntitySystem.Get<AudioSystem>().Play(SoundAutoEject, Owner, AudioHelpers.WithVariation(AutoEjectVariation));
-            }
         }
 
         protected override void RemoveMagazine(IEntity user)
@@ -134,57 +128,44 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             throw new System.NotImplementedException();
         }
 
-        protected override bool TryTakeAmmo()
+        protected override bool TryShoot(Angle angle)
         {
-            if (!base.TryTakeAmmo())
+            if (!base.TryShoot(angle))
                 return false;
 
-            if (_chamber != null)
-            {
-                _toFireAmmo.Enqueue(_chamber.Value);
-                Cycle();
-                return true;
-            }
-
+            var chamber = _chamber;
             Cycle();
-            return false;
-        }
-
-        protected override void Shoot(int shotCount, List<Angle> spreads)
-        {
-            DebugTools.Assert(shotCount == _toFireAmmo.Count);
+            
+            if (chamber == null)
+                return true;
+            
             var shooter = Shooter();
             CameraRecoilComponent? cameraRecoilComponent = null;
             shooter?.TryGetComponent(out cameraRecoilComponent);
+            
+            string? sound;
+            float variation;
 
-            for (var i = 0; i < shotCount; i++)
+            if (chamber.Value)
             {
-                var ammo = _toFireAmmo.Dequeue();
-                string? sound;
-                float variation;
-
-                if (ammo)
-                {
-                    sound = SoundGunshot;
-                    variation = GunshotVariation;
-                    cameraRecoilComponent?.Kick(-spreads[i].ToVec().Normalized * RecoilMultiplier);
-                }
-                else
-                {
-                    sound = SoundEmpty;
-                    variation = EmptyVariation;
-                }
-
-                if (sound == null)
-                    continue;
-                
-                EntitySystem.Get<AudioSystem>().Play(sound, Owner, AudioHelpers.WithVariation(variation));
+                sound = SoundGunshot;
+                variation = GunshotVariation;
+                cameraRecoilComponent?.Kick(angle.ToVec().Normalized * RecoilMultiplier);
+            }
+            else
+            {
+                sound = SoundEmpty;
+                variation = EmptyVariation;
             }
 
+            if (sound != null)
+                EntitySystem.Get<AudioSystem>().Play(sound, Owner, AudioHelpers.WithVariation(variation));
+            
             UpdateAppearance();
             //_statusControl?.Update();
+            return true;
         }
-        
+
         void IExamine.Examine(FormattedMessage message, bool inDetailsInRange)
         {
             message.AddMarkup(Loc.GetString("\nIt uses [color=white]{0}[/color] ammo.", Caliber));

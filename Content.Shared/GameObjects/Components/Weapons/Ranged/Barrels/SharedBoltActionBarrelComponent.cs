@@ -8,6 +8,7 @@ using Content.Shared.Interfaces;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Localization;
+using Robust.Shared.Maths;
 using Robust.Shared.ViewVariables;
 
 namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
@@ -73,67 +74,13 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
 
         public abstract bool TryInsertBullet(IEntity user, SharedAmmoComponent ammoComponent);
 
-        protected override bool TryTakeAmmo()
+        protected override bool TryShoot(Angle angle)
         {
-            if (!base.TryTakeAmmo())
-            {
+            if (!base.TryShoot(angle))
                 return false;
-            }
-            
-            // TODO: Any guns that use UnspawnedAmmo should try and spawn one into the chamber if possible.
+
             return !BoltOpen;
         }
-
-        /*
-        public bool TryInsertBullet(IEntity user, IEntity ammo)
-        {
-            if (!ammo.TryGetComponent(out AmmoComponent ammoComponent))
-            {
-                return false;
-            }
-
-            if (ammoComponent.Caliber != Caliber)
-            {
-                Owner.PopupMessage(user, Loc.GetString("Wrong caliber"));
-                return false;
-            }
-
-            if (!BoltOpen)
-            {
-                Owner.PopupMessage(user, Loc.GetString("Bolt isn't open"));
-                return false;
-            }
-
-            if (_chamberContainer.ContainedEntity == null)
-            {
-                _chamberContainer.Insert(ammo);
-                if (_soundInsert != null)
-                {
-                    EntitySystem.Get<AudioSystem>().PlayAtCoords(_soundInsert, Owner.Transform.Coordinates, AudioParams.Default.WithVolume(-2));
-                }
-                Dirty();
-                UpdateAppearance();
-                return true;
-            }
-
-            if (_ammoContainer.ContainedEntities.Count < Capacity - 1)
-            {
-                _ammoContainer.Insert(ammo);
-                _spawnedAmmo.Push(ammo);
-                if (_soundInsert != null)
-                {
-                    EntitySystem.Get<AudioSystem>().PlayAtCoords(_soundInsert, Owner.Transform.Coordinates, AudioParams.Default.WithVolume(-2));
-                }
-                Dirty();
-                UpdateAppearance();
-                return true;
-            }
-
-            Owner.PopupMessage(user, Loc.GetString("No room"));
-
-            return false;
-        }
-        */
 
         public override async Task<bool> InteractUsing(InteractUsingEventArgs eventArgs)
         {

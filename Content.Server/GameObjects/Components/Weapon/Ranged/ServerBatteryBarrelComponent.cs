@@ -90,19 +90,13 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
         public bool TryInsertPowerCell(IEntity entity)
         {
             if (_powerCellContainer.ContainedEntity != null)
-            {
                 return false;
-            }
 
             if (!entity.HasComponent<BatteryComponent>())
-            {
                 return false;
-            }
 
             if (SoundPowerCellInsert != null)
-            {
                 EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundPowerCellInsert, Owner, AudioHelpers.WithVariation(CellInsertVariation));
-            }
 
             _powerCellContainer.Insert(entity);
 
@@ -113,14 +107,10 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
         public override bool UseEntity(UseEntityEventArgs eventArgs)
         {
             if (!_powerCellRemovable)
-            {
                 return false;
-            }
 
             if (PowerCellEntity == null)
-            {
                 return false;
-            }
 
             return TryEjectCell(eventArgs.User);
         }
@@ -128,20 +118,14 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
         private bool TryEjectCell(IEntity user)
         {
             if (PowerCell == null || !_powerCellRemovable)
-            {
                 return false;
-            }
 
             if (!user.TryGetComponent(out HandsComponent? hands))
-            {
                 return false;
-            }
 
             var cell = PowerCell;
             if (!_powerCellContainer.Remove(cell.Owner))
-            {
                 return false;
-            }
 
             Dirty();
 
@@ -154,9 +138,9 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             return true;
         }
 
-        protected override bool TryTakeAmmo()
+        protected override bool TryShoot(Angle angle)
         {
-            if (!base.TryTakeAmmo())
+            if (!base.TryShoot(angle))
                 return false;
 
             var battery = PowerCell;
@@ -170,60 +154,42 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             // Multiply the entity's damage / whatever by the percentage of charge the shot has.
             var chargeChange = Math.Min(battery.CurrentCharge, BaseFireCost);
             battery.UseCharge(chargeChange);
-            ToFireCharge += chargeChange;
 
-            Dirty();
-            return true;
-        }
-
-        protected override void Shoot(int shotCount, List<Angle> spreads)
-        {
-            DebugTools.Assert(ToFireCharge > 0);
             IPrototypeManager? prototypeManager = null;
             var shooter = Shooter();
             
             if (AmmoIsHitscan)
-            {
                 prototypeManager = IoCManager.Resolve<IPrototypeManager>();
-            }
+            
+            var energyRatio = chargeChange / BaseFireCost;
 
-            var count = 0;
-
-            while (ToFireCharge > 0)
+            if (prototypeManager != null)
             {
-                var fireCharge = Math.Min(BaseFireCost, ToFireCharge);
-                ToFireCharge -= fireCharge;
-                var energyRatio = fireCharge / BaseFireCost;
-                var direction = spreads[count];
-                count++;
-
-                if (prototypeManager != null)
-                {
-                    var prototype = prototypeManager.Index<HitscanPrototype>(AmmoPrototype);
-                    EntitySystem.Get<SharedRangedWeaponSystem>().ShootHitscan(Shooter(), this, prototype, direction, energyRatio, energyRatio);
-                }
-                else
-                {
-                    var entity = Owner.EntityManager.SpawnEntity(AmmoPrototype, Owner.Transform.Coordinates);
-                    var ammoComponent = entity.GetComponent<SharedAmmoComponent>();
-                    var projectileComponent = entity.GetComponent<ProjectileComponent>();
-                    
-                    if (energyRatio < 1.0)
-                    {
-                        var newDamages = new Dictionary<DamageType, int>(projectileComponent.Damages.Count);
-                        foreach (var (damageType, damage) in projectileComponent.Damages)
-                        {
-                            newDamages.Add(damageType, (int) (damage * energyRatio));
-                        }
-
-                        projectileComponent.Damages = newDamages;
-                    }
-                    
-                    EntitySystem.Get<SharedRangedWeaponSystem>().ShootAmmo(shooter, this, direction, ammoComponent);
-                }
+                var prototype = prototypeManager.Index<HitscanPrototype>(AmmoPrototype);
+                EntitySystem.Get<SharedRangedWeaponSystem>().ShootHitscan(Shooter(), this, prototype, angle, energyRatio, energyRatio);
             }
+            else
+            {
+                var entity = Owner.EntityManager.SpawnEntity(AmmoPrototype, Owner.Transform.Coordinates);
+                var ammoComponent = entity.GetComponent<SharedAmmoComponent>();
+                var projectileComponent = entity.GetComponent<ProjectileComponent>();
+                
+                if (energyRatio < 1.0)
+                {
+                    var newDamages = new Dictionary<DamageType, int>(projectileComponent.Damages.Count);
+                    foreach (var (damageType, damage) in projectileComponent.Damages)
+                    {
+                        newDamages.Add(damageType, (int) (damage * energyRatio));
+                    }
 
-            ToFireCharge = 0.0f;
+                    projectileComponent.Damages = newDamages;
+                }
+                
+                EntitySystem.Get<SharedRangedWeaponSystem>().ShootAmmo(shooter, this, angle, ammoComponent);
+            }
+                
+            Dirty();
+            return true;
         }
 
         public override async Task<bool> InteractUsing(InteractUsingEventArgs eventArgs)

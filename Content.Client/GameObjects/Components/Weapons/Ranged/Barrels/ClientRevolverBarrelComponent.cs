@@ -37,47 +37,57 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         /// null means no bullet
         /// </summary>
         [ViewVariables]
-        public bool?[] Bullets { get; private set; } = default!;
+        public bool?[] Ammo { get; private set; } = default!;
 
-        public override void ExposeData(ObjectSerializer serializer)
-        {
-            base.ExposeData(serializer);
-            serializer.DataReadWriteFunction(
-                "capacity",
-                6,
-                cap => Bullets = new bool?[cap],
-                () => Bullets.Length);
-        }
-        
         public override void Initialize()
         {
             base.Initialize();
+            Ammo = new bool?[Capacity];
             
             // Mark every bullet as unspent
             if (FillPrototype != null)
             {
-                for (var i = 0; i < Bullets.Length; i++)
+                for (var i = 0; i < Ammo.Length; i++)
                 {
-                    Bullets[i] = true;
+                    Ammo[i] = true;
                     UnspawnedCount--;
                 }
             }
         }
 
-        protected override bool TryTakeAmmo()
+        protected override bool TryShoot(Angle angle)
         {
-            if (!base.TryTakeAmmo())
+            if (!base.TryShoot(angle))
                 return false;
-            
-            if (Bullets[CurrentSlot] == true)
-            {
-                Bullets[CurrentSlot] = false;
-                Cycle();
-                _statusControl?.Update();
+
+            var currentAmmo = Ammo[CurrentSlot];
+            if (currentAmmo == null)
                 return true;
+            
+            Cycle();
+            
+            var shooter = Shooter();
+            CameraRecoilComponent? cameraRecoilComponent = null;
+            shooter?.TryGetComponent(out cameraRecoilComponent);
+            
+            string? sound;
+            float variation;
+            
+            if (currentAmmo.Value)
+            {
+                sound = SoundGunshot;
+                variation = GunshotVariation;
+                cameraRecoilComponent?.Kick(angle.ToVec().Normalized * RecoilMultiplier);
+            }
+            else
+            {
+                sound = SoundEmpty;
+                variation = EmptyVariation;
             }
 
-            Cycle();
+            if (sound != null)
+                EntitySystem.Get<AudioSystem>().Play(sound, Owner, AudioHelpers.WithVariation(variation));
+            
             _statusControl?.Update();
             return false;
         }
@@ -89,50 +99,20 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             // TODO: Could probably just do this server-side.
         }
 
-        protected override void Shoot(int shotCount, List<Angle> spreads)
-        {
-            var shooter = Shooter();
-            CameraRecoilComponent? cameraRecoilComponent = null;
-            shooter?.TryGetComponent(out cameraRecoilComponent);
-
-            for (var i = 0; i < shotCount; i++)
-            {
-                string? sound;
-                float variation;
-                
-                if (Bullets[i] == true)
-                {
-                    sound = SoundGunshot;
-                    variation = GunshotVariation;
-                    cameraRecoilComponent?.Kick(-spreads[i].ToVec().Normalized * RecoilMultiplier);
-                }
-                else
-                {
-                    sound = SoundEmpty;
-                    variation = EmptyVariation;
-                }
-
-                if (sound == null)
-                    break;
-                
-                EntitySystem.Get<AudioSystem>().Play(sound, Owner, AudioHelpers.WithVariation(variation));
-            }
-        }
-
         protected override void EjectAllSlots()
         {
             // TODO: Does nothing because interactions aren't predicted
 
-            for (var i = 0; i < Bullets.Length; i++)
+            for (var i = 0; i < Ammo.Length; i++)
             {
-                var slot = Bullets[i];
+                var slot = Ammo[i];
 
                 if (slot == null)
                     continue;
 
                 // TODO: Play SOUND. Once we have prediction and know what the ammo component is.
 
-                Bullets[i] = null;
+                Ammo[i] = null;
             }
 
             _statusControl?.Update();
@@ -147,7 +127,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         
         private void Spin()
         {
-            CurrentSlot = IoCManager.Resolve<IRobustRandom>().Next(Bullets.Length - 1);
+            CurrentSlot = IoCManager.Resolve<IRobustRandom>().Next(Ammo.Length - 1);
             _statusControl?.Update(true);
             SendNetworkMessage(new ChangeSlotMessage(CurrentSlot));
             if (SoundSpin != null)
@@ -163,7 +143,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                 return;
 
             CurrentSlot = cast.CurrentSlot;
-            Bullets = cast.Bullets;
+            Ammo = cast.Bullets;
             _statusControl?.Update();
         }
 
@@ -204,7 +184,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             {
                 _bulletsList.RemoveAllChildren();
 
-                var capacity = _parent.Bullets.Length;
+                var capacity = _parent.Ammo.Length;
 
                 string texturePath;
                 if (capacity <= 20)
@@ -238,9 +218,9 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                 var altColor = false;
                 const float scale = 1.3f;
 
-                for (var i = 0; i < _parent.Bullets.Length; i++)
+                for (var i = 0; i < _parent.Ammo.Length; i++)
                 {
-                    var bulletSpent = !_parent.Bullets[i];
+                    var bulletSpent = !_parent.Ammo[i];
                     // Add a outline
                     var box = new Control
                     {

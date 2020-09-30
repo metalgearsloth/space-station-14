@@ -32,8 +32,6 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 
         private bool? _chamber;
         private Stack<bool?> _ammo = new Stack<bool?>();
-        
-        private Queue<bool> _toFireAmmo = new Queue<bool>();
 
         private StatusControl? _statusControl;
 
@@ -108,31 +106,42 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             appearanceComponent.SetData(AmmoVisuals.AmmoMax, (int) Capacity);
         }
 
-        protected override bool TryTakeAmmo()
+        protected override bool TryShoot(Angle angle)
         {
-            if (!base.TryTakeAmmo())
-            {
+            if (!base.TryShoot(angle))
                 return false;
-            }
 
-            if (_chamber != null)
-            {
-                _toFireAmmo.Enqueue(_chamber.Value);
-                _chamber = null;
-
-                if (AutoCycle)
-                {
-                    Cycle();
-                }
-                return true;
-            }
+            var chamber = _chamber;
+            Cycle();
             
-            if (AutoCycle && _ammo.Count > 0)
+            if (chamber == null)
+                return true;
+            
+            var shooter = Shooter();
+            CameraRecoilComponent? cameraRecoilComponent = null;
+            shooter?.TryGetComponent(out cameraRecoilComponent);
+            
+            string? sound;
+            float variation;
+
+            if (chamber.Value)
             {
-                Cycle();
+                sound = SoundGunshot;
+                variation = GunshotVariation;
+                cameraRecoilComponent?.Kick(angle.ToVec().Normalized * RecoilMultiplier);
+            }
+            else
+            {
+                sound = SoundEmpty;
+                variation = EmptyVariation;
             }
 
-            return false;
+            if (sound != null)
+                EntitySystem.Get<AudioSystem>().Play(sound, Owner, AudioHelpers.WithVariation(variation));
+            
+            UpdateAppearance();
+            _statusControl?.Update();
+            return true;
         }
 
         protected override void Cycle(bool manual = false)
@@ -185,41 +194,6 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                 
                 UnspawnedCount--;
             }
-        }
-
-        protected override void Shoot(int shotCount, List<Angle> spreads)
-        {
-            DebugTools.Assert(shotCount == _toFireAmmo.Count);
-            var shooter = Shooter();
-            CameraRecoilComponent? cameraRecoilComponent = null;
-            shooter?.TryGetComponent(out cameraRecoilComponent);
-
-            for (var i = 0; i < shotCount; i++)
-            {
-                var ammo = _toFireAmmo.Dequeue();
-                string? sound;
-                float variation;
-
-                if (ammo)
-                {
-                    sound = SoundGunshot;
-                    variation = GunshotVariation;
-                    cameraRecoilComponent?.Kick(-spreads[i].ToVec().Normalized * RecoilMultiplier);
-                }
-                else
-                {
-                    sound = SoundEmpty;
-                    variation = EmptyVariation;
-                }
-
-                if (sound == null)
-                    continue;
-                
-                EntitySystem.Get<AudioSystem>().Play(sound, Owner, AudioHelpers.WithVariation(variation));
-            }
-
-            UpdateAppearance();
-            _statusControl?.Update();
         }
 
         void IExamine.Examine(FormattedMessage message, bool inDetailsRange)

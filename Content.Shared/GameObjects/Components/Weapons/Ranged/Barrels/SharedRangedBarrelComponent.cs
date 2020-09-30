@@ -281,12 +281,10 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         /// </summary>
         protected virtual void NoShotsFired() {}
 
-        protected virtual bool CanFire(IEntity entity)
+        protected virtual bool CanFire()
         {
             if (FireRate <= 0.0f || FireCoordinates == null)
-            {
                 return false;
-            }
             
             switch (Selector)
             {
@@ -302,13 +300,11 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         }
 
         /// <summary>
-        ///     Whether we can take more ammo for shooting. Doesn't necessarily need to be fireable.
+        ///     Fire out the specified number of bullets if possible.
+        ///     Client-side this will just play the specified number of sounds and a muzzle flash.
+        ///     Server-side this will work out each bullet to spawn and fire them.
         /// </summary>
-        /// <remarks>
-        ///     Doesn't need to be fireable so something like a revolver can keep cycling through bullets even though they're not usable.
-        /// </remarks>
-        /// <returns></returns>
-        protected virtual bool TryTakeAmmo()
+        protected virtual bool TryShoot(Angle angle)
         {
             switch (Selector)
             {
@@ -336,98 +332,49 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
             var lastFire = NextFire;
             
             if (ShotCounter == 0 && NextFire <= currentTime)
-            {
                 NextFire = currentTime;
-            }
-            
-            if (!CanFire(user))
-            {
-                return false;
-            }
-            
+
             if (currentTime < NextFire)
-            {
                 return true;
-            }
 
             var firedShots = 0;
+            var fireAngle = (coordinates.Position - user.Transform.WorldPosition).ToAngle();
+            var robustRandom = IoCManager.Resolve<IRobustRandom>();
 
             // To handle guns with firerates higher than framerate / tickrate
             while (NextFire <= currentTime)
             {
                 NextFire += TimeSpan.FromSeconds(1 / FireRate);
+                var spread = GetWeaponSpread(NextFire, lastFire, fireAngle, robustRandom);
+                lastFire = NextFire;
                 
                 // Mainly check if we can get more bullets (e.g. if there's only 1 left in the clip).
-                if (!TryTakeAmmo())
-                {
+                if (!TryShoot(spread))
                     break;
-                }
                 
                 firedShots++;
                 ShotCounter++;
             }
 
-            // No ammo :(
-            if (firedShots == 0)
-            {
-                NoShotsFired();
-                // TODO: FIGURE THIS SHIT OUT
-                // EntitySystem.Get<SharedRangedWeaponSystem>().PlaySound(Shooter(), Owner, SoundEmpty);
-                return false;
-            }
-
             AccumulatedShots += firedShots;
-            var direction = coordinates.Position - Owner.Transform.MapPosition.Position;
-            var spread = GetWeaponSpread(currentTime, lastFire, direction.ToAngle(), firedShots);
-            // SO server-side we essentially need to backtrack by n firedShots to work out what to shoot for each one
-            // Client side we'll just play the effects and shit unless we get client-side entity prediction in.
-            Shoot(firedShots, spread);
-
             return true;
         }
 
-        private List<Angle> GetWeaponSpread(TimeSpan currentTime, TimeSpan lastFire, Angle direction, int shots)
+        private Angle GetWeaponSpread(TimeSpan currentTime, TimeSpan lastFire, Angle direction, IRobustRandom robustRandom)
         {
             // TODO: Fix this
-            
             // TODO: Could also predict this client-side. Probably need to use System.Random and seeds but out of scope for this big pr.
             // If we're sure no desyncs occur then we could just use the Uid to get the seed probably.
-            var robustRandom = IoCManager.Resolve<IRobustRandom>();
-            var spreads = new List<Angle>(shots);
-
-            for (var i = 0; i < shots; i++)
-            {
-                double timeSinceLastFire;
-
-                if (i == 0)
-                {
-                    // Rollback to first shot fired.
-                    timeSinceLastFire = (currentTime - lastFire).TotalSeconds - 1 / FireRate * shots;
-                }
-                else
-                {
-                    timeSinceLastFire = 1 / FireRate;
-                }
-                
-                var newTheta = MathHelper.Clamp(_currentAngle.Theta + _angleIncrease - _angleDecay * timeSinceLastFire, _minAngle.Theta, _maxAngle.Theta);
-                _currentAngle = new Angle(newTheta);
-
-                var random = (robustRandom.NextDouble() - 0.5) * 2;
-                var angle = Angle.FromDegrees(direction.Degrees + _currentAngle.Degrees * random);
-                spreads.Add(angle); 
-            }
+            var newTheta = MathHelper.Clamp(
+                _currentAngle.Theta + _angleIncrease - _angleDecay * (currentTime - lastFire).TotalSeconds, 
+                _minAngle.Theta, 
+                _maxAngle.Theta);
             
-            return spreads;
-        }
+            _currentAngle = new Angle(newTheta);
 
-        /// <summary>
-        ///     Fire out the specified number of bullets.
-        ///     Client-side this will just play the specified number of sounds and a muzzle flash.
-        ///     Server-side this will work out each bullet to spawn and fire them.
-        /// </summary>
-        /// <param name="shotCount"></param>
-        /// <param name="spreads"></param>
-        protected abstract void Shoot(int shotCount, List<Angle> spreads);
+            var random = (robustRandom.NextDouble() - 0.5) * 2;
+            return Angle.FromDegrees(direction.Degrees + _currentAngle.Degrees * random);
+        }
 
         void IHandSelected.HandSelected(HandSelectedEventArgs eventArgs)
         {

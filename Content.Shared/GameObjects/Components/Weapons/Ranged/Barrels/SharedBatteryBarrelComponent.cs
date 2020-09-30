@@ -22,12 +22,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         
         // Could use an interface instead but eh, if there's more than hitscan / projectiles in the future you can change it.
         protected bool AmmoIsHitscan;
-        
-        /// <summary>
-        ///     How much charge we've used for this shoot.
-        /// </summary>
-        protected float ToFireCharge;
-        
+
         // Sounds
         public string? SoundPowerCellInsert { get; private set; }
         public string? SoundPowerCellEject { get; private set; }

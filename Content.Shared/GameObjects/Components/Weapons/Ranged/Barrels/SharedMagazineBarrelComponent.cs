@@ -9,6 +9,7 @@ using Robust.Shared.GameObjects;
 using Robust.Shared.GameObjects.Systems;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Localization;
+using Robust.Shared.Maths;
 using Robust.Shared.Serialization;
 using Robust.Shared.ViewVariables;
 
@@ -96,21 +97,19 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
 
         protected abstract bool UseEntity(IEntity user);
 
-        protected override bool TryTakeAmmo()
-        {
-            if (!base.TryTakeAmmo())
-            {
-                return false;
-            }
-
-            return !BoltOpen;
-        }
-
         protected abstract void TryEjectChamber();
 
         protected abstract void TryFeedChamber();
 
         protected abstract void RemoveMagazine(IEntity user);
+
+        protected override bool TryShoot(Angle angle)
+        {
+            if (!base.TryShoot(angle))
+                return false;
+
+            return !BoltOpen;
+        }
 
         protected abstract bool TryInsertMag(IEntity user, IEntity mag);
 

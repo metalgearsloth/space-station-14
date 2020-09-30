@@ -1,6 +1,4 @@
 #nullable enable
-using System;
-using System.Collections.Generic;
 using Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition;
 using Content.Server.GameObjects.EntitySystems;
 using Content.Shared.Audio;
@@ -10,7 +8,6 @@ using Content.Shared.GameObjects.EntitySystems;
 using Robust.Server.GameObjects.Components.Container;
 using Robust.Server.GameObjects.EntitySystems;
 using Robust.Server.Interfaces.GameObjects;
-using Robust.Server.Interfaces.Player;
 using Robust.Server.Player;
 using Robust.Shared.GameObjects;
 using Robust.Shared.GameObjects.Systems;
@@ -38,11 +35,6 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
         public override void ExposeData(ObjectSerializer serializer)
         {
             base.ExposeData(serializer);
-            serializer.DataReadWriteFunction(
-                "capacity",
-                6,
-                cap => _ammoSlots = new IEntity[cap],
-                () => _ammoSlots.Length);
             serializer.DataField(ref FillPrototype, "fillPrototype", null);
         }
 
@@ -85,6 +77,8 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
         public override void Initialize()
         {
             base.Initialize();
+
+            _ammoSlots = new IEntity?[Capacity];
             AmmoContainer = ContainerManagerComponent.Ensure<Container>("weapon-ammo", Owner, out var existing);
 
             if (existing)
@@ -105,13 +99,11 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             }
         }
 
-        protected override bool TryTakeAmmo()
+        protected override bool TryShoot(Angle angle)
         {
             // Revolvers can keep cycling even if the ammo is invalid.
-            if (!base.TryTakeAmmo())
-            {
+            if (!base.TryShoot(angle))
                 return false;
-            }
 
             var currentAmmo = _ammoSlots[CurrentSlot];
 
@@ -123,6 +115,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                     _ammoSlots[CurrentSlot] = entity;
                     AmmoContainer.Insert(entity);
                     UnspawnedCount--;
+                    currentAmmo = entity;
                 }
                 else
                 {
@@ -139,38 +132,20 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             }
 
             Cycle();
-            return true;
-        }
-
-        protected override void Shoot(int shotCount, List<Angle> spreads)
-        {
-            // TODO: Copy existing shooting code rather than re-inventing the wheel
-            // Feed in the ammo and do what you need to do with it.
-            // Also TODO: Make this common to all projectile guns
-            shotCount = Math.Min(shotCount, _ammoSlots.Length);
-            var slot = CurrentSlot;
             var shooter = Shooter();
+            var ammoComp = currentAmmo.GetComponent<AmmoComponent>();
+            var sound = ammoComp.Spent ? SoundEmpty : SoundGunshot;
+            
+            if (sound != null)
+                EntitySystem.Get<AudioSystem>().PlayFromEntity(sound, Owner, AudioHelpers.WithVariation(GunshotVariation), excludedSession: shooter.PlayerSession());
 
-            for (var i = 0; i < shotCount; i++)
+            if (!ammoComp.Spent)
             {
-                slot = (slot == 0 ? _ammoSlots.Length - 1 : slot - 1);
-                var ammo = _ammoSlots[slot];
-
-                if (ammo == null)
-                    continue;
-                
-                var ammoComp = ammo.GetComponent<AmmoComponent>();
-                var sound = ammoComp.Spent ? SoundEmpty : SoundGunshot;
-                
-                if (sound != null)
-                    EntitySystem.Get<AudioSystem>().PlayFromEntity(sound, Owner, AudioHelpers.WithVariation(GunshotVariation), excludedSession: shooter.PlayerSession());
-
-                if (!ammoComp.Spent)
-                {
-                    EntitySystem.Get<RangedWeaponSystem>().ShootAmmo(shooter, this, spreads[i], ammoComp);
-                    ammoComp.Spent = true;
-                }
+                EntitySystem.Get<RangedWeaponSystem>().ShootAmmo(shooter, this, angle, ammoComp);
+                ammoComp.Spent = true;
             }
+
+            return true;
         }
 
         protected override void EjectAllSlots()

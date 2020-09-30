@@ -20,7 +20,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         /// </summary>
         protected int CurrentSlot = 0;
 
-        protected int Capacity { get; }
+        protected int Capacity { get; set; }
 
         public string? FillPrototype;
         
@@ -40,6 +40,12 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         {
             base.ExposeData(serializer);
 
+            serializer.DataReadWriteFunction(
+                "capacity",
+                6,
+                cap => Capacity = cap,
+                () => Capacity);
+            
             serializer.DataField(ref Caliber, "caliber", BallisticCaliber.Unspecified);
             serializer.DataField(ref FillPrototype, "fillPrototype", null);
 
