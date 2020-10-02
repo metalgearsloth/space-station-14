@@ -18,6 +18,7 @@ using Content.Shared.Interfaces.GameObjects.Components;
 using Robust.Client.GameObjects;
 using Robust.Client.GameObjects.EntitySystems;
 using Robust.Shared.GameObjects.Systems;
+using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Utility;
 
 namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
@@ -87,7 +88,6 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 
             cameraRecoilComponent?.Kick(angle.ToVec().Normalized * RecoilMultiplier * chargeChange / BaseFireCost);
             
-            // TODO: When we can predict hitscan shooting (main issue is having the recoil align with the server) then also predict this for hitscan battery weapons.
             if (!AmmoIsHitscan)
                 EntitySystem.Get<SharedRangedWeaponSystem>().MuzzleFlash(shooter, this, angle);
 

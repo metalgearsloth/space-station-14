@@ -85,10 +85,10 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
 
         public bool TryInsertPowerCell(IEntity entity)
         {
-            if (_powerCellContainer.ContainedEntity != null)
-                return false;
-
             if (!entity.HasComponent<BatteryComponent>())
+                return false;
+            
+            if (_powerCellContainer.ContainedEntity != null)
                 return false;
 
             if (SoundPowerCellInsert != null)
@@ -102,24 +102,19 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
 
         public override bool UseEntity(UseEntityEventArgs eventArgs)
         {
-            if (!_powerCellRemovable)
-                return false;
-
-            if (PowerCellEntity == null)
-                return false;
-
             return TryEjectCell(eventArgs.User);
         }
 
         private bool TryEjectCell(IEntity user)
         {
-            if (PowerCell == null || !_powerCellRemovable)
-                return false;
-
-            if (!user.TryGetComponent(out HandsComponent? hands))
-                return false;
-
             var cell = PowerCell;
+            if (cell == null ||
+                !_powerCellRemovable ||
+                !user.TryGetComponent(out HandsComponent? hands))
+            {
+                return false;
+            }
+            
             if (!_powerCellContainer.Remove(cell.Owner))
                 return false;
 
@@ -151,17 +146,12 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             var chargeChange = Math.Min(battery.CurrentCharge, BaseFireCost);
             battery.UseCharge(chargeChange);
 
-            IPrototypeManager? prototypeManager = null;
             var shooter = Shooter();
-            
-            if (AmmoIsHitscan)
-                prototypeManager = IoCManager.Resolve<IPrototypeManager>();
-            
             var energyRatio = chargeChange / BaseFireCost;
 
-            if (prototypeManager != null)
+            if (AmmoIsHitscan)
             {
-                var prototype = prototypeManager.Index<HitscanPrototype>(AmmoPrototype);
+                var prototype = IoCManager.Resolve<IPrototypeManager>().Index<HitscanPrototype>(AmmoPrototype);
                 EntitySystem.Get<SharedRangedWeaponSystem>().ShootHitscan(Shooter(), this, prototype, angle, energyRatio, energyRatio);
             }
             else
@@ -182,7 +172,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                 }
                 
                 EntitySystem.Get<SharedRangedWeaponSystem>().ShootAmmo(shooter, this, angle, ammoComponent);
-                EntitySystem.Get<SharedRangedWeaponSystem>().MuzzleFlash(shooter, this, angle);
+                EntitySystem.Get<SharedRangedWeaponSystem>().MuzzleFlash(shooter, this, angle, alphaRatio: energyRatio);
             }
                 
             Dirty();
@@ -191,14 +181,9 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
 
         public override async Task<bool> InteractUsing(InteractUsingEventArgs eventArgs)
         {
-            if (!eventArgs.Using.HasComponent<BatteryComponent>())
-            {
-                return false;
-            }
-
             return TryInsertPowerCell(eventArgs.Using);
         }
-
+        
         [Verb]
         public sealed class EjectCellVerb : Verb<ServerBatteryBarrelComponent>
         {
