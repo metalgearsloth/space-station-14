@@ -86,7 +86,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             CameraRecoilComponent? cameraRecoilComponent = null;
             shooter?.TryGetComponent(out cameraRecoilComponent);
 
-            cameraRecoilComponent?.Kick(angle.ToVec().Normalized * RecoilMultiplier * chargeChange / BaseFireCost);
+            cameraRecoilComponent?.Kick(-angle.ToVec().Normalized * RecoilMultiplier * chargeChange / BaseFireCost);
             
             if (!AmmoIsHitscan)
                 EntitySystem.Get<SharedRangedWeaponSystem>().MuzzleFlash(shooter, this, angle);

@@ -72,7 +72,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             {
                 sound = SoundGunshot;
                 variation = GunshotVariation;
-                cameraRecoilComponent?.Kick(angle.ToVec().Normalized * RecoilMultiplier);
+                cameraRecoilComponent?.Kick(-angle.ToVec().Normalized * RecoilMultiplier);
                 EntitySystem.Get<SharedRangedWeaponSystem>().MuzzleFlash(shooter, this, angle);
                 _chamber = false;
             }

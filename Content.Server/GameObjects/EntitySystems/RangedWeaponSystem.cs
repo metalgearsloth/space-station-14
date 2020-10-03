@@ -52,6 +52,8 @@ namespace Content.Server.GameObjects.EntitySystems
         [Dependency] private readonly IGameTiming _gameTiming = default!;
 
         private EffectSystem _effectSystem = default!;
+        
+        private List<SharedRangedWeaponComponent> _activeRangedWeapons = new List<SharedRangedWeaponComponent>();
 
         public override void Initialize()
         {
@@ -81,9 +83,7 @@ namespace Content.Server.GameObjects.EntitySystems
         private void HandleStartFiringMessage(StartFiringMessage message, EntitySessionEventArgs args)
         {
             if (message.FireCoordinates == null)
-            {
                 return;
-            }
 
             var entity = _entityManager.GetEntity(message.Uid);
             var weapon = entity.GetComponent<SharedRangedWeaponComponent>();
@@ -96,6 +96,7 @@ namespace Content.Server.GameObjects.EntitySystems
             }
 
             weapon.Firing = true;
+            _activeRangedWeapons.Add(weapon);
             weapon.FireCoordinates = message.FireCoordinates;
             weapon.ShotCounter = 0;
         }
@@ -119,22 +120,28 @@ namespace Content.Server.GameObjects.EntitySystems
         public override void Update(float frameTime)
         {
             base.Update(frameTime);
-            var currentTime = IoCManager.Resolve<IGameTiming>().CurTime;
-            
-            foreach (var comp in ComponentManager.EntityQuery<SharedRangedWeaponComponent>())
+            var currentTime = _gameTiming.CurTime;
+
+            for (var i = _activeRangedWeapons.Count - 1; i >= 0; i--)
             {
-                Update(comp, currentTime);
+                var comp = _activeRangedWeapons[i];
+
+                if (!TryUpdate(comp, currentTime))
+                {
+                    comp.Firing = false;
+                    _activeRangedWeapons.RemoveAt(i);
+                }
             }
         }
 
-        private void Update(SharedRangedWeaponComponent weaponComponent, TimeSpan currentTime)
+        private bool TryUpdate(SharedRangedWeaponComponent weaponComponent, TimeSpan currentTime)
         {
-            if (weaponComponent.FireCoordinates == null || (!weaponComponent.Firing && weaponComponent.ExpectedShots == 0))
-                return;
+            if (weaponComponent.FireCoordinates == null || weaponComponent.ExpectedShots == 0)
+                return false;
 
             var shooter = weaponComponent.Shooter();
             if (shooter == null)
-                return;
+                return false;
             
             if (!weaponComponent.TryFire(currentTime, shooter, weaponComponent.FireCoordinates!.Value) || (!weaponComponent.Firing && weaponComponent.ExpectedShots <= weaponComponent.AccumulatedShots))
             {
@@ -146,7 +153,11 @@ namespace Content.Server.GameObjects.EntitySystems
                     Logger.Warning("Desync shots fired");
                     weaponComponent.ExpectedShots = 0;
                 }
+
+                return false;
             }
+
+            return true;
         }
 
         public override void ShootHitscan(IEntity? user, SharedRangedWeaponComponent weapon, HitscanPrototype hitscan, Angle angle, float damageRatio = 1, float alphaRatio = 1)
@@ -170,9 +181,9 @@ namespace Content.Server.GameObjects.EntitySystems
             }
 
             // Fire effects
-            HitscanMuzzleFlash(user, weapon, hitscan.MuzzleEffect, angle, currentTime,alphaRatio);
+            HitscanMuzzleFlash(user, weapon, hitscan.MuzzleEffect, angle, distance, currentTime, alphaRatio);
             TravelFlash(user, weapon.Owner, hitscan, angle, distance, currentTime, alphaRatio);
-            ImpactFlash(user, weapon.Owner, hitscan, angle, distance, currentTime, alphaRatio: alphaRatio);
+            ImpactFlash(user, weapon.Owner, hitscan, angle, distance, currentTime, alphaRatio);
         }
 
         public override void ShootAmmo(IEntity? user, SharedRangedWeaponComponent weapon, Angle angle, SharedAmmoComponent ammoComponent)
@@ -241,8 +252,6 @@ namespace Content.Server.GameObjects.EntitySystems
 
         private List<Angle> Linspace(double start, double end, int intervals)
         {
-            DebugTools.Assert(intervals > 1);
-
             var linspace = new List<Angle>(intervals);
 
             for (var i = 0; i <= intervals - 1; i++)
@@ -277,9 +286,9 @@ namespace Content.Server.GameObjects.EntitySystems
             _effectSystem.CreateParticle(message, predicted ? user?.PlayerSession() : null);
         }
         
-        private void HitscanMuzzleFlash(IEntity? user, SharedRangedWeaponComponent weapon, string? texture, Angle angle, TimeSpan? currentTime = null, float alphaRatio = 1.0f)
+        private void HitscanMuzzleFlash(IEntity? user, SharedRangedWeaponComponent weapon, string? texture, Angle angle, float distance, TimeSpan? currentTime = null, float alphaRatio = 1.0f)
         {
-            if (texture == null)
+            if (texture == null || distance <= 1.0f)
                 return;
 
             currentTime ??= _gameTiming.CurTime;
@@ -303,9 +312,9 @@ namespace Content.Server.GameObjects.EntitySystems
 
         private void TravelFlash(IEntity? user, IEntity weapon, HitscanPrototype hitscan, Angle angle, float distance, TimeSpan? currentTime = null, float alphaRatio = 1.0f)
         {
-            if (hitscan.TravelEffect == null)
+            if (hitscan.TravelEffect == null || distance <= 1.5f)
                 return;
-            
+
             currentTime ??= _gameTiming.CurTime;
             var parent = user ?? weapon;
             const float offset = 0.5f;
@@ -315,7 +324,7 @@ namespace Content.Server.GameObjects.EntitySystems
                 EffectSprite = hitscan.TravelEffect,
                 Born = _gameTiming.CurTime,
                 DeathTime = currentTime.Value + TimeSpan.FromSeconds(EffectDuration),
-                Size = new Vector2(distance - offset, 1f),
+                Size = new Vector2(distance - offset , 1f),
                 Coordinates = parent.Transform.Coordinates.Offset(angle.ToVec() * (distance + offset) / 2),
                 //Rotated from east facing
                 Rotation = (float) angle.FlipPositive(),

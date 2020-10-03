@@ -14,7 +14,7 @@ namespace Content.Client.GameObjects.Components.Mobs
     public sealed class CameraRecoilComponent : SharedCameraRecoilComponent
     {
         // Maximum rate of magnitude restore towards 0 kick.
-        private const float RestoreRateMax = 15f;
+        private const float RestoreRateMax = 5f;
 
         // Minimum rate of magnitude restore towards 0 kick.
         private const float RestoreRateMin = 1f;
