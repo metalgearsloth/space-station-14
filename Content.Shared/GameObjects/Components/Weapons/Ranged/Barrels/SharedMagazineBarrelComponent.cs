@@ -68,7 +68,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
             serializer.DataReadWriteFunction("soundRack", null, value => SoundRack = value, () => SoundRack);
             serializer.DataReadWriteFunction("soundMagInsert", null, value => SoundMagInsert = value, () => SoundMagInsert);
             serializer.DataReadWriteFunction("soundMagEject", null, value => SoundMagEject = value, () => SoundMagEject);
-            serializer.DataReadWriteFunction("soundAutoEject", null, value => SoundAutoEject = value, () => SoundAutoEject);
+            serializer.DataReadWriteFunction("soundAutoEject", "/Audio/Weapons/Guns/EmptyAlarm/smg_empty_alarm.ogg", value => SoundAutoEject = value, () => SoundAutoEject);
         }
 
         protected List<MagazineType> GetMagazineTypes()

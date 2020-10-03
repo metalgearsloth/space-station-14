@@ -10,6 +10,7 @@ using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
 using Content.Shared.GameObjects.EntitySystems;
 using Content.Shared.GameObjects.Verbs;
+using Content.Shared.Interfaces;
 using Robust.Client.Animations;
 using Robust.Client.GameObjects;
 using Robust.Client.GameObjects.EntitySystems;
@@ -146,12 +147,16 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                 TryEjectChamber();
                 if (SoundBoltOpen != null)
                     EntitySystem.Get<AudioSystem>().Play(SoundBoltOpen, Owner, AudioHelpers.WithVariation(BoltToggleVariation));
+                
+                Owner.PopupMessage(Shooter(), Loc.GetString("Bolt opened"));
             }
             else
             {
                 TryFeedChamber();
                 if (SoundBoltClosed != null)
                     EntitySystem.Get<AudioSystem>().Play(SoundBoltClosed, Owner, AudioHelpers.WithVariation(BoltToggleVariation));
+                
+                Owner.PopupMessage(Shooter(), Loc.GetString("Bolt closed"));
             }
 
             BoltOpen = value;
@@ -222,6 +227,9 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                 if (SoundEmpty != null)
                     EntitySystem.Get<AudioSystem>().Play(SoundEmpty, Owner, AudioHelpers.WithVariation(EmptyVariation));
                 
+                if (!BoltOpen && (_magazine == null || _magazine.Count == 0))
+                    SetBolt(true);
+
                 return true;
             }
 

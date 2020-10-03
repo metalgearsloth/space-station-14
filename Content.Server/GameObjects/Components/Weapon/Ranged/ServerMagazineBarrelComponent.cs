@@ -284,25 +284,16 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
 
         protected override bool UseEntity(IEntity user)
         {
-            // Behavior:
-            // If bolt open just close it
-            // If bolt closed then cycle
-            //     If we cycle then get next round
-            //         If no more round then open bolt
-
-            if (BoltOpen)
+            var mag = _magazineContainer.ContainedEntity;
+            
+            if (mag?.GetComponent<SharedRangedMagazineComponent>().ShotsLeft > 0)
             {
-                if (SoundBoltClosed != null)
-                    EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundBoltClosed, Owner, AudioHelpers.WithVariation(BoltToggleVariation));
-                
-                Owner.PopupMessage(user, Loc.GetString("Bolt closed"));
-                BoltOpen = false;
+                Cycle(true);
                 return true;
             }
 
-            // Could play a rack-slide specific sound here if you're so inclined (if the chamber is empty but rounds are available)
+            SetBolt(!BoltOpen);
 
-            Cycle(true);
             return true;
         }
 
@@ -319,6 +310,11 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             {
                 if (SoundEmpty != null)
                     EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundEmpty, Owner, AudioHelpers.WithVariation(EmptyVariation), excludedSession: shooter.PlayerSession());
+
+                var mag = _magazineContainer.ContainedEntity;
+                
+                if (!BoltOpen && (mag == null || mag.GetComponent<SharedRangedMagazineComponent>().ShotsLeft == 0))
+                    SetBolt(true);
                 
                 return true;
             }
