@@ -56,8 +56,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                 return false;
 
             var chamber = _chamber;
-            Cycle();
-            
+
             if (chamber == null)
                 return true;
             
@@ -75,6 +74,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                 cameraRecoilComponent?.Kick(-angle.ToVec().Normalized * RecoilMultiplier);
                 EntitySystem.Get<SharedRangedWeaponSystem>().MuzzleFlash(shooter, this, angle);
                 _chamber = false;
+
             }
             else
             {
@@ -84,7 +84,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 
             if (sound != null)
                 EntitySystem.Get<AudioSystem>().Play(sound, Owner, AudioHelpers.WithVariation(variation));
-            
+
             UpdateAppearance();
             _statusControl?.Update();
             return true;

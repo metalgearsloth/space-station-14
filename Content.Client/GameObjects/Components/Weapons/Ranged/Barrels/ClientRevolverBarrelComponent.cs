@@ -98,14 +98,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         {
             return angle;
         }
-
-        protected override void NoShotsFired()
-        {
-            base.NoShotsFired();
-            SendNetworkMessage(new ChangeSlotMessage(CurrentSlot));
-            // TODO: Could probably just do this server-side.
-        }
-
+        
         protected override void EjectAllSlots()
         {
             // TODO: Does nothing because interactions aren't predicted

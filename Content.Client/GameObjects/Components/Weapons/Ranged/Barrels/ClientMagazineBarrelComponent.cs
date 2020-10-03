@@ -22,6 +22,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
     public sealed class ClientMagazineBarrelComponent : SharedMagazineBarrelComponent, IExamine
     {
         // TODO private StatusControl? _statusControl;
+        // TODO: Verbs
         
         private bool? _chamber;
 

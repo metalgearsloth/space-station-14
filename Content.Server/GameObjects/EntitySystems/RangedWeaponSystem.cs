@@ -94,11 +94,12 @@ namespace Content.Server.GameObjects.EntitySystems
                 // Cheater / lagger
                 return;
             }
-
-            weapon.Firing = true;
+            
             _activeRangedWeapons.Add(weapon);
+            weapon.Firing = true;
             weapon.FireCoordinates = message.FireCoordinates;
             weapon.ShotCounter = 0;
+            weapon.AccumulatedShots = 0;
         }
         
         private void HandleStopFiringMessage(StopFiringMessage message, EntitySessionEventArgs args)
@@ -112,7 +113,7 @@ namespace Content.Server.GameObjects.EntitySystems
                 // Cheater / lagger
                 return;
             }
-            
+
             weapon.Firing = false;
             weapon.ExpectedShots += message.Shots;
         }
@@ -128,7 +129,6 @@ namespace Content.Server.GameObjects.EntitySystems
 
                 if (!TryUpdate(comp, currentTime))
                 {
-                    comp.Firing = false;
                     _activeRangedWeapons.RemoveAt(i);
                 }
             }
@@ -136,17 +136,16 @@ namespace Content.Server.GameObjects.EntitySystems
 
         private bool TryUpdate(SharedRangedWeaponComponent weaponComponent, TimeSpan currentTime)
         {
-            if (weaponComponent.FireCoordinates == null || weaponComponent.ExpectedShots == 0)
+            if (weaponComponent.FireCoordinates == null || !weaponComponent.Firing)
                 return false;
 
             var shooter = weaponComponent.Shooter();
             if (shooter == null)
                 return false;
             
-            if (!weaponComponent.TryFire(currentTime, shooter, weaponComponent.FireCoordinates!.Value) || (!weaponComponent.Firing && weaponComponent.ExpectedShots <= weaponComponent.AccumulatedShots))
+            if (!weaponComponent.TryFire(currentTime, shooter, weaponComponent.FireCoordinates!.Value) || weaponComponent.ExpectedShots > 0)
             {
-                weaponComponent.ExpectedShots -= weaponComponent.ExpectedShots;
-                weaponComponent.AccumulatedShots = 0;
+                weaponComponent.ExpectedShots -= weaponComponent.AccumulatedShots;
 
                 if (weaponComponent.ExpectedShots > 0)
                 {

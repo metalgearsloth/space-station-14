@@ -94,8 +94,6 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                 return false;
             
             var chamberEntity = _chamberContainer?.ContainedEntity;
-            Cycle();
-            
             if (chamberEntity == null)
                 return true;
             

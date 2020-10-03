@@ -273,11 +273,6 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
             return container.Owner;
         }
 
-        /// <summary>
-        ///     Called by the ranged weapon system if no bullets were fired by the gun
-        /// </summary>
-        protected virtual void NoShotsFired() {}
-
         protected virtual bool CanFire()
         {
             if (FireRate <= 0.0f || FireCoordinates == null)

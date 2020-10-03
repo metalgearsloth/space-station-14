@@ -123,6 +123,9 @@ namespace Content.Client.GameObjects.EntitySystems
         
         private void StopFiring(SharedRangedWeaponComponent weaponComponent)
         {
+            if (!weaponComponent.Firing)
+                return;
+            
             RaiseNetworkEvent(new StopFiringMessage(weaponComponent.Owner.Uid, weaponComponent.ShotCounter));
             weaponComponent.Firing = false;
         }

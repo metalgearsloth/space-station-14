@@ -130,13 +130,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                 {
                     EntitySystem.Get<SharedRangedWeaponSystem>().EjectCasing(Shooter(), chamberEntity);
                 }
-                else
-                {
-                    // TODO: Uhh this is megasketch and probably needs a bool override if its during shooting or even remove it from here
-                    // TODO: Pretty sure all muzzles are being parented when they shouldn't be
-                    chamberEntity.Delete();
-                }
-                
+
                 return;
             }
         }
