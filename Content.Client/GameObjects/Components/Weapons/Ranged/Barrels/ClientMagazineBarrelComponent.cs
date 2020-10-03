@@ -114,8 +114,9 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 
             if (!(curState is MagazineBarrelComponentState cast))
                 return;
-
-            SetBolt(cast.BoltOpen);
+            
+            // Don't want to use TrySetBolt in case it gets re-predicted... I think
+            BoltOpen = cast.BoltOpen;
             _chamber = cast.Chambered;
             _magazine = cast.Magazine;
             UpdateAppearance();
@@ -137,10 +138,10 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             _statusControl?.Update();
         }
 
-        protected override void SetBolt(bool value)
+        protected override bool TrySetBolt(bool value)
         {
             if (BoltOpen == value)
-                return;
+                return false;
 
             if (value)
             {
@@ -162,6 +163,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             BoltOpen = value;
             UpdateAppearance();
             _statusControl?.Update();
+            return true;
         }
 
         protected override void TryEjectChamber()
@@ -228,7 +230,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                     EntitySystem.Get<AudioSystem>().Play(SoundEmpty, Owner, AudioHelpers.WithVariation(EmptyVariation));
                 
                 if (!BoltOpen && (_magazine == null || _magazine.Count == 0))
-                    SetBolt(true);
+                    TrySetBolt(true);
 
                 return true;
             }
@@ -467,7 +469,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 
             protected override void Activate(IEntity user, ClientMagazineBarrelComponent component)
             {
-                component.SetBolt(true);
+                component.TrySetBolt(true);
                 component.SendNetworkMessage(new BoltChangedComponentMessage(true));
             }
         }
@@ -489,7 +491,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 
             protected override void Activate(IEntity user, ClientMagazineBarrelComponent component)
             {
-                component.SetBolt(false);
+                component.TrySetBolt(false);
                 component.SendNetworkMessage(new BoltChangedComponentMessage(false));
             }
         }

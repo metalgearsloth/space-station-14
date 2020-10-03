@@ -81,15 +81,25 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
     }
 
     [Serializable, NetSerializable]
-    public class RangedCoordinatesMessage : EntitySystemMessage
+    public class RangedFireMessage : EntitySystemMessage
     {
+        /// <summary>
+        ///     Gun Uid
+        /// </summary>
         public EntityUid Uid { get; }
-        
-        public MapCoordinates? Coordinates { get; }
 
-        public RangedCoordinatesMessage(EntityUid uid, MapCoordinates? coordinates)
+        public uint ShotsSoFar { get; }
+        
+        /// <summary>
+        ///     Coordinates to shoot at.
+        ///     If list empty then we'll stop shooting.
+        /// </summary>
+        public List<MapCoordinates> Coordinates { get; }
+
+        public RangedFireMessage(EntityUid uid, ushort shotsSoFar, List<MapCoordinates> coordinates)
         {
             Uid = uid;
+            ShotsSoFar = shotsSoFar;
             Coordinates = coordinates;
         }
     }
@@ -120,25 +130,26 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         ///     Keep a running track of how many shots we've fired for single-shot (etc.) weapons.
         /// </summary>
         public int ShotCounter;
-        
-        // Shooting
-        // So I guess we'll try syncing start and stop fire, as well as fire angles
-        public bool Firing { get; set; }
-        
+
         /// <summary>
         ///     Filepath to MuzzleFlash texture
         /// </summary>
         public string? MuzzleFlash { get; set; }
-        
-        /// <summary>
-        ///     The angle the shooter selected to fire at.
-        /// </summary>
-        public MapCoordinates? FireCoordinates { get; set; }
-        
-        public int ExpectedShots { get; set; }
-        
-        public int AccumulatedShots { get; set; }
-        
+
+        public bool Firing
+        {
+            get => _firing;
+            set
+            {
+                if (_firing == value)
+                    return;
+
+                _firing = value;
+                Dirty();
+            }
+        }
+        private bool _firing;
+
         /// <summary>
         ///     Multiplies the ammo spread to get the final spread of each pellet
         /// </summary>
@@ -158,6 +169,8 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         private float _angleIncrease;
 
         protected float RecoilMultiplier { get; set; }
+        
+        public Queue<MapCoordinates> ToShootCoordinates { get; set; } = new Queue<MapCoordinates>();
 
         // Sounds
         public string? SoundGunshot { get; private set; }
@@ -275,7 +288,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
 
         protected virtual bool CanFire()
         {
-            if (FireRate <= 0.0f || FireCoordinates == null)
+            if (FireRate <= 0.0f)
                 return false;
             
             switch (Selector)
@@ -317,10 +330,12 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         /// <param name="currentTime"></param>
         /// <param name="user"></param>
         /// <param name="coordinates"></param>
+        /// <param name="firedShots"></param>
         /// <returns>false if firing is impossible, true if firing is possible but delayed or we did fire</returns>
-        public bool TryFire(TimeSpan currentTime, IEntity user, MapCoordinates coordinates)
+        public bool TryFire(TimeSpan currentTime, IEntity user, MapCoordinates coordinates, out int firedShots)
         {
             // TODO: bracketless ifs and also need to test ammoSpreadRatio <= 1.0f in tests
+            firedShots = 0;
             var lastFire = NextFire;
             
             if (ShotCounter == 0 && NextFire <= currentTime)
@@ -332,7 +347,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
             if (currentTime < NextFire)
                 return true;
 
-            var firedShots = 0;
+            
             var fireAngle = (coordinates.Position - user.Transform.WorldPosition).ToAngle();
             var robustRandom = IoCManager.Resolve<IRobustRandom>();
 
@@ -350,8 +365,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
                 firedShots++;
                 ShotCounter++;
             }
-
-            AccumulatedShots += firedShots;
+            
             return true;
         }
 
@@ -392,7 +406,6 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         {
             ShotCounter = 0;
             NextFire = IoCManager.Resolve<IGameTiming>().CurTime;
-            FireCoordinates = null;
         }
 
         public abstract Task<bool> InteractUsing(InteractUsingEventArgs eventArgs);

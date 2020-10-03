@@ -58,64 +58,57 @@ namespace Content.Server.GameObjects.EntitySystems
         public override void Initialize()
         {
             base.Initialize();
-            SubscribeNetworkEvent<RangedCoordinatesMessage>(HandleRangedAngleMessage);
-            SubscribeNetworkEvent<StartFiringMessage>(HandleStartFiringMessage);
-            SubscribeNetworkEvent<StopFiringMessage>(HandleStopFiringMessage);
-
+            SubscribeNetworkEvent<RangedFireMessage>(HandleRangedFireMessage);
+            
             _effectSystem = Get<EffectSystem>();
         }
 
-        private void HandleRangedAngleMessage(RangedCoordinatesMessage message, EntitySessionEventArgs args)
+        private void HandleRangedFireMessage(RangedFireMessage message, EntitySessionEventArgs args)
         {
             var entity = _entityManager.GetEntity(message.Uid);
             var weapon = entity.GetComponent<SharedRangedWeaponComponent>();
-            var shooter = weapon.Shooter();
-
-            if (shooter != args.SenderSession.AttachedEntity)
-            {
-                // Cheater / lagger
-                return;
-            }
-
-            weapon.FireCoordinates = message.Coordinates;
-        }
-        
-        private void HandleStartFiringMessage(StartFiringMessage message, EntitySessionEventArgs args)
-        {
-            if (message.FireCoordinates == null)
-                return;
-
-            var entity = _entityManager.GetEntity(message.Uid);
-            var weapon = entity.GetComponent<SharedRangedWeaponComponent>();
-            var shooter = weapon.Shooter();
-
-            if (shooter != args.SenderSession.AttachedEntity)
-            {
-                // Cheater / lagger
-                return;
-            }
             
-            _activeRangedWeapons.Add(weapon);
-            weapon.Firing = true;
-            weapon.FireCoordinates = message.FireCoordinates;
-            weapon.ShotCounter = 0;
-            weapon.AccumulatedShots = 0;
-        }
-        
-        private void HandleStopFiringMessage(StopFiringMessage message, EntitySessionEventArgs args)
-        {
-            var entity = _entityManager.GetEntity(message.Uid);
-            var weapon = entity.GetComponent<SharedRangedWeaponComponent>();
-            var shooter = weapon.Shooter();
+            if (entity.Deleted)
+            {
+                _activeRangedWeapons.Remove(weapon);
+                return;
+            }
 
+            var shooter = weapon.Shooter();
             if (shooter != args.SenderSession.AttachedEntity)
             {
                 // Cheater / lagger
                 return;
             }
 
-            weapon.Firing = false;
-            weapon.ExpectedShots += message.Shots;
+            // Started shooting
+            if (message.ShotsSoFar == 0)
+            {
+                if (weapon.ToShootCoordinates.Count > 0)
+                {
+                    // TODO: Log?
+                    message.Coordinates.ForEach(co => weapon.ToShootCoordinates.Enqueue(co));
+                }
+                
+                weapon.ShotCounter = 0;
+                weapon.Firing = true;
+                _activeRangedWeapons.Add(weapon);
+                return;
+            }
+
+            // Stop shooting, reconcile, whatever
+            if (message.Coordinates.Count == 0)
+            {
+                // TODO: Uhhhh handle
+                if (weapon.ToShootCoordinates.Count > 0)
+                    throw new InvalidOperationException();
+                
+                weapon.Firing = false;
+                _activeRangedWeapons.Remove(weapon);
+                return;
+            }
+
+            message.Coordinates.ForEach(co => weapon.ToShootCoordinates.Enqueue(co));
         }
 
         public override void Update(float frameTime)
@@ -143,7 +136,7 @@ namespace Content.Server.GameObjects.EntitySystems
             if (shooter == null)
                 return false;
             
-            if (!weaponComponent.TryFire(currentTime, shooter, weaponComponent.FireCoordinates!.Value) || weaponComponent.ExpectedShots > 0)
+            if (!weaponComponent.TryFire(currentTime, shooter, weaponComponent.FireCoordinates!.Value, out _) || weaponComponent.ExpectedShots > 0)
             {
                 weaponComponent.ExpectedShots -= weaponComponent.AccumulatedShots;
 

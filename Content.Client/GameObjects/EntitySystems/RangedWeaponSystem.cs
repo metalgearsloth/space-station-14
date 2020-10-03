@@ -65,7 +65,7 @@ namespace Content.Client.GameObjects.EntitySystems
             if (!_combatModeSystem.IsInCombatMode() || state != BoundKeyState.Down)
             {
                 // Result this so we can queue up more firing.
-                _lastFireResult = true;
+                _lastFireResult = false;
                 
                 if (_firingWeapon != null)
                 {
@@ -100,20 +100,25 @@ namespace Content.Client.GameObjects.EntitySystems
             
             var currentTime = _gameTiming.CurTime;
             var mouseCoordinates = _eyeManager.ScreenToMap(_inputManager.MouseScreenPosition);
-            
-            // Update server as well if necessary
-            if (_firingWeapon.FireCoordinates != mouseCoordinates)
-            {
-                _firingWeapon.FireCoordinates = mouseCoordinates;
-                RaiseNetworkEvent(new RangedCoordinatesMessage(_firingWeapon.Owner.Uid, mouseCoordinates));
-            }
 
-            _lastFireResult = _firingWeapon.TryFire(currentTime, player, mouseCoordinates);
-            _firingWeapon.Firing = _lastFireResult;
-            
-            if (_firingWeapon.Firing)
+            if (_firingWeapon.TryFire(currentTime, player, mouseCoordinates, out var shots))
             {
-                RaiseNetworkEvent(new StartFiringMessage(_firingWeapon.Owner.Uid, _firingWeapon.FireCoordinates.Value));
+                _firingWeapon.Firing = true;
+                
+                // First shot
+                // TODO: Try not sending co-ords
+                if (!_lastFireResult)
+                {
+                    _lastFireResult = true;
+                    _firingWeapon.FireCoordinates = mouseCoordinates;
+                    RaiseNetworkEvent(new StartFiringMessage(_firingWeapon.Owner.Uid, _firingWeapon.FireCoordinates.Value));
+                }
+                
+                if (shots > 0)
+                {
+                    // TODO: Send over: current count of shots (to detect packet loss), number of shots here
+                    RaiseNetworkEvent(new RangedFireMessage());
+                }
             }
             else
             {
@@ -123,10 +128,9 @@ namespace Content.Client.GameObjects.EntitySystems
         
         private void StopFiring(SharedRangedWeaponComponent weaponComponent)
         {
-            if (!weaponComponent.Firing)
-                return;
-            
-            RaiseNetworkEvent(new StopFiringMessage(weaponComponent.Owner.Uid, weaponComponent.ShotCounter));
+            if (weaponComponent.Firing)
+                RaiseNetworkEvent(new StopFiringMessage(weaponComponent.Owner.Uid, weaponComponent.ShotCounter));
+
             weaponComponent.Firing = false;
         }
         

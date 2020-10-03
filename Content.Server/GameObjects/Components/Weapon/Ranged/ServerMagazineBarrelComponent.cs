@@ -40,7 +40,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             switch (message)
             {
                 case BoltChangedComponentMessage msg:
-                    SetBolt(msg.BoltOpen);
+                    TrySetBolt(msg.BoltOpen);
                     break;
                 case RemoveMagazineComponentMessage msg:
                     RemoveMagazine(user);
@@ -60,9 +60,8 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             {
                 var mag = Owner.EntityManager.SpawnEntity(MagFillPrototype, Owner.Transform.MapPosition);
                 _magazineContainer.Insert(mag);
+                Dirty();
             }
-            
-            Dirty();
         }
 
         public override ComponentState GetComponentState()
@@ -95,10 +94,10 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             return new MagazineBarrelComponentState(BoltOpen, chamber, Selector, ammo);
         }
 
-        protected override void SetBolt(bool value)
+        protected override bool TrySetBolt(bool value)
         {
             if (BoltOpen == value)
-                return;
+                return false;
 
             if (value)
             {
@@ -118,7 +117,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             }
 
             BoltOpen = value;
-            Dirty();
+            return true;
         }
 
         protected override void Cycle(bool manual = false)
@@ -133,8 +132,6 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                     EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundRack, Owner, AudioParams.Default.WithVolume(-2));
                 }
             }
-            
-            Dirty();
         }
 
         protected override void TryEjectChamber()
@@ -209,90 +206,85 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             // TODO: Popups temporary until prediction
             
             // Insert magazine
-            if (mag.TryGetComponent(out SharedRangedMagazineComponent? magazineComponent))
+            if (!mag.TryGetComponent(out SharedRangedMagazineComponent? magazineComponent))
+                return false;
+            
+            if ((MagazineTypes & magazineComponent.MagazineType) == 0)
             {
-                if ((MagazineTypes & magazineComponent.MagazineType) == 0)
-                {
-                    Owner.PopupMessage(user, Loc.GetString("Wrong magazine type"));
-                    return false;
-                }
+                Owner.PopupMessage(user, Loc.GetString("Wrong magazine type"));
+                return false;
+            }
 
-                if (magazineComponent.Caliber != Caliber)
-                {
-                    Owner.PopupMessage(user, Loc.GetString("Wrong caliber"));
-                    return false;
-                }
+            if (magazineComponent.Caliber != Caliber)
+            {
+                Owner.PopupMessage(user, Loc.GetString("Wrong caliber"));
+                return false;
+            }
 
-                if (MagNeedsOpenBolt && !BoltOpen)
-                {
-                    Owner.PopupMessage(user, Loc.GetString("Need to open bolt first"));
-                    return false;
-                }
+            if (MagNeedsOpenBolt && !BoltOpen)
+            {
+                Owner.PopupMessage(user, Loc.GetString("Need to open bolt first"));
+                return false;
+            }
 
-                if (_magazineContainer?.ContainedEntity == null)
-                {
-                    if (SoundMagInsert != null)
-                    {
-                        EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundMagInsert, Owner, AudioHelpers.WithVariation(MagVariation), excludedSession: Shooter().PlayerSession());
-                    }
-
-                    Owner.PopupMessage(user, Loc.GetString("Magazine inserted"));
-                    _magazineContainer?.Insert(mag);
-                    Dirty();
-                    return true;
-                }
-
+            if (_magazineContainer?.ContainedEntity != null)
+            {
                 Owner.PopupMessage(user, Loc.GetString("Already holding a magazine"));
                 return false;
             }
 
-            return false;
+            if (SoundMagInsert != null)
+                EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundMagInsert, Owner, AudioHelpers.WithVariation(MagVariation), excludedSession: Shooter().PlayerSession());
+            
+            Owner.PopupMessage(user, Loc.GetString("Magazine inserted"));
+            _magazineContainer?.Insert(mag);
+            Dirty();
+            return true;
         }
 
         protected override bool TryInsertAmmo(IEntity user, IEntity ammo)
         {
             // Insert 1 ammo
-            if (ammo.TryGetComponent(out SharedAmmoComponent? ammoComponent))
+            if (!ammo.TryGetComponent(out SharedAmmoComponent? ammoComponent))
+                return false;
+            
+            if (!BoltOpen)
             {
-                if (!BoltOpen)
-                {
-                    Owner.PopupMessage(user, Loc.GetString("Cannot insert ammo while bolt is closed"));
-                    return false;
-                }
-
-                if (ammoComponent.Caliber != Caliber)
-                {
-                    Owner.PopupMessage(user, Loc.GetString("Wrong caliber"));
-                    return false;
-                }
-
-                if (_chamberContainer?
-                    .ContainedEntity == null)
-                {
-                    Owner.PopupMessage(user, Loc.GetString("Ammo inserted"));
-                    _chamberContainer?.Insert(ammo);
-                    Dirty();
-                    return true;
-                }
-
-                Owner.PopupMessage(user, Loc.GetString("Chamber full"));
+                Owner.PopupMessage(user, Loc.GetString("Cannot insert ammo while bolt is closed"));
                 return false;
             }
 
-            return false;
+            if (ammoComponent.Caliber != Caliber)
+            {
+                Owner.PopupMessage(user, Loc.GetString("Wrong caliber"));
+                return false;
+            }
+
+            if (_chamberContainer?
+                .ContainedEntity != null)
+            {
+                Owner.PopupMessage(user, Loc.GetString("Chamber full"));
+                return false;
+            }
+            
+            Owner.PopupMessage(user, Loc.GetString("Ammo inserted"));
+            _chamberContainer?.Insert(ammo);
+            Dirty();
+            return true;
         }
 
         protected override bool UseEntity(IEntity user)
         {
             var mag = _magazineContainer.ContainedEntity;
-            
             if (mag?.GetComponent<SharedRangedMagazineComponent>().ShotsLeft > 0)
             {
                 Cycle(true);
+                Dirty();
                 return true;
             }
 
-            SetBolt(!BoltOpen);
+            if (TrySetBolt(!BoltOpen))
+                Dirty();
 
             return true;
         }
@@ -314,7 +306,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                 var mag = _magazineContainer.ContainedEntity;
                 
                 if (!BoltOpen && (mag == null || mag.GetComponent<SharedRangedMagazineComponent>().ShotsLeft == 0))
-                    SetBolt(true);
+                    TrySetBolt(true);
                 
                 return true;
             }

@@ -2,13 +2,9 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Content.Shared.GameObjects.EntitySystems;
-using Content.Shared.Interfaces;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Robust.Shared.GameObjects;
-using Robust.Shared.GameObjects.Systems;
 using Robust.Shared.Interfaces.GameObjects;
-using Robust.Shared.Localization;
 using Robust.Shared.Maths;
 using Robust.Shared.Serialization;
 using Robust.Shared.ViewVariables;
@@ -86,7 +82,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
             return types;
         }
         
-        protected abstract void SetBolt(bool value);
+        protected abstract bool TrySetBolt(bool value);
 
         protected abstract void Cycle(bool manual = false);
 
