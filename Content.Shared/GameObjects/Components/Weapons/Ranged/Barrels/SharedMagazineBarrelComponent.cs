@@ -131,6 +131,14 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         }
     }
     
+    [Serializable, NetSerializable]
+    public sealed class RemoveMagazineComponentMessage : ComponentMessage
+    {
+        public RemoveMagazineComponentMessage()
+        {
+            Directed = true;
+        }
+    }
 
     [Flags]
     public enum MagazineType

@@ -17,7 +17,9 @@ using Content.Shared.Audio;
 using Robust.Server.GameObjects.EntitySystems;
 using Robust.Server.Player;
 using Robust.Shared.Audio;
+using Robust.Shared.Interfaces.Network;
 using Robust.Shared.Maths;
+using Robust.Shared.Players;
 
 namespace Content.Server.GameObjects.Components.Weapon.Ranged
 {
@@ -27,6 +29,24 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
     {
         private ContainerSlot _chamberContainer = default!;
         private ContainerSlot _magazineContainer = default!;
+
+        public override void HandleNetworkMessage(ComponentMessage message, INetChannel netChannel, ICommonSession? session = null)
+        {
+            base.HandleNetworkMessage(message, netChannel, session);
+            var user = session?.AttachedEntity;
+            if (user != Shooter() || user == null)
+                return;
+            
+            switch (message)
+            {
+                case BoltChangedComponentMessage msg:
+                    SetBolt(msg.BoltOpen);
+                    break;
+                case RemoveMagazineComponentMessage msg:
+                    RemoveMagazine(user);
+                    break;
+            }
+        }
 
         public override void Initialize()
         {
@@ -176,7 +196,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             
             if (SoundMagEject != null)
                 // TODO: Variation
-                EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundMagEject, Owner, AudioHelpers.WithVariation(0.1f));
+                EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundMagEject, Owner, AudioHelpers.WithVariation(0.1f), excludedSession: Shooter()?.PlayerSession());
 
             if (user.TryGetComponent(out HandsComponent? handsComponent))
                 handsComponent.PutInHandOrDrop(mag.GetComponent<ItemComponent>());
@@ -217,7 +237,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                     }
 
                     Owner.PopupMessage(user, Loc.GetString("Magazine inserted"));
-                    _magazineContainer?.Insert(user);
+                    _magazineContainer?.Insert(mag);
                     Dirty();
                     return true;
                 }
