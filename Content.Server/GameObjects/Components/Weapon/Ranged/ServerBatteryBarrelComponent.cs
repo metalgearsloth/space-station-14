@@ -91,7 +91,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                 return false;
 
             if (SoundPowerCellInsert != null)
-                EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundPowerCellInsert, Owner, AudioHelpers.WithVariation(CellInsertVariation));
+                EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundPowerCellInsert, Owner, AudioHelpers.WithVariation(CellInsertVariation).WithVolume(CellInsertVolume));
 
             _powerCellContainer.Insert(entity);
 
@@ -121,7 +121,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                 cell.Owner.Transform.Coordinates = user.Transform.Coordinates;
             
             if (SoundPowerCellEject != null)
-                EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundPowerCellEject, Owner, AudioHelpers.WithVariation(CellEjectVariation));
+                EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundPowerCellEject, Owner, AudioHelpers.WithVariation(CellEjectVariation).WithVolume(CellEjectVolume));
             
             Dirty();
             return true;

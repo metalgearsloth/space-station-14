@@ -43,7 +43,6 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         public override void Initialize()
         {
             base.Initialize();
-            UnspawnedCount = 0;
             UpdateAppearance();
         }
 
@@ -51,8 +50,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         {
            if (!(curState is BoltActionBarrelComponentState cast))
                 return;
-
-           UnspawnedCount = 0;
+           
            _chamber = cast.Chamber;
            _ammo = cast.Bullets;
            SetBolt(cast.BoltOpen);
@@ -70,7 +68,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                 TryEjectChamber();
                 if (SoundBoltOpen != null)
                 {
-                    EntitySystem.Get<AudioSystem>().Play(SoundBoltOpen, Owner, AudioHelpers.WithVariation(BoltToggleVariation));
+                    EntitySystem.Get<AudioSystem>().Play(SoundBoltOpen, Owner, AudioHelpers.WithVariation(BoltToggleVariation).WithVolume(BoltToggleVolume));
                 }
             }
             else
@@ -78,7 +76,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                 TryFeedChamber();
                 if (SoundBoltClosed != null)
                 {
-                    EntitySystem.Get<AudioSystem>().Play(SoundBoltClosed, Owner, AudioHelpers.WithVariation(BoltToggleVariation));
+                    EntitySystem.Get<AudioSystem>().Play(SoundBoltClosed, Owner, AudioHelpers.WithVariation(BoltToggleVariation).WithVolume(BoltToggleVolume));
                 }
             }
 
@@ -118,11 +116,13 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             
             string? sound;
             float variation;
+            float volume;
 
             if (chamber.Value)
             {
                 sound = SoundGunshot;
                 variation = GunshotVariation;
+                volume = GunshotVolume;
                 cameraRecoilComponent?.Kick(-angle.ToVec().Normalized * RecoilMultiplier);
                 EntitySystem.Get<SharedRangedWeaponSystem>().MuzzleFlash(shooter, this, angle);
                 if (!AutoCycle)
@@ -133,10 +133,11 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             {
                 sound = SoundEmpty;
                 variation = EmptyVariation;
+                volume = EmptyVolume;
             }
 
             if (sound != null)
-                EntitySystem.Get<AudioSystem>().Play(sound, Owner, AudioHelpers.WithVariation(variation));
+                EntitySystem.Get<AudioSystem>().Play(sound, Owner, AudioHelpers.WithVariation(variation).WithVolume(volume));
 
             UpdateAppearance();
             _statusControl?.Update();
@@ -177,7 +178,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                 _chamber = ammo;
                 if (SoundRack != null)
                 {
-                    EntitySystem.Get<AudioSystem>().Play(SoundRack, Owner, AudioHelpers.WithVariation(CycleVariation));
+                    EntitySystem.Get<AudioSystem>().Play(SoundRack, Owner, AudioHelpers.WithVariation(CycleVariation).WithVolume(CycleVolume));
                 }
                 
                 return;
@@ -188,7 +189,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                 _chamber = true;
                 if (SoundRack != null)
                 {
-                    EntitySystem.Get<AudioSystem>().Play(SoundRack, Owner, AudioHelpers.WithVariation(CycleVariation));
+                    EntitySystem.Get<AudioSystem>().Play(SoundRack, Owner, AudioHelpers.WithVariation(CycleVariation).WithVolume(CycleVolume));
                 }
                 
                 UnspawnedCount--;

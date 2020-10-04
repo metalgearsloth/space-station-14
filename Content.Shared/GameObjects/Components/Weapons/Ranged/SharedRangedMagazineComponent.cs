@@ -41,20 +41,6 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
             serializer.DataReadWriteFunction("fillPrototype", null, value => FillPrototype = value, () => FillPrototype);
         }
 
-        public override void Initialize()
-        {
-            base.Initialize();
-
-            if (FillPrototype != null)
-            {
-                UnspawnedCount += Capacity;
-            }
-            else
-            {
-                UnspawnedCount = 0;
-            }
-        }
-
         protected abstract bool TryInsertAmmo(IEntity user, IEntity ammo);
 
         async Task<bool> IInteractUsing.InteractUsing(InteractUsingEventArgs eventArgs)

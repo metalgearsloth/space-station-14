@@ -11,13 +11,8 @@ using Content.Shared.Audio;
 using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
 using Content.Shared.GameObjects.EntitySystems;
 using Robust.Server.GameObjects.EntitySystems;
-using Robust.Server.Interfaces.GameObjects;
-using Robust.Server.Interfaces.Player;
 using Robust.Server.Player;
-using Robust.Shared.Audio;
 using Robust.Shared.GameObjects.Systems;
-using Robust.Shared.Serialization;
-using Robust.Shared.Utility;
 
 namespace Content.Server.GameObjects.Components.Weapon.Ranged
 {
@@ -103,7 +98,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             var sound = ammoComp.Spent ? SoundEmpty : SoundGunshot;
             
             if (sound != null)
-                EntitySystem.Get<AudioSystem>().PlayFromEntity(sound, Owner, AudioHelpers.WithVariation(GunshotVariation), excludedSession: shooter.PlayerSession());
+                EntitySystem.Get<AudioSystem>().PlayFromEntity(sound, Owner, AudioHelpers.WithVariation(GunshotVariation).WithVolume(GunshotVolume), excludedSession: shooter.PlayerSession());
 
             if (!ammoComp.Spent)
             {
@@ -144,7 +139,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             if (manual)
             {
                 if (SoundRack != null)
-                    EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundRack, Owner, AudioHelpers.WithVariation(CycleVariation));
+                    EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundRack, Owner, AudioHelpers.WithVariation(CycleVariation).WithVolume(CycleVolume));
             }
         }
         
@@ -162,11 +157,8 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                 _spawnedAmmo.Push(ammo);
 
                 if (SoundInsert != null)
-                {
-                    // TODO: Copy stuff from existing with variation, same with alllll the others.
-                    EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundInsert, Owner);
-                }
-                
+                    EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundInsert, Owner, AudioHelpers.WithVariation(InsertVariation).WithVolume(CycleVariation));
+
                 Dirty();
                 return true;
             }

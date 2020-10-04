@@ -36,6 +36,8 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
 
         protected const float SpinVariation = 0.1f;
 
+        protected const float SpinVolume = 0.0f;
+
         public override void ExposeData(ObjectSerializer serializer)
         {
             base.ExposeData(serializer);
@@ -114,7 +116,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
     }
     
     [Serializable, NetSerializable]
-    public sealed class ChangeSlotMessage : ComponentMessage
+    public class ChangeSlotMessage : ComponentMessage
     {
         public int Slot { get; }
         
@@ -122,6 +124,15 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         {
             Slot = slot;
             Directed = true;
+        }
+    }
+
+    [Serializable, NetSerializable]
+    public sealed class RevolverSpinMessage : ChangeSlotMessage
+    {
+        public RevolverSpinMessage(int slot) : base(slot)
+        {
+            
         }
     }
 }

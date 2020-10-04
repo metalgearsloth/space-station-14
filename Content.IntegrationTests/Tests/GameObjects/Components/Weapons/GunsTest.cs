@@ -3,11 +3,13 @@ using System.Threading.Tasks;
 using Content.Server.GameObjects.Components.Weapon.Ranged;
 using Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition;
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
+using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
 using NUnit.Framework;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Interfaces.Map;
 using Robust.Shared.Interfaces.Resources;
+using Robust.Shared.Log;
 using Robust.Shared.Map;
 using Robust.Shared.Prototypes;
 
@@ -16,6 +18,41 @@ namespace Content.IntegrationTests.Tests.GameObjects.Components.Weapons
     [TestFixture]
     public sealed class GunsTest : ContentIntegrationTest
     {
+        [Test]
+        public async Task TestGuns()
+        {
+            var server = StartServerDummyTicker();
+            await server.WaitIdleAsync();
+            var entityManager = server.ResolveDependency<IEntityManager>();
+            var protoManager = server.ResolveDependency<IPrototypeManager>();
+            
+            server.Assert(() =>
+            {
+                foreach (var proto in protoManager.EnumeratePrototypes<EntityPrototype>())
+                {
+                    if (proto.Abstract)
+                        continue;
+
+                    var rangedFound = false;
+
+                    foreach (var rangedType in new[] {"BatteryBarrel", "BoltActionBarrel", "MagazineBarrel", "PumpBarrel", "RevolverBarrel"})
+                    {
+                        if (proto.Components.ContainsKey(rangedType))
+                            rangedFound = true;
+                    }
+
+                    if (!rangedFound)
+                        continue;
+                    
+                    var entity = entityManager.SpawnEntity(proto.ID, MapCoordinates.Nullspace);
+                    var ranged = entity.GetComponent<SharedRangedWeaponComponent>();
+                    
+                    Assert.That(ranged.AmmoSpreadRatio <= 1.0f && ranged.AmmoSpreadRatio >= 0.0f);
+
+                }
+            });
+        }
+        
         /// <summary>
         ///     Tests whether the fillprototypes for all guns are valid prototypes
         /// </summary>

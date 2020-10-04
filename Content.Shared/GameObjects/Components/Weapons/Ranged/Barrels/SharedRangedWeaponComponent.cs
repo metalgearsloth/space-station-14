@@ -125,6 +125,8 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         /// </summary>
         public int ShotCounter;
         
+        // These 2 are mainly for handling desyncs so the server fires the same number of shots as the client.
+        // Someone smarter probably has a better way of doing it but these seemed to work okay...
         public int ExpectedShots { get; set; }
         
         public int AccumulatedShots { get; set; }
@@ -141,19 +143,24 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         /// </summary>
         public float AmmoSpreadRatio { get; set; }
         
-         // Recoil / spray control
+        // Recoil / spray control
         private Angle _minAngle;
         private Angle _maxAngle;
         private Angle _currentAngle = Angle.Zero;
+        
         /// <summary>
-        /// How slowly the angle's theta decays per second in radians
+        ///     How slowly the angle's theta decays per second in radians
         /// </summary>
         private float _angleDecay;
+        
         /// <summary>
-        /// How quickly the angle's theta builds for every shot fired in radians
+        ///     How quickly the angle's theta builds for every shot fired in radians
         /// </summary>
         private float _angleIncrease;
 
+        /// <summary>
+        ///     How much camera recoil there is.
+        /// </summary>
         protected float RecoilMultiplier { get; set; }
         
         public MapCoordinates? FireCoordinates { get; set; }
@@ -168,6 +175,12 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         protected const float CycleVariation = 0.1f;
         protected const float BoltToggleVariation = 0.1f;
         protected const float InsertVariation = 0.1f;
+
+        protected const float GunshotVolume = 0.0f;
+        protected const float EmptyVolume = 0.0f;
+        protected const float CycleVolume = 0.0f;
+        protected const float BoltToggleVolume = 0.0f;
+        protected const float InsertVolume = 0.0f;
         
         public override void ExposeData(ObjectSerializer serializer)
         {
@@ -265,9 +278,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         public IEntity? Shooter()
         {
             if (!ContainerHelpers.TryGetContainer(Owner, out var container))
-            {
                 return null;
-            }
 
             return container.Owner;
         }

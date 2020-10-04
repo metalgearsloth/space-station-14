@@ -31,6 +31,15 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition
             
             _ammoContainer = ContainerManagerComponent.Ensure<Container>($"{Name}-magazine", Owner, out var existing);
 
+            if (FillPrototype != null)
+            {
+                UnspawnedCount += Capacity;
+            }
+            else
+            {
+                UnspawnedCount = 0;
+            }
+
             if (existing)
             {
                 foreach (var entity in _ammoContainer.ContainedEntities)

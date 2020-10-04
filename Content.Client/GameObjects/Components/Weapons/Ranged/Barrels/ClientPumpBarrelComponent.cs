@@ -10,7 +10,6 @@ using System;
 using System.Collections.Generic;
 using Content.Client.GameObjects.Components.Mobs;
 using Content.Shared.Audio;
-using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
 using Content.Shared.GameObjects.EntitySystems;
 using Robust.Client.GameObjects;
@@ -40,6 +39,18 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             UnspawnedCount = 0;
             UpdateAppearance();
         }
+        
+        public override void HandleComponentState(ComponentState? curState, ComponentState? nextState)
+        {
+            if (!(curState is PumpBarrelComponentState cast))
+                return;
+            
+            _chamber = cast.Chamber;
+            _ammoContainer = cast.Ammo;
+            Capacity = cast.Capacity;
+            _statusControl?.Update();
+            UpdateAppearance();
+        }
 
         private void UpdateAppearance()
         {
@@ -66,11 +77,13 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             
             string? sound;
             float variation;
+            float volume;
 
             if (chamber.Value)
             {
                 sound = SoundGunshot;
                 variation = GunshotVariation;
+                volume = GunshotVolume;
                 cameraRecoilComponent?.Kick(-angle.ToVec().Normalized * RecoilMultiplier);
                 EntitySystem.Get<SharedRangedWeaponSystem>().MuzzleFlash(shooter, this, angle);
                 _chamber = false;
@@ -80,10 +93,11 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             {
                 sound = SoundEmpty;
                 variation = EmptyVariation;
+                volume = EmptyVolume;
             }
 
             if (sound != null)
-                EntitySystem.Get<AudioSystem>().Play(sound, Owner, AudioHelpers.WithVariation(variation));
+                EntitySystem.Get<AudioSystem>().Play(sound, Owner, AudioHelpers.WithVariation(variation).WithVolume(volume));
 
             UpdateAppearance();
             _statusControl?.Update();
@@ -101,18 +115,6 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         public override bool TryInsertBullet(IEntity user, IEntity ammo)
         {
             throw new NotImplementedException();
-        }
-
-        public override void HandleComponentState(ComponentState? curState, ComponentState? nextState)
-        {
-            if (!(curState is PumpBarrelComponentState cast))
-                return;
-            
-            _chamber = cast.Chamber;
-            _ammoContainer = cast.Ammo;
-            Capacity = cast.Capacity;
-            _statusControl?.Update();
-            UpdateAppearance();
         }
 
         public Control MakeControl()

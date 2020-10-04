@@ -104,7 +104,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                 TryEjectChamber();
                 if (SoundBoltOpen != null)
                 {
-                    EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundBoltOpen, Owner, AudioHelpers.WithVariation(BoltToggleVariation), excludedSession: Shooter().PlayerSession());
+                    EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundBoltOpen, Owner, AudioHelpers.WithVariation(BoltToggleVariation).WithVolume(BoltToggleVolume), excludedSession: Shooter().PlayerSession());
                 }
             }
             else
@@ -112,7 +112,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                 TryFeedChamber();
                 if (SoundBoltClosed != null)
                 {
-                    EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundBoltClosed, Owner, AudioHelpers.WithVariation(BoltToggleVariation), excludedSession: Shooter().PlayerSession());
+                    EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundBoltClosed, Owner, AudioHelpers.WithVariation(BoltToggleVariation).WithVolume(BoltToggleVolume), excludedSession: Shooter().PlayerSession());
                 }
             }
 
@@ -128,9 +128,8 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             if (manual)
             {
                 if (SoundRack != null)
-                {
-                    EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundRack, Owner, AudioParams.Default.WithVolume(-2));
-                }
+                    EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundRack, Owner, AudioHelpers.WithVariation(RackVariation).WithVolume(RackVolume));
+                
             }
         }
 
@@ -144,9 +143,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
 
                 var ammoComponent = chamberEntity.GetComponent<SharedAmmoComponent>();
                 if (!ammoComponent.Caseless)
-                {
                     EntitySystem.Get<SharedRangedWeaponSystem>().EjectCasing(Shooter(), chamberEntity);
-                }
 
                 return;
             }
@@ -170,7 +167,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             if (AutoEjectMag && magazine != null && magazine.ShotsLeft == 0)
             {
                 if (SoundAutoEject != null)
-                    EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundAutoEject, Owner, AudioHelpers.WithVariation(AutoEjectVariation), excludedSession: Shooter().PlayerSession());
+                    EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundAutoEject, Owner, AudioHelpers.WithVariation(AutoEjectVariation).WithVolume(AutoEjectVolume), excludedSession: Shooter().PlayerSession());
 
                 _magazineContainer?.Remove(magazine.Owner);
             }
@@ -192,8 +189,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             _magazineContainer?.Remove(mag);
             
             if (SoundMagEject != null)
-                // TODO: Variation
-                EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundMagEject, Owner, AudioHelpers.WithVariation(0.1f), excludedSession: Shooter()?.PlayerSession());
+                EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundMagEject, Owner, AudioHelpers.WithVariation(MagVariation).WithVolume(MagVolume), excludedSession: Shooter()?.PlayerSession());
 
             if (user.TryGetComponent(out HandsComponent? handsComponent))
                 handsComponent.PutInHandOrDrop(mag.GetComponent<ItemComponent>());
@@ -234,7 +230,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             }
 
             if (SoundMagInsert != null)
-                EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundMagInsert, Owner, AudioHelpers.WithVariation(MagVariation), excludedSession: Shooter().PlayerSession());
+                EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundMagInsert, Owner, AudioHelpers.WithVariation(MagVariation).WithVolume(MagVolume), excludedSession: Shooter().PlayerSession());
             
             Owner.PopupMessage(user, Loc.GetString("Magazine inserted"));
             _magazineContainer?.Insert(mag);
@@ -301,7 +297,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             if (chamberEntity == null)
             {
                 if (SoundEmpty != null)
-                    EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundEmpty, Owner, AudioHelpers.WithVariation(EmptyVariation), excludedSession: shooter.PlayerSession());
+                    EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundEmpty, Owner, AudioHelpers.WithVariation(EmptyVariation).WithVolume(EmptyVolume), excludedSession: shooter.PlayerSession());
 
                 var mag = _magazineContainer.ContainedEntity;
                 
@@ -315,7 +311,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             var sound = ammoComp.Spent ? SoundEmpty : SoundGunshot;
             
             if (sound != null)
-                EntitySystem.Get<AudioSystem>().PlayFromEntity(sound, Owner, AudioHelpers.WithVariation(GunshotVariation), excludedSession: shooter.PlayerSession());
+                EntitySystem.Get<AudioSystem>().PlayFromEntity(sound, Owner, AudioHelpers.WithVariation(GunshotVariation).WithVolume(GunshotVolume), excludedSession: shooter.PlayerSession());
 
             if (!ammoComp.Spent)
             {

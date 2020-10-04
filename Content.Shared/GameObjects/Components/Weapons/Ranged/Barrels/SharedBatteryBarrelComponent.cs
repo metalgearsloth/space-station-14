@@ -38,6 +38,9 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         protected const float CellInsertVariation = 0.1f;
         protected const float CellEjectVariation = 0.1f;
 
+        protected const float CellInsertVolume = 0.0f;
+        protected const float CellEjectVolume = 0.0f;
+
         public override void ExposeData(ObjectSerializer serializer)
         {
             base.ExposeData(serializer);

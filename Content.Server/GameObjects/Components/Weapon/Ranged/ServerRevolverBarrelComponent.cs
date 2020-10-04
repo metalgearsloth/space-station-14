@@ -54,10 +54,10 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
 
             switch (message)
             {
-                case ChangeSlotMessage msg:
+                case RevolverSpinMessage msg:
                     CurrentSlot = msg.Slot;
                     if (SoundSpin != null)
-                        EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundSpin, Owner, AudioHelpers.WithVariation(SpinVariation), excludedSession: Shooter().PlayerSession());
+                        EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundSpin, Owner, AudioHelpers.WithVariation(SpinVariation).WithVolume(SpinVolume), excludedSession: Shooter().PlayerSession());
                     
                     break;
             }
@@ -148,7 +148,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             var sound = ammoComp.Spent ? SoundEmpty : SoundGunshot;
             
             if (sound != null)
-                EntitySystem.Get<AudioSystem>().PlayFromEntity(sound, Owner, AudioHelpers.WithVariation(GunshotVariation), excludedSession: shooter.PlayerSession());
+                EntitySystem.Get<AudioSystem>().PlayFromEntity(sound, Owner, AudioHelpers.WithVariation(GunshotVariation).WithVolume(GunshotVolume), excludedSession: shooter.PlayerSession());
 
             if (!ammoComp.Spent)
             {
@@ -217,7 +217,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                     AmmoContainer.Insert(ammoComponent.Owner);
                     NextFire = IoCManager.Resolve<IGameTiming>().CurTime;
                     if (SoundInsert != null)
-                        EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundInsert, Owner, AudioHelpers.WithVariation(InsertVariation));
+                        EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundInsert, Owner, AudioHelpers.WithVariation(InsertVariation).WithVolume(InsertVolume));
 
                     // Won't need dirty once prediction is in, place we can pass in the actual user above.
                     Dirty();

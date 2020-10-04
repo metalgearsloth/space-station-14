@@ -40,6 +40,10 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         // Sounds
         public string? SoundRack { get; private set; }
         public string? SoundInsert { get; private set; }
+        
+        protected const float RackVariation = 0.1f;
+        
+        protected const float RackVolume = 0.0f;
 
         public override void ExposeData(ObjectSerializer serializer)
         {

@@ -8,18 +8,14 @@ using Robust.Shared.GameObjects;
 using Robust.Shared.Maths;
 using Robust.Shared.ViewVariables;
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Content.Client.GameObjects.Components.Mobs;
 using Content.Shared.Audio;
-using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using Content.Shared.GameObjects.EntitySystems;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Robust.Client.GameObjects;
 using Robust.Client.GameObjects.EntitySystems;
 using Robust.Shared.GameObjects.Systems;
-using Robust.Shared.Interfaces.GameObjects;
-using Robust.Shared.Utility;
 
 namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 {
@@ -74,7 +70,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             if (currentCharge < LowerChargeLimit)
             {
                 if (SoundEmpty != null)
-                    EntitySystem.Get<AudioSystem>().Play(SoundEmpty, Owner, AudioHelpers.WithVariation(EmptyVariation));
+                    EntitySystem.Get<AudioSystem>().Play(SoundEmpty, Owner, AudioHelpers.WithVariation(EmptyVariation).WithVolume(EmptyVolume));
                 
                 return false;
             }
@@ -92,7 +88,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                 EntitySystem.Get<SharedRangedWeaponSystem>().MuzzleFlash(shooter, this, angle);
 
             if (SoundGunshot != null)
-                EntitySystem.Get<AudioSystem>().Play(SoundGunshot, Owner, AudioHelpers.WithVariation(GunshotVariation));
+                EntitySystem.Get<AudioSystem>().Play(SoundGunshot, Owner, AudioHelpers.WithVariation(GunshotVariation).WithVolume(GunshotVolume));
             
             // TODO: Show effect here once we can get the full hitscan predicted
             

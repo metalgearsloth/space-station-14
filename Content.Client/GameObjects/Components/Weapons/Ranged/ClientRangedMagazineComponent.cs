@@ -20,18 +20,10 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged
 
         public override int ShotsLeft => _spawnedAmmo.Count + UnspawnedCount;
 
-        public override void Initialize()
-        {
-            base.Initialize();
-            UnspawnedCount = 0;
-        }
-
         private void UpdateAppearance()
         {
             if (!Owner.TryGetComponent(out AppearanceComponent? appearanceComponent))
-            {
                 return;
-            }
             
             appearanceComponent.SetData(AmmoVisuals.AmmoCount, ShotsLeft);
             appearanceComponent.SetData(AmmoVisuals.AmmoMax, Capacity);
@@ -41,9 +33,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged
         {
             base.HandleComponentState(curState, nextState);
             if (!(curState is RangedMagazineComponentState cast))
-            {
                 return;
-            }
 
             if (_spawnedAmmo == cast.SpawnedAmmo)
                 return;
@@ -65,12 +55,12 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged
 
         protected override bool TryInsertAmmo(IEntity user, IEntity ammo)
         {
-            throw new System.NotImplementedException();
+            throw new NotImplementedException();
         }
 
         protected override bool Use(IEntity user)
         {
-            throw new System.NotImplementedException();
+            throw new NotImplementedException();
         }
         
         void IExamine.Examine(FormattedMessage message, bool inDetailsRange)

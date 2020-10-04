@@ -8,7 +8,6 @@ using Robust.Client.UserInterface.Controls;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Maths;
 using Robust.Shared.ViewVariables;
-using System.Collections.Generic;
 using Content.Client.GameObjects.Components.Mobs;
 using Content.Shared.Audio;
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
@@ -20,7 +19,6 @@ using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Interfaces.Random;
 using Robust.Shared.IoC;
 using Robust.Shared.Localization;
-using Robust.Shared.Serialization;
 
 namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 {
@@ -65,7 +63,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             if (currentAmmo == null)
             {
                 if (SoundEmpty != null)
-                    EntitySystem.Get<AudioSystem>().Play(SoundEmpty, Owner, AudioHelpers.WithVariation(EmptyVariation));
+                    EntitySystem.Get<AudioSystem>().Play(SoundEmpty, Owner, AudioHelpers.WithVariation(EmptyVariation).WithVolume(EmptyVolume));
             
                 return true;
             }
@@ -76,11 +74,13 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             
             string? sound;
             float variation;
+            float volume;
             
             if (currentAmmo.Value)
             {
                 sound = SoundGunshot;
                 variation = GunshotVariation;
+                volume = GunshotVolume;
                 cameraRecoilComponent?.Kick(-angle.ToVec().Normalized * RecoilMultiplier);
                 EntitySystem.Get<SharedRangedWeaponSystem>().MuzzleFlash(shooter, this, angle);
                 Ammo[CurrentSlot] = false;
@@ -89,10 +89,11 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             {
                 sound = SoundEmpty;
                 variation = EmptyVariation;
+                volume = EmptyVolume;
             }
 
             if (sound != null)
-                EntitySystem.Get<AudioSystem>().Play(sound, Owner, AudioHelpers.WithVariation(variation));
+                EntitySystem.Get<AudioSystem>().Play(sound, Owner, AudioHelpers.WithVariation(variation).WithVolume(volume));
             
             Cycle();
             _statusControl?.Update();
@@ -106,8 +107,6 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         
         protected override void EjectAllSlots()
         {
-            // TODO: Does nothing because interactions aren't predicted
-
             for (var i = 0; i < Ammo.Length; i++)
             {
                 var slot = Ammo[i];
@@ -126,7 +125,6 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 
         public override bool TryInsertBullet(IEntity user, SharedAmmoComponent ammoComponent)
         {
-            // TODO: Interaction prediction here and elsewhere etc.
             return true;
         }
         
@@ -134,11 +132,11 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         {
             CurrentSlot = IoCManager.Resolve<IRobustRandom>().Next(Ammo.Length - 1);
             _statusControl?.Update(true);
-            SendNetworkMessage(new ChangeSlotMessage(CurrentSlot));
+            SendNetworkMessage(new RevolverSpinMessage(CurrentSlot));
+            
             if (SoundSpin != null)
-            {
-                EntitySystem.Get<AudioSystem>().Play(SoundSpin, Owner);
-            }
+                EntitySystem.Get<AudioSystem>().Play(SoundSpin, Owner, AudioHelpers.WithVariation(SpinVariation).WithVolume(SpinVolume));
+            
         }
 
         // Item status etc.

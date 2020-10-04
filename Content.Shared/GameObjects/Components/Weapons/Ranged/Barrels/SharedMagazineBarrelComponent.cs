@@ -16,10 +16,9 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         public override string Name => "MagazineBarrel";
 
         public override uint? NetID => ContentNetIDs.MAGAZINE_BARREL;
-
-        // TODO: Just make properties
-        // TODO: Add VV to a bunch of shit
+        
         [ViewVariables] public MagazineType MagazineTypes { get; private set; }
+        
         [ViewVariables] public BallisticCaliber Caliber { get; private set; }
 
         public int Capacity { get; set; }
@@ -42,6 +41,11 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
 
         protected const float AutoEjectVariation = 0.1f;
         protected const float MagVariation = 0.1f;
+        protected const float RackVariation = 0.1f;
+
+        protected const float AutoEjectVolume = 0.0f;
+        protected const float MagVolume = 0.0f;
+        protected const float RackVolume = 0.0f;
 
         public override void ExposeData(ObjectSerializer serializer)
         {

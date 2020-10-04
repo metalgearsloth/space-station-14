@@ -21,7 +21,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         public override string Name => "BoltActionBarrel";
         public override uint? NetID => ContentNetIDs.BOLTACTION_BARREL;
 
-        [ViewVariables] public int Capacity { get; set; }
+        [ViewVariables] protected int Capacity { get; private set; }
 
         [ViewVariables]
         public BallisticCaliber Caliber;
@@ -52,16 +52,6 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
             serializer.DataReadWriteFunction("soundBoltOpen", "/Audio/Weapons/Guns/Bolt/rifle_bolt_open.ogg", value => SoundBoltOpen = value, () => SoundBoltOpen);
             serializer.DataReadWriteFunction("soundBoltClosed", "/Audio/Weapons/Guns/Bolt/rifle_bolt_closed.ogg", value => SoundBoltClosed = value, () => SoundBoltClosed);
             serializer.DataReadWriteFunction("soundInsert", "/Audio/Weapons/Guns/MagIn/bullet_insert.ogg", value => SoundInsert = value, () => SoundInsert);
-        }
-
-        public override void Initialize()
-        {
-            base.Initialize();
-            if (FillPrototype != null)
-            {
-                // TODO: Update revolvers and pump to do this
-                UnspawnedCount += Capacity;
-            }
         }
 
         protected abstract void SetBolt(bool value);
