@@ -61,6 +61,7 @@ namespace Content.Client.GameObjects.EntitySystems
             if (!_gameTiming.IsFirstTimePredicted)
                 return;
 
+            var currentTime = _gameTiming.CurTime;
             var state = _inputSystem.CmdStates.GetState(EngineKeyFunctions.Use);
             if (!_combatModeSystem.IsInCombatMode() || state != BoundKeyState.Down)
             {
@@ -69,7 +70,7 @@ namespace Content.Client.GameObjects.EntitySystems
                 
                 if (_firingWeapon != null)
                 {
-                    StopFiring(_firingWeapon);
+                    StopFiring(_firingWeapon, currentTime);
                     _firingWeapon.ShotCounter = 0;
                     _firingWeapon = null;
                 }
@@ -85,51 +86,37 @@ namespace Content.Client.GameObjects.EntitySystems
             _firingWeapon = GetRangedWeapon(player);
 
             if (lastFiringWeapon != _firingWeapon && lastFiringWeapon != null)
-                StopFiring(lastFiringWeapon);
+                StopFiring(lastFiringWeapon, currentTime);
 
             if (_firingWeapon == null)
                 return;
-
-            // We'll block any more firings so a single shot weapon doesn't spam the SoundEmpty for example.
-            if (!_lastFireResult)
-            {
-                _firingWeapon.FireCoordinates = null;
-                StopFiring(_firingWeapon);
-                return;
-            }
             
-            var currentTime = _gameTiming.CurTime;
             var mouseCoordinates = _eyeManager.ScreenToMap(_inputManager.MouseScreenPosition);
 
             if (_firingWeapon.TryFire(currentTime, player, mouseCoordinates, out var shots))
             {
-                _firingWeapon.Firing = true;
-                
-                // First shot
-                // TODO: Try not sending co-ords
-                if (!_lastFireResult)
+                // First shot we'll send timestamp
+                if (!_firingWeapon.Firing)
                 {
                     _lastFireResult = true;
-                    _firingWeapon.FireCoordinates = mouseCoordinates;
-                    RaiseNetworkEvent(new StartFiringMessage(_firingWeapon.Owner.Uid, _firingWeapon.FireCoordinates.Value));
-                }
-                
-                if (shots > 0)
+                    RaiseNetworkEvent(new StartFiringMessage(_firingWeapon.Owner.Uid, mouseCoordinates, currentTime));
+                } 
+                else if (shots > 0)
                 {
                     // TODO: Send over: current count of shots (to detect packet loss), number of shots here
-                    RaiseNetworkEvent(new RangedFireMessage());
+                    RaiseNetworkEvent(new RangedFireMessage(_firingWeapon.Owner.Uid, mouseCoordinates));
                 }
             }
             else
             {
-                StopFiring(_firingWeapon);
+                StopFiring(_firingWeapon, currentTime);
             }
         }
         
-        private void StopFiring(SharedRangedWeaponComponent weaponComponent)
+        private void StopFiring(SharedRangedWeaponComponent weaponComponent, TimeSpan currentTime)
         {
             if (weaponComponent.Firing)
-                RaiseNetworkEvent(new StopFiringMessage(weaponComponent.Owner.Uid, weaponComponent.ShotCounter));
+                RaiseNetworkEvent(new StopFiringMessage(weaponComponent.Owner.Uid, currentTime));
 
             weaponComponent.Firing = false;
         }

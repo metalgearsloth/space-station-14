@@ -58,9 +58,62 @@ namespace Content.Server.GameObjects.EntitySystems
         public override void Initialize()
         {
             base.Initialize();
+            SubscribeNetworkEvent<StartFiringMessage>(HandleStartMessage);
+            SubscribeNetworkEvent<StopFiringMessage>(HandleStopMessage);
             SubscribeNetworkEvent<RangedFireMessage>(HandleRangedFireMessage);
             
             _effectSystem = Get<EffectSystem>();
+        }
+
+        private void HandleStartMessage(StartFiringMessage message, EntitySessionEventArgs args)
+        {
+            var entity = _entityManager.GetEntity(message.Uid);
+            var weapon = entity.GetComponent<SharedRangedWeaponComponent>();
+            
+            if (entity.Deleted)
+            {
+                _activeRangedWeapons.Remove(weapon);
+                return;
+            }
+
+            var shooter = weapon.Shooter();
+            if (shooter != args.SenderSession.AttachedEntity)
+            {
+                // Cheater / lagger
+                return;
+            }
+
+            if (_activeRangedWeapons.Contains(weapon))
+            {
+                return;
+            }
+
+            var currentTime = _gameTiming.CurTime;
+            weapon.Firing = true;
+            weapon.FireCoordinates = message.FireCoordinates;
+        }
+
+        private void HandleStopMessage(StopFiringMessage message, EntitySessionEventArgs args)
+        {
+            var entity = _entityManager.GetEntity(message.Uid);
+            var weapon = entity.GetComponent<SharedRangedWeaponComponent>();
+            
+            if (entity.Deleted)
+            {
+                _activeRangedWeapons.Remove(weapon);
+                return;
+            }
+
+            var shooter = weapon.Shooter();
+            if (shooter != args.SenderSession.AttachedEntity)
+            {
+                // Cheater / lagger
+                return;
+            }
+
+            // TODO
+            weapon.Firing = false;
+            _activeRangedWeapons.Remove(weapon);
         }
 
         private void HandleRangedFireMessage(RangedFireMessage message, EntitySessionEventArgs args)
@@ -81,34 +134,7 @@ namespace Content.Server.GameObjects.EntitySystems
                 return;
             }
 
-            // Started shooting
-            if (message.ShotsSoFar == 0)
-            {
-                if (weapon.ToShootCoordinates.Count > 0)
-                {
-                    // TODO: Log?
-                    message.Coordinates.ForEach(co => weapon.ToShootCoordinates.Enqueue(co));
-                }
-                
-                weapon.ShotCounter = 0;
-                weapon.Firing = true;
-                _activeRangedWeapons.Add(weapon);
-                return;
-            }
-
-            // Stop shooting, reconcile, whatever
-            if (message.Coordinates.Count == 0)
-            {
-                // TODO: Uhhhh handle
-                if (weapon.ToShootCoordinates.Count > 0)
-                    throw new InvalidOperationException();
-                
-                weapon.Firing = false;
-                _activeRangedWeapons.Remove(weapon);
-                return;
-            }
-
-            message.Coordinates.ForEach(co => weapon.ToShootCoordinates.Enqueue(co));
+            weapon.FireCoordinates = message.FireCoordinates;
         }
 
         public override void Update(float frameTime)
@@ -136,15 +162,9 @@ namespace Content.Server.GameObjects.EntitySystems
             if (shooter == null)
                 return false;
             
-            if (!weaponComponent.TryFire(currentTime, shooter, weaponComponent.FireCoordinates!.Value, out _) || weaponComponent.ExpectedShots > 0)
+            if (!weaponComponent.TryFire(currentTime, shooter, weaponComponent.FireCoordinates.Value, out _))
             {
-                weaponComponent.ExpectedShots -= weaponComponent.AccumulatedShots;
-
-                if (weaponComponent.ExpectedShots > 0)
-                {
-                    Logger.Warning("Desync shots fired");
-                    weaponComponent.ExpectedShots = 0;
-                }
+                // TODO firing stop stop
 
                 return false;
             }

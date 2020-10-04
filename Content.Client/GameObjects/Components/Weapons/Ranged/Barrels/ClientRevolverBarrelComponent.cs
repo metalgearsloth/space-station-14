@@ -63,7 +63,12 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 
             var currentAmmo = Ammo[CurrentSlot];
             if (currentAmmo == null)
+            {
+                if (SoundEmpty != null)
+                    EntitySystem.Get<AudioSystem>().Play(SoundEmpty, Owner, AudioHelpers.WithVariation(EmptyVariation));
+            
                 return true;
+            }
 
             var shooter = Shooter();
             CameraRecoilComponent? cameraRecoilComponent = null;

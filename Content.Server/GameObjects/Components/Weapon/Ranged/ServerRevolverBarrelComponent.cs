@@ -66,9 +66,19 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
         public override ComponentState GetComponentState()
         {
             var bullets = new bool?[_ammoSlots.Length];
+            var unspawned = UnspawnedCount;
+            
             for (var i = 0; i < _ammoSlots.Length; i++)
             {
                 bullets[i] = !_ammoSlots[i]?.GetComponent<SharedAmmoComponent>().Spent;
+                var bullet = !_ammoSlots[i]?.GetComponent<SharedAmmoComponent>().Spent;
+                if (bullet == null && unspawned > 0)
+                {
+                    unspawned--;
+                    bullet = true;
+                }
+
+                bullets[i] = bullet;
             }
             
             return new RevolverBarrelComponentState(CurrentSlot, Selector, bullets, SoundGunshot);
@@ -119,6 +129,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                 }
                 else
                 {
+                    Cycle();
                     return false;
                 }
             } 
@@ -206,8 +217,8 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                     AmmoContainer.Insert(ammoComponent.Owner);
                     NextFire = IoCManager.Resolve<IGameTiming>().CurTime;
                     if (SoundInsert != null)
-                        EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundInsert, Owner, AudioHelpers.WithVariation(InsertVariation), excludedSession: Shooter().PlayerSession());
-                    
+                        EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundInsert, Owner, AudioHelpers.WithVariation(InsertVariation));
+
                     // Won't need dirty once prediction is in, place we can pass in the actual user above.
                     Dirty();
                     return true;

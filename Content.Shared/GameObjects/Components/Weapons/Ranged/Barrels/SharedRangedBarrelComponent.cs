@@ -55,11 +55,14 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         public EntityUid Uid { get; }
         
         public MapCoordinates FireCoordinates { get; }
+        
+        public TimeSpan StartTime { get; }
 
-        public StartFiringMessage(EntityUid uid, MapCoordinates fireCoordinates)
+        public StartFiringMessage(EntityUid uid, MapCoordinates fireCoordinates, TimeSpan startTime)
         {
             Uid = uid;
             FireCoordinates = fireCoordinates;
+            StartTime = startTime;
         }
     }
 
@@ -68,15 +71,12 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
     {
         public EntityUid Uid { get; }
         
-        /// <summary>
-        ///     We'll send the amount of shots we expected so the server can try to reconcile it.
-        /// </summary>
-        public int Shots { get; }
+        public TimeSpan EndTime { get; }
 
-        public StopFiringMessage(EntityUid uid, int shots)
+        public StopFiringMessage(EntityUid uid, TimeSpan endTime)
         {
             Uid = uid;
-            Shots = shots;
+            EndTime = endTime;
         }
     }
 
@@ -88,19 +88,16 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         /// </summary>
         public EntityUid Uid { get; }
 
-        public uint ShotsSoFar { get; }
-        
         /// <summary>
         ///     Coordinates to shoot at.
         ///     If list empty then we'll stop shooting.
         /// </summary>
-        public List<MapCoordinates> Coordinates { get; }
+        public MapCoordinates FireCoordinates { get; }
 
-        public RangedFireMessage(EntityUid uid, ushort shotsSoFar, List<MapCoordinates> coordinates)
+        public RangedFireMessage(EntityUid uid, MapCoordinates fireCoordinates)
         {
             Uid = uid;
-            ShotsSoFar = shotsSoFar;
-            Coordinates = coordinates;
+            FireCoordinates = fireCoordinates;
         }
     }
 
@@ -170,7 +167,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
 
         protected float RecoilMultiplier { get; set; }
         
-        public Queue<MapCoordinates> ToShootCoordinates { get; set; } = new Queue<MapCoordinates>();
+        public MapCoordinates? FireCoordinates { get; set; }
 
         // Sounds
         public string? SoundGunshot { get; private set; }
