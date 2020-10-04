@@ -3,6 +3,7 @@ using System;
 using Content.Client.GameObjects.Components.Items;
 using Content.Shared.GameObjects.Components.Projectiles;
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
+using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
 using Content.Shared.GameObjects.EntitySystems;
 using JetBrains.Annotations;
 using Robust.Client.GameObjects.EntitySystems;
@@ -70,7 +71,7 @@ namespace Content.Client.GameObjects.EntitySystems
                 
                 if (_firingWeapon != null)
                 {
-                    StopFiring(_firingWeapon, currentTime);
+                    StopFiring(_firingWeapon);
                     _firingWeapon.ShotCounter = 0;
                     _firingWeapon = null;
                 }
@@ -86,7 +87,7 @@ namespace Content.Client.GameObjects.EntitySystems
             _firingWeapon = GetRangedWeapon(player);
 
             if (lastFiringWeapon != _firingWeapon && lastFiringWeapon != null)
-                StopFiring(lastFiringWeapon, currentTime);
+                StopFiring(lastFiringWeapon);
 
             if (_firingWeapon == null)
                 return;
@@ -98,25 +99,24 @@ namespace Content.Client.GameObjects.EntitySystems
                 // First shot we'll send timestamp
                 if (!_firingWeapon.Firing)
                 {
-                    _lastFireResult = true;
-                    RaiseNetworkEvent(new StartFiringMessage(_firingWeapon.Owner.Uid, mouseCoordinates, currentTime));
+                    _firingWeapon.Firing = true;
+                    RaiseNetworkEvent(new StartFiringMessage(_firingWeapon.Owner.Uid, mouseCoordinates));
                 } 
                 else if (shots > 0)
                 {
-                    // TODO: Send over: current count of shots (to detect packet loss), number of shots here
                     RaiseNetworkEvent(new RangedFireMessage(_firingWeapon.Owner.Uid, mouseCoordinates));
                 }
             }
             else
             {
-                StopFiring(_firingWeapon, currentTime);
+                StopFiring(_firingWeapon);
             }
         }
         
-        private void StopFiring(SharedRangedWeaponComponent weaponComponent, TimeSpan currentTime)
+        private void StopFiring(SharedRangedWeaponComponent weaponComponent)
         {
             if (weaponComponent.Firing)
-                RaiseNetworkEvent(new StopFiringMessage(weaponComponent.Owner.Uid, currentTime));
+                RaiseNetworkEvent(new StopFiringMessage(weaponComponent.Owner.Uid, weaponComponent.ShotCounter));
 
             weaponComponent.Firing = false;
         }

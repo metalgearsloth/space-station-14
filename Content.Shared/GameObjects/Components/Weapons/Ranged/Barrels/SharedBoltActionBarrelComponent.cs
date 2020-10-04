@@ -94,6 +94,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         {
             if (BoltOpen)
             {
+                Dirty();
                 SetBolt(false);
                 // TODO: Predict when they're in plx
                 Owner.PopupMessage(eventArgs.User, Loc.GetString("Bolt closed"));
@@ -101,7 +102,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
             }
 
             Cycle(true);
-
+            Dirty();
             return true;
         }
     }

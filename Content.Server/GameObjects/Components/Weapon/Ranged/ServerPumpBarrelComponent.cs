@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition;
 using Content.Server.GameObjects.EntitySystems;
 using Content.Shared.Audio;
+using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
 using Content.Shared.GameObjects.EntitySystems;
 using Robust.Server.GameObjects.EntitySystems;
 using Robust.Server.Interfaces.GameObjects;
@@ -145,23 +146,15 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                 if (SoundRack != null)
                     EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundRack, Owner, AudioHelpers.WithVariation(CycleVariation));
             }
-            
-            // TODO: When interaction predictions are in remove this.
-            Dirty();
         }
         
         public override bool TryInsertBullet(IEntity user, IEntity ammo)
         {
-            // TODO: Also check this out on the revolver for prediction.
             if (!ammo.TryGetComponent(out SharedAmmoComponent? ammoComponent))
-            {
                 return false;
-            }
 
             if (ammoComponent.Caliber != Caliber)
-            {
                 return false;
-            }
 
             if (_ammoContainer.ContainedEntities.Count < Capacity)
             {

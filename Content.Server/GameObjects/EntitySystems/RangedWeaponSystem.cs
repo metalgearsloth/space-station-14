@@ -2,18 +2,15 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Content.Server.GameObjects.Components.Projectiles;
-using Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition;
 using Content.Shared.Audio;
 using Content.Shared.GameObjects.Components.Damage;
 using Content.Shared.GameObjects.Components.Projectiles;
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
+using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
 using Content.Shared.GameObjects.EntitySystems;
 using Content.Shared.Physics;
 using JetBrains.Annotations;
-using Microsoft.CodeAnalysis;
 using Robust.Server.GameObjects.EntitySystems;
-using Robust.Server.Interfaces.GameObjects;
 using Robust.Server.Player;
 using Robust.Shared.GameObjects;
 using Robust.Shared.GameObjects.Components;
@@ -27,7 +24,6 @@ using Robust.Shared.Log;
 using Robust.Shared.Maths;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Random;
-using Robust.Shared.Utility;
 
 namespace Content.Server.GameObjects.EntitySystems
 {
@@ -83,14 +79,14 @@ namespace Content.Server.GameObjects.EntitySystems
                 return;
             }
 
-            if (_activeRangedWeapons.Contains(weapon))
+            if (!_activeRangedWeapons.Contains(weapon))
             {
-                return;
+                _activeRangedWeapons.Add(weapon);
             }
 
-            var currentTime = _gameTiming.CurTime;
-            weapon.Firing = true;
+            weapon.ShotCounter = 0;
             weapon.FireCoordinates = message.FireCoordinates;
+            weapon.Firing = true;
         }
 
         private void HandleStopMessage(StopFiringMessage message, EntitySessionEventArgs args)
@@ -110,10 +106,9 @@ namespace Content.Server.GameObjects.EntitySystems
                 // Cheater / lagger
                 return;
             }
-
-            // TODO
+            
             weapon.Firing = false;
-            _activeRangedWeapons.Remove(weapon);
+            weapon.ExpectedShots = message.ExpectedShots;
         }
 
         private void HandleRangedFireMessage(RangedFireMessage message, EntitySessionEventArgs args)
@@ -149,26 +144,34 @@ namespace Content.Server.GameObjects.EntitySystems
                 if (!TryUpdate(comp, currentTime))
                 {
                     _activeRangedWeapons.RemoveAt(i);
+                    comp.ExpectedShots = 0;
+                    comp.AccumulatedShots = 0;
+                    comp.Dirty();
                 }
             }
         }
 
         private bool TryUpdate(SharedRangedWeaponComponent weaponComponent, TimeSpan currentTime)
         {
-            if (weaponComponent.FireCoordinates == null || !weaponComponent.Firing)
+            if (weaponComponent.FireCoordinates == null || !weaponComponent.Firing && weaponComponent.AccumulatedShots >= weaponComponent.ExpectedShots)
+            {
+                if (weaponComponent.AccumulatedShots != weaponComponent.ExpectedShots)
+                {
+                    Logger.Warning($"Shooting desync occurred: Fired {weaponComponent.ShotCounter} but expected {weaponComponent.ExpectedShots}");
+                }
+                
+                weaponComponent.ExpectedShots -= weaponComponent.AccumulatedShots;
                 return false;
+            }
 
             var shooter = weaponComponent.Shooter();
             if (shooter == null)
                 return false;
-            
-            if (!weaponComponent.TryFire(currentTime, shooter, weaponComponent.FireCoordinates.Value, out _))
-            {
-                // TODO firing stop stop
 
+            if (!weaponComponent.TryFire(currentTime, shooter, weaponComponent.FireCoordinates.Value, out var shots))
                 return false;
-            }
 
+            weaponComponent.AccumulatedShots += shots;
             return true;
         }
 

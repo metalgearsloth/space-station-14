@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
 using Robust.Shared.GameObjects;
 using Robust.Shared.IoC;
 using Robust.Shared.Log;

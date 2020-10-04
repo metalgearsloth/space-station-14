@@ -8,7 +8,7 @@ using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Serialization;
 using Robust.Shared.ViewVariables;
 
-namespace Content.Shared.GameObjects.Components.Weapons.Ranged
+namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
 {
     public abstract class SharedPumpBarrelComponent : SharedRangedWeaponComponent
     {
@@ -60,6 +60,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         public override bool UseEntity(UseEntityEventArgs eventArgs)
         {
             Cycle(true);
+            Dirty();
             return true;
         }
 

@@ -56,6 +56,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
            _chamber = cast.Chamber;
            _ammo = cast.Bullets;
            SetBolt(cast.BoltOpen);
+           UpdateAppearance();
             _statusControl?.Update();
         }
 

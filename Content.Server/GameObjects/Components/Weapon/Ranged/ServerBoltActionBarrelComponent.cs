@@ -115,7 +115,6 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             }
 
             BoltOpen = value;
-            Dirty();
         }
 
         protected override void Cycle(bool manual = false)

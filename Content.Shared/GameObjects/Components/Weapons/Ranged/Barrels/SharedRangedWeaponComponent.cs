@@ -14,7 +14,7 @@ using Robust.Shared.Maths;
 using Robust.Shared.Serialization;
 using Component = Robust.Shared.GameObjects.Component;
 
-namespace Content.Shared.GameObjects.Components.Weapons.Ranged
+namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
 {
     public enum BallisticCaliber
     {
@@ -55,14 +55,11 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         public EntityUid Uid { get; }
         
         public MapCoordinates FireCoordinates { get; }
-        
-        public TimeSpan StartTime { get; }
 
-        public StartFiringMessage(EntityUid uid, MapCoordinates fireCoordinates, TimeSpan startTime)
+        public StartFiringMessage(EntityUid uid, MapCoordinates fireCoordinates)
         {
             Uid = uid;
             FireCoordinates = fireCoordinates;
-            StartTime = startTime;
         }
     }
 
@@ -71,12 +68,12 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
     {
         public EntityUid Uid { get; }
         
-        public TimeSpan EndTime { get; }
+        public int ExpectedShots { get; }
 
-        public StopFiringMessage(EntityUid uid, TimeSpan endTime)
+        public StopFiringMessage(EntityUid uid, int expectedShots)
         {
             Uid = uid;
-            EndTime = endTime;
+            ExpectedShots = expectedShots;
         }
     }
 
@@ -127,25 +124,17 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         ///     Keep a running track of how many shots we've fired for single-shot (etc.) weapons.
         /// </summary>
         public int ShotCounter;
+        
+        public int ExpectedShots { get; set; }
+        
+        public int AccumulatedShots { get; set; }
 
         /// <summary>
         ///     Filepath to MuzzleFlash texture
         /// </summary>
         public string? MuzzleFlash { get; set; }
 
-        public bool Firing
-        {
-            get => _firing;
-            set
-            {
-                if (_firing == value)
-                    return;
-
-                _firing = value;
-                Dirty();
-            }
-        }
-        private bool _firing;
+        public bool Firing { get; set; }
 
         /// <summary>
         ///     Multiplies the ammo spread to get the final spread of each pellet
@@ -343,7 +332,6 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
             
             if (currentTime < NextFire)
                 return true;
-
             
             var fireAngle = (coordinates.Position - user.Transform.WorldPosition).ToAngle();
             var robustRandom = IoCManager.Resolve<IRobustRandom>();
@@ -380,7 +368,6 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         /// <returns></returns>
         protected virtual Angle GetWeaponSpread(TimeSpan currentTime, TimeSpan lastFire, Angle angle, IRobustRandom robustRandom)
         {
-            // TODO: Fix this
             // TODO: Could also predict this client-side. Probably need to use System.Random and seeds but out of scope for this big pr.
             // If we're sure no desyncs occur then we could just use the Uid to get the seed probably.
             var newTheta = MathHelper.Clamp(

@@ -34,7 +34,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
     {
         
         [ViewVariables] public IEntity PowerCellEntity => _powerCellContainer.ContainedEntity;
-        public BatteryComponent PowerCell => _powerCellContainer.ContainedEntity.GetComponent<BatteryComponent>();
+        public BatteryComponent? PowerCell => _powerCellContainer.ContainedEntity?.GetComponent<BatteryComponent>();
         private ContainerSlot _powerCellContainer = default!;
         [ViewVariables] private bool _powerCellRemovable;
         
@@ -78,9 +78,8 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             {
                 var powerCellEntity = Owner.EntityManager.SpawnEntity(_powerCellPrototype, Owner.Transform.Coordinates);
                 _powerCellContainer.Insert(powerCellEntity);
+                Dirty();
             }
-
-            Dirty();
         }
 
         public bool TryInsertPowerCell(IEntity entity)
@@ -118,14 +117,13 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             if (!_powerCellContainer.Remove(cell.Owner))
                 return false;
 
-            Dirty();
-
             if (!hands.PutInHand(cell.Owner.GetComponent<ItemComponent>()))
                 cell.Owner.Transform.Coordinates = user.Transform.Coordinates;
             
             if (SoundPowerCellEject != null)
                 EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundPowerCellEject, Owner, AudioHelpers.WithVariation(CellEjectVariation));
             
+            Dirty();
             return true;
         }
 
@@ -174,8 +172,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                 EntitySystem.Get<SharedRangedWeaponSystem>().ShootAmmo(shooter, this, angle, ammoComponent);
                 EntitySystem.Get<SharedRangedWeaponSystem>().MuzzleFlash(shooter, this, angle, alphaRatio: energyRatio);
             }
-                
-            Dirty();
+            
             return true;
         }
 
