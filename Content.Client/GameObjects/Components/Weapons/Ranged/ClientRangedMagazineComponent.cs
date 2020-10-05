@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
 using Content.Shared.GameObjects.EntitySystems;
+using Content.Shared.GameObjects.Verbs;
 using Robust.Client.GameObjects;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Interfaces.GameObjects;
@@ -55,18 +56,44 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged
 
         protected override bool TryInsertAmmo(IEntity user, IEntity ammo)
         {
-            throw new NotImplementedException();
+            // TODO
+            return true;
         }
 
         protected override bool Use(IEntity user)
         {
-            throw new NotImplementedException();
+            // TODO
+            return true;
         }
         
         void IExamine.Examine(FormattedMessage message, bool inDetailsRange)
         {
             var text = Loc.GetString("It's a [color=white]{0}[/color] magazine of [color=white]{1}[/color] caliber.", MagazineType, Caliber);
             message.AddMarkup(text);
+        }
+        
+        [Verb]
+        private sealed class DumpMagazineVerb : Verb<ClientRangedMagazineComponent>
+        {
+            protected override void GetData(IEntity user, ClientRangedMagazineComponent component, VerbData data)
+            {
+                if (!ActionBlockerSystem.CanInteract(user))
+                {
+                    data.Visibility = VerbVisibility.Invisible;
+                    return;
+                }
+
+                var remaining = Math.Min(10, component.ShotsLeft);
+
+                data.Text = Loc.GetString($"Dump {remaining}");
+            }
+
+            protected override void Activate(IEntity user, ClientRangedMagazineComponent component)
+            {
+                var remaining = (byte) Math.Min(10, component.ShotsLeft);
+                
+                component.SendNetworkMessage(new DumpRangedMagazineComponentMessage(remaining));
+            }
         }
     }
 }
