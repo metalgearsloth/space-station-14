@@ -66,4 +66,16 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
             SpawnedAmmo = spawnedAmmo;
         }
     }
+
+    [Serializable, NetSerializable]
+    public sealed class DumpRangedMagazineComponentMessage : ComponentMessage
+    {
+        public byte Amount { get; }
+
+        public DumpRangedMagazineComponentMessage(byte amount)
+        {
+            Amount = amount;
+            Directed = true;
+        }
+    }
 }

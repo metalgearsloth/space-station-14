@@ -1,4 +1,5 @@
 #nullable enable
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Content.Server.GameObjects.Components.GUI;
@@ -7,10 +8,13 @@ using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using Content.Shared.GameObjects.EntitySystems;
 using Content.Shared.Interfaces;
 using Robust.Server.GameObjects.Components.Container;
+using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
 using Robust.Shared.GameObjects.Systems;
 using Robust.Shared.Interfaces.GameObjects;
+using Robust.Shared.Interfaces.Network;
 using Robust.Shared.Localization;
+using Robust.Shared.Players;
 
 namespace Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition
 {
@@ -48,8 +52,26 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition
                     UnspawnedCount--;
                 }
             }
+            
+            Dirty();
         }
-        
+
+        public override void HandleNetworkMessage(ComponentMessage message, INetChannel netChannel, ICommonSession? session = null)
+        {
+            base.HandleNetworkMessage(message, netChannel, session);
+            
+            // If it's not on the ground / in our inventory then block it
+            if (ContainerHelpers.TryGetContainer(Owner, out var container) && container.Owner != session?.AttachedEntity)
+                return;
+
+            switch (message)
+            {
+                case DumpRangedMagazineComponentMessage msg:
+                    Dump(session?.AttachedEntity, msg.Amount);
+                    break;
+            }
+        }
+
         public override ComponentState GetComponentState()
         {
             var ammo = new Stack<bool>();
@@ -65,6 +87,22 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition
             }
                 
             return new RangedMagazineComponentState(ammo);
+        }
+
+        public void Dump(IEntity? user, int amount)
+        {
+            var count = Math.Min(amount, ShotsLeft);
+            const byte maxSounds = 3;
+            var soundsPlayed = 0;
+
+            for (var i = 0; i < count; i++)
+            {
+                if (!TryPop(out var entity))
+                    break;
+                
+                EntitySystem.Get<SharedRangedWeaponSystem>().EjectCasing(user, entity, soundsPlayed < maxSounds);
+                soundsPlayed++;
+            }
         }
 
         public bool TryPop([NotNullWhen(true)] out IEntity? entity)
@@ -115,19 +153,14 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition
         protected override bool Use(IEntity user)
         {
             if (!user.TryGetComponent(out HandsComponent? handsComponent))
-            {
                 return false;
-            }
 
             if (!TryPop(out var ammo))
-            {
                 return false;
-            }
 
             var itemComponent = ammo.GetComponent<ItemComponent>();
             if (!handsComponent.CanPutInHand(itemComponent))
             {
-                ammo.Transform.Coordinates = user.Transform.Coordinates;
                 EntitySystem.Get<SharedRangedWeaponSystem>().EjectCasing(user, ammo);
             }
             else

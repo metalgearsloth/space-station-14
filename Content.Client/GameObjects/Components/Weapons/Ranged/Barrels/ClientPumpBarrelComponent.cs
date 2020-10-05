@@ -106,7 +106,8 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 
         protected override void Cycle(bool manual = false)
         {
-            throw new NotImplementedException();
+            // TODO
+            return;
         }
 
         // TODO: Need interaction prediction AHHHHHHHHHHHHHHHHHHHH
@@ -114,7 +115,8 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         // I know I know no deadcode but I need interaction predictions
         public override bool TryInsertBullet(IEntity user, IEntity ammo)
         {
-            throw new NotImplementedException();
+            // TODO
+            return true;
         }
 
         public Control MakeControl()

@@ -97,14 +97,16 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             return true;
         }
 
-        public override Task<bool> InteractUsing(InteractUsingEventArgs eventArgs)
+        public override async Task<bool> InteractUsing(InteractUsingEventArgs eventArgs)
         {
-            throw new NotImplementedException();
+            // TODO
+            return true;
         }
 
         public override bool UseEntity(UseEntityEventArgs eventArgs)
         {
-            throw new NotImplementedException();
+            // TODO
+            return true;
         }
 
         public Control MakeControl()

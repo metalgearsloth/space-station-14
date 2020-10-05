@@ -203,17 +203,20 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 
         protected override bool TryInsertMag(IEntity user, IEntity mag)
         {
-            throw new System.NotImplementedException();
+            // TODO
+            return true;
         }
 
         protected override bool TryInsertAmmo(IEntity user, IEntity ammo)
         {
-            throw new System.NotImplementedException();
+            // TODO
+            return true;
         }
 
         protected override bool UseEntity(IEntity user)
         {
-            throw new System.NotImplementedException();
+            // TODO
+            return true;
         }
 
         protected override bool TryShoot(Angle angle)

@@ -383,13 +383,21 @@ namespace Content.Server.GameObjects.EntitySystems
             
             var ammo = casing.GetComponent<SharedAmmoComponent>();
             var offsetPos = (_robustRandom.NextFloat() * ejectOffset, _robustRandom.NextFloat() * ejectOffset);
-            casing.Transform.Coordinates = casing.Transform.Coordinates.Offset(offsetPos);
+            
+            // Need to deparent it if applicable
+            if (user != null && casing.Transform.ParentUid == user.Uid && user.Transform.Parent != null)
+            {
+                casing.Transform.Coordinates = user.Transform.Coordinates.Offset(offsetPos);
+            }
+            else
+            {
+                casing.Transform.Coordinates = casing.Transform.Coordinates.Offset(offsetPos);
+            }
+
             casing.Transform.LocalRotation = _robustRandom.Pick(ejectDirections).ToAngle();
 
             if (ammo.SoundCollectionEject == null || !playSound)
-            {
                 return;
-            }
 
             var soundCollection = _prototypeManager.Index<SoundCollectionPrototype>(ammo.SoundCollectionEject);
             var randomFile = _robustRandom.Pick(soundCollection.PickFiles);

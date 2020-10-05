@@ -125,6 +125,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 
         public override bool TryInsertBullet(IEntity user, SharedAmmoComponent ammoComponent)
         {
+            // TODO
             return true;
         }
         

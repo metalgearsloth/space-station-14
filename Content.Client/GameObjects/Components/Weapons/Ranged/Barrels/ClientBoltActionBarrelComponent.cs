@@ -163,7 +163,8 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 
         public override bool TryInsertBullet(IEntity user, SharedAmmoComponent ammoComponent)
         {
-            throw new NotImplementedException();
+            // TODO
+            return true;
         }
 
         protected override void TryEjectChamber()
@@ -206,7 +207,6 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         {
             protected override void GetData(IEntity user, ClientBoltActionBarrelComponent component, VerbData data)
             {
-                // TODO: Check shooter on the other verbs
                 if (!ActionBlockerSystem.CanInteract(user) || component.Shooter() != user)
                 {
                     data.Visibility = VerbVisibility.Invisible;
