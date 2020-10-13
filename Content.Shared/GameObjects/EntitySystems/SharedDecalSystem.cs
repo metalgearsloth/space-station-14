@@ -3,41 +3,64 @@ using System.Collections.Generic;
 using JetBrains.Annotations;
 using Robust.Shared.GameObjects;
 using Robust.Shared.GameObjects.Systems;
+using Robust.Shared.Interfaces.Configuration;
+using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Interfaces.Map;
 using Robust.Shared.Interfaces.Timing;
 using Robust.Shared.IoC;
 using Robust.Shared.Map;
+using Robust.Shared.Maths;
 using Robust.Shared.Serialization;
 using Robust.Shared.Timing;
+using Robust.Shared.Utility;
 
 namespace Content.Shared.GameObjects.EntitySystems
 {
-    [UsedImplicitly]
     public abstract class SharedDecalSystem : EntitySystem
     {
+        [Dependency] private readonly IConfigurationManager _configurationManager = default!;
         [Dependency] protected readonly IGameTiming GameTiming = default!;
         [Dependency] protected readonly IMapManager MapManager = default!;
-        
+
         public const byte ChunkSize = 4;
-        
-        protected Dictionary<GridId, Dictionary<MapIndices, DecalChunk>> Decals =
-            new Dictionary<GridId, Dictionary<MapIndices, DecalChunk>>();
-        
+        // TODO: Look at what client gas tile overlays did to handle those
+        protected const float UpdateRange = 12.5f;
+
+        protected Dictionary<GridId, Dictionary<Vector2i, DecalChunk>> Decals =
+            new Dictionary<GridId, Dictionary<Vector2i, DecalChunk>>();
+
+        public override void Initialize()
+        {
+            base.Initialize();
+            MapManager.OnGridRemoved += HandleGridRemoved;
+        }
+
+        public override void Shutdown()
+        {
+            base.Shutdown();
+            MapManager.OnGridRemoved -= HandleGridRemoved;
+        }
+
         public void RoundRestart()
         {
             Decals.Clear();
         }
-        
-        protected static MapIndices GetChunkIndices(MapIndices indices)
+
+        protected virtual void HandleGridRemoved(GridId gridId)
         {
-            return new MapIndices((int) Math.Floor((float) indices.X / ChunkSize) * ChunkSize, (int) MathF.Floor((float) indices.Y / ChunkSize) * ChunkSize);
+            Decals.Remove(gridId);
         }
 
-        protected DecalChunk GetOrCreateChunk(GridId gridId, MapIndices indices)
+        protected static Vector2i GetChunkIndices(Vector2i indices)
+        {
+            return new Vector2i((int) Math.Floor((float) indices.X / ChunkSize) * ChunkSize, (int) MathF.Floor((float) indices.Y / ChunkSize) * ChunkSize);
+        }
+
+        protected DecalChunk GetOrCreateChunk(GridId gridId, Vector2i indices)
         {
             if (!Decals.TryGetValue(gridId, out var chunks))
             {
-                chunks = new Dictionary<MapIndices, DecalChunk>();
+                chunks = new Dictionary<Vector2i, DecalChunk>();
                 Decals[gridId] = chunks;
             }
 
@@ -51,38 +74,71 @@ namespace Content.Shared.GameObjects.EntitySystems
 
             return chunk;
         }
-        
-        protected virtual void HandleDecalMessage(DecalMessage message)
+
+        /// <summary>
+        ///     Get every chunk in range of our entity that exists, including on other grids.
+        /// </summary>
+        /// <param name="entity"></param>
+        /// <returns></returns>
+        protected List<DecalChunk> GetChunksInRange(IEntity entity)
         {
-            var gridId = message.Coordinates.GetGridId(EntityManager);
+            var inRange = new List<DecalChunk>();
 
-            if (gridId == GridId.Invalid)
-                return;
+            // This is the max in any direction that we can get a chunk (e.g. max 2 chunks away of data).
+            var (maxXDiff, maxYDiff) = ((int) (UpdateRange / ChunkSize) + 1, (int) (UpdateRange / ChunkSize) + 1);
 
-            var indices = MapManager.GetGrid(gridId).GetTileRef(message.Coordinates).GridIndices;
-            var chunk = GetOrCreateChunk(gridId, indices);
-            
-            var decal = new Decal(message.Coordinates, message.TexturePath);
-            var currentTick = GameTiming.CurTick;
-            chunk.AddDecal(currentTick, decal);
-            chunk.Dirty(currentTick);
+            var worldBounds = Box2.CenteredAround(entity.Transform.WorldPosition,
+                new Vector2(UpdateRange, UpdateRange));
+
+            foreach (var grid in MapManager.FindGridsIntersecting(entity.Transform.MapID, worldBounds))
+            {
+                if (!Decals.TryGetValue(grid.Index, out var chunks))
+                {
+                    continue;
+                }
+
+                var entityTile = grid.GetTileRef(entity.Transform.Coordinates).GridIndices;
+
+                for (var x = -maxXDiff; x <= maxXDiff; x++)
+                {
+                    for (var y = -maxYDiff; y <= maxYDiff; y++)
+                    {
+                        var chunkIndices = GetChunkIndices(new Vector2i(entityTile.X + x * ChunkSize, entityTile.Y + y * ChunkSize));
+
+                        if (!chunks.TryGetValue(chunkIndices, out var chunk)) continue;
+
+                        // Now we'll check if it's in range and relevant for us
+                        // (e.g. if we're on the very edge of a chunk we may need more chunks).
+
+                        var (xDiff, yDiff) = (chunkIndices.X - entityTile.X, chunkIndices.Y - entityTile.Y);
+                        if (xDiff > 0 && xDiff > UpdateRange ||
+                            yDiff > 0 && yDiff > UpdateRange ||
+                            xDiff < 0 && Math.Abs(xDiff + ChunkSize) > UpdateRange ||
+                            yDiff < 0 && Math.Abs(yDiff + ChunkSize) > UpdateRange) continue;
+
+                        inRange.Add(chunk);
+                    }
+                }
+            }
+
+            return inRange;
         }
     }
 
     public sealed class DecalChunk
     {
         public GridId GridId { get; }
-        
-        public MapIndices OriginIndices { get; }
-        
+
+        public Vector2i OriginIndices { get; }
+
         public GameTick LastModifiedTick { get; private set; }
-        
+
         /// <summary>
         ///     The decal and the tick it was added.
         /// </summary>
         public Dictionary<Decal, GameTick> Decals { get; } = new Dictionary<Decal, GameTick>();
 
-        public DecalChunk(GridId gridId, MapIndices originIndices, GameTick createdTick)
+        public DecalChunk(GridId gridId, Vector2i originIndices, GameTick createdTick)
         {
             GridId = gridId;
             OriginIndices = originIndices;
@@ -92,7 +148,7 @@ namespace Content.Shared.GameObjects.EntitySystems
         public IEnumerable<Decal> GetModifiedDecals(GameTick? currentTick = null)
         {
             currentTick ??= GameTick.Zero;
-            
+
             foreach (var (decal, tick) in Decals)
             {
                 if (tick <= currentTick)
@@ -134,13 +190,19 @@ namespace Content.Shared.GameObjects.EntitySystems
     {
         public EntityCoordinates Coordinates { get; }
 
-        public string TexturePath { get; }
-        
+        public Color Color { get; }
+
+        public ResourcePath RsiPath { get; }
+
+        public string State { get; }
+
         // TODO: Rotation
-        public Decal(EntityCoordinates coordinates, string texturePath)
+        public Decal(EntityCoordinates coordinates, Color color, ResourcePath rsiPath, string state)
         {
             Coordinates = coordinates;
-            TexturePath = texturePath;
+            Color = color;
+            RsiPath = rsiPath;
+            State = state;
         }
     }
 
@@ -150,29 +212,30 @@ namespace Content.Shared.GameObjects.EntitySystems
     [Serializable, NetSerializable]
     public sealed class DecalOverlayMessage : EntitySystemMessage
     {
-        // We could also potentially send a Dictionary<Origin, List<Decal>> instead to save the client a bit of perf
-        // But the bandwidth's probably more important?
-        public GridId GridId { get; }
+        public Dictionary<GridId, List<Decal>> Decals { get; }
 
-        private List<Decal> Decals { get; }
-
-        public DecalOverlayMessage(GridId gridId, List<Decal> decals)
+        public DecalOverlayMessage(Dictionary<GridId, List<Decal>> decals)
         {
-            GridId = gridId;
             Decals = decals;
         }
     }
-    
+
     public sealed class DecalMessage : EntitySystemMessage
     {
         public EntityCoordinates Coordinates { get; }
-        
-        public string TexturePath { get; }
 
-        public DecalMessage(EntityCoordinates coordinates, string texturePath)
+        public Color Color { get; }
+
+        public ResourcePath RsiPath { get; }
+
+        public string State { get; }
+
+        public DecalMessage(EntityCoordinates coordinates, Color color, ResourcePath rsiPath, string state)
         {
             Coordinates = coordinates;
-            TexturePath = texturePath;
+            Color = color;
+            RsiPath = rsiPath;
+            State = state;
         }
     }
 }

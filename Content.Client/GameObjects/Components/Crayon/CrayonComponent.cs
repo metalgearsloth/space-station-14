@@ -29,6 +29,7 @@ namespace Content.Client.GameObjects.Components.Crayon
                 return;
 
             _color = state.Color;
+            SelectedRsi = state.Rsi;
             SelectedState = state.State;
             Charges = state.Charges;
             Capacity = state.Capacity;

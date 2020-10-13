@@ -14,7 +14,10 @@ namespace Content.Shared.GameObjects.Components
         public override string Name => "Crayon";
         public override uint? NetID => ContentNetIDs.CRAYONS;
 
+        public string SelectedRsi { get; set; }
+
         public string SelectedState { get; set; }
+
         protected string _color;
 
         [Serializable, NetSerializable]
@@ -46,13 +49,15 @@ namespace Content.Shared.GameObjects.Components
     public class CrayonComponentState : ComponentState
     {
         public readonly string Color;
+        public readonly string Rsi;
         public readonly string State;
         public readonly int Charges;
         public readonly int Capacity;
 
-        public CrayonComponentState(string color, string state, int charges, int capacity) : base(ContentNetIDs.CRAYONS)
+        public CrayonComponentState(string color, string rsi, string state, int charges, int capacity) : base(ContentNetIDs.CRAYONS)
         {
             Color = color;
+            Rsi = rsi;
             State = state;
             Charges = charges;
             Capacity = capacity;

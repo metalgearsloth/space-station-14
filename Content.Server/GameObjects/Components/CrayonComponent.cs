@@ -18,6 +18,9 @@ using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization;
 using Robust.Shared.ViewVariables;
 using System.Linq;
+using Content.Shared.GameObjects.EntitySystems;
+using Robust.Server.Player;
+using Robust.Shared.Utility;
 
 namespace Content.Server.GameObjects.Components
 {
@@ -58,8 +61,10 @@ namespace Content.Server.GameObjects.Components
 
             // Get the first one from the catalog and set it as default
             var decals = _prototypeManager.EnumeratePrototypes<CrayonDecalPrototype>().FirstOrDefault();
+
             if (decals != null)
             {
+                SelectedRsi = decals.SpritePath;
                 SelectedState = decals.Decals.First();
             }
             Dirty();
@@ -88,7 +93,7 @@ namespace Content.Server.GameObjects.Components
 
         public override ComponentState GetComponentState()
         {
-            return new CrayonComponentState(_color, SelectedState, Charges, Capacity);
+            return new CrayonComponentState(_color, SelectedRsi, SelectedState, Charges, Capacity);
         }
 
         // Opens the selection window
@@ -119,15 +124,12 @@ namespace Content.Server.GameObjects.Components
                 return;
             }
 
-            var entityManager = IoCManager.Resolve<IServerEntityManager>();
             //TODO: rotation?
-            var entity = entityManager.SpawnEntity("CrayonDecal", eventArgs.ClickLocation);
-            if (entity.TryGetComponent(out AppearanceComponent? appearance))
-            {
-                appearance.SetData(CrayonVisuals.State, SelectedState);
-                appearance.SetData(CrayonVisuals.Color, Color);
+            Owner.EntityManager.EventBus.RaiseEvent(EventSource.Local, new DecalMessage(eventArgs.ClickLocation, Color.FromName(_color), new ResourcePath(SelectedRsi), SelectedState));
+            /*
                 appearance.SetData(CrayonVisuals.Rotation, eventArgs.User.Transform.LocalRotation);
             }
+            */
 
             if (!string.IsNullOrEmpty(_useSound))
             {
