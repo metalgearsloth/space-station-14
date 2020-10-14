@@ -50,30 +50,38 @@ namespace Content.Server.GameObjects.Components.Doors
                     return;
 
                 _state = value;
+                Owner.TryGetComponent(out OccluderComponent? occluder);
+                Owner.TryGetComponent(out AirtightComponent? airtight);
+                Owner.TryGetComponent(out IPhysicsComponent? body);
 
-                // Didn't do in Open and Close as some stuff spawns as open so this is just easier.
-                if (Owner.TryGetComponent(out IPhysicsComponent? physicsComponent))
+                switch (_state)
                 {
-                    switch (_state)
-                    {
-                        case DoorState.Closed:
-                        case DoorState.Closing:
-                            // WE should probably track what we updated but I doubt doors will get more than 1 physics shape anyway... right?
-                            foreach (var shape in physicsComponent.PhysicsShapes)
-                            {
-                                shape.CollisionLayer |= (int) CollisionGroup.Opaque;
-                            }
-                            break;
-                        case DoorState.Open:
-                        case DoorState.Opening:
-                            foreach (var shape in physicsComponent.PhysicsShapes)
-                            {
-                                shape.CollisionLayer &= (int) ~CollisionGroup.Opaque;
-                            }
-                            break;
-                        default:
-                            throw new ArgumentOutOfRangeException();
-                    }
+                    case DoorState.Closed:
+                    case DoorState.Closing:
+                        if (_occludes && occluder != null)
+                            occluder.Enabled = true;
+
+                        if (airtight != null)
+                            airtight.AirBlocked = true;
+
+                        if (body != null)
+                            body.CanCollide = true;
+
+                        break;
+                    case DoorState.Open:
+                    case DoorState.Opening:
+                        if (_occludes && occluder != null)
+                            occluder.Enabled = false;
+
+                        if (airtight != null)
+                            airtight.AirBlocked = false;
+
+                        if (body != null)
+                            body.CanCollide = false;
+
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
                 }
 
                 Owner.EntityManager.EventBus.RaiseEvent(EventSource.Local, new DoorStateMessage(this, State));
@@ -269,23 +277,9 @@ namespace Content.Server.GameObjects.Components.Doors
             _canWeldShut = false;
             State = DoorState.Opening;
             SetAppearance(DoorVisualState.Opening);
-            if (_occludes && Owner.TryGetComponent(out OccluderComponent? occluder))
-            {
-                occluder.Enabled = false;
-            }
 
             Timer.Spawn(OpenTimeOne, async () =>
             {
-                if (Owner.TryGetComponent(out AirtightComponent? airtight))
-                {
-                    airtight.AirBlocked = false;
-                }
-
-                if (Owner.TryGetComponent(out IPhysicsComponent? physics))
-                {
-                    physics.Hard = false;
-                }
-
                 await Timer.Delay(OpenTimeTwo, _cancellationTokenSource.Token);
 
                 State = DoorState.Open;
@@ -417,26 +411,12 @@ namespace Content.Server.GameObjects.Components.Doors
             State = DoorState.Closing;
             OpenTimeCounter = 0;
             SetAppearance(DoorVisualState.Closing);
-            if (_occludes && Owner.TryGetComponent(out OccluderComponent? occluder))
-            {
-                occluder.Enabled = true;
-            }
 
             Timer.Spawn(CloseTimeOne, async () =>
             {
                 if (shouldCheckCrush && _canCrush)
                 {
                     CheckCrush();
-                }
-
-                if (Owner.TryGetComponent(out AirtightComponent? airtight))
-                {
-                    airtight.AirBlocked = true;
-                }
-
-                if (Owner.TryGetComponent(out IPhysicsComponent? body))
-                {
-                    body.Hard = true;
                 }
 
                 await Timer.Delay(CloseTimeTwo, _cancellationTokenSource.Token);
