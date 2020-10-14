@@ -27,9 +27,9 @@ namespace Content.Shared.Physics
                 return;
             }
 
-            LinearVelocity *= Decay;
+            Impulse *= Decay;
 
-            if (LinearVelocity.Length < 0.001)
+            if (Impulse.Length < 0.001)
             {
                 Stop();
             }

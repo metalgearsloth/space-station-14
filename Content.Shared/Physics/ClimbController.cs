@@ -63,7 +63,7 @@ namespace Content.Shared.Physics
 
             _lastKnownPosition = ControlledComponent.Owner.Transform.WorldPosition;
 
-            if ((ControlledComponent.Owner.Transform.WorldPosition - _movingTo.Value).Length <= 0.1f) 
+            if ((ControlledComponent.Owner.Transform.WorldPosition - _movingTo.Value).Length <= 0.1f)
             {
                 _movingTo = null;
             }
@@ -78,11 +78,11 @@ namespace Content.Shared.Physics
                 }
 
                 var diff = _movingTo.Value - ControlledComponent.Owner.Transform.WorldPosition;
-                LinearVelocity = diff.Normalized * 5;
+                Impulse = diff.Normalized * 5;
             }
             else
             {
-                LinearVelocity = Vector2.Zero;
+                Impulse = Vector2.Zero;
             }
         }
     }

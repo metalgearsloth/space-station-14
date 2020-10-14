@@ -25,14 +25,14 @@ namespace Content.Shared.Physics
                 return;
             }
 
-            LinearVelocity = velocityDirection * speed * 100;
+            Impulse = velocityDirection * speed * 100;
         }
 
         public override void UpdateAfterProcessing()
         {
             base.UpdateAfterProcessing();
 
-            LinearVelocity = Vector2.Zero;
+            Impulse = Vector2.Zero;
         }
     }
 }

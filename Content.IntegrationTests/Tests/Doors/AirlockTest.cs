@@ -112,7 +112,7 @@ namespace Content.IntegrationTests.Tests.Doors
             await server.WaitIdleAsync();
 
             // Push the human towards the airlock
-            controller.LinearVelocity = (0.5f, 0);
+            controller.Impulse = (0.5f, 0);
 
             for (var i = 0; i < 240; i += 10)
             {

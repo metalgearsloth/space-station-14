@@ -98,7 +98,7 @@ namespace Content.Shared.GameObjects.EntitySystems
                 {
                     if (physics.TryGetController(out MoverController controller))
                     {
-                        controller.Move(total, 1);
+                        controller.Move(total, 1.0f);
                     }
                 }
 

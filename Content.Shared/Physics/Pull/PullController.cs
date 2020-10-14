@@ -14,7 +14,7 @@ namespace Content.Shared.Physics.Pull
 {
     public class PullController : VirtualController
     {
-        private const float DistBeforePull = 1.0f;
+        private const float DistBeforePull = 1.2f;
 
         private const float DistBeforeStopPull = SharedInteractionSystem.InteractionRange;
 
@@ -126,15 +126,24 @@ namespace Content.Shared.Physics.Pull
             else if (_movingTo.HasValue)
             {
                 var diff = _movingTo.Value.Position - ControlledComponent.Owner.Transform.Coordinates.Position;
-                LinearVelocity = diff.Normalized * 5;
+                Impulse = diff.Normalized * 5;
             }
             else if (dist.Length > DistBeforePull)
             {
-                LinearVelocity = dist.Normalized * _puller.LinearVelocity.Length * 1.1f;
+                // Extrapolate out the owner's direction and try and align us faster.
+                var targetPos = _puller.LinearVelocity != Vector2.Zero ? (_puller.Owner.Transform.WorldPosition - _puller.LinearVelocity.Normalized * DistBeforePull / 2) : Vector2.Zero;
+                var targetAdjustment = Vector2.Zero;
+
+                if (targetPos != Vector2.Zero && (ControlledComponent.Owner.Transform.WorldPosition - targetPos).LengthSquared > 0.4f)
+                {
+                    targetAdjustment = (targetPos - ControlledComponent.Owner.Transform.WorldPosition) * 6000f;
+                }
+
+                Impulse = _puller.LinearVelocity / ControlledComponent.InvMass * 50 + targetAdjustment;
             }
             else
             {
-                LinearVelocity = Vector2.Zero;
+                Impulse = Vector2.Zero;
             }
         }
 

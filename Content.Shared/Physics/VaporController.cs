@@ -7,7 +7,7 @@ namespace Content.Shared.Physics
     {
         public void Move(Vector2 velocityDirection, float speed)
         {
-            LinearVelocity = velocityDirection * speed;
+            Impulse = velocityDirection * 500 * speed;
         }
     }
 }

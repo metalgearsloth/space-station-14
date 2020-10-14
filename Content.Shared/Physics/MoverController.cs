@@ -27,12 +27,12 @@ namespace Content.Shared.Physics
 
         public void Push(Vector2 velocityDirection, float speed)
         {
-            LinearVelocity = velocityDirection * speed;
+            Impulse = velocityDirection * 5000 * speed;
         }
 
         public void StopMoving()
         {
-            LinearVelocity = Vector2.Zero;
+            Impulse = Vector2.Zero;
         }
     }
 }

@@ -78,28 +78,7 @@ namespace Content.Server.Throw
                 }
             }
 
-            // scaling is handled elsewhere, this is just multiplying by 10 independent of timing as a fix until elsewhere values are updated
-            var spd = throwForce * 10;
-
-            projComp.StartThrow(angle.ToVec(), spd);
-
-            if (throwSourceEnt != null &&
-                throwSourceEnt.TryGetComponent<IPhysicsComponent>(out var physics) &&
-                physics.TryGetController(out MoverController mover))
-            {
-                var physicsMgr = IoCManager.Resolve<IPhysicsManager>();
-
-                if (physicsMgr.IsWeightless(throwSourceEnt.Transform.Coordinates))
-                {
-                    // We don't check for surrounding entities,
-                    // so you'll still get knocked around if you're hugging the station wall in zero g.
-                    // I got kinda lazy is the reason why. Also it makes a bit of sense.
-                    // If somebody wants they can come along and make it so magboots completely hold you still.
-                    // Would be a cool incentive to use them.
-                    const float ThrowFactor = 5.0f; // Break Newton's Third Law for better gameplay
-                    mover.Push(-angle.ToVec(), spd * ThrowFactor / physics.Mass);
-                }
-            }
+            projComp.StartThrow(angle.ToVec(), throwForce);
         }
 
         /// <summary>
@@ -129,27 +108,13 @@ namespace Content.Server.Throw
             EntityCoordinates sourceLoc, bool spread = false, IEntity throwSourceEnt = null)
         {
             var entityManager = IoCManager.Resolve<IEntityManager>();
-            var timing = IoCManager.Resolve<IGameTiming>();
 
             // Calculate the force necessary to land a throw based on throw duration, mass and distance.
             if (!targetLoc.TryDistance(entityManager, sourceLoc, out var distance))
-            {
                 return;
-            }
-
-            var throwDuration = ThrownItemComponent.DefaultThrowTime;
-            var mass = 1f;
-            if (thrownEnt.TryGetComponent(out IPhysicsComponent physics))
-            {
-                mass = physics.Mass;
-            }
-
-            var velocityNecessary = distance / throwDuration;
-            var impulseNecessary = velocityNecessary * mass;
-            var forceNecessary = impulseNecessary * (1f / timing.TickRate);
 
             // Then clamp it to the max force allowed and call Throw().
-            Throw(thrownEnt, MathF.Min(forceNecessary, throwForceMax), targetLoc, sourceLoc, spread, throwSourceEnt);
+            Throw(thrownEnt, Math.Min(100 * distance, 1000), targetLoc, sourceLoc, spread, throwSourceEnt);
         }
     }
 }

@@ -56,13 +56,13 @@ namespace Content.Server.Atmos
                     {
                         var moveForce = maxForce * MathHelper.Clamp(moveProb, 0, 100) / 150f;
                         var pos = ((throwTarget.Position - transform.Coordinates.Position).Normalized + direction.ToDirection().ToVec()).Normalized;
-                        LinearVelocity = pos * moveForce;
+                        Impulse = pos * moveForce * 5000;
                     }
 
                     else
                     {
                         var moveForce = MathF.Min(maxForce * MathHelper.Clamp(moveProb, 0, 100) / 2500f, 20f);
-                        LinearVelocity = direction.ToDirection().ToVec() * moveForce;
+                        Impulse = direction.ToDirection().ToVec() * moveForce * 5000;
                     }
 
                     pressureComponent.LastHighPressureMovementAirCycle = cycle;
@@ -76,8 +76,8 @@ namespace Content.Server.Atmos
 
             if (ControlledComponent != null && !_physicsManager.IsWeightless(ControlledComponent.Owner.Transform.Coordinates))
             {
-                LinearVelocity *= 0.85f;
-                if (MathF.Abs(LinearVelocity.Length) < 1f)
+                Impulse *= 0.85f;
+                if (MathF.Abs(Impulse.Length) < 1f)
                     Stop();
             }
         }

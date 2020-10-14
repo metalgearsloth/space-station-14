@@ -88,7 +88,7 @@ namespace Content.Shared.GameObjects.Components.Movement
             if (entity.TryGetComponent(out IPhysicsComponent physics))
             {
                 var controller = physics.EnsureController<SlipController>();
-                controller.LinearVelocity = physics.LinearVelocity * LaunchForwardsMultiplier;
+                controller.Impulse = physics.LinearVelocity * 5000 * LaunchForwardsMultiplier;
             }
 
             stun.Paralyze(5);
