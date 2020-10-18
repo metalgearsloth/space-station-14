@@ -12,9 +12,7 @@ using Content.Shared.Audio;
 using Content.Shared.Maps;
 using JetBrains.Annotations;
 using Robust.Server.GameObjects.EntitySystems;
-using Robust.Server.GameObjects.EntitySystems.TileLookup;
 using Robust.Shared.Containers;
-using Robust.Shared.GameObjects;
 using Robust.Shared.GameObjects.Components;
 using Robust.Shared.GameObjects.Systems;
 using Robust.Shared.Interfaces.GameObjects;
@@ -23,6 +21,7 @@ using Robust.Shared.Interfaces.Random;
 using Robust.Shared.IoC;
 using Robust.Shared.Map;
 using Robust.Shared.Maths;
+using Robust.Shared.Physics.Chunks;
 using Robust.Shared.Random;
 using Robust.Shared.ViewVariables;
 
@@ -33,7 +32,7 @@ namespace Content.Server.Atmos
         [Robust.Shared.IoC.Dependency] private readonly IRobustRandom _robustRandom = default!;
         [Robust.Shared.IoC.Dependency] private readonly IEntityManager _entityManager = default!;
         [Robust.Shared.IoC.Dependency] private readonly IMapManager _mapManager = default!;
-        private readonly GridTileLookupSystem _gridTileLookupSystem = default!;
+        private readonly SharedEntityLookupSystem _sharedEntityLookupSystem = default!;
 
 
         private static readonly TileAtmosphereComparer Comparer = new TileAtmosphereComparer();
@@ -126,7 +125,7 @@ namespace Content.Server.Atmos
         {
             IoCManager.InjectDependencies(this);
             _gridAtmosphereComponent = atmosphereComponent;
-            _gridTileLookupSystem = _entityManager.EntitySysManager.GetEntitySystem<GridTileLookupSystem>();
+            _sharedEntityLookupSystem = _entityManager.EntitySysManager.GetEntitySystem<SharedEntityLookupSystem>();
             GridIndex = gridIndex;
             GridIndices = gridIndices;
             Air = mixture;
@@ -200,7 +199,7 @@ namespace Content.Server.Atmos
                         GridIndices.ToEntityCoordinates(GridIndex, _mapManager), AudioHelpers.WithVariation(0.125f).WithVolume(MathHelper.Clamp(PressureDifference / 10, 10, 100)));
             }
 
-            foreach (var entity in _gridTileLookupSystem.GetEntitiesIntersecting(GridIndex, GridIndices))
+            foreach (var entity in _sharedEntityLookupSystem.GetEntitiesIntersecting(GridIndex, GridIndices))
             {
                 if (!entity.TryGetComponent(out IPhysicsComponent physics)
                     ||  !entity.TryGetComponent(out MovedByPressureComponent pressure)
@@ -819,7 +818,7 @@ namespace Content.Server.Atmos
 
             var tileRef = GridIndices.GetTileRef(GridIndex);
 
-            foreach (var entity in tileRef.GetEntitiesInTileFast(_gridTileLookupSystem))
+            foreach (var entity in tileRef.GetEntitiesInTileFast(_sharedEntityLookupSystem))
             {
                 foreach (var fireAct in entity.GetAllComponents<IFireAct>())
                 {
@@ -1101,13 +1100,13 @@ namespace Content.Server.Atmos
         {
             var reconsiderAdjacent = false;
 
-            foreach (var entity in GridIndices.GetEntitiesInTileFast(GridIndex, _gridAtmosphereComponent.GridTileLookupSystem))
+            foreach (var entity in GridIndices.GetEntitiesInTileFast(GridIndex, _gridAtmosphereComponent.SharedEntityLookupSystem))
             {
                 if (!entity.TryGetComponent(out FirelockComponent firelock)) continue;
                 reconsiderAdjacent |= firelock.EmergencyPressureStop();
             }
 
-            foreach (var entity in other.GridIndices.GetEntitiesInTileFast(other.GridIndex, _gridAtmosphereComponent.GridTileLookupSystem))
+            foreach (var entity in other.GridIndices.GetEntitiesInTileFast(other.GridIndex, _gridAtmosphereComponent.SharedEntityLookupSystem))
             {
                 if (!entity.TryGetComponent(out FirelockComponent firelock)) continue;
                 reconsiderAdjacent |= firelock.EmergencyPressureStop();

@@ -10,17 +10,15 @@ using Content.Server.GameObjects.Components.NodeContainer.NodeGroups;
 using Content.Server.GameObjects.EntitySystems;
 using Content.Shared.Atmos;
 using Content.Shared.Maps;
-using Robust.Server.GameObjects.EntitySystems.TileLookup;
 using Robust.Server.Interfaces.GameObjects;
 using Robust.Shared.GameObjects;
 using Robust.Shared.GameObjects.Components.Map;
-using Robust.Shared.GameObjects.Components.Transform;
 using Robust.Shared.GameObjects.Systems;
 using Robust.Shared.Interfaces.Map;
-using Robust.Shared.IoC;
 using Robust.Shared.Log;
 using Robust.Shared.Map;
 using Robust.Shared.Maths;
+using Robust.Shared.Physics.Chunks;
 using Robust.Shared.Serialization;
 using Robust.Shared.Timing;
 using Robust.Shared.ViewVariables;
@@ -38,7 +36,7 @@ namespace Content.Server.GameObjects.Components.Atmos
         [Robust.Shared.IoC.Dependency] private ITileDefinitionManager _tileDefinitionManager = default!;
         [Robust.Shared.IoC.Dependency] private IServerEntityManager _serverEntityManager = default!;
 
-        public GridTileLookupSystem GridTileLookupSystem { get; private set; } = default!;
+        public SharedEntityLookupSystem SharedEntityLookupSystem { get; private set; } = default!;
         public AtmosphereSystem AtmosphereSystem { get; private set; } = default!;
 
         /// <summary>
@@ -175,7 +173,7 @@ namespace Content.Server.GameObjects.Components.Atmos
             base.Initialize();
             RepopulateTiles();
 
-            GridTileLookupSystem = EntitySystem.Get<GridTileLookupSystem>();
+            SharedEntityLookupSystem = EntitySystem.Get<SharedEntityLookupSystem>();
             AtmosphereSystem = EntitySystem.Get<AtmosphereSystem>();
         }
 
@@ -783,7 +781,7 @@ namespace Content.Server.GameObjects.Components.Atmos
 
         protected virtual IEnumerable<AirtightComponent> GetObstructingComponents(Vector2i indices)
         {
-            var gridLookup = EntitySystem.Get<GridTileLookupSystem>();
+            var gridLookup = EntitySystem.Get<SharedEntityLookupSystem>();
 
             var list = new List<AirtightComponent>();
 

@@ -509,7 +509,7 @@ namespace Content.Server.Atmos
                 if (!doReaction)
                     continue;
 
-                reaction = prototype.React(this, holder, _atmosphereSystem.GridTileLookupSystem);
+                reaction = prototype.React(this, holder, _atmosphereSystem.SharedEntityLookupSystem);
                 if(reaction.HasFlag(ReactionResult.StopReactions))
                     break;
             }
