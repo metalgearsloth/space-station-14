@@ -31,6 +31,10 @@
     <Compile Update="UserInterface\OptionsMenu.Audio.cs">
       <DependentUpon>OptionsMenu.cs</DependentUpon>
     </Compile>
+    <Compile Remove="GameObjects\EntitySystems\Audio\NoAirAudioEffect.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="GameObjects\EntitySystems\Audio" />
   </ItemGroup>
   <Import Project="..\RobustToolbox\MSBuild\Robust.Engine.targets" />
   <Target Name="ContentAfterBuild" DependsOnTargets="ClientAfterBuild" AfterTargets="Build" />
