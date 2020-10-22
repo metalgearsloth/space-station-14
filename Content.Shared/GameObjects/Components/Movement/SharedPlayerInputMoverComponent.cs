@@ -286,7 +286,7 @@ namespace Content.Shared.GameObjects.Components.Movement
         }
 
         [Flags]
-        private enum MoveButtons : byte
+        public enum MoveButtons : byte
         {
             None = 0,
             Up = 1,

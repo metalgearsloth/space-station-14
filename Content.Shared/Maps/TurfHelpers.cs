@@ -160,7 +160,7 @@ namespace Content.Shared.Maps
 
             var worldBox = GetWorldTileBox(turf);
 
-            var query = physics.GetCollidingEntities(turf.MapIndex, in worldBox);
+            var query = physics.GetCollidingBodies(turf.MapIndex, worldBox);
 
             foreach (var body in query)
             {

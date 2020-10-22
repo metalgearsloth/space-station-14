@@ -55,6 +55,13 @@ namespace Content.Client.Input
             ghost.AddFunction(EngineKeyFunctions.Walk);
             ghost.AddFunction(ContentKeyFunctions.OpenContextMenu);
 
+            var shuttle = contexts.New("shuttle", "common");
+            shuttle.AddFunction(EngineKeyFunctions.MoveUp);
+            shuttle.AddFunction(EngineKeyFunctions.MoveDown);
+            shuttle.AddFunction(EngineKeyFunctions.MoveLeft);
+            shuttle.AddFunction(EngineKeyFunctions.MoveRight);
+            shuttle.AddFunction(EngineKeyFunctions.Walk);
+
             common.AddFunction(ContentKeyFunctions.OpenEntitySpawnWindow);
             common.AddFunction(ContentKeyFunctions.OpenSandboxWindow);
             common.AddFunction(ContentKeyFunctions.OpenTileSpawnWindow);

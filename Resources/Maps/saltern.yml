@@ -8399,6 +8399,7 @@ entities:
     - !type:PhysShapeGrid
       grid: 0
     type: Physics
+    anchored: false
   - uniqueMixes:
     - volume: 2500
       moles:

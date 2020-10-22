@@ -5,15 +5,19 @@ using Content.Shared.GameObjects.Components.Movement;
 using Content.Shared.Physics;
 using Content.Shared.Physics.Pull;
 using Robust.Shared.Configuration;
+using Robust.Shared.GameObjects;
 using Robust.Shared.GameObjects.Components;
+using Robust.Shared.GameObjects.Components.Map;
 using Robust.Shared.GameObjects.Systems;
 using Robust.Shared.Input;
 using Robust.Shared.Input.Binding;
 using Robust.Shared.Interfaces.Configuration;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Interfaces.GameObjects.Components;
+using Robust.Shared.Interfaces.Map;
 using Robust.Shared.Interfaces.Physics;
 using Robust.Shared.IoC;
+using Robust.Shared.Log;
 using Robust.Shared.Maths;
 using Robust.Shared.Players;
 
@@ -22,6 +26,7 @@ namespace Content.Shared.GameObjects.EntitySystems
     public abstract class SharedMoverSystem : EntitySystem
     {
         [Dependency] private readonly IEntityManager _entityManager = default!;
+        [Dependency] private readonly IMapManager _mapManager = default!;
         [Dependency] protected readonly IPhysicsManager PhysicsManager = default!;
         [Dependency] private readonly IConfigurationManager _configurationManager = default!;
 
@@ -54,8 +59,21 @@ namespace Content.Shared.GameObjects.EntitySystems
 
         protected void UpdateKinematics(ITransformComponent transform, IMoverComponent mover, IPhysicsComponent physics)
         {
-            physics.EnsureController<MoverController>();
+            ShuttleController? shuttleController = null;
 
+            if (physics.Owner.HasComponent<SharedShuttleControllerComponent>())
+            {
+                var grid = _mapManager.GetGrid(transform.GridID);
+                if (grid.GridEntityId.IsValid())
+                {
+                    var gridEntity = EntityManager.GetEntity(grid.GridEntityId);
+                    shuttleController = gridEntity.GetComponent<IPhysicsComponent>().EnsureController<ShuttleController>();
+                }
+            }
+            else
+            {
+                physics.EnsureController<MoverController>();
+            }
             var weightless = transform.Owner.IsWeightless();
 
             if (weightless)
@@ -82,9 +100,11 @@ namespace Content.Shared.GameObjects.EntitySystems
             }
             else
             {
+                MoverController controller;
+
                 if (weightless)
                 {
-                    if (physics.TryGetController(out MoverController controller))
+                    if (physics.TryGetController(out controller))
                     {
                         controller.Push(combined, mover.CurrentPushSpeed);
                     }
@@ -94,12 +114,15 @@ namespace Content.Shared.GameObjects.EntitySystems
                 }
 
                 var total = walkDir * mover.CurrentWalkSpeed + sprintDir * mover.CurrentSprintSpeed;
-
+                if (shuttleController != null)
                 {
-                    if (physics.TryGetController(out MoverController controller))
-                    {
-                        controller.Move(total, 1);
-                    }
+                    shuttleController.Push(total, 5.0f);
+                    return;
+                }
+
+                if (physics.TryGetController(out controller))
+                {
+                    controller.Move(total, 8);
                 }
 
                 transform.LocalRotation = total.GetDir().ToAngle();

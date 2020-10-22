@@ -303,14 +303,16 @@ namespace Content.Server.GameObjects.Components.Doors
                 return;
 
             // Crush
-            foreach (var e in body.GetCollidingEntities(Vector2.Zero, false))
+            foreach (var comp in body.GetCollidingComponents(false))
             {
-                if (!e.TryGetComponent(out StunnableComponent? stun)
-                    || !e.TryGetComponent(out IDamageableComponent? damage)
-                    || !e.TryGetComponent(out IPhysicsComponent? otherBody))
+                var entity = comp.Owner;
+
+                if (!entity.TryGetComponent(out StunnableComponent? stun)
+                    || !entity.TryGetComponent(out IDamageableComponent? damage)
+                    || !entity.TryGetComponent(out IPhysicsComponent? otherBody))
                     continue;
 
-                var percentage = otherBody.WorldAABB.IntersectPercentage(body.WorldAABB);
+                var percentage = comp.WorldAABB.IntersectPercentage(body.WorldAABB);
 
                 if (percentage < 0.1f)
                     continue;
@@ -380,7 +382,7 @@ namespace Content.Server.GameObjects.Components.Doors
             bool shouldCheckCrush = false;
 
             if (_canCrush && Owner.TryGetComponent(out IPhysicsComponent? physics) &&
-                physics.IsColliding(Vector2.Zero, false))
+                physics.IsColliding(false))
             {
                 if (Safety)
                     return false;

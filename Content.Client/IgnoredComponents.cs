@@ -63,7 +63,6 @@
             "MagicMirror",
             "FloorTile",
             "FootstepSound",
-            "ShuttleController",
             "HumanInventoryController",
             "UseDelay",
             "Pourable",
