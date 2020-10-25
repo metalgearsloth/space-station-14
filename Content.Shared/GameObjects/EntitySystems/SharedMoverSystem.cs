@@ -122,7 +122,7 @@ namespace Content.Shared.GameObjects.EntitySystems
 
                 if (physics.TryGetController(out controller))
                 {
-                    controller.Move(total, 8);
+                    controller.Move(total, 1);
                 }
 
                 transform.LocalRotation = total.GetDir().ToAngle();
