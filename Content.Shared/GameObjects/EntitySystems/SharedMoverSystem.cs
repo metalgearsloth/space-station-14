@@ -77,7 +77,7 @@ namespace Content.Shared.GameObjects.EntitySystems
             {
                 if (physics.TryGetController(out MoverController controller))
                 {
-                    controller.StopMoving(frameTime);
+                    controller.StopMoving();
                 }
             }
             else
@@ -87,7 +87,7 @@ namespace Content.Shared.GameObjects.EntitySystems
                     // TODO: Just set it to air status
                     if (physics.TryGetController(out MoverController controller))
                     {
-                        controller.Push(combined, mover.CurrentPushSpeed, frameTime);
+                        controller.Push(combined, mover.CurrentPushSpeed);
                     }
 
                     transform.LocalRotation = physics.LinearVelocity.GetDir().ToAngle();
@@ -99,7 +99,7 @@ namespace Content.Shared.GameObjects.EntitySystems
                 {
                     if (physics.TryGetController(out MoverController controller))
                     {
-                        controller.Push(total, 1.0f, frameTime);
+                        controller.Push(total, 1.0f);
                     }
                 }
 

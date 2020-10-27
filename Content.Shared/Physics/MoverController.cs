@@ -12,48 +12,47 @@ namespace Content.Shared.Physics
 
         private const float MaxChange = 0.01f;
 
-        // Essentially we need to store our force somewhere so if the player doesn't do any inputs we aren't naturally resisting any new forces.
-        private Vector2 _accumulatedForce = Vector2.Zero;
-
-        private float _forceCap = 10.0f;
+        // Look I needed some kind of trickery so they'd slow down when you stopped pressing the button.
+        // If you have a better solution be my guest.
+        private bool _frictionModified = false;
 
         // Essentially do unique shit to make movement feel nicer.
-        public void Push(Vector2 velocityDirection, float speed, float frameTime)
+        public void Push(Vector2 velocityDirection, float speed)
         {
+            Force = Vector2.Zero;
+
             if (ControlledComponent == null)
                 return;
+
+            if (_frictionModified)
+            {
+                ControlledComponent.Friction /= 25.0f;
+                _frictionModified = false;
+            }
 
             var bodyVelocity = ControlledComponent.LinearVelocity;
             var deltaV = velocityDirection - bodyVelocity;
-
-            if (deltaV.Length <= 0.0)
-                return;
-
-            var accel = deltaV; // frameTime;
+            var accel = deltaV * speed;
 
             // Just because I cbf tabbing anymore; body.LinearVelocity += body.Force * body.InvMass * deltaTime;
             // Thus mass gets cancelled out and so velocity += force * deltaTime
             var force = accel.Normalized * Math.Min(accel.Length, MaxChange) * ControlledComponent.Mass;
+
             Force = force;
         }
 
-        public void StopMoving(float frameTime)
+        public void StopMoving()
         {
+            Force = Vector2.Zero;
+
             if (ControlledComponent == null)
                 return;
 
-            var bodyVelocity = ControlledComponent.LinearVelocity;
-            var deltaV = -bodyVelocity;
-
-            if (deltaV.Length <= 0.0)
-                return;
-
-            var accel = deltaV; // frameTime;
-
-            // Just because I cbf tabbing anymore; body.LinearVelocity += body.Force * body.InvMass * deltaTime;
-            // Thus mass gets cancelled out and so velocity += force * deltaTime
-            var force = accel.Normalized * Math.Min(accel.Length, MaxChange) * ControlledComponent.Mass;
-            Force = force;
+            if (!_frictionModified)
+            {
+                ControlledComponent.Friction *= 25.0f;
+                _frictionModified = true;
+            }
         }
     }
 }
