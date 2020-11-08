@@ -33,7 +33,7 @@ namespace Content.Server.AI.Utility.ExpandableActions.Combat.Melee
             var owner = context.GetState<SelfState>().GetValue();
 
             foreach (var target in EntitySystem.Get<AiFactionTagSystem>()
-                .GetNearbyHostiles(owner, owner.GetComponent<AiControllerComponent>().VisionRadius))
+                .GetNearbyHostiles(owner, owner.GetComponent<NPCComponent>().VisionRadius))
             {
                 yield return new UnarmedAttackEntity(owner, target, Bonus);
             }

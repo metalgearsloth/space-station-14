@@ -5,23 +5,21 @@ using Content.Server.AI.Operators;
 using Content.Server.AI.Utility.Actions;
 using Content.Server.AI.WorldState;
 using Content.Server.AI.WorldState.States.Utility;
+using Content.Server.GameObjects.Components.Movement;
 using Content.Server.GameObjects.EntitySystems.AI;
 using Content.Server.GameObjects.EntitySystems.AI.LoadBalancer;
 using Content.Server.GameObjects.EntitySystems.JobQueues;
 using Content.Shared.GameObjects.Components.Damage;
-using Robust.Server.AI;
 using Robust.Shared.GameObjects;
 using Robust.Shared.GameObjects.Systems;
 using Robust.Shared.Interfaces.GameObjects;
-using Robust.Shared.Interfaces.Serialization;
 using Robust.Shared.IoC;
 using Robust.Shared.Log;
 using Robust.Shared.Serialization;
 
 namespace Content.Server.AI.Utility.AiLogic
 {
-    [AiLogicProcessor("UtilityAI")]
-    public class UtilityAi : AiLogicProcessor, IExposeData
+    public class UtilityNPCComponent : NPCComponent
     {
         // TODO: Look at having ParallelOperators (probably no more than that as then you'd have a full-blown BT)
         // Also RepeatOperators (e.g. if we're following an entity keep repeating MoveToEntity)
@@ -62,7 +60,7 @@ namespace Content.Server.AI.Utility.AiLogic
         // These 2 methods will be used eventually if / when we get a director AI
         public void AddBehaviorSet(string behaviorSet, bool sort = true)
         {
-            var aiSystem = EntitySystem.Get<AiSystem>();
+            var aiSystem = EntitySystem.Get<NPCSystem>();
 
             if (BehaviorSets.TryAdd(behaviorSet, aiSystem.GetBehaviorActions(behaviorSet)) && sort)
             {
@@ -125,20 +123,23 @@ namespace Content.Server.AI.Utility.AiLogic
             _availableActions.Reverse();
         }
 
-        public override void Setup()
+        public override void Initialize()
         {
-            base.Setup();
+            base.Initialize();
             _planCooldownRemaining = PlanCooldown;
-            _blackboard = new Blackboard(SelfEntity);
+            // TODO: Probably make blackboard a component
+            _blackboard = new Blackboard(Owner);
             _planner = IoCManager.Resolve<IEntitySystemManager>().GetEntitySystem<AiActionSystem>();
-            if (SelfEntity.TryGetComponent(out IDamageableComponent damageableComponent))
+            if (Owner.TryGetComponent(out IDamageableComponent? damageableComponent))
             {
                 damageableComponent.HealthChangedEvent += DeathHandle;
             }
         }
 
-        public void ExposeData(ObjectSerializer serializer)
+        public override void ExposeData(ObjectSerializer serializer)
         {
+            base.ExposeData(serializer);
+
             serializer.DataReadWriteFunction("behaviorSets", new List<string>(), values =>
             {
                 foreach (var behavior in values)
@@ -160,10 +161,12 @@ namespace Content.Server.AI.Utility.AiLogic
             SortActions();
         }
 
-        public override void Shutdown()
+        public override void OnRemove()
         {
+            base.OnRemove();
             // TODO: If DamageableComponent removed still need to unsubscribe?
-            if (SelfEntity.TryGetComponent(out IDamageableComponent damageableComponent))
+            // TODO: smug bb
+            if (Owner.TryGetComponent(out IDamageableComponent? damageableComponent))
             {
                 damageableComponent.HealthChangedEvent -= DeathHandle;
             }
@@ -244,7 +247,7 @@ namespace Content.Server.AI.Utility.AiLogic
             {
                 _planCooldownRemaining = PlanCooldown;
                 _actionCancellation = new CancellationTokenSource();
-                _actionRequest = _planner.RequestAction(new AiActionRequest(SelfEntity.Uid, _blackboard, _availableActions), _actionCancellation);
+                _actionRequest = _planner.RequestAction(new AiActionRequest(Owner.Uid, _blackboard, _availableActions), _actionCancellation);
 
                 return;
             }

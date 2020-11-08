@@ -130,7 +130,7 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Steering
         /// <exception cref="InvalidOperationException"></exception>
         public void Unregister(IEntity entity)
         {
-            if (entity.TryGetComponent(out AiControllerComponent controller))
+            if (entity.TryGetComponent(out NPCComponent controller))
             {
                 controller.VelocityDir = Vector2.Zero;
             }
@@ -248,7 +248,7 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Steering
         private SteeringStatus Steer(IEntity entity, IAiSteeringRequest steeringRequest, float frameTime)
         {
             // Main optimisation to be done below is the redundant calls and adding more variables
-            if (entity.Deleted || !entity.TryGetComponent(out AiControllerComponent controller) || !ActionBlockerSystem.CanMove(entity))
+            if (entity.Deleted || !entity.TryGetComponent(out NPCComponent controller) || !ActionBlockerSystem.CanMove(entity))
             {
                 return SteeringStatus.NoPath;
             }

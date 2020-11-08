@@ -33,7 +33,7 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Accessible
             }
 
             var access = AccessReader.FindAccessTags(entity);
-            var visionRadius = entity.GetComponent<AiControllerComponent>().VisionRadius;
+            var visionRadius = entity.GetComponent<NPCComponent>().VisionRadius;
 
             return new ReachableArgs(visionRadius, access, collisionMask);
         }

@@ -51,7 +51,7 @@ namespace Content.IntegrationTests.Tests.AI
                     if (!comps.ContainsKey("AiController")) continue;
 
                     var aiEntity = entityManager.SpawnEntity(entity.ID, grid.ToCoordinates());
-                    var aiController = aiEntity.GetComponent<AiControllerComponent>();
+                    var aiController = aiEntity.GetComponent<NPCComponent>();
                     Assert.That(processorNames.Contains(aiController.LogicName), $"Could not find valid processor named {aiController.LogicName} on entity {entity.ID}");
                 }
             });

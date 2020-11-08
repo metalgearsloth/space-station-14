@@ -36,7 +36,7 @@ namespace Content.Server.GameObjects.EntitySystems.AI.LoadBalancer
 
             var entity = _request.Context.GetState<SelfState>().GetValue();
 
-            if (entity == null || !entity.HasComponent<AiControllerComponent>())
+            if (entity == null || !entity.HasComponent<NPCComponent>())
             {
                 return null;
             }

@@ -1,12 +1,9 @@
 ﻿#nullable enable
-using Content.Server.GameObjects.EntitySystems.AI;
 using Content.Server.Interfaces.GameTicking;
 using Content.Shared.GameObjects.Components.Movement;
 using Content.Shared.Roles;
-using Robust.Server.AI;
 using Robust.Shared.GameObjects;
 using Robust.Shared.GameObjects.Components;
-using Robust.Shared.GameObjects.Systems;
 using Robust.Shared.IoC;
 using Robust.Shared.Map;
 using Robust.Shared.Maths;
@@ -17,28 +14,14 @@ using Robust.Shared.ViewVariables;
 namespace Content.Server.GameObjects.Components.Movement
 {
     [RegisterComponent, ComponentReference(typeof(IMoverComponent))]
-    public class AiControllerComponent : Component, IMoverComponent
+    public class NPCComponent : Component, IMoverComponent
     {
         [Dependency] private readonly IPrototypeManager _prototypeManager = default!;
         [Dependency] private readonly IGameTicker _gameTicker = default!;
 
-        private string? _logicName;
         private float _visionRadius;
 
-        public override string Name => "AiController";
-
-        [ViewVariables(VVAccess.ReadWrite)]
-        public string? LogicName
-        {
-            get => _logicName;
-            set
-            {
-                _logicName = value;
-                Processor = null!;
-            }
-        }
-
-        public AiLogicProcessor? Processor { get; set; }
+        public override string Name => "NPC";
 
         [ViewVariables(VVAccess.ReadWrite)]
         public string? StartingGearPrototype { get; set; }
@@ -57,8 +40,6 @@ namespace Content.Server.GameObjects.Components.Movement
 
             // This component requires a physics component.
             Owner.EnsureComponent<PhysicsComponent>();
-
-            EntitySystem.Get<AiSystem>().ProcessorInitialize(this);
         }
 
         protected override void Startup()
@@ -70,7 +51,6 @@ namespace Content.Server.GameObjects.Components.Movement
                 var startingGear = _prototypeManager.Index<StartingGearPrototype>(StartingGearPrototype);
                 _gameTicker.EquipStartingGear(Owner, startingGear);
             }
-
         }
 
         /// <inheritdoc />
@@ -78,7 +58,6 @@ namespace Content.Server.GameObjects.Components.Movement
         {
             base.ExposeData(serializer);
 
-            serializer.DataField(ref _logicName, "logic", null);
             serializer.DataReadWriteFunction(
                 "startingGear",
                 null,
@@ -87,11 +66,11 @@ namespace Content.Server.GameObjects.Components.Movement
             serializer.DataField(ref _visionRadius, "vision", 8.0f);
         }
 
-        protected override void Shutdown()
-        {
-            base.Shutdown();
-            Processor?.Shutdown();
-        }
+        /// <summary>
+        /// Called every tick when NPC is awake.
+        /// </summary>
+        /// <param name="frameTime"></param>
+        public virtual void Update(float frameTime) {}
 
         /// <summary>
         ///     Movement speed (m/s) that the entity walks, after modifiers
@@ -134,7 +113,6 @@ namespace Content.Server.GameObjects.Components.Movement
         /// <inheritdoc />
         [ViewVariables]
         public float GrabRange => 0.2f;
-
 
         /// <summary>
         ///     Is the entity Sprinting (running)?
