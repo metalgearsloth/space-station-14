@@ -13,7 +13,7 @@ using Robust.Shared.IoC;
 
 namespace Content.Server.AI.Utility.ExpandableActions.Combat.Melee
 {
-    public sealed class UnarmedAttackNearbyHostilesExp : ExpandableUtilityAction
+    public sealed class UnarmedAttackNearbyExp : ExpandableUtilityAction
     {
         public override float Bonus => UtilityAction.CombatBonus;
 

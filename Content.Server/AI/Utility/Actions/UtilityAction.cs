@@ -62,13 +62,13 @@ namespace Content.Server.AI.Utility.Actions
         {
             Owner = owner;
         }
-        
+
         public virtual void Shutdown() {}
 
         /// <summary>
-        /// If this action is chosen then setup the operators to run. This also allows for operators to be reset.
+        ///     If this action is chosen then retrieve operators to run.
         /// </summary>
-        public abstract void SetupOperators(Blackboard context);
+        public abstract Queue<AiOperator> GetOperators(Blackboard context);
 
         // Call the task's operator with Execute and get the outcome
         public Outcome Execute(float frameTime)
@@ -116,7 +116,7 @@ namespace Content.Server.AI.Utility.Actions
             // Overall structure is based on Building a better centaur
             // Ideally we should early-out each action as cheaply as possible if it's not valid, thus
             // the finalScore can only go down over time.
-            
+
             var finalScore = 1.0f;
             var minThreshold = min / Bonus;
             context.GetState<ConsiderationState>().SetValue(considerations.Count);

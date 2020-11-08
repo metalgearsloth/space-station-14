@@ -1,4 +1,5 @@
-﻿using System;
+﻿#nullable enable
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using Content.Server.AI.Operators;
@@ -16,6 +17,7 @@ using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.IoC;
 using Robust.Shared.Log;
 using Robust.Shared.Serialization;
+using Robust.Shared.ViewVariables;
 
 namespace Content.Server.AI.Utility.AiLogic
 {
@@ -23,9 +25,9 @@ namespace Content.Server.AI.Utility.AiLogic
     {
         // TODO: Look at having ParallelOperators (probably no more than that as then you'd have a full-blown BT)
         // Also RepeatOperators (e.g. if we're following an entity keep repeating MoveToEntity)
-        private AiActionSystem _planner;
+        private AiActionSystem _planner = default!;
         public Blackboard Blackboard => _blackboard;
-        private Blackboard _blackboard;
+        private Blackboard _blackboard = default!;
 
         /// <summary>
         /// The sum of all BehaviorSets gives us what actions the AI can take
@@ -36,7 +38,9 @@ namespace Content.Server.AI.Utility.AiLogic
         /// <summary>
         /// The currently running action; most importantly are the operators.
         /// </summary>
-        public UtilityAction CurrentAction { get; private set; }
+        public UtilityAction? CurrentAction { get; private set; }
+
+        public (Type Type, Queue<AiOperator> ActionOperators)? ActualCurrentAction { get; private set; }
 
         /// <summary>
         /// How frequently we can re-plan. If an AI's in combat you could decrease the cooldown,
@@ -48,14 +52,17 @@ namespace Content.Server.AI.Utility.AiLogic
         /// <summary>
         /// If we've requested a plan then wait patiently for the action
         /// </summary>
-        private AiActionRequestJob _actionRequest;
+        private AiActionRequestJob? _actionRequest;
 
-        private CancellationTokenSource _actionCancellation;
+        private CancellationTokenSource? _actionCancellation;
 
         /// <summary>
         /// If we can't do anything then stop thinking; should probably use ActionBlocker instead
         /// </summary>
         private bool _isDead = false;
+
+        [ViewVariables(VVAccess.ReadWrite)]
+        public string? NPCProfile { get; private set; }
 
         // These 2 methods will be used eventually if / when we get a director AI
         public void AddBehaviorSet(string behaviorSet, bool sort = true)
@@ -140,25 +147,18 @@ namespace Content.Server.AI.Utility.AiLogic
         {
             base.ExposeData(serializer);
 
-            serializer.DataReadWriteFunction("behaviorSets", new List<string>(), values =>
+            serializer.DataReadWriteFunction("profile", null, value => NPCProfile = value, () => NPCProfile);
+
+            if (NPCProfile != null)
             {
-                foreach (var behavior in values)
+                var npcSystem = EntitySystem.Get<NPCSystem>();
+
+                foreach (var behaviorSet in npcSystem.GetBehaviorSets(NPCProfile))
                 {
-                    AddBehaviorSet(behavior, false);
+                    AddBehaviorSet(behaviorSet, false);
                 }
-            }, () =>
-            {
-                var result = new List<string>();
-
-                foreach (var (behavior, _) in BehaviorSets)
-                {
-                    result.Add(behavior);
-                }
-
-                return result;
-            });
-
-            SortActions();
+                SortActions();
+            }
         }
 
         public override void OnRemove()
@@ -171,7 +171,7 @@ namespace Content.Server.AI.Utility.AiLogic
                 damageableComponent.HealthChangedEvent -= DeathHandle;
             }
 
-            var currentOp = CurrentAction?.ActionOperators.Peek();
+            var currentOp = ActualCurrentAction?.ActionOperators.Peek();
             currentOp?.Shutdown(Outcome.Failed);
         }
 
@@ -182,15 +182,13 @@ namespace Content.Server.AI.Utility.AiLogic
 
             if (oldDeadState != _isDead)
             {
-                var entityManager = IoCManager.Resolve<IEntityManager>();
-
                 switch (_isDead)
                 {
                     case true:
-                        entityManager.EventBus.RaiseEvent(EventSource.Local, new SleepAiMessage(this, true));
+                        Owner.EntityManager.EventBus.RaiseEvent(EventSource.Local, new SleepAiMessage(this, true));
                         break;
                     case false:
-                        entityManager.EventBus.RaiseEvent(EventSource.Local, new SleepAiMessage(this, false));
+                        Owner.EntityManager.EventBus.RaiseEvent(EventSource.Local, new SleepAiMessage(this, false));
                         break;
                 }
             }
@@ -198,31 +196,30 @@ namespace Content.Server.AI.Utility.AiLogic
 
         private void ReceivedAction()
         {
-            switch (_actionRequest.Exception)
+            switch (_actionRequest?.Exception)
             {
                 case null:
                     break;
                 default:
                     Logger.FatalS("ai", _actionRequest.Exception.ToString());
-                    throw _actionRequest.Exception;
+                    return;
             }
-            var action = _actionRequest.Result;
+            var action = _actionRequest?.Result;
             _actionRequest = null;
             // Actions with lower scores should be implicitly dumped by GetAction
             // If we're not allowed to replace the action with an action of the same type then dump.
-            if (action == null || !action.CanOverride && CurrentAction?.GetType() == action.GetType())
+            if (action == null || !action.CanOverride && ActualCurrentAction?.Type == action.GetType())
             {
                 return;
             }
 
-            var currentOp = CurrentAction?.ActionOperators.Peek();
+            var currentOp = ActualCurrentAction?.ActionOperators.Peek();
             if (currentOp != null && currentOp.HasStartup)
             {
                 currentOp.Shutdown(Outcome.Failed);
             }
 
-            CurrentAction = action;
-            action.SetupOperators(_blackboard);
+            ActualCurrentAction = (action.GetType(), action.GetOperators(_blackboard));
         }
 
         public override void Update(float frameTime)

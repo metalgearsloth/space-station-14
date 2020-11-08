@@ -23,13 +23,12 @@ using Robust.Shared.Utility;
 namespace Content.Server.GameObjects.EntitySystems.AI
 {
     [UsedImplicitly]
-    internal class NPCSystem : EntitySystem
+    public sealed class NPCSystem : EntitySystem
     {
-        [Dependency] private readonly IConfigurationManager _configurationManager = default!;
-        [Dependency] private readonly IDynamicTypeFactory _typeFactory = default!;
+        [Dependency] private readonly IPrototypeManager _prototypeManager = default!;
         [Dependency] private readonly IReflectionManager _reflectionManager = default!;
-
-        private readonly Dictionary<string, Type> _processorTypes = new Dictionary<string, Type>();
+        [Dependency] private readonly IDynamicTypeFactory _typeFactory = default!;
+        [Dependency] private readonly IConfigurationManager _configurationManager = default!;
 
         /// <summary>
         ///     To avoid iterating over dead AI continuously they can wake and sleep themselves when necessary.
@@ -41,7 +40,7 @@ namespace Content.Server.GameObjects.EntitySystems.AI
 
         public bool IsAwake(NPCComponent comp) => _awakeAi.Contains(comp);
 
-        private Dictionary<string, List<IAiUtility>> _behaviorSets = new Dictionary<string, List<IAiUtility>>();
+        private readonly Dictionary<string, List<IAiUtility>> _behaviorSets = new Dictionary<string, List<IAiUtility>>();
 
         /// <inheritdoc />
         public override void Initialize()
@@ -49,15 +48,11 @@ namespace Content.Server.GameObjects.EntitySystems.AI
             base.Initialize();
             SubscribeLocalEvent<SleepAiMessage>(HandleAiSleep);
 
-            var protoManager = IoCManager.Resolve<IPrototypeManager>();
-            var reflectionManager = IoCManager.Resolve<IReflectionManager>();
-            var typeFactory = IoCManager.Resolve<IDynamicTypeFactory>();
-
-            foreach (var proto in protoManager.EnumeratePrototypes<BehaviorSet>())
+            foreach (var proto in _prototypeManager.EnumeratePrototypes<BehaviorSetPrototype>())
             {
                 var actions = new List<IAiUtility>();
 
-                foreach (var action in GetActions(proto, protoManager, reflectionManager, typeFactory))
+                foreach (var action in GetActions(proto))
                 {
                     actions.Add(action);
                 }
@@ -66,31 +61,61 @@ namespace Content.Server.GameObjects.EntitySystems.AI
             }
         }
 
-        private IEnumerable<IAiUtility> GetActions(BehaviorSet behaviorSet, IPrototypeManager? prototypeManager = null, IReflectionManager? reflectionManager = null, IDynamicTypeFactory? typeFactory = null)
+        private IEnumerable<IAiUtility> GetActions(BehaviorSetPrototype behaviorSetPrototype)
         {
-            prototypeManager ??= IoCManager.Resolve<IPrototypeManager>();
-            reflectionManager ??= IoCManager.Resolve<IReflectionManager>();
-            typeFactory ??= IoCManager.Resolve<IDynamicTypeFactory>();
-
-            if (behaviorSet.Parent != null)
+            if (behaviorSetPrototype.Parent != null)
             {
-                var parent = IoCManager.Resolve<IPrototypeManager>().Index<BehaviorSet>(behaviorSet.Parent);
-                foreach (var action in GetActions(parent, prototypeManager, reflectionManager, typeFactory))
+                var parent = _prototypeManager.Index<BehaviorSetPrototype>(behaviorSetPrototype.Parent);
+                foreach (var action in GetActions(parent))
                 {
                     yield return action;
                 }
             }
 
-            foreach (var action in behaviorSet.Actions)
+            foreach (var action in behaviorSetPrototype.Actions)
             {
-                var type = reflectionManager.LooseGetType(action);
+                var type = _reflectionManager.LooseGetType(action);
                 if (type == null || !typeof(IAiUtility).IsAssignableFrom(type))
                 {
-                    Logger.Error($"Invalid type {action} for BehaviorSet {behaviorSet.ID}");
+                    Logger.Error($"Invalid type {action} for BehaviorSet {behaviorSetPrototype.ID}");
                     continue;
                 }
 
-                yield return (IAiUtility) typeFactory.CreateInstance(type);
+                if (type.GetConstructor(Type.EmptyTypes) == null)
+                {
+                    Logger.Error($"No parameterless constructor for NPC action {type}");
+                    continue;
+                }
+
+                yield return (IAiUtility) _typeFactory.CreateInstance(type);
+            }
+        }
+
+        public IEnumerable<string> GetBehaviorSets(string profile)
+        {
+            if (!_prototypeManager.TryIndex<NPCProfilePrototype>(profile, out var npcProfile))
+            {
+                Logger.Error($"Unable to find NPCProfile {profile}");
+                yield break;
+            }
+
+            if (npcProfile.Parent != null)
+            {
+                foreach (var bSet in GetBehaviorSets(npcProfile.Parent))
+                {
+                    yield return bSet;
+                }
+            }
+
+            foreach (var bSet in npcProfile.BehaviorSets)
+            {
+                if (!_prototypeManager.HasIndex<BehaviorSetPrototype>(bSet))
+                {
+                    Logger.Error($"Unable to find NPC BehaviorSet {bSet} in {npcProfile.ID}");
+                    continue;
+                }
+
+                yield return bSet;
             }
         }
 
@@ -159,49 +184,6 @@ namespace Content.Server.GameObjects.EntitySystems.AI
         public List<IAiUtility> GetBehaviorActions(string behaviorSet)
         {
             return new List<IAiUtility>(_behaviorSets[behaviorSet]);
-        }
-
-        private class AddAiCommand : IClientCommand
-        {
-            public string Command => "addai";
-            public string Description => "Add an ai component with a given processor to an entity.";
-            public string Help => "Usage: addai <processorId> <entityId>"
-                                + "\n    processorId: Class that inherits AiLogicProcessor and has an AiLogicProcessor attribute."
-                                + "\n    entityID: Uid of entity to add the AiControllerComponent to. Open its VV menu to find this.";
-
-            public void Execute(IConsoleShell shell, IPlayerSession? player, string[] args)
-            {
-                if(args.Length != 2)
-                {
-                    shell.SendText(player, "Wrong number of args.");
-                    return;
-                }
-
-                var processorId = args[0];
-                var entId = new EntityUid(int.Parse(args[1]));
-                var ent = IoCManager.Resolve<IEntityManager>().GetEntity(entId);
-                var aiSystem = Get<NPCSystem>();
-
-                if (!aiSystem.ProcessorTypeExists(processorId))
-                {
-                    shell.SendText(player, "Invalid processor type. Processor must inherit AiLogicProcessor and have an AiLogicProcessor attribute.");
-                    return;
-                }
-                if (ent.HasComponent<NPCComponent>())
-                {
-                    shell.SendText(player, "Entity already has an AI component.");
-                    return;
-                }
-
-                if (ent.HasComponent<IMoverComponent>())
-                {
-                    ent.RemoveComponent<IMoverComponent>();
-                }
-
-                var comp = ent.AddComponent<NPCComponent>();
-                comp.LogicName = processorId;
-                shell.SendText(player, "AI component added.");
-            }
         }
     }
 }

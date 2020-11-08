@@ -1,0 +1,31 @@
+# You don't need to do a profile for an AI but it just makes it easier to group behaviors together, especially if you want
+# for example all xenos to have the same common behaviors but don't want to manually adjust each one
+
+# Probably organise this by faction when I come back and do more NPC work
+# Human
+- type: NPCProfile
+  id: Civilian
+  behaviorSets:
+  - Clothing
+  - Hunger
+  - Thirst
+  - Idle
+
+- type: NPCProfile
+  id: Spirate
+  actions:
+  # TODO: Reload Ballistic
+  # TODO: Ideally long-term we should just store the weapons in backpack
+  - EquipMeleeExp
+  - PickUpMeleeWeaponExp
+  - MeleeAttackNearbyExp
+
+- type: NPCProfile
+  id: SimpleAnimal
+  parent: Civilian
+
+- type: NPCProfile
+  id: HostileAnimal
+  behaviorSets:
+  - Idle
+  - UnarmedAttack

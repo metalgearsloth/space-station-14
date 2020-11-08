@@ -6,8 +6,12 @@ using YamlDotNet.RepresentationModel;
 
 namespace Content.Server.AI.Utility
 {
+    /// <summary>
+    ///     Encompasses a group of utility actions into a set.
+    ///     Includes regular and expandable actions.
+    /// </summary>
     [Prototype("behaviorSet")]
-    public sealed class BehaviorSet : IIndexedPrototype, IPrototype
+    public sealed class BehaviorSetPrototype : IIndexedPrototype, IPrototype
     {
         public string ID { get; private set; } = default!;
 
