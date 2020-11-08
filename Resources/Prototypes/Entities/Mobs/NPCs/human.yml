@@ -8,8 +8,10 @@
   suffix: AI
   components:
   - type: AiController
-    logic: Civilian
     startingGear: AssistantGear
+  - type: UtilityAI
+    behaviorSets:
+    - Civilian
   - type: AiFactionTag
     factions:
     - NanoTransen
@@ -23,4 +25,10 @@
   suffix: AI
   components:
   - type: AiController
-    logic: Spirate
+  - type: UtilityAI
+    behaviorSets:
+    - Clothing
+    - Hunger
+    - Thirst
+    - Idle
+    - Spirate

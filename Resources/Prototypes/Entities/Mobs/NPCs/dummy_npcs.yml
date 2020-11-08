@@ -8,4 +8,6 @@
   suffix: AI
   components:
   - type: AiController
-    logic: PathingDummy
+  - type: UtilityAI
+    behaviorSets:
+    - PathingDummy

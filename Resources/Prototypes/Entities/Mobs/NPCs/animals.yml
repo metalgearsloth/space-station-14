@@ -10,7 +10,9 @@
   suffix: AI
   components:
   - type: AiController
-    logic: Civilian
+  - type: UtilityAI
+    behaviorSets:
+    - SimpleAnimal
   - type: AiFactionTag
     factions:
     - SimpleNeutral

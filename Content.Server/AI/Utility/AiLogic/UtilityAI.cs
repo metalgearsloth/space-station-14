@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Threading;
 using Content.Server.AI.Operators;
 using Content.Server.AI.Utility.Actions;
-using Content.Server.AI.Utility.BehaviorSets;
 using Content.Server.AI.WorldState;
 using Content.Server.AI.WorldState.States.Utility;
 using Content.Server.GameObjects.EntitySystems.AI;
@@ -14,13 +13,15 @@ using Robust.Server.AI;
 using Robust.Shared.GameObjects;
 using Robust.Shared.GameObjects.Systems;
 using Robust.Shared.Interfaces.GameObjects;
+using Robust.Shared.Interfaces.Serialization;
 using Robust.Shared.IoC;
 using Robust.Shared.Log;
-using Robust.Shared.Utility;
+using Robust.Shared.Serialization;
 
 namespace Content.Server.AI.Utility.AiLogic
 {
-    public abstract class UtilityAi : AiLogicProcessor
+    [AiLogicProcessor("UtilityAI")]
+    public class UtilityAi : AiLogicProcessor, IExposeData
     {
         // TODO: Look at having ParallelOperators (probably no more than that as then you'd have a full-blown BT)
         // Also RepeatOperators (e.g. if we're following an entity keep repeating MoveToEntity)
@@ -31,7 +32,7 @@ namespace Content.Server.AI.Utility.AiLogic
         /// <summary>
         /// The sum of all BehaviorSets gives us what actions the AI can take
         /// </summary>
-        public Dictionary<Type, BehaviorSet> BehaviorSets { get; } = new Dictionary<Type, BehaviorSet>();
+        public Dictionary<string, List<IAiUtility>> BehaviorSets { get; } = new Dictionary<string, List<IAiUtility>>();
         private readonly List<IAiUtility> _availableActions = new List<IAiUtility>();
 
         /// <summary>
@@ -59,14 +60,16 @@ namespace Content.Server.AI.Utility.AiLogic
         private bool _isDead = false;
 
         // These 2 methods will be used eventually if / when we get a director AI
-        public void AddBehaviorSet<T>(T behaviorSet, bool sort = true) where T : BehaviorSet
+        public void AddBehaviorSet(string behaviorSet, bool sort = true)
         {
-            if (BehaviorSets.TryAdd(typeof(T), behaviorSet) && sort)
+            var aiSystem = EntitySystem.Get<AiSystem>();
+
+            if (BehaviorSets.TryAdd(behaviorSet, aiSystem.GetBehaviorActions(behaviorSet)) && sort)
             {
                 SortActions();
             }
 
-            if (BehaviorSets.Count == 1 && !EntitySystem.Get<AiSystem>().IsAwake(this))
+            if (BehaviorSets.Count == 1 && !aiSystem.IsAwake(this))
             {
                 IoCManager.Resolve<IEntityManager>()
                     .EventBus
@@ -74,10 +77,8 @@ namespace Content.Server.AI.Utility.AiLogic
             }
         }
 
-        public void RemoveBehaviorSet(Type behaviorSet)
+        public void RemoveBehaviorSet(string behaviorSet)
         {
-            DebugTools.Assert(behaviorSet.IsAssignableFrom(typeof(BehaviorSet)));
-
             if (BehaviorSets.ContainsKey(behaviorSet))
             {
                 BehaviorSets.Remove(behaviorSet);
@@ -98,9 +99,9 @@ namespace Content.Server.AI.Utility.AiLogic
         protected void SortActions()
         {
             _availableActions.Clear();
-            foreach (var set in BehaviorSets.Values)
+            foreach (var actions in BehaviorSets.Values)
             {
-                foreach (var action in set.Actions)
+                foreach (var action in actions)
                 {
                     var found = false;
 
@@ -134,6 +135,29 @@ namespace Content.Server.AI.Utility.AiLogic
             {
                 damageableComponent.HealthChangedEvent += DeathHandle;
             }
+        }
+
+        public void ExposeData(ObjectSerializer serializer)
+        {
+            serializer.DataReadWriteFunction("behaviorSets", new List<string>(), values =>
+            {
+                foreach (var behavior in values)
+                {
+                    AddBehaviorSet(behavior, false);
+                }
+            }, () =>
+            {
+                var result = new List<string>();
+
+                foreach (var (behavior, _) in BehaviorSets)
+                {
+                    result.Add(behavior);
+                }
+
+                return result;
+            });
+
+            SortActions();
         }
 
         public override void Shutdown()

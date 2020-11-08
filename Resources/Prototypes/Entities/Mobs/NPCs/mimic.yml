@@ -8,7 +8,9 @@
   suffix: AI
   components:
   - type: AiController
-    logic: Mimic
+  - type: UtilityAI
+    behaviorSets:
+    - UnarmedAttackHostiles
   - type: AiFactionTag
     factions:
     - SimpleHostile

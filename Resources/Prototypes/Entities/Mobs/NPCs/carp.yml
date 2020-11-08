@@ -7,7 +7,9 @@
   suffix: AI
   components:
   - type: AiController
-    logic: Xeno
+  - type: UtilityAI
+    behaviorSets:
+    - HostileAnimal
   - type: AiFactionTag
     factions:
     - SimpleHostile

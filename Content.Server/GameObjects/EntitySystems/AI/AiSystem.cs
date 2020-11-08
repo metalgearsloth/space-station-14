@@ -1,7 +1,8 @@
 ﻿#nullable enable
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using Content.Server.AI.Utility;
+using Content.Server.AI.Utility.Actions;
 using Content.Server.GameObjects.Components.Movement;
 using Content.Shared;
 using Content.Shared.GameObjects.Components.Movement;
@@ -16,6 +17,7 @@ using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Interfaces.Reflection;
 using Robust.Shared.IoC;
 using Robust.Shared.Log;
+using Robust.Shared.Prototypes;
 using Robust.Shared.Utility;
 
 namespace Content.Server.GameObjects.EntitySystems.AI
@@ -39,19 +41,64 @@ namespace Content.Server.GameObjects.EntitySystems.AI
 
         public bool IsAwake(AiLogicProcessor processor) => _awakeAi.Contains(processor);
 
+        private Dictionary<string, List<IAiUtility>> _behaviorSets = new Dictionary<string, List<IAiUtility>>();
+
         /// <inheritdoc />
         public override void Initialize()
         {
             base.Initialize();
             SubscribeLocalEvent<SleepAiMessage>(HandleAiSleep);
 
-            var processors = _reflectionManager.GetAllChildren<AiLogicProcessor>();
-            foreach (var processor in processors)
+            foreach (var processor in _reflectionManager.GetAllChildren<AiLogicProcessor>())
             {
                 var att = (AiLogicProcessorAttribute) Attribute.GetCustomAttribute(processor, typeof(AiLogicProcessorAttribute))!;
                 // Tests should pick this up
                 DebugTools.AssertNotNull(att);
                 _processorTypes.Add(att.SerializeName, processor);
+            }
+
+            var protoManager = IoCManager.Resolve<IPrototypeManager>();
+            var reflectionManager = IoCManager.Resolve<IReflectionManager>();
+            var typeFactory = IoCManager.Resolve<IDynamicTypeFactory>();
+
+            foreach (var proto in protoManager.EnumeratePrototypes<BehaviorSet>())
+            {
+                var actions = new List<IAiUtility>();
+
+                foreach (var action in GetActions(proto, protoManager, reflectionManager, typeFactory))
+                {
+                    actions.Add(action);
+                }
+
+                _behaviorSets[proto.ID] = actions;
+            }
+        }
+
+        private IEnumerable<IAiUtility> GetActions(BehaviorSet behaviorSet, IPrototypeManager? prototypeManager = null, IReflectionManager? reflectionManager = null, IDynamicTypeFactory? typeFactory = null)
+        {
+            prototypeManager ??= IoCManager.Resolve<IPrototypeManager>();
+            reflectionManager ??= IoCManager.Resolve<IReflectionManager>();
+            typeFactory ??= IoCManager.Resolve<IDynamicTypeFactory>();
+
+            if (behaviorSet.Parent != null)
+            {
+                var parent = IoCManager.Resolve<IPrototypeManager>().Index<BehaviorSet>(behaviorSet.Parent);
+                foreach (var action in GetActions(parent, prototypeManager, reflectionManager, typeFactory))
+                {
+                    yield return action;
+                }
+            }
+
+            foreach (var action in behaviorSet.Actions)
+            {
+                var type = reflectionManager.LooseGetType(action);
+                if (type == null || !typeof(IAiUtility).IsAssignableFrom(type))
+                {
+                    Logger.Error($"Invalid type {action} for BehaviorSet {behaviorSet.ID}");
+                    continue;
+                }
+
+                yield return (IAiUtility) typeFactory.CreateInstance(type);
             }
         }
 
@@ -115,6 +162,11 @@ namespace Content.Server.GameObjects.EntitySystems.AI
         private void HandleAiSleep(SleepAiMessage message)
         {
             _queuedSleepMessages.Add(message);
+        }
+
+        public List<IAiUtility> GetBehaviorActions(string behaviorSet)
+        {
+            return new List<IAiUtility>(_behaviorSets[behaviorSet]);
         }
 
         /// <summary>
