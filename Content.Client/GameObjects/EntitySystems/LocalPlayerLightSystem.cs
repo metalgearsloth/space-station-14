@@ -15,7 +15,7 @@ namespace Content.Client.GameObjects.EntitySystems
     internal sealed class LocalPlayerLightSystem : EntitySystem
     {
         private IEntity? _lightEntity;
-        
+
         public override void Initialize()
         {
             base.Initialize();
@@ -24,14 +24,20 @@ namespace Content.Client.GameObjects.EntitySystems
 
         private void HandlePlayerAttached(PlayerAttachSysMessage message)
         {
-            if (_lightEntity?.HasComponent<PointLightComponent>() == true)
+            if (_lightEntity != null)
             {
-                _lightEntity?.RemoveComponent<PointLightComponent>();
+                if (_lightEntity.HasComponent<PointLightComponent>())
+                {
+                    _lightEntity.RemoveComponent<PointLightComponent>();
+                }
             }
-            
-            if (message.AttachedEntity == null || message.AttachedEntity.HasComponent<PointLightComponent>()) 
+
+            if (message.AttachedEntity == null || message.AttachedEntity.HasComponent<PointLightComponent>())
+            {
+                _lightEntity = null;
                 return;
-            
+            }
+
             _lightEntity = message.AttachedEntity;
             var pointLight = _lightEntity.AddComponent<PointLightComponent>();
 
