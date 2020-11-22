@@ -18,22 +18,33 @@
   - type: Icon
     sprite: Constructible/Structures/Windows/window.rsi
     state: full
-  - type: Collidable
+  - type: Physics
     shapes:
     - !type:PhysShapeAabb
-      bounds: "-0.5, -0.5, 0.3, 0.5"
       layer:
       - Impassable
       - MobImpassable
       - VaultImpassable
       - SmallImpassable
   - type: Destructible
-    deadThreshold: 100
+    deadThreshold: 15
+    resistances: metallicResistances
+    destroySoundCollection: WindowBreak
+    spawnOnDestroy:
+      ShardGlass:
+        Min: 1
+        Max: 2
   - type: SnapGrid
     offset: Center
   - type: Airtight
   - type: Window
     base: window
+  - type: Construction
+    graph: window
+    node: window
+  - type: Appearance
+    visuals:
+    - type: WindowVisualizer
 
 - type: entity
   id: ReinforcedWindow
@@ -43,8 +54,47 @@
   - type: Sprite
     drawdepth: WallTops
     sprite: Constructible/Structures/Windows/reinforced_window.rsi
-  - type: Window
-    base: rwindow
   - type: Icon
     sprite: Constructible/Structures/Windows/reinforced_window.rsi
-    state: full
+  - type: Destructible
+    deadThreshold: 75
+    spawnOnDestroy:
+      ShardGlassReinforced:
+        Min: 1
+        Max: 2
+    resistances: metallicResistances
+  - type: Window
+    base: rwindow
+  - type: Construction
+    graph: window
+    node: reinforcedWindow
+
+- type: entity
+  id: PhoronWindow
+  name: phoronwindow
+  parent: Window
+  components:
+  - type: Sprite
+    drawdepth: WallTops
+    sprite: Constructible/Structures/Windows/phoron_window.rsi
+  - type: Icon
+    sprite: Constructible/Structures/Windows/phoron_window.rsi
+  - type: Destructible
+    deadThreshold: 100
+    spawnOnDestroy:
+      ShardGlassPhoron:
+        Min: 1
+        Max: 2
+    resistances: metallicResistances
+  - type: Window
+    base: pwindow
+  - type: Construction
+    graph: window
+    node: phoronWindow
+
+- type: soundCollection
+  id: WindowBreak
+  files:
+  - /Audio/Effects/glass_break1.ogg
+  - /Audio/Effects/glass_break2.ogg
+  - /Audio/Effects/glass_break3.ogg

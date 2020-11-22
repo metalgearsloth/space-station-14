@@ -16,7 +16,7 @@ namespace Content.Server.Players
         ///     The session ID of the player owning this data.
         /// </summary>
         [ViewVariables]
-        public NetSessionId SessionId { get; }
+        public NetUserId UserId { get; }
 
         /// <summary>
         ///     The currently occupied mind of the player owning this data.
@@ -25,15 +25,21 @@ namespace Content.Server.Players
         [ViewVariables]
         public Mind? Mind { get; set; }
 
+        /// <summary>
+        ///     If true, the player is an admin and they explicitly de-adminned mid-game,
+        ///     so they should not regain admin if they reconnect.
+        /// </summary>
+        public bool ExplicitlyDeadminned { get; set; }
+
         public void WipeMind()
         {
             Mind?.ChangeOwningPlayer(null);
             Mind = null;
         }
 
-        public PlayerData(NetSessionId sessionId)
+        public PlayerData(NetUserId userId)
         {
-            SessionId = sessionId;
+            UserId = userId;
         }
     }
 

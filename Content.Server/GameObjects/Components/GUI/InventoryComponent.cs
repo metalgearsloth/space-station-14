@@ -3,12 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using Content.Server.GameObjects.Components.Items.Clothing;
 using Content.Server.GameObjects.Components.Items.Storage;
-using Content.Server.GameObjects.EntitySystems;
 using Content.Server.GameObjects.EntitySystems.Click;
-using Content.Server.Interfaces;
 using Content.Server.Interfaces.GameObjects;
 using Content.Shared.GameObjects.Components.Inventory;
 using Content.Shared.GameObjects.EntitySystems;
+using Content.Shared.Interfaces;
 using Robust.Server.GameObjects.Components.Container;
 using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
@@ -29,7 +28,6 @@ namespace Content.Server.GameObjects.Components.GUI
     public class InventoryComponent : SharedInventoryComponent, IExAct, IEffectBlocker, IPressureProtection
     {
         [Dependency] private readonly IEntitySystemManager _entitySystemManager = default!;
-        [Dependency] private readonly IServerNotifyManager _serverNotifyManager = default!;
 
         [ViewVariables]
         private readonly Dictionary<Slots, ContainerSlot> _slotContainers = new Dictionary<Slots, ContainerSlot>();
@@ -128,6 +126,17 @@ namespace Content.Server.GameObjects.Components.GUI
             base.OnRemove();
         }
 
+        public IEnumerable<IEntity> GetAllHeldItems()
+        {
+            foreach (var (_, container) in _slotContainers)
+            {
+                foreach (var entity in container.ContainedEntities)
+                {
+                    yield return entity;
+                }
+            }
+        }
+
         /// <summary>
         /// Helper to get container name for specified slot on this component
         /// </summary>
@@ -147,6 +156,13 @@ namespace Content.Server.GameObjects.Components.GUI
         {
             return GetSlotItem<ItemComponent>(slot);
         }
+
+        public IEnumerable<T> LookupItems<T>() where T: Component
+        {
+            return _slotContainers.Values.SelectMany(x => x.ContainedEntities.Select(e => e.GetComponentOrNull<T>()))
+                .Where(x => x != null);
+        }
+
         public T GetSlotItem<T>(Slots slot) where T : ItemComponent
         {
             if (!_slotContainers.ContainsKey(slot))
@@ -280,7 +296,7 @@ namespace Content.Server.GameObjects.Components.GUI
             }
 
             // TODO: The item should be dropped to the container our owner is in, if any.
-            ContainerHelpers.AttachParentToContainerOrGrid(entity.Transform);
+            entity.Transform.AttachParentToContainerOrGrid();
 
             _entitySystemManager.GetEntitySystem<InteractionSystem>().UnequippedInteraction(Owner, entity, slot);
 
@@ -305,7 +321,7 @@ namespace Content.Server.GameObjects.Components.GUI
 
             var itemTransform = entity.Transform;
 
-            ContainerHelpers.AttachParentToContainerOrGrid(itemTransform);
+            itemTransform.AttachParentToContainerOrGrid();
 
             _entitySystemManager.GetEntitySystem<InteractionSystem>().UnequippedInteraction(Owner, item.Owner, slot);
 
@@ -416,7 +432,7 @@ namespace Content.Server.GameObjects.Components.GUI
         /// Message that tells us to equip or unequip items from the inventory slots
         /// </summary>
         /// <param name="msg"></param>
-        private void HandleInventoryMessage(ClientInventoryMessage msg)
+        private async void HandleInventoryMessage(ClientInventoryMessage msg)
         {
             switch (msg.Updatetype)
             {
@@ -426,13 +442,13 @@ namespace Content.Server.GameObjects.Components.GUI
                     var activeHand = hands.GetActiveHand;
                     if (activeHand != null && activeHand.Owner.TryGetComponent(out ItemComponent clothing))
                     {
-                        hands.Drop(hands.ActiveHand);
+                        hands.Drop(hands.ActiveHand, doDropInteraction:false);
                         if (!Equip(msg.Inventoryslot, clothing, true, out var reason))
                         {
                             hands.PutInHand(clothing);
 
                             if (reason != null)
-                                _serverNotifyManager.PopupMessageCursor(Owner, reason);
+                                Owner.PopupMessageCursor(reason);
                         }
                     }
                     break;
@@ -447,8 +463,8 @@ namespace Content.Server.GameObjects.Components.GUI
                     {
                         if (activeHand != null)
                         {
-                            interactionSystem.Interaction(Owner, activeHand.Owner, itemContainedInSlot.Owner,
-                                new GridCoordinates());
+                                await interactionSystem.Interaction(Owner, activeHand.Owner, itemContainedInSlot.Owner,
+                                    new EntityCoordinates());
                         }
                         else if (Unequip(msg.Inventoryslot))
                         {
@@ -525,7 +541,7 @@ namespace Content.Server.GameObjects.Components.GUI
             var list = new List<KeyValuePair<Slots, EntityUid>>();
             foreach (var (slot, container) in _slotContainers)
             {
-                if (container.ContainedEntity != null)
+                if (container != null && container.ContainedEntity != null)
                 {
                     list.Add(new KeyValuePair<Slots, EntityUid>(slot, container.ContainedEntity.Uid));
                 }

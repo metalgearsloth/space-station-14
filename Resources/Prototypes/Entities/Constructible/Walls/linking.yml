@@ -3,17 +3,13 @@
   name: "signal switch"
   components:
   - type: Clickable
-    bounds:
-      all: -0.25,-0.375,0.25,0.375
   - type: InteractionOutline
-  - type: Collidable
+  - type: Physics
   - type: Sprite
-    sprite: Constructible/Linking/switch.rsi
-    state: on
-  - type: Icon
-    sprite: Constructible/Linking/switch.rsi
+    sprite: Constructible/Power/switch.rsi
     state: on
   - type: SignalSwitch
+  - type: Rotatable
   - type: SignalTransmitter
   placement:
     snap:
@@ -24,17 +20,13 @@
   name: "signal button"
   components:
   - type: Clickable
-    bounds:
-      all: -0.25,-0.375,0.25,0.375
   - type: InteractionOutline
-  - type: Collidable
+  - type: Physics
   - type: Sprite
-    sprite: Constructible/Linking/switch.rsi
-    state: dead
-  - type: Icon
-    sprite: Constructible/Linking/switch.rsi
+    sprite: Constructible/Power/switch.rsi
     state: dead
   - type: SignalButton
+  - type: Rotatable
   - type: SignalTransmitter
   placement:
     snap:

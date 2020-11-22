@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Content.Server.GameObjects.Components.Access;
 using Content.Server.GameObjects.Components.Power.ApcNetComponents;
 using Content.Server.Utility;
 using Content.Shared.GameObjects.Components.VendingMachines;
@@ -14,7 +15,9 @@ using Robust.Server.GameObjects.EntitySystems;
 using Robust.Server.Interfaces.GameObjects;
 using Robust.Shared.Audio;
 using Robust.Shared.GameObjects;
+using Robust.Shared.GameObjects.Components.Timers;
 using Robust.Shared.GameObjects.Systems;
+using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Interfaces.Random;
 using Robust.Shared.IoC;
 using Robust.Shared.Prototypes;
@@ -32,6 +35,7 @@ namespace Content.Server.GameObjects.Components.VendingMachines
     public class VendingMachineComponent : SharedVendingMachineComponent, IActivate, IExamine, IBreakAct, IWires
     {
         [Dependency] private readonly IRobustRandom _random = default!;
+        [Dependency] private readonly IPrototypeManager _prototypeManager = default!;
 
         private bool _ejecting;
         private TimeSpan _animationDuration = TimeSpan.Zero;
@@ -61,7 +65,7 @@ namespace Content.Server.GameObjects.Components.VendingMachines
                 wires.OpenInterface(actor.playerSession);
             } else
             {
-                UserInterface?.Open(actor.playerSession);
+                UserInterface?.Toggle(actor.playerSession);
             }
         }
 
@@ -77,8 +81,7 @@ namespace Content.Server.GameObjects.Components.VendingMachines
         private void InitializeFromPrototype()
         {
             if (string.IsNullOrEmpty(_packPrototypeId)) { return; }
-            var prototypeManger = IoCManager.Resolve<IPrototypeManager>();
-            if (!prototypeManger.TryIndex(_packPrototypeId, out VendingMachineInventoryPrototype packPrototype))
+            if (!_prototypeManager.TryIndex(_packPrototypeId, out VendingMachineInventoryPrototype packPrototype))
             {
                 return;
             }
@@ -145,7 +148,7 @@ namespace Content.Server.GameObjects.Components.VendingMachines
             switch (message)
             {
                 case VendingMachineEjectMessage msg:
-                    TryEject(msg.ID);
+                    TryEject(msg.ID, serverMsg.Session.AttachedEntity);
                     break;
                 case InventorySyncRequestMessage _:
                     UserInterface?.SendMessage(new VendingMachineInventoryMessage(Inventory));
@@ -184,21 +187,34 @@ namespace Content.Server.GameObjects.Components.VendingMachines
             UserInterface?.SendMessage(new VendingMachineInventoryMessage(Inventory));
             TrySetVisualState(VendingMachineVisualState.Eject);
 
-            Timer.Spawn(_animationDuration, () =>
+            Owner.SpawnTimer(_animationDuration, () =>
             {
                 _ejecting = false;
                 TrySetVisualState(VendingMachineVisualState.Normal);
-                Owner.EntityManager.SpawnEntity(id, Owner.Transform.GridPosition);
+                Owner.EntityManager.SpawnEntity(id, Owner.Transform.Coordinates);
             });
 
             EntitySystem.Get<AudioSystem>().PlayFromEntity(_soundVend, Owner, AudioParams.Default.WithVolume(-2f));
+        }
+
+        private void TryEject(string id, IEntity? sender)
+        {
+            if (Owner.TryGetComponent<AccessReader>(out var accessReader))
+            {
+                if (sender == null || !accessReader.IsAllowed(sender))
+                {
+                    FlickDenyAnimation();
+                    return;
+                }
+            }
+            TryEject(id);
         }
 
         private void FlickDenyAnimation()
         {
             TrySetVisualState(VendingMachineVisualState.Deny);
             //TODO: This duration should be a distinct value specific to the deny animation
-            Timer.Spawn(_animationDuration, () =>
+            Owner.SpawnTimer(_animationDuration, () =>
             {
                 TrySetVisualState(VendingMachineVisualState.Normal);
             });

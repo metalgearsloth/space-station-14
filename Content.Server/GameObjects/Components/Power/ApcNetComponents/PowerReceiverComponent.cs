@@ -1,12 +1,13 @@
-﻿using System;
+﻿#nullable enable
+using System;
 using Content.Server.GameObjects.Components.NodeContainer.NodeGroups;
 using Content.Shared.GameObjects.Components.Power;
 using Content.Shared.GameObjects.EntitySystems;
 using Robust.Server.GameObjects;
 using Robust.Server.Interfaces.GameObjects;
 using Robust.Shared.GameObjects;
+using Robust.Shared.GameObjects.ComponentDependencies;
 using Robust.Shared.GameObjects.Components;
-using Robust.Shared.Interfaces.Map;
 using Robust.Shared.IoC;
 using Robust.Shared.Localization;
 using Robust.Shared.Serialization;
@@ -21,9 +22,13 @@ namespace Content.Server.GameObjects.Components.Power.ApcNetComponents
     [RegisterComponent]
     public class PowerReceiverComponent : Component, IExamine
     {
+        [Dependency] private readonly IServerEntityManager _serverEntityManager = default!;
+
+        [ViewVariables] [ComponentDependency] private readonly IPhysicsComponent? _physicsComponent = null;
+
         public override string Name => "PowerReceiver";
 
-        public event EventHandler<PowerStateEventArgs> OnPowerStateChanged;
+        public event EventHandler<PowerStateEventArgs>? OnPowerStateChanged;
 
         [ViewVariables]
         public bool Powered => (HasApcPower || !NeedsPower) && !PowerDisabled;
@@ -48,7 +53,7 @@ namespace Content.Server.GameObjects.Components.Power.ApcNetComponents
         /// </summary>
         public bool Connectable => Anchored;
 
-        private bool Anchored => !Owner.TryGetComponent<ICollidableComponent>(out var collidable) || collidable.Anchored;
+        private bool Anchored => _physicsComponent == null || _physicsComponent.Anchored;
 
         [ViewVariables]
         public bool NeedsProvider { get; private set; } = true;
@@ -61,7 +66,7 @@ namespace Content.Server.GameObjects.Components.Power.ApcNetComponents
         private int _load;
 
         /// <summary>
-        ///     When true, causes this to appear powered even if not receiving power from an Apc.
+        ///     When false, causes this to appear powered even if not receiving power from an Apc.
         /// </summary>
         [ViewVariables(VVAccess.ReadWrite)]
         public bool NeedsPower { get => _needsPower; set => SetNeedsPower(value); }
@@ -70,6 +75,7 @@ namespace Content.Server.GameObjects.Components.Power.ApcNetComponents
         /// <summary>
         ///     When true, causes this to never appear powered.
         /// </summary>
+        [ViewVariables(VVAccess.ReadWrite)]
         public bool PowerDisabled { get => _powerDisabled; set => SetPowerDisabled(value); }
         private bool _powerDisabled;
 
@@ -89,18 +95,18 @@ namespace Content.Server.GameObjects.Components.Power.ApcNetComponents
             {
                 TryFindAndSetProvider();
             }
-            if (Owner.TryGetComponent<ICollidableComponent>(out var collidable))
+            if (_physicsComponent != null)
             {
                 AnchorUpdate();
-                collidable.AnchoredChanged += AnchorUpdate;
+                _physicsComponent.AnchoredChanged += AnchorUpdate;
             }
         }
 
         public override void OnRemove()
         {
-            if (Owner.TryGetComponent<ICollidableComponent>(out var collidable))
+            if (_physicsComponent != null)
             {
-                collidable.AnchoredChanged -= AnchorUpdate;
+                _physicsComponent.AnchoredChanged -= AnchorUpdate;
             }
             _provider.RemoveReceiver(this);
             base.OnRemove();
@@ -116,25 +122,27 @@ namespace Content.Server.GameObjects.Components.Power.ApcNetComponents
 
         private bool TryFindAvailableProvider(out IPowerProvider foundProvider)
         {
-            var nearbyEntities = IoCManager.Resolve<IServerEntityManager>()
+            var nearbyEntities = _serverEntityManager
                 .GetEntitiesInRange(Owner, PowerReceptionRange);
-            var mapManager = IoCManager.Resolve<IMapManager>();
+
             foreach (var entity in nearbyEntities)
             {
                 if (entity.TryGetComponent<PowerProviderComponent>(out var provider))
                 {
                     if (provider.Connectable)
                     {
-                        var distanceToProvider = provider.Owner.Transform.GridPosition.Distance(mapManager, Owner.Transform.GridPosition);
-                        if (distanceToProvider < Math.Min(PowerReceptionRange, provider.PowerTransferRange))
+                        if (provider.Owner.Transform.Coordinates.TryDistance(_serverEntityManager, Owner.Transform.Coordinates, out var distance))
                         {
-                            foundProvider = provider;
-                            return true;
+                            if (distance < Math.Min(PowerReceptionRange, provider.PowerTransferRange))
+                            {
+                                foundProvider = provider;
+                                return true;
+                            }
                         }
                     }
                 }
             }
-            foundProvider = default;
+            foundProvider = default!;
             return false;
         }
 
@@ -199,7 +207,7 @@ namespace Content.Server.GameObjects.Components.Power.ApcNetComponents
         private void OnNewPowerState()
         {
             OnPowerStateChanged?.Invoke(this, new PowerStateEventArgs(Powered));
-            if (Owner.TryGetComponent(out AppearanceComponent appearance))
+            if (Owner.TryGetComponent<AppearanceComponent>(out var appearance))
             {
                 appearance.SetData(PowerDeviceVisuals.Powered, Powered);
             }
@@ -225,7 +233,7 @@ namespace Content.Server.GameObjects.Components.Power.ApcNetComponents
 
         public void Examine(FormattedMessage message, bool inDetailsRange)
         {
-            message.AddMarkup(Loc.GetString("It appears to be {0}.", this.Powered ? "[color=darkgreen]powered[/color]" : "[color=darkred]un-powered[/color]"));
+            message.AddMarkup(Loc.GetString("It appears to be {0}.", Powered ? "[color=darkgreen]powered[/color]" : "[color=darkred]un-powered[/color]"));
         }
     }
 

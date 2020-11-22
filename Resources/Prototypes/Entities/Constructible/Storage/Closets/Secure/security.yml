@@ -8,8 +8,8 @@
     visuals:
     - type: StorageVisualizer
       state: hos
-  - type: Icon
-    state: hos_door
+  - type: AccessReader
+    access: [["HeadOfSecurity"]]
 
 # Warden
 - type: entity
@@ -21,8 +21,8 @@
     visuals:
     - type: StorageVisualizer
       state: warden
-  - type: Icon
-    state: warden_door
+  - type: AccessReader
+    access: [["Brig"]]
 
 # Security Officer
 - type: entity
@@ -34,8 +34,8 @@
     visuals:
     - type: StorageVisualizer
       state: sec
-  - type: Icon
-    state: sec_door
+  - type: AccessReader
+    access: [["Security"]]
 
 # Detective
 - type: entity
@@ -43,9 +43,9 @@
   parent: LockerSecureBase
   name: "detective's cabinet"
   components:
-    - type: Appearance
-      visuals:
-        - type: StorageVisualizer
-          state: cabinet
-    - type: Icon
-      state: cabinet_door
+  - type: Appearance
+    visuals:
+    - type: StorageVisualizer
+      state: cabinet
+  - type: AccessReader
+    access: [["Detective"]]

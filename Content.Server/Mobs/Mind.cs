@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Content.Server.GameObjects.Components.Mobs;
 using Content.Server.Mobs.Roles;
+using Content.Server.Objectives;
 using Content.Server.Players;
 using Robust.Server.Interfaces.GameObjects;
 using Robust.Server.Interfaces.Player;
@@ -27,13 +28,15 @@ namespace Content.Server.Mobs
     {
         private readonly ISet<Role> _roles = new HashSet<Role>();
 
+        private readonly List<ObjectivePrototype> _objectives = new List<ObjectivePrototype>();
+
         /// <summary>
         ///     Creates the new mind attached to a specific player session.
         /// </summary>
-        /// <param name="sessionId">The session ID of the owning player.</param>
-        public Mind(NetSessionId sessionId)
+        /// <param name="userId">The session ID of the owning player.</param>
+        public Mind(NetUserId userId)
         {
-            SessionId = sessionId;
+            UserId = userId;
         }
 
         // TODO: This session should be able to be changed, probably.
@@ -41,7 +44,7 @@ namespace Content.Server.Mobs
         ///     The session ID of the player owning this mind.
         /// </summary>
         [ViewVariables]
-        public NetSessionId? SessionId { get; private set; }
+        public NetUserId? UserId { get; private set; }
 
         [ViewVariables]
         public bool IsVisitingEntity => VisitingEntity != null;
@@ -75,6 +78,12 @@ namespace Content.Server.Mobs
         public IEnumerable<Role> AllRoles => _roles;
 
         /// <summary>
+        ///     An enumerable over all the objectives this mind has.
+        /// </summary>
+        [ViewVariables]
+        public IEnumerable<ObjectivePrototype> AllObjectives => _objectives;
+
+        /// <summary>
         ///     The session of the player owning this mind.
         ///     Can be null, in which case the player is currently not logged in.
         /// </summary>
@@ -83,12 +92,12 @@ namespace Content.Server.Mobs
         {
             get
             {
-                if (!SessionId.HasValue)
+                if (!UserId.HasValue)
                 {
                     return null;
                 }
                 var playerMgr = IoCManager.Resolve<IPlayerManager>();
-                playerMgr.TryGetSessionById(SessionId.Value, out var ret);
+                playerMgr.TryGetSessionById(UserId.Value, out var ret);
                 return ret;
             }
         }
@@ -145,6 +154,32 @@ namespace Content.Server.Mobs
         }
 
         /// <summary>
+        /// Adds an objective to this mind.
+        /// </summary>
+        public bool TryAddObjective(ObjectivePrototype objective)
+        {
+            if (!objective.CanBeAssigned(this))
+                return false;
+            _objectives.Add(objective);
+            return true;
+        }
+
+        /// <summary>
+        /// Removes an objective to this mind.
+        /// </summary>
+        /// <returns>Returns true if the removal succeeded.</returns>
+        public bool TryRemoveObjective(int index)
+        {
+            if (_objectives.Count >= index) return false;
+
+            var objective = _objectives[index];
+            _objectives.Remove(objective);
+            return true;
+        }
+
+
+
+        /// <summary>
         ///     Transfer this mind's control over to a new entity.
         /// </summary>
         /// <param name="entity">
@@ -195,7 +230,7 @@ namespace Content.Server.Mobs
             VisitingEntity = null;
         }
 
-        public void ChangeOwningPlayer(NetSessionId? newOwner)
+        public void ChangeOwningPlayer(NetUserId? newOwner)
         {
             var playerMgr = IoCManager.Resolve<IPlayerManager>();
             PlayerData newOwnerData = null;
@@ -216,12 +251,12 @@ namespace Content.Server.Mobs
             var oldSession = Session;
             oldSession?.AttachToEntity(null);
 
-            if (SessionId.HasValue)
+            if (UserId.HasValue)
             {
-                playerMgr.GetPlayerData(SessionId.Value).ContentData().Mind = null;
+                playerMgr.GetPlayerData(UserId.Value).ContentData().Mind = null;
             }
 
-            SessionId = newOwner;
+            UserId = newOwner;
             if (!newOwner.HasValue)
             {
                 return;

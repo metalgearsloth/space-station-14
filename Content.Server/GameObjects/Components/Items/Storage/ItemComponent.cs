@@ -1,20 +1,18 @@
 ﻿using Content.Server.GameObjects.Components.GUI;
-using Content.Server.GameObjects.EntitySystems;
 using Content.Server.Interfaces.GameObjects.Components.Items;
 using Content.Server.Throw;
-using Content.Server.Utility;
 using Content.Shared.GameObjects;
 using Content.Shared.GameObjects.Components.Items;
+using Content.Shared.GameObjects.Components.Storage;
 using Content.Shared.GameObjects.EntitySystems;
 using Content.Shared.GameObjects.Verbs;
 using Content.Shared.Interfaces.GameObjects.Components;
+using Content.Shared.Utility;
 using Robust.Server.Interfaces.GameObjects;
 using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
 using Robust.Shared.GameObjects.Components;
 using Robust.Shared.Interfaces.GameObjects;
-using Robust.Shared.Interfaces.Map;
-using Robust.Shared.IoC;
 using Robust.Shared.Localization;
 using Robust.Shared.Serialization;
 
@@ -22,11 +20,10 @@ namespace Content.Server.GameObjects.Components.Items.Storage
 {
     [RegisterComponent]
     [ComponentReference(typeof(StorableComponent))]
+    [ComponentReference(typeof(SharedStorableComponent))]
     [ComponentReference(typeof(IItemComponent))]
     public class ItemComponent : StorableComponent, IInteractHand, IExAct, IEquipped, IUnequipped, IItemComponent
     {
-        [Dependency] private readonly IMapManager _mapManager = default!;
-
         public override string Name => "Item";
         public override uint? NetID => ContentNetIDs.ITEM;
 
@@ -61,12 +58,12 @@ namespace Content.Server.GameObjects.Components.Items.Storage
             }
         }
 
-        public void Equipped(EquippedEventArgs eventArgs)
+        public virtual void Equipped(EquippedEventArgs eventArgs)
         {
             EquippedToSlot();
         }
 
-        public void Unequipped(UnequippedEventArgs eventArgs)
+        public virtual void Unequipped(UnequippedEventArgs eventArgs)
         {
             RemovedFromSlot();
         }
@@ -90,15 +87,13 @@ namespace Content.Server.GameObjects.Components.Items.Storage
                 return false;
             }
 
-            if (Owner.TryGetComponent(out ICollidableComponent physics) &&
+            if (Owner.TryGetComponent(out IPhysicsComponent physics) &&
                 physics.Anchored)
             {
                 return false;
             }
 
-            var itemPos = Owner.Transform.MapPosition;
-
-            return InteractionChecks.InRangeUnobstructed(user, itemPos, ignoredEnt: Owner, ignoreInsideBlocker:true);
+            return user.InRangeUnobstructed(Owner, ignoreInsideBlocker: true, popup: true);
         }
 
         public bool InteractHand(InteractHandEventArgs eventArgs)
@@ -116,7 +111,7 @@ namespace Content.Server.GameObjects.Components.Items.Storage
             protected override void GetData(IEntity user, ItemComponent component, VerbData data)
             {
                 if (!ActionBlockerSystem.CanInteract(user) ||
-                    ContainerHelpers.IsInContainer(component.Owner) ||
+                    component.Owner.IsInContainer() ||
                     !component.CanPickup(user))
                 {
                     data.Visibility = VerbVisibility.Invisible;
@@ -143,8 +138,8 @@ namespace Content.Server.GameObjects.Components.Items.Storage
         public void OnExplosion(ExplosionEventArgs eventArgs)
         {
             var sourceLocation = eventArgs.Source;
-            var targetLocation = eventArgs.Target.Transform.GridPosition;
-            var dirVec = (targetLocation.ToMapPos(_mapManager) - sourceLocation.ToMapPos(_mapManager)).Normalized;
+            var targetLocation = eventArgs.Target.Transform.Coordinates;
+            var dirVec = (targetLocation.ToMapPos(Owner.EntityManager) - sourceLocation.ToMapPos(Owner.EntityManager)).Normalized;
 
             var throwForce = 1.0f;
 
@@ -161,7 +156,7 @@ namespace Content.Server.GameObjects.Components.Items.Storage
                     break;
             }
 
-            ThrowHelper.Throw(Owner, throwForce, targetLocation, sourceLocation, true);
+            Owner.Throw(throwForce, targetLocation, sourceLocation, true);
         }
     }
 }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,11 +15,13 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Pathfinders
     {
         // Some of this is probably fugly due to other structural changes in pathfinding so it could do with optimisation
         // Realistically it's probably not getting used given it doesn't support tile costs which can be very useful
+#if DEBUG
         public static event Action<SharedAiDebug.JpsRouteDebug> DebugRoute;
+#endif
 
-        private PathfindingNode _startNode;
+        private readonly PathfindingNode _startNode;
         private PathfindingNode _endNode;
-        private PathfindingArgs _pathfindingArgs;
+        private readonly PathfindingArgs _pathfindingArgs;
 
         public JpsPathfindingJob(double maxTime,
             PathfindingNode startNode,
@@ -494,13 +496,13 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Pathfinders
             }
 
             if ((closedNeighborOne == null || !PathfindingHelpers.Traversable(_pathfindingArgs.CollisionMask, _pathfindingArgs.Access, closedNeighborOne)) &&
-                (openNeighborOne != null && PathfindingHelpers.Traversable(_pathfindingArgs.CollisionMask, _pathfindingArgs.Access, openNeighborOne)))
+                openNeighborOne != null && PathfindingHelpers.Traversable(_pathfindingArgs.CollisionMask, _pathfindingArgs.Access, openNeighborOne))
             {
                 return true;
             }
 
             if ((closedNeighborTwo == null || !PathfindingHelpers.Traversable(_pathfindingArgs.CollisionMask, _pathfindingArgs.Access, closedNeighborTwo)) &&
-                (openNeighborTwo != null && PathfindingHelpers.Traversable(_pathfindingArgs.CollisionMask, _pathfindingArgs.Access, openNeighborTwo)))
+                openNeighborTwo != null && PathfindingHelpers.Traversable(_pathfindingArgs.CollisionMask, _pathfindingArgs.Access, openNeighborTwo))
             {
                 return true;
             }

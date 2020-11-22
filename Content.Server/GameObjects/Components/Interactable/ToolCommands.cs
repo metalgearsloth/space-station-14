@@ -1,5 +1,7 @@
 ﻿#nullable enable
 using System.Linq;
+using Content.Server.Administration;
+using Content.Shared.Administration;
 using Content.Shared.Maps;
 using JetBrains.Annotations;
 using Robust.Server.Interfaces.Console;
@@ -14,7 +16,7 @@ namespace Content.Server.GameObjects.Components.Interactable
     /// <summary>
     /// <see cref="TilePryingComponent.TryPryTile"/>
     /// </summary>
-    [UsedImplicitly]
+    [AdminCommand(AdminFlags.Debug)]
     class TilePryCommand : IClientCommand
     {
         public string Command => "tilepry";
@@ -49,7 +51,7 @@ namespace Content.Server.GameObjects.Components.Interactable
             var mapManager = IoCManager.Resolve<IMapManager>();
             var playerGrid = player.AttachedEntity.Transform.GridID;
             var mapGrid = mapManager.GetGrid(playerGrid);
-            var playerPosition = player.AttachedEntity.Transform.GridPosition;
+            var playerPosition = player.AttachedEntity.Transform.Coordinates;
             var tileDefinitionManager = IoCManager.Resolve<ITileDefinitionManager>();
 
             for (var i = -radius; i <= radius; i++)
@@ -69,7 +71,7 @@ namespace Content.Server.GameObjects.Components.Interactable
         }
     }
 
-    [UsedImplicitly]
+    [AdminCommand(AdminFlags.Debug)]
     class AnchorCommand : IClientCommand
     {
         public string Command => "anchor";
@@ -108,13 +110,13 @@ namespace Content.Server.GameObjects.Components.Interactable
             {
                 if (entity.TryGetComponent(out AnchorableComponent? anchorable))
                 {
-                    anchorable.TryAnchor(player.AttachedEntity, force: true);
+                    _ = anchorable.TryAnchor(player.AttachedEntity, force: true);
                 }
             }
         }
     }
 
-    [UsedImplicitly]
+    [AdminCommand(AdminFlags.Debug)]
     class UnAnchorCommand : IClientCommand
     {
         public string Command => "unanchor";
@@ -153,7 +155,7 @@ namespace Content.Server.GameObjects.Components.Interactable
             {
                 if (entity.TryGetComponent(out AnchorableComponent? anchorable))
                 {
-                    anchorable.TryUnAnchor(player.AttachedEntity, force: true);
+                    _ = anchorable.TryUnAnchor(player.AttachedEntity, force: true);
                 }
             }
         }

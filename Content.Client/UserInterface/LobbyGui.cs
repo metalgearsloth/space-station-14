@@ -9,8 +9,6 @@ using Robust.Client.UserInterface.Controls;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Localization;
 using Robust.Shared.Maths;
-using System;
-using System.Collections.Generic;
 
 namespace Content.Client.UserInterface
 {
@@ -260,8 +258,8 @@ namespace Content.Client.UserInterface
 
     public class LobbyPlayerList : Control
     {
-        private ScrollContainer _scroll;
-        private VBoxContainer _vBox;
+        private readonly ScrollContainer _scroll;
+        private readonly VBoxContainer _vBox;
 
         public LobbyPlayerList()
         {

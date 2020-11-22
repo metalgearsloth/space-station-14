@@ -6,13 +6,14 @@ using System.Threading.Tasks;
 using Content.Server.GameObjects.Components.Interactable;
 using Content.Server.GameObjects.Components.VendingMachines;
 using Content.Server.GameObjects.EntitySystems;
-using Content.Server.Interfaces;
 using Content.Server.Interfaces.GameObjects.Components.Items;
 using Content.Server.Utility;
 using Content.Shared.GameObjects.Components;
 using Content.Shared.GameObjects.Components.Interactable;
 using Content.Shared.GameObjects.EntitySystems;
+using Content.Shared.Interfaces;
 using Content.Shared.Interfaces.GameObjects.Components;
+using Content.Shared.Utility;
 using JetBrains.Annotations;
 using Robust.Server.GameObjects;
 using Robust.Server.GameObjects.Components.UserInterface;
@@ -35,7 +36,6 @@ namespace Content.Server.GameObjects.Components
     public class WiresComponent : SharedWiresComponent, IInteractUsing, IExamine, IMapInit
     {
         [Dependency] private readonly IRobustRandom _random = default!;
-        [Dependency] private readonly IServerNotifyManager _notifyManager = default!;
 
         private AudioSystem _audioSystem = default!;
 
@@ -56,6 +56,9 @@ namespace Content.Server.GameObjects.Components
                 }
 
                 _isPanelOpen = value;
+
+                if (!_isPanelOpen)
+                    UserInterface?.CloseAll();
                 UpdateAppearance();
             }
         }
@@ -114,11 +117,13 @@ namespace Content.Server.GameObjects.Components
         /// <summary>
         /// Contains all registered wires.
         /// </summary>
+        [ViewVariables]
         public readonly List<Wire> WiresList = new List<Wire>();
 
         /// <summary>
         /// Status messages are displayed at the bottom of the UI.
         /// </summary>
+        [ViewVariables]
         private readonly Dictionary<object, object> _statuses = new Dictionary<object, object>();
 
         /// <summary>
@@ -368,6 +373,14 @@ namespace Content.Server.GameObjects.Components
             UserInterface?.Open(session);
         }
 
+        /// <summary>
+        /// Closes all wire UIs.
+        /// </summary>
+        public void CloseAll()
+        {
+            UserInterface?.CloseAll();
+        }
+
         private void UserInterfaceOnReceiveMessage(ServerBoundUserInterfaceMessage serverMsg)
         {
             var message = serverMsg.Message;
@@ -383,15 +396,13 @@ namespace Content.Server.GameObjects.Components
 
                     if (!player.TryGetComponent(out IHandsComponent? handsComponent))
                     {
-                        _notifyManager.PopupMessage(Owner.Transform.GridPosition, player,
-                            Loc.GetString("You have no hands."));
+                        Owner.PopupMessage(player, Loc.GetString("You have no hands."));
                         return;
                     }
 
-                    if (!EntitySystem.Get<SharedInteractionSystem>().InRangeUnobstructed(player.Transform.MapPosition, Owner.Transform.MapPosition, ignoredEnt: Owner))
+                    if (!player.InRangeUnobstructed(Owner))
                     {
-                        _notifyManager.PopupMessage(Owner.Transform.GridPosition, player,
-                            Loc.GetString("You can't reach there!"));
+                        Owner.PopupMessage(player, Loc.GetString("You can't reach there!"));
                         return;
                     }
 
@@ -404,8 +415,7 @@ namespace Content.Server.GameObjects.Components
                         case WiresAction.Cut:
                             if (tool == null || !tool.HasQuality(ToolQuality.Cutting))
                             {
-                                _notifyManager.PopupMessageCursor(player,
-                                    Loc.GetString("You need to hold a wirecutter in your hand!"));
+                                player.PopupMessageCursor(Loc.GetString("You need to hold a wirecutter in your hand!"));
                                 return;
                             }
 
@@ -416,8 +426,7 @@ namespace Content.Server.GameObjects.Components
                         case WiresAction.Mend:
                             if (tool == null || !tool.HasQuality(ToolQuality.Cutting))
                             {
-                                _notifyManager.PopupMessageCursor(player,
-                                    Loc.GetString("You need to hold a wirecutter in your hand!"));
+                                player.PopupMessageCursor(Loc.GetString("You need to hold a wirecutter in your hand!"));
                                 return;
                             }
 
@@ -428,15 +437,13 @@ namespace Content.Server.GameObjects.Components
                         case WiresAction.Pulse:
                             if (tool == null || !tool.HasQuality(ToolQuality.Multitool))
                             {
-                                _notifyManager.PopupMessageCursor(player,
-                                    Loc.GetString("You need to hold a multitool in your hand!"));
+                                player.PopupMessageCursor(Loc.GetString("You need to hold a multitool in your hand!"));
                                 return;
                             }
 
                             if (wire.IsCut)
                             {
-                                _notifyManager.PopupMessageCursor(player,
-                                    Loc.GetString("You can't pulse a wire that's been cut!"));
+                                player.PopupMessageCursor(Loc.GetString("You can't pulse a wire that's been cut!"));
                                 return;
                             }
 

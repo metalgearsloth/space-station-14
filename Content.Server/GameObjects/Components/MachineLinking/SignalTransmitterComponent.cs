@@ -1,4 +1,6 @@
-﻿using Content.Server.GameObjects.Components.Interactable;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
+using Content.Server.GameObjects.Components.Interactable;
 using Content.Shared.GameObjects.Components.Interactable;
 using Content.Shared.Interfaces;
 using Content.Shared.Interfaces.GameObjects.Components;
@@ -8,18 +10,14 @@ using Robust.Shared.Interfaces.Map;
 using Robust.Shared.IoC;
 using Robust.Shared.Localization;
 using Robust.Shared.Serialization;
+using Robust.Shared.Utility;
 using Robust.Shared.ViewVariables;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace Content.Server.GameObjects.Components.MachineLinking
 {
     [RegisterComponent]
     public class SignalTransmitterComponent : Component, IInteractUsing
     {
-        [Dependency] private readonly IMapManager _mapManager = default!;
-        [Dependency] private readonly IEntityManager _entityManager = default!;
-
         public override string Name => "SignalTransmitter";
 
         private List<SignalReceiverComponent> _unresolvedReceivers;
@@ -62,7 +60,7 @@ namespace Content.Server.GameObjects.Components.MachineLinking
                 _unresolvedReceivers = new List<SignalReceiverComponent>();
                 foreach (var entityUid in entityUids)
                 {
-                    if (!_entityManager.TryGetEntity(entityUid, out var entity)
+                    if (!Owner.EntityManager.TryGetEntity(entityUid, out var entity)
                         || !entity.TryGetComponent<SignalReceiverComponent>(out var receiver))
                     {
                         continue;
@@ -88,22 +86,21 @@ namespace Content.Server.GameObjects.Components.MachineLinking
             }
         }
 
-        public bool TransmitSignal(IEntity user, SignalState state)
+        public bool TransmitSignal<T>(T signal)
         {
             if (_receivers.Count == 0)
             {
-                Owner.PopupMessage(user, Loc.GetString("No receivers connected."));
                 return false;
             }
 
             foreach (var receiver in _receivers)
             {
-                if (Range > 0 && !Owner.Transform.GridPosition.InRange(_mapManager, receiver.Owner.Transform.GridPosition, Range))
+                if (Range > 0 && !Owner.Transform.Coordinates.InRange(Owner.EntityManager, receiver.Owner.Transform.Coordinates, Range))
                 {
                     continue;
                 }
 
-                receiver.DistributeSignal(state);
+                receiver.DistributeSignal(signal);
             }
             return true;
         }
@@ -151,8 +148,9 @@ namespace Content.Server.GameObjects.Components.MachineLinking
         {
             base.Shutdown();
 
-            foreach (var receiver in _receivers)
+            for (var i = _receivers.Count-1; i >= 0; i++)
             {
+                var receiver = _receivers[i];
                 if (receiver.Deleted)
                 {
                     continue;
@@ -160,6 +158,7 @@ namespace Content.Server.GameObjects.Components.MachineLinking
 
                 receiver.Unsubscribe(this);
             }
+
             _receivers.Clear();
         }
     }

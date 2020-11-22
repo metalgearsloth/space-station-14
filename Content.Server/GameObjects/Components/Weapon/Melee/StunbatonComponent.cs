@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿#nullable enable
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Content.Server.GameObjects.Components.GUI;
 using Content.Server.GameObjects.Components.Items.Storage;
@@ -28,16 +29,16 @@ using Robust.Shared.ViewVariables;
 namespace Content.Server.GameObjects.Components.Weapon.Melee
 {
     [RegisterComponent]
-    public class StunbatonComponent : MeleeWeaponComponent, IUse, IExamine, IMapInit, IInteractUsing
+    public class StunbatonComponent : MeleeWeaponComponent, IUse, IExamine, IInteractUsing, IThrowCollide
     {
         [Dependency] private readonly IRobustRandom _robustRandom = default!;
-        [Dependency] private readonly ISharedNotifyManager _notifyManager = default!;
 
         public override string Name => "Stunbaton";
 
         private bool _activated = false;
 
-        [ViewVariables] private ContainerSlot _cellContainer;
+        [ViewVariables] private PowerCellSlotComponent _cellSlot = default!;
+        private PowerCellComponent? Cell => _cellSlot.Cell;
 
         [ViewVariables(VVAccess.ReadWrite)]
         private float _paralyzeChanceNoSlowdown = 0.35f;
@@ -56,23 +57,10 @@ namespace Content.Server.GameObjects.Components.Weapon.Melee
         [ViewVariables]
         public bool Activated => _activated;
 
-        [ViewVariables]
-        private BatteryComponent Cell
-        {
-            get
-            {
-                if (_cellContainer.ContainedEntity == null) return null;
-
-                _cellContainer.ContainedEntity.TryGetComponent(out BatteryComponent cell);
-                return cell;
-            }
-        }
-
         public override void Initialize()
         {
             base.Initialize();
-            _cellContainer =
-                ContainerManagerComponent.Ensure<ContainerSlot>("stunbaton_cell_container", Owner, out var existed);
+            _cellSlot = Owner.EnsureComponent<PowerCellSlotComponent>();
         }
 
         public override void ExposeData(ObjectSerializer serializer)
@@ -85,6 +73,23 @@ namespace Content.Server.GameObjects.Components.Weapon.Melee
             serializer.DataField(ref _slowdownTime, "slowdownTime", 5f);
         }
 
+        public override void HandleMessage(ComponentMessage message, IComponent? component)
+        {
+            base.HandleMessage(message, component);
+            switch (message)
+            {
+                case PowerCellChangedMessage m:
+                    if (component is PowerCellSlotComponent slotComponent && slotComponent == _cellSlot)
+                    {
+                        if (m.Ejected)
+                        {
+                            TurnOff();
+                        }
+                    }
+                    break;
+            }
+        }
+
         protected override bool OnHitEntities(IReadOnlyList<IEntity> entities, AttackEventArgs eventArgs)
         {
             if (!Activated || entities.Count == 0 || Cell == null)
@@ -93,11 +98,11 @@ namespace Content.Server.GameObjects.Components.Weapon.Melee
             if (!Cell.TryUseCharge(EnergyPerUse))
                 return true;
 
-            EntitySystem.Get<AudioSystem>().PlayAtCoords("/Audio/Weapons/egloves.ogg", Owner.Transform.GridPosition, AudioHelpers.WithVariation(0.25f));
+            EntitySystem.Get<AudioSystem>().PlayAtCoords("/Audio/Weapons/egloves.ogg", Owner.Transform.Coordinates, AudioHelpers.WithVariation(0.25f));
 
             foreach (var entity in entities)
             {
-                if (!entity.TryGetComponent(out StunnableComponent stunnable)) continue;
+                if (!entity.TryGetComponent(out StunnableComponent? stunnable)) continue;
 
                 if(!stunnable.SlowedDown)
                     if(_robustRandom.Prob(_paralyzeChanceNoSlowdown))
@@ -113,7 +118,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Melee
 
             if (!(Cell.CurrentCharge < EnergyPerUse)) return true;
 
-            EntitySystem.Get<AudioSystem>().PlayAtCoords(AudioHelpers.GetRandomFileFromSoundCollection("sparks"), Owner.Transform.GridPosition, AudioHelpers.WithVariation(0.25f));
+            EntitySystem.Get<AudioSystem>().PlayAtCoords(AudioHelpers.GetRandomFileFromSoundCollection("sparks"), Owner.Transform.Coordinates, AudioHelpers.WithVariation(0.25f));
             TurnOff();
 
             return true;
@@ -121,6 +126,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Melee
 
         private bool ToggleStatus(IEntity user)
         {
+            if (!ActionBlockerSystem.CanUse(user)) return false;
             if (Activated)
             {
                 TurnOff();
@@ -143,7 +149,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Melee
             var sprite = Owner.GetComponent<SpriteComponent>();
             var item = Owner.GetComponent<ItemComponent>();
 
-            EntitySystem.Get<AudioSystem>().PlayAtCoords(AudioHelpers.GetRandomFileFromSoundCollection("sparks"), Owner.Transform.GridPosition, AudioHelpers.WithVariation(0.25f));
+            EntitySystem.Get<AudioSystem>().PlayAtCoords(AudioHelpers.GetRandomFileFromSoundCollection("sparks"), Owner.Transform.Coordinates, AudioHelpers.WithVariation(0.25f));
 
             item.EquippedPrefix = "off";
             sprite.LayerSetState(0, "stunbaton_off");
@@ -159,24 +165,23 @@ namespace Content.Server.GameObjects.Components.Weapon.Melee
 
             var sprite = Owner.GetComponent<SpriteComponent>();
             var item = Owner.GetComponent<ItemComponent>();
-            var cell = Cell;
 
-            if (cell == null)
+            if (Cell == null)
             {
-                EntitySystem.Get<AudioSystem>().PlayAtCoords("/Audio/Machines/button.ogg", Owner.Transform.GridPosition, AudioHelpers.WithVariation(0.25f));
+                EntitySystem.Get<AudioSystem>().PlayAtCoords("/Audio/Machines/button.ogg", Owner.Transform.Coordinates, AudioHelpers.WithVariation(0.25f));
 
-                _notifyManager.PopupMessage(Owner, user, Loc.GetString("Cell missing..."));
+                Owner.PopupMessage(user, Loc.GetString("Cell missing..."));
                 return;
             }
 
-            if (cell.CurrentCharge < EnergyPerUse)
+            if (Cell.CurrentCharge < EnergyPerUse)
             {
-                EntitySystem.Get<AudioSystem>().PlayAtCoords("/Audio/Machines/button.ogg", Owner.Transform.GridPosition, AudioHelpers.WithVariation(0.25f));
-                _notifyManager.PopupMessage(Owner, user, Loc.GetString("Dead cell..."));
+                EntitySystem.Get<AudioSystem>().PlayAtCoords("/Audio/Machines/button.ogg", Owner.Transform.Coordinates, AudioHelpers.WithVariation(0.25f));
+                Owner.PopupMessage(user, Loc.GetString("Dead cell..."));
                 return;
             }
 
-            EntitySystem.Get<AudioSystem>().PlayAtCoords(AudioHelpers.GetRandomFileFromSoundCollection("sparks"), Owner.Transform.GridPosition, AudioHelpers.WithVariation(0.25f));
+            EntitySystem.Get<AudioSystem>().PlayAtCoords(AudioHelpers.GetRandomFileFromSoundCollection("sparks"), Owner.Transform.Coordinates, AudioHelpers.WithVariation(0.25f));
 
             item.EquippedPrefix = "on";
             sprite.LayerSetState(0, "stunbaton_on");
@@ -192,49 +197,10 @@ namespace Content.Server.GameObjects.Components.Weapon.Melee
 
         public async Task<bool> InteractUsing(InteractUsingEventArgs eventArgs)
         {
-            if (!eventArgs.Using.HasComponent<BatteryComponent>()) return false;
-
-            if (Cell != null) return false;
-
-            var handsComponent = eventArgs.User.GetComponent<IHandsComponent>();
-
-            if (!handsComponent.Drop(eventArgs.Using, _cellContainer))
-            {
-                return false;
-            }
-
-            EntitySystem.Get<AudioSystem>().PlayFromEntity("/Audio/Items/pistol_magin.ogg", Owner);
-
+            if (!ActionBlockerSystem.CanInteract(eventArgs.User)) return false;
+            if (!_cellSlot.InsertCell(eventArgs.Using)) return false;
             Dirty();
-
             return true;
-        }
-
-        private void EjectCell(IEntity user)
-        {
-            if (Cell == null)
-            {
-                return;
-            }
-
-            var cell = Cell;
-
-            if (!_cellContainer.Remove(cell.Owner))
-            {
-                return;
-            }
-
-            if (!user.TryGetComponent(out HandsComponent hands))
-            {
-                return;
-            }
-
-            if (!hands.PutInHand(cell.Owner.GetComponent<ItemComponent>()))
-            {
-                cell.Owner.Transform.GridPosition = user.Transform.GridPosition;
-            }
-
-            EntitySystem.Get<AudioSystem>().PlayAtCoords("/Audio/Items/pistol_magout.ogg", Owner.Transform.GridPosition, AudioHelpers.WithVariation(0.25f));
         }
 
         public void Examine(FormattedMessage message, bool inDetailsRange)
@@ -245,43 +211,14 @@ namespace Content.Server.GameObjects.Components.Weapon.Melee
             }
         }
 
-        public void MapInit()
+        public void DoHit(ThrowCollideEventArgs eventArgs)
         {
-            if (_cellContainer.ContainedEntity != null)
-            {
+            if (!Activated || Cell == null || !Cell.TryUseCharge(EnergyPerUse) || !eventArgs.Target.TryGetComponent(out StunnableComponent? stunnable))
                 return;
-            }
 
-            var cell = Owner.EntityManager.SpawnEntity("PowerCellSmallHyper", Owner.Transform.GridPosition);
-            _cellContainer.Insert(cell);
-        }
+            EntitySystem.Get<AudioSystem>().PlayAtCoords("/Audio/Weapons/egloves.ogg", Owner.Transform.Coordinates, AudioHelpers.WithVariation(0.25f));
 
-        [Verb]
-        public sealed class EjectCellVerb : Verb<StunbatonComponent>
-        {
-            protected override void GetData(IEntity user, StunbatonComponent component, VerbData data)
-            {
-                if (!ActionBlockerSystem.CanInteract(user))
-                {
-                    data.Visibility = VerbVisibility.Invisible;
-                    return;
-                }
-
-                if (component.Cell == null)
-                {
-                    data.Text = Loc.GetString("Eject cell (cell missing)");
-                    data.Visibility = VerbVisibility.Disabled;
-                }
-                else
-                {
-                    data.Text = Loc.GetString("Eject cell");
-                }
-            }
-
-            protected override void Activate(IEntity user, StunbatonComponent component)
-            {
-                component.EjectCell(user);
-            }
+            stunnable.Paralyze(_paralyzeTime);
         }
     }
 }

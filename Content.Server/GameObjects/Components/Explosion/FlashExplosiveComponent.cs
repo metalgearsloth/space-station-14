@@ -36,7 +36,7 @@ namespace Content.Server.GameObjects.Components.Explosion
         public bool Explode()
         {
             // If we're in a locker or whatever then can't flash anything
-            ContainerHelpers.TryGetContainer(Owner, out var container);
+            Owner.TryGetContainer(out var container);
             if (container == null || !container.Owner.HasComponent<EntityStorageComponent>())
             {
                 FlashableComponent.FlashAreaHelper(Owner, _range, _duration);
@@ -44,7 +44,7 @@ namespace Content.Server.GameObjects.Components.Explosion
 
             if (_sound != null)
             {
-                EntitySystem.Get<AudioSystem>().PlayAtCoords(_sound, Owner.Transform.GridPosition);
+                EntitySystem.Get<AudioSystem>().PlayAtCoords(_sound, Owner.Transform.Coordinates);
             }
 
             if (_deleteOnFlash && !Owner.Deleted)

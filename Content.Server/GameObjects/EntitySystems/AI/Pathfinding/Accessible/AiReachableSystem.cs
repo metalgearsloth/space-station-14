@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Content.Server.GameObjects.Components.Access;
 using Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Pathfinders;
 using Content.Shared.AI;
+using Content.Shared.GameTicking;
 using JetBrains.Annotations;
 using Robust.Server.GameObjects;
 using Robust.Shared.GameObjects.Components;
@@ -22,7 +23,7 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Accessible
     /// </summary>
     /// Long-term can be used to do hierarchical pathfinding
     [UsedImplicitly]
-    public sealed class AiReachableSystem : EntitySystem
+    public sealed class AiReachableSystem : EntitySystem, IResettingEntitySystem
     {
         /*
          * The purpose of this is to provide a higher-level / hierarchical abstraction of the actual pathfinding graph
@@ -44,7 +45,7 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Accessible
         /// <summary>
         /// Queued region updates
         /// </summary>
-        private HashSet<PathfindingChunk> _queuedUpdates = new HashSet<PathfindingChunk>();
+        private readonly HashSet<PathfindingChunk> _queuedUpdates = new HashSet<PathfindingChunk>();
 
         // Oh god the nesting. Shouldn't need to go beyond this
         /// <summary>
@@ -52,7 +53,7 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Accessible
         /// Regions are groups of nodes with the same profile (for pathfinding purposes)
         /// i.e. same collision, not-space, same access, etc.
         /// </summary>
-        private Dictionary<GridId, Dictionary<PathfindingChunk, HashSet<PathfindingRegion>>> _regions =
+        private readonly Dictionary<GridId, Dictionary<PathfindingChunk, HashSet<PathfindingRegion>>> _regions =
             new Dictionary<GridId, Dictionary<PathfindingChunk, HashSet<PathfindingRegion>>>();
 
         /// <summary>
@@ -69,7 +70,7 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Accessible
 
         // Also, didn't use a dictionary because there didn't seem to be a clean way to do the lookup
         // Plus this way we can check if everything is equal except for vision so an entity with a lower vision radius can use an entity with a higher vision radius' cached result
-        private Dictionary<ReachableArgs, Dictionary<PathfindingRegion, (TimeSpan CacheTime, HashSet<PathfindingRegion> Regions)>> _cachedAccessible =
+        private readonly Dictionary<ReachableArgs, Dictionary<PathfindingRegion, (TimeSpan CacheTime, HashSet<PathfindingRegion> Regions)>> _cachedAccessible =
             new Dictionary<ReachableArgs, Dictionary<PathfindingRegion, (TimeSpan, HashSet<PathfindingRegion>)>>();
 
         private readonly List<PathfindingRegion> _queuedCacheDeletions = new List<PathfindingRegion>();
@@ -133,14 +134,6 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Accessible
             _mapManager.OnGridRemoved -= GridRemoved;
         }
 
-        public void ResettingCleanup()
-        {
-            _queuedUpdates.Clear();
-            _regions.Clear();
-            _cachedAccessible.Clear();
-            _queuedCacheDeletions.Clear();
-        }
-
         private void RecalculateNodeRegions(PathfindingChunkUpdateMessage message)
         {
             // TODO: Only need to do changed nodes ideally
@@ -160,13 +153,13 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Accessible
         /// <returns></returns>
         public bool CanAccess(IEntity entity, IEntity target, float range = 0.0f)
         {
-            var targetTile = _mapManager.GetGrid(target.Transform.GridID).GetTileRef(target.Transform.GridPosition);
+            var targetTile = _mapManager.GetGrid(target.Transform.GridID).GetTileRef(target.Transform.Coordinates);
             var targetNode = _pathfindingSystem.GetNode(targetTile);
 
             var collisionMask = 0;
-            if (entity.TryGetComponent(out ICollidableComponent collidableComponent))
+            if (entity.TryGetComponent(out IPhysicsComponent physics))
             {
-                collisionMask = collidableComponent.CollisionMask;
+                collisionMask = physics.CollisionMask;
             }
 
             var access = AccessReader.FindAccessTags(entity);
@@ -198,7 +191,7 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Accessible
                 return false;
             }
 
-            var entityTile = _mapManager.GetGrid(entity.Transform.GridID).GetTileRef(entity.Transform.GridPosition);
+            var entityTile = _mapManager.GetGrid(entity.Transform.GridID).GetTileRef(entity.Transform.Coordinates);
             var entityNode = _pathfindingSystem.GetNode(entityTile);
             var entityRegion = GetRegion(entityNode);
             var targetRegion = GetRegion(targetNode);
@@ -408,7 +401,7 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Accessible
         /// <returns></returns>
         public PathfindingRegion GetRegion(IEntity entity)
         {
-            var entityTile = _mapManager.GetGrid(entity.Transform.GridID).GetTileRef(entity.Transform.GridPosition);
+            var entityTile = _mapManager.GetGrid(entity.Transform.GridID).GetTileRef(entity.Transform.Coordinates);
             var entityNode = _pathfindingSystem.GetNode(entityTile);
             return GetRegion(entityNode);
         }
@@ -627,12 +620,12 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Accessible
         /// <param name="chunk"></param>
         private void GenerateRegions(PathfindingChunk chunk)
         {
-            // Grid deleted while update queued.
+            // Grid deleted while update queued, or invalid grid.
             if (!_mapManager.TryGetGrid(chunk.GridId, out _))
             {
                 return;
             }
-            
+
             if (!_regions.ContainsKey(chunk.GridId))
             {
                 _regions.Add(chunk.GridId, new Dictionary<PathfindingChunk, HashSet<PathfindingRegion>>());
@@ -682,11 +675,20 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Accessible
 #endif
         }
 
+        public void Reset()
+        {
+            _queuedUpdates.Clear();
+            _regions.Clear();
+            _cachedAccessible.Clear();
+            _queuedCacheDeletions.Clear();
+        }
+
 #if DEBUG
         private void SendDebugMessage(PlayerAttachSystemMessage message)
         {
             var playerGrid = message.Entity.Transform.GridID;
-            SendRegionsDebugMessage(playerGrid);
+            if(playerGrid.IsValid())
+                SendRegionsDebugMessage(playerGrid);
         }
 
         private void SendRegionsDebugMessage(GridId gridId)
@@ -714,7 +716,7 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Accessible
 
                     foreach (var node in region.Nodes)
                     {
-                        var nodeVector = grid.GridTileToLocal(node.TileRef.GridIndices).ToMapPos(_mapManager);
+                        var nodeVector = grid.GridTileToLocal(node.TileRef.GridIndices).ToMapPos(EntityManager);
                         debugRegionNodes.Add(nodeVector);
                     }
 
@@ -743,7 +745,7 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Accessible
 
                 foreach (var node in region.Nodes)
                 {
-                    var nodeVector = grid.GridTileToLocal(node.TileRef.GridIndices).ToMapPos(_mapManager);
+                    var nodeVector = grid.GridTileToLocal(node.TileRef.GridIndices).ToMapPos(EntityManager);
 
                     debugResult[_runningCacheIdx].Add(nodeVector);
                 }

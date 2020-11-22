@@ -1,8 +1,6 @@
 ﻿#nullable enable
 using System;
 using Content.Shared.GameObjects.Components.Body;
-using Content.Shared.GameObjects.Components.Mobs;
-using Content.Shared.GameObjects.Components.Rotation;
 using Robust.Shared.GameObjects;
 using Robust.Shared.GameObjects.Components;
 using Robust.Shared.Interfaces.Configuration;
@@ -78,7 +76,9 @@ namespace Content.Shared.GameObjects.Components.Movement
             }
         }
 
+        [ViewVariables(VVAccess.ReadWrite)]
         public float CurrentPushSpeed => 5;
+        [ViewVariables(VVAccess.ReadWrite)]
         public float GrabRange => 0.2f;
         public bool Sprinting => !HasFlag(_heldMoveButtons, MoveButtons.Walk);
 
@@ -132,23 +132,23 @@ namespace Content.Shared.GameObjects.Components.Movement
             }
         }
 
-        public abstract GridCoordinates LastPosition { get; set; }
+        public abstract EntityCoordinates LastPosition { get; set; }
         public abstract float StepSoundDistance { get; set; }
 
         /// <summary>
         ///     Whether or not the player can move diagonally.
         /// </summary>
         [ViewVariables]
-        public bool DiagonalMovementEnabled => _configurationManager.GetCVar<bool>("game.diagonalmovement");
+        public bool DiagonalMovementEnabled => _configurationManager.GetCVar<bool>(CCVars.GameDiagonalMovement);
 
         /// <inheritdoc />
         public override void OnAdd()
         {
-            // This component requires that the entity has a CollidableComponent.
-            if (!Owner.HasComponent<ICollidableComponent>())
+            // This component requires that the entity has a IPhysicsComponent.
+            if (!Owner.HasComponent<IPhysicsComponent>())
                 Logger.Error(
                     $"[ECS] {Owner.Prototype?.Name} - {nameof(SharedPlayerInputMoverComponent)} requires" +
-                    $" {nameof(ICollidableComponent)}. ");
+                    $" {nameof(IPhysicsComponent)}. ");
 
             base.OnAdd();
         }
@@ -270,7 +270,7 @@ namespace Content.Shared.GameObjects.Components.Movement
         bool ICollideSpecial.PreventCollide(IPhysBody collidedWith)
         {
             // Don't collide with other mobs
-            return collidedWith.Entity.HasComponent<ISharedBodyManagerComponent>();
+            return collidedWith.Entity.HasComponent<IBody>();
         }
 
         [Serializable, NetSerializable]

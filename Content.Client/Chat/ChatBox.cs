@@ -1,10 +1,8 @@
 ﻿using Content.Shared.Chat;
-using Robust.Client.Console;
 using Robust.Client.Graphics.Drawing;
 using Robust.Client.UserInterface;
 using Robust.Client.UserInterface.Controls;
 using Robust.Shared.Input;
-using Robust.Shared.IoC;
 using Robust.Shared.Localization;
 using Robust.Shared.Maths;
 using Robust.Shared.Utility;
@@ -16,8 +14,6 @@ namespace Content.Client.Chat
         public delegate void TextSubmitHandler(ChatBox chatBox, string text);
 
         public delegate void FilterToggledHandler(ChatBox chatBox, BaseButton.ButtonToggledEventArgs e);
-
-        private readonly ILocalizationManager _localize = IoCManager.Resolve<ILocalizationManager>();
 
         public HistoryLineEdit Input { get; private set; }
         public OutputPanel Contents { get; }
@@ -79,7 +75,7 @@ namespace Content.Client.Chat
 
             AllButton = new Button
             {
-                Text = _localize.GetString("All"),
+                Text = Loc.GetString("All"),
                 Name = "ALL",
                 SizeFlagsHorizontal = SizeFlags.ShrinkEnd | SizeFlags.Expand,
                 ToggleMode = true,
@@ -87,41 +83,35 @@ namespace Content.Client.Chat
 
             LocalButton = new Button
             {
-                Text = _localize.GetString("Local"),
+                Text = Loc.GetString("Local"),
                 Name = "Local",
                 ToggleMode = true,
             };
 
             OOCButton = new Button
             {
-                Text = _localize.GetString("OOC"),
+                Text = Loc.GetString("OOC"),
                 Name = "OOC",
                 ToggleMode = true,
             };
 
-            var groupController = IoCManager.Resolve<IClientConGroupController>();
-            if(groupController.CanCommand("asay"))
+            AdminButton = new Button
             {
-                AdminButton = new Button
-                {
-                    Text = _localize.GetString("Admin"),
-                    Name = "Admin",
-                    ToggleMode = true,
-                };
-            }
+                Text = Loc.GetString("Admin"),
+                Name = "Admin",
+                ToggleMode = true,
+                Visible = false
+            };
 
             AllButton.OnToggled += OnFilterToggled;
             LocalButton.OnToggled += OnFilterToggled;
             OOCButton.OnToggled += OnFilterToggled;
+            AdminButton.OnToggled += OnFilterToggled;
 
             hBox.AddChild(AllButton);
             hBox.AddChild(LocalButton);
             hBox.AddChild(OOCButton);
-            if(AdminButton != null)
-            {
-                AdminButton.OnToggled += OnFilterToggled;
-                hBox.AddChild(AdminButton);
-            }
+            hBox.AddChild(AdminButton);
 
             AddChild(outerVBox);
         }

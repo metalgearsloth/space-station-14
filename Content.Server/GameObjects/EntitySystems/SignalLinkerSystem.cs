@@ -1,4 +1,8 @@
-﻿using Content.Server.GameObjects.Components.MachineLinking;
+﻿using System.Collections.Generic;
+using Content.Server.Administration;
+using Content.Server.GameObjects.Components.MachineLinking;
+using Content.Server.GameObjects.EntitySystems.Click;
+using Content.Shared.Administration;
 using Robust.Server.Interfaces.Console;
 using Robust.Server.Interfaces.Player;
 using Robust.Shared.GameObjects;
@@ -10,22 +14,21 @@ using Robust.Shared.IoC;
 using Robust.Shared.Map;
 using Robust.Shared.Network;
 using Robust.Shared.Players;
-using System.Collections.Generic;
 
 namespace Content.Server.GameObjects.EntitySystems
 {
     public class SignalLinkerSystem : EntitySystem
     {
-        private Dictionary<NetSessionId, SignalTransmitterComponent> _transmitters;
+        private Dictionary<NetUserId, SignalTransmitterComponent> _transmitters;
 
         public override void Initialize()
         {
             base.Initialize();
 
-            _transmitters = new Dictionary<NetSessionId, SignalTransmitterComponent>();
+            _transmitters = new Dictionary<NetUserId, SignalTransmitterComponent>();
         }
 
-        public void SignalLinkerKeybind(NetSessionId id, bool? enable)
+        public bool SignalLinkerKeybind(NetUserId id, bool? enable)
         {
             if (enable == null)
             {
@@ -36,13 +39,13 @@ namespace Content.Server.GameObjects.EntitySystems
             {
                 if (_transmitters.ContainsKey(id))
                 {
-                    return;
+                    return true;
                 }
 
                 if (_transmitters.Count == 0)
                 {
                     CommandBinds.Builder
-                        .Bind(EngineKeyFunctions.Use, new PointerInputCmdHandler(HandleUse))
+                        .BindBefore(EngineKeyFunctions.Use, new PointerInputCmdHandler(HandleUse), typeof(InteractionSystem))
                         .Register<SignalLinkerSystem>();
                 }
 
@@ -53,7 +56,7 @@ namespace Content.Server.GameObjects.EntitySystems
             {
                 if (!_transmitters.ContainsKey(id))
                 {
-                    return;
+                    return false;
                 }
 
                 _transmitters.Remove(id);
@@ -62,21 +65,17 @@ namespace Content.Server.GameObjects.EntitySystems
                     CommandBinds.Unregister<SignalLinkerSystem>();
                 }
             }
+            return enable == true;
         }
 
-        private bool HandleUse(ICommonSession session, GridCoordinates coords, EntityUid uid)
+        private bool HandleUse(ICommonSession session, EntityCoordinates coords, EntityUid uid)
         {
-            if (!_transmitters.TryGetValue(session.SessionId, out var signalTransmitter))
+            if (!_transmitters.TryGetValue(session.UserId, out var signalTransmitter))
             {
                 return false;
             }
 
             if (!EntityManager.TryGetEntity(uid, out var entity))
-            {
-                return false;
-            }
-
-            if (entity == null)
             {
                 return false;
             }
@@ -91,7 +90,7 @@ namespace Content.Server.GameObjects.EntitySystems
 
             if (entity.TryGetComponent<SignalTransmitterComponent>(out var transmitter))
             {
-                _transmitters[session.SessionId] = transmitter.GetSignal(session.AttachedEntity);
+                _transmitters[session.UserId] = transmitter.GetSignal(session.AttachedEntity);
 
                 return true;
             }
@@ -101,6 +100,7 @@ namespace Content.Server.GameObjects.EntitySystems
 
     }
 
+    [AdminCommand(AdminFlags.Debug)]
     public class SignalLinkerCommand : IClientCommand
     {
         public string Command => "signallink";
@@ -134,7 +134,8 @@ namespace Content.Server.GameObjects.EntitySystems
                 return;
             }
 
-            system.SignalLinkerKeybind(player.SessionId, enable);
+            var ret = system.SignalLinkerKeybind(player.UserId, enable);
+            shell.SendText(player, ret ? "Enabled" : "Disabled");
         }
     }
 }

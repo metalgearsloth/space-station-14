@@ -1,9 +1,8 @@
-#nullable enable
+﻿#nullable enable
 using System;
 using System.Threading;
-using Content.Shared.GameObjects.EntitySystems;
 using Content.Shared.Physics;
-using Robust.Shared.GameObjects.Systems;
+using Content.Shared.Utility;
 using Robust.Shared.Interfaces.GameObjects;
 
 // ReSharper disable UnassignedReadonlyField
@@ -13,17 +12,17 @@ namespace Content.Server.GameObjects.EntitySystems.DoAfter
     public sealed class DoAfterEventArgs
     {
         // Premade checks
-        public Func<bool> GetInRangeUnobstructed(int collisionMask = (int) CollisionGroup.MobMask)
+        public Func<bool> GetInRangeUnobstructed(CollisionGroup collisionMask = CollisionGroup.MobMask)
         {
             if (Target == null)
             {
                 throw new InvalidOperationException("Can't supply a null target to DoAfterEventArgs.GetInRangeUnobstructed");
             }
-            var interactionSystem = EntitySystem.Get<SharedInteractionSystem>();
-            Func<IEntity, bool> ignored = entity => entity == User || entity == Target;
-            return () => interactionSystem.InRangeUnobstructed(User.Transform.MapPosition, Target.Transform.MapPosition, collisionMask: collisionMask, predicate: ignored);
+
+            bool Ignored(IEntity entity) => entity == User || entity == Target;
+            return () => User.InRangeUnobstructed(Target, collisionMask: collisionMask, predicate: Ignored);
         }
-        
+
         /// <summary>
         ///     The entity invoking do_after
         /// </summary>
@@ -61,6 +60,11 @@ namespace Content.Server.GameObjects.EntitySystems.DoAfter
         /// </summary>
         public bool BreakOnTargetMove { get; set; }
 
+        /// <summary>
+        ///     Threshold for user and target movement
+        /// </summary>
+        public float MovementThreshold { get; set; }
+
         public bool BreakOnDamage { get; set; }
         public bool BreakOnStun { get; set; }
 
@@ -71,7 +75,7 @@ namespace Content.Server.GameObjects.EntitySystems.DoAfter
         ///     Anything that needs a pre-check should do it itself so no DoAfterState is ever sent to the client.
         /// </remarks>
         public Func<bool>? PostCheck { get; set; } = null;
-        
+
         /// <summary>
         ///     Additional conditions that need to be met. Return false to cancel.
         /// </summary>
@@ -87,6 +91,7 @@ namespace Content.Server.GameObjects.EntitySystems.DoAfter
             Delay = delay;
             CancelToken = cancelToken;
             Target = target;
+            MovementThreshold = 0.1f;
 
             if (Target == null)
             {

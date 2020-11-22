@@ -82,7 +82,10 @@ namespace Content.Client.GameObjects.Components.HUD.Inventory
 
             foreach (var (slot, entityUid) in cast.Entities)
             {
-                var entity = Owner.EntityManager.GetEntity(entityUid);
+                if (!Owner.EntityManager.TryGetEntity(entityUid, out var entity))
+                {
+                    continue;
+                }
                 if (!_slots.ContainsKey(slot) || _slots[slot] != entity)
                 {
                     _slots[slot] = entity;
@@ -169,8 +172,8 @@ namespace Content.Client.GameObjects.Components.HUD.Inventory
 
         public void SendEquipMessage(Slots slot)
         {
-            var equipmessage = new ClientInventoryMessage(slot, ClientInventoryUpdate.Equip);
-            SendNetworkMessage(equipmessage);
+            var equipMessage = new ClientInventoryMessage(slot, ClientInventoryUpdate.Equip);
+            SendNetworkMessage(equipMessage);
         }
 
         public void SendUseMessage(Slots slot)

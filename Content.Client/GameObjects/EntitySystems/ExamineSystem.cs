@@ -27,7 +27,6 @@ namespace Content.Client.GameObjects.EntitySystems
     {
         [Dependency] private readonly IInputManager _inputManager = default!;
         [Dependency] private readonly IUserInterfaceManager _userInterfaceManager = default!;
-        [Dependency] private readonly IEntityManager _entityManager = default!;
         [Dependency] private readonly IPlayerManager _playerManager = default!;
 
         public const string StyleClassEntityTooltip = "entity-tooltip";
@@ -50,9 +49,9 @@ namespace Content.Client.GameObjects.EntitySystems
             base.Shutdown();
         }
 
-        private bool HandleExamine(ICommonSession session, GridCoordinates coords, EntityUid uid)
+        private bool HandleExamine(ICommonSession session, EntityCoordinates coords, EntityUid uid)
         {
-            if (!uid.IsValid() || !_entityManager.TryGetEntity(uid, out var examined))
+            if (!uid.IsValid() || !EntityManager.TryGetEntity(uid, out var examined))
             {
                 return false;
             }

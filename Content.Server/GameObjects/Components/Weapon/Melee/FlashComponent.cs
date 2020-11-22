@@ -8,6 +8,7 @@ using Robust.Server.GameObjects;
 using Robust.Server.GameObjects.EntitySystems;
 using Robust.Shared.Audio;
 using Robust.Shared.GameObjects;
+using Robust.Shared.GameObjects.Components.Timers;
 using Robust.Shared.GameObjects.Systems;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.IoC;
@@ -22,9 +23,6 @@ namespace Content.Server.GameObjects.Components.Weapon.Melee
     [RegisterComponent]
     public class FlashComponent : MeleeWeaponComponent, IUse, IExamine
     {
-        [Dependency] private readonly IEntityManager _entityManager = default!;
-        [Dependency] private readonly ISharedNotifyManager _notifyManager = default!;
-
         public override string Name => "Flash";
 
         [ViewVariables(VVAccess.ReadWrite)] private int _flashDuration = 5000;
@@ -84,7 +82,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Melee
                 return false;
             }
 
-            foreach (var entity in _entityManager.GetEntitiesInRange(Owner.Transform.GridPosition, _range))
+            foreach (var entity in Owner.EntityManager.GetEntitiesInRange(Owner.Transform.Coordinates, _range))
             {
                 Flash(entity, eventArgs.User, _aoeFlashDuration);
             }
@@ -101,21 +99,21 @@ namespace Content.Server.GameObjects.Components.Weapon.Melee
                 {
                     sprite.LayerSetState(0, "burnt");
 
-                    _notifyManager.PopupMessage(Owner, user, Loc.GetString("The flash burns out!"));
+                    Owner.PopupMessage(user, Loc.GetString("The flash burns out!"));
                 }
                 else if (!_flashing)
                 {
                     int animLayer = sprite.AddLayerWithState("flashing");
                     _flashing = true;
 
-                    Timer.Spawn(400, () =>
+                    Owner.SpawnTimer(400, () =>
                     {
                         sprite.RemoveLayer(animLayer);
                         _flashing = false;
                     });
                 }
 
-                EntitySystem.Get<AudioSystem>().PlayAtCoords("/Audio/Weapons/flash.ogg", Owner.Transform.GridPosition,
+                EntitySystem.Get<AudioSystem>().PlayAtCoords("/Audio/Weapons/flash.ogg", Owner.Transform.Coordinates,
                     AudioParams.Default);
 
                 return true;
@@ -155,7 +153,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Melee
 
             if (entity != user)
             {
-                _notifyManager.PopupMessage(user, entity, Loc.GetString("{0:TheName} blinds you with {1:theName}", user, Owner));
+                user.PopupMessage(entity, Loc.GetString("{0:TheName} blinds you with {1:theName}", user, Owner));
             }
         }
 

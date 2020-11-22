@@ -1,15 +1,16 @@
-﻿using Content.Server.Atmos;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using Content.Server.Atmos;
 using Content.Server.GameObjects.Components.NodeContainer.NodeGroups;
 using Content.Server.Interfaces;
-using Content.Shared.Atmos;
+using Content.Shared.GameObjects.Components.Atmos;
+using Robust.Server.GameObjects;
 using Robust.Shared.GameObjects.Components.Transform;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Maths;
 using Robust.Shared.Serialization;
 using Robust.Shared.ViewVariables;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace Content.Server.GameObjects.Components.NodeContainer.Nodes
 {
@@ -17,11 +18,17 @@ namespace Content.Server.GameObjects.Components.NodeContainer.Nodes
     ///     Connects with other <see cref="PipeNode"/>s whose <see cref="PipeNode.PipeDirection"/>
     ///     correctly correspond.
     /// </summary>
-    public class PipeNode : Node, IGasMixtureHolder
+    public class PipeNode : Node, IGasMixtureHolder, IRotatableNode
     {
         [ViewVariables]
-        public PipeDirection PipeDirection => _pipeDirection;
+        public PipeDirection PipeDirection { get => _pipeDirection; set => SetPipeDirection(value); }
         private PipeDirection _pipeDirection;
+
+        /// <summary>
+        ///     Controls what visuals are applied in <see cref="PipeVisualizer"/>.
+        /// </summary>
+        public ConduitLayer ConduitLayer => _conduitLayer;
+        private ConduitLayer _conduitLayer;
 
         [ViewVariables]
         private IPipeNet _pipeNet = PipeNet.NullNet;
@@ -53,19 +60,25 @@ namespace Content.Server.GameObjects.Components.NodeContainer.Nodes
         public GasMixture LocalAir { get; set; }
 
         [ViewVariables]
-        public float Volume { get; private set; }
+        public float Volume => LocalAir.Volume;
+
+        private AppearanceComponent _appearance;
+
+        private const float DefaultVolume = 1;
 
         public override void ExposeData(ObjectSerializer serializer)
         {
             base.ExposeData(serializer);
             serializer.DataField(ref _pipeDirection, "pipeDirection", PipeDirection.None);
-            serializer.DataField(this, x => Volume, "volume", 10);
+            serializer.DataField(this, x => LocalAir, "gasMixture", new GasMixture(DefaultVolume));
+            serializer.DataField(ref _conduitLayer, "conduitLayer", ConduitLayer.Two);
         }
 
         public override void Initialize(IEntity owner)
         {
             base.Initialize(owner);
-            LocalAir = new GasMixture(Volume);
+            Owner.TryGetComponent(out _appearance);
+            UpdateAppearance();
         }
 
         public void JoinPipeNet(IPipeNet pipeNet)
@@ -80,22 +93,31 @@ namespace Content.Server.GameObjects.Components.NodeContainer.Nodes
             _needsPipeNet = true;
         }
 
+        void IRotatableNode.RotateEvent(RotateEvent ev)
+        {
+            var diff = ev.NewRotation - ev.OldRotation;
+            PipeDirection = PipeDirection.RotatePipeDirection(diff);
+        }
+
         protected override IEnumerable<Node> GetReachableNodes()
         {
-            foreach (CardinalDirection direction in Enum.GetValues(typeof(CardinalDirection)))
+            for (var i = 0; i < PipeDirectionHelpers.PipeDirections; i++)
             {
-                PipeDirectionFromCardinal(direction, out var ownNeededConnection, out var theirNeededConnection);
-                if ((_pipeDirection & ownNeededConnection) == PipeDirection.None)
+                var pipeDirection = (PipeDirection) (1 << i);
+
+                var ownNeededConnection = pipeDirection;
+                var theirNeededConnection = ownNeededConnection.GetOpposite();
+                if (!_pipeDirection.HasFlag(ownNeededConnection))
                 {
                     continue;
                 }
                 var pipeNodesInDirection = Owner.GetComponent<SnapGridComponent>()
-                    .GetInDir((Direction) direction)
+                    .GetInDir(pipeDirection.ToDirection())
                     .Select(entity => entity.TryGetComponent<NodeContainerComponent>(out var container) ? container : null)
                     .Where(container => container != null)
                     .SelectMany(container => container.Nodes)
                     .OfType<PipeNode>()
-                    .Where(pipeNode => (pipeNode._pipeDirection & theirNeededConnection) != PipeDirection.None);
+                    .Where(pipeNode => pipeNode._pipeDirection.HasFlag(theirNeededConnection));
                 foreach (var pipeNode in pipeNodesInDirection)
                 {
                     yield return pipeNode;
@@ -103,69 +125,16 @@ namespace Content.Server.GameObjects.Components.NodeContainer.Nodes
             }
         }
 
-        private void PipeDirectionFromCardinal(CardinalDirection direction, out PipeDirection sameDir, out PipeDirection oppDir)
+        private void UpdateAppearance()
         {
-            switch (direction)
-            {
-                case CardinalDirection.North:
-                    sameDir = PipeDirection.North;
-                    oppDir = PipeDirection.South;
-                    break;
-                case CardinalDirection.South:
-                    sameDir = PipeDirection.South;
-                    oppDir = PipeDirection.North;
-                    break;
-                case CardinalDirection.East:
-                    sameDir = PipeDirection.East;
-                    oppDir = PipeDirection.West;
-                    break;
-                case CardinalDirection.West:
-                    sameDir = PipeDirection.West;
-                    oppDir = PipeDirection.East;
-                    break;
-                default:
-                    throw new ArgumentException("Invalid Direction.");
-            }
+            _appearance?.SetData(PipeVisuals.VisualState, new PipeVisualState(PipeDirection, ConduitLayer));
         }
 
-        private enum CardinalDirection
+        private void SetPipeDirection(PipeDirection pipeDirection)
         {
-            North = Direction.North,
-            South = Direction.South,
-            East = Direction.East,
-            West = Direction.West,
+            _pipeDirection = pipeDirection;
+            RefreshNodeGroup();
+            UpdateAppearance();
         }
-    }
-
-    public enum PipeDirection
-    {
-        None = 0,
-
-        //Half of a pipe in a direction
-        North = 1 << 0,
-        South = 1 << 1,
-        West = 1 << 2,
-        East = 1 << 3,
-
-        //Straight pipes
-        Longitudinal = North | South,
-        Lateral = West | East,
-
-        //Bends
-        NWBend = North | West,
-        NEBend = North | East,
-        SWBend = South | West,
-        SEBend = South | East,
-
-        //T-Junctions
-        TNorth = North | Lateral,
-        TSouth = South | Lateral,
-        TWest = West | Longitudinal,
-        TEast = East | Longitudinal,
-
-        //Four way
-        FourWay = North | South | East | West,
-
-        All = -1,
     }
 }

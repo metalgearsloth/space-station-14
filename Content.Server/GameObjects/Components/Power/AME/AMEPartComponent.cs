@@ -1,7 +1,8 @@
-﻿using Content.Server.GameObjects.Components.Interactable;
-using Content.Server.Interfaces;
+﻿using System.Threading.Tasks;
+using Content.Server.GameObjects.Components.Interactable;
 using Content.Server.Interfaces.GameObjects.Components.Items;
 using Content.Shared.GameObjects.Components.Interactable;
+using Content.Shared.Interfaces;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Robust.Server.Interfaces.GameObjects;
 using Robust.Shared.GameObjects;
@@ -9,7 +10,6 @@ using Robust.Shared.GameObjects.Components.Transform;
 using Robust.Shared.Interfaces.Map;
 using Robust.Shared.IoC;
 using Robust.Shared.Localization;
-using System.Threading.Tasks;
 
 namespace Content.Server.GameObjects.Components.Power.AME
 {
@@ -19,15 +19,14 @@ namespace Content.Server.GameObjects.Components.Power.AME
     {
         [Dependency] private readonly IMapManager _mapManager = default!;
         [Dependency] private readonly IServerEntityManager _serverEntityManager = default!;
-        [Dependency] private readonly IServerNotifyManager _notifyManager = default!;
+
         public override string Name => "AMEPart";
 
         async Task<bool> IInteractUsing.InteractUsing(InteractUsingEventArgs args)
         {
             if (!args.User.TryGetComponent(out IHandsComponent hands))
             {
-                _notifyManager.PopupMessage(Owner.Transform.GridPosition, args.User,
-                    Loc.GetString("You have no hands."));
+                Owner.PopupMessage(args.User, Loc.GetString("You have no hands."));
                 return true;
             }
 
@@ -35,7 +34,7 @@ namespace Content.Server.GameObjects.Components.Power.AME
             if (activeHandEntity.TryGetComponent<ToolComponent>(out var multitool) && multitool.Qualities == ToolQuality.Multitool)
             {
 
-                var mapGrid = _mapManager.GetGrid(args.ClickLocation.GridID);
+                var mapGrid = _mapManager.GetGrid(args.ClickLocation.GetGridId(_serverEntityManager));
                 var tile = mapGrid.GetTileRef(args.ClickLocation);
                 var snapPos = mapGrid.SnapGridCellFor(args.ClickLocation, SnapGridOffset.Center);
 

@@ -10,14 +10,16 @@
   icon: "ResearchDirector"
   access:
   - Research
+  - ResearchDirector
   - Command
   - Maintenance
 
 - type: startingGear
   id: ResearchDirectorGear
   equipment:
-    innerclothing: UniformResearchDirector
-    backpack: BackpackClothing
-    shoes: ShoesBrown
-    outerclothing: OuterclothingLabcoatopen
+    innerclothing: ClothingUniformJumpsuitResearchDirector
+    # Note to Swept add science backpacks
+    backpack: ClothingBackpackFilled
+    shoes: ClothingShoesColorBrown
     idcard: RnDPDA
+    ears: ClothingHeadsetScience

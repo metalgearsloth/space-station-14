@@ -6,15 +6,19 @@ using System.Threading;
 using System.Threading.Tasks;
 using Content.Server.GameObjects.Components.GUI;
 using Content.Server.GameObjects.Components.Items.Storage;
+using Content.Server.GameObjects.Components.Mobs.State;
 using Content.Server.GameObjects.Components.Power.ApcNetComponents;
+using Content.Server.GameObjects.Components.Projectiles;
 using Content.Server.GameObjects.EntitySystems.DoAfter;
-using Content.Server.Interfaces;
 using Content.Server.Interfaces.GameObjects.Components.Items;
 using Content.Server.Utility;
 using Content.Shared.GameObjects.Components.Body;
+using Content.Shared.GameObjects.Components.Damage;
 using Content.Shared.GameObjects.Components.Disposal;
+using Content.Shared.GameObjects.Components.Items;
 using Content.Shared.GameObjects.EntitySystems;
 using Content.Shared.GameObjects.Verbs;
+using Content.Shared.Interfaces;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Robust.Server.GameObjects;
 using Robust.Server.GameObjects.Components.Container;
@@ -25,9 +29,11 @@ using Robust.Shared.Audio;
 using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
 using Robust.Shared.GameObjects.Components;
+using Robust.Shared.GameObjects.Components.Timers;
 using Robust.Shared.GameObjects.Components.Transform;
 using Robust.Shared.GameObjects.Systems;
 using Robust.Shared.Interfaces.GameObjects;
+using Robust.Shared.Interfaces.Random;
 using Robust.Shared.Interfaces.Timing;
 using Robust.Shared.IoC;
 using Robust.Shared.Localization;
@@ -40,10 +46,10 @@ namespace Content.Server.GameObjects.Components.Disposal
 {
     [RegisterComponent]
     [ComponentReference(typeof(SharedDisposalUnitComponent))]
+    [ComponentReference(typeof(IActivate))]
     [ComponentReference(typeof(IInteractUsing))]
-    public class DisposalUnitComponent : SharedDisposalUnitComponent, IInteractHand, IInteractUsing, IDragDropOn
+    public class DisposalUnitComponent : SharedDisposalUnitComponent, IInteractHand, IActivate, IInteractUsing, IDragDropOn, IThrowCollide
     {
-        [Dependency] private readonly IServerNotifyManager _notifyManager = default!;
         [Dependency] private readonly IGameTiming _gameTiming = default!;
 
         public override string Name => "DisposalUnit";
@@ -56,23 +62,25 @@ namespace Content.Server.GameObjects.Components.Disposal
         /// <summary>
         ///     Last time that an entity tried to exit this disposal unit.
         /// </summary>
+        [ViewVariables]
         private TimeSpan _lastExitAttempt;
 
         /// <summary>
         ///     The current pressure of this disposal unit.
         ///     Prevents it from flushing if it is not equal to or bigger than 1.
         /// </summary>
+        [ViewVariables]
         private float _pressure;
 
         private bool _engaged;
 
-        [ViewVariables]
+        [ViewVariables(VVAccess.ReadWrite)]
         private TimeSpan _automaticEngageTime;
 
-        [ViewVariables]
+        [ViewVariables(VVAccess.ReadWrite)]
         private TimeSpan _flushDelay;
 
-        [ViewVariables]
+        [ViewVariables(VVAccess.ReadWrite)]
         private float _entryDelay;
 
         /// <summary>
@@ -95,14 +103,9 @@ namespace Content.Server.GameObjects.Components.Disposal
             receiver.Powered;
 
         [ViewVariables]
-        public bool Anchored =>
-            !Owner.TryGetComponent(out CollidableComponent? collidable) ||
-            collidable.Anchored;
-
-        [ViewVariables]
         private PressureState State => _pressure >= 1 ? PressureState.Ready : PressureState.Pressurizing;
 
-        [ViewVariables]
+        [ViewVariables(VVAccess.ReadWrite)]
         private bool Engaged
         {
             get => _engaged;
@@ -136,14 +139,17 @@ namespace Content.Server.GameObjects.Components.Disposal
                 return false;
             }
 
-            if (!entity.TryGetComponent(out ICollidableComponent? collidable) ||
-                !collidable.CanCollide)
+
+            if (!entity.TryGetComponent(out IPhysicsComponent? physics) ||
+                !physics.CanCollide)
             {
-                return false;
+                if (!(entity.TryGetComponent(out IDamageableComponent? damageState) && damageState.CurrentState == DamageState.Dead)) {
+                    return false;
+                }
             }
 
             if (!entity.HasComponent<ItemComponent>() &&
-                !entity.HasComponent<ISharedBodyManagerComponent>())
+                !entity.HasComponent<IBody>())
             {
                 return false;
             }
@@ -160,7 +166,7 @@ namespace Content.Server.GameObjects.Components.Disposal
 
             _automaticEngageToken = new CancellationTokenSource();
 
-            Timer.Spawn(_automaticEngageTime, () =>
+            Owner.SpawnTimer(_automaticEngageTime, () =>
             {
                 if (!TryFlush())
                 {
@@ -255,7 +261,7 @@ namespace Content.Server.GameObjects.Components.Disposal
 
             if (Engaged && CanFlush())
             {
-                Timer.Spawn(_flushDelay, () => TryFlush());
+                Owner.SpawnTimer(_flushDelay, () => TryFlush());
             }
         }
 
@@ -410,7 +416,6 @@ namespace Content.Server.GameObjects.Components.Disposal
                 return;
             }
 
-
             if (!Anchored)
             {
                 appearance.SetData(Visuals.VisualState, VisualState.UnAnchored);
@@ -550,9 +555,9 @@ namespace Content.Server.GameObjects.Components.Disposal
                 Logger.WarningS("VitalComponentMissing", $"Disposal unit {Owner.Uid} is missing an anchorable component");
             }
 
-            if (Owner.TryGetComponent(out CollidableComponent? collidable))
+            if (Owner.TryGetComponent(out IPhysicsComponent? physics))
             {
-                collidable.AnchoredChanged += UpdateVisualState;
+                physics.AnchoredChanged += UpdateVisualState;
             }
 
             if (Owner.TryGetComponent(out PowerReceiverComponent? receiver))
@@ -565,9 +570,9 @@ namespace Content.Server.GameObjects.Components.Disposal
 
         public override void OnRemove()
         {
-            if (Owner.TryGetComponent(out ICollidableComponent? collidable))
+            if (Owner.TryGetComponent(out IPhysicsComponent? physics))
             {
-                collidable.AnchoredChanged -= UpdateVisualState;
+                physics.AnchoredChanged -= UpdateVisualState;
             }
 
             if (Owner.TryGetComponent(out PowerReceiverComponent? receiver))
@@ -610,37 +615,63 @@ namespace Content.Server.GameObjects.Components.Disposal
             }
         }
 
-        bool IInteractHand.InteractHand(InteractHandEventArgs eventArgs)
+        bool IsValidInteraction(ITargetedInteractEventArgs eventArgs)
         {
             if (!ActionBlockerSystem.CanInteract(eventArgs.User))
             {
-                _notifyManager.PopupMessage(Owner.Transform.GridPosition, eventArgs.User,
-                    Loc.GetString("You can't do that!"));
+                Owner.PopupMessage(eventArgs.User, Loc.GetString("You can't do that!"));
                 return false;
             }
 
-            if (ContainerHelpers.IsInContainer(eventArgs.User))
+            if (eventArgs.User.IsInContainer())
             {
-                _notifyManager.PopupMessage(Owner.Transform.GridPosition, eventArgs.User,
-                    Loc.GetString("You can't reach there!"));
+                Owner.PopupMessage(eventArgs.User, Loc.GetString("You can't reach there!"));
+                return false;
+            }
+            // This popup message doesn't appear on clicks, even when code was seperate. Unsure why.
+
+            if (!eventArgs.User.HasComponent<IHandsComponent>())
+            {
+                Owner.PopupMessage(eventArgs.User, Loc.GetString("You have no hands!"));
                 return false;
             }
 
+            return true;
+        }
+
+
+        bool IInteractHand.InteractHand(InteractHandEventArgs eventArgs)
+        {
             if (!eventArgs.User.TryGetComponent(out IActorComponent? actor))
             {
                 return false;
             }
+            // Duplicated code here, not sure how else to get actor inside to make UserInterface happy.
 
-            if (!eventArgs.User.HasComponent<IHandsComponent>())
+            if (IsValidInteraction(eventArgs))
             {
-                _notifyManager.PopupMessage(Owner.Transform.GridPosition, eventArgs.User,
-                    Loc.GetString("You have no hands!"));
-                return false;
+                UserInterface?.Open(actor.playerSession);
+                return true;
             }
 
-            UserInterface?.Open(actor.playerSession);
-            return true;
+            return false;
         }
+
+        void IActivate.Activate(ActivateEventArgs eventArgs)
+        {
+            if (!eventArgs.User.TryGetComponent(out IActorComponent? actor))
+            {
+                return;
+            }
+
+            if (IsValidInteraction(eventArgs))
+            {
+                UserInterface?.Open(actor.playerSession);
+            }
+
+            return;
+        }
+
 
         async Task<bool> IInteractUsing.InteractUsing(InteractUsingEventArgs eventArgs)
         {
@@ -649,13 +680,25 @@ namespace Content.Server.GameObjects.Components.Disposal
 
         bool IDragDropOn.CanDragDropOn(DragDropEventArgs eventArgs)
         {
-            return CanInsert(eventArgs.Dropped);
+            return CanInsert(eventArgs.Dragged);
         }
 
         bool IDragDropOn.DragDropOn(DragDropEventArgs eventArgs)
         {
-            _ = TryInsert(eventArgs.Dropped, eventArgs.User);
+            _ = TryInsert(eventArgs.Dragged, eventArgs.User);
             return true;
+        }
+
+        void IThrowCollide.HitBy(ThrowCollideEventArgs eventArgs)
+        {
+            if (!CanInsert(eventArgs.Thrown) ||
+                IoCManager.Resolve<IRobustRandom>().NextDouble() > 0.75 ||
+                !_container.Insert(eventArgs.Thrown))
+            {
+                return;
+            }
+
+            AfterInsert(eventArgs.Thrown);
         }
 
         [Verb]

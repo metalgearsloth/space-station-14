@@ -2,7 +2,8 @@
 using System.Collections.Immutable;
 using System.Linq;
 using Content.Client.GameObjects.Components;
-using Content.Shared.GameObjects.EntitySystems;
+using Content.Client.Utility;
+using Content.Shared;
 using Robust.Client.GameObjects.EntitySystems;
 using Robust.Client.Interfaces.GameObjects;
 using Robust.Client.Interfaces.Graphics.ClientEye;
@@ -67,17 +68,11 @@ namespace Content.Client.State
             var inRange = false;
             if (localPlayer.ControlledEntity != null && entityToClick != null)
             {
-                var playerPos = localPlayer.ControlledEntity.Transform.MapPosition;
-                var entityPos = entityToClick.Transform.MapPosition;
-                inRange = EntitySystemManager.GetEntitySystem<SharedInteractionSystem>()
-                    .InRangeUnobstructed(playerPos, entityPos,
-                        predicate: entity =>
-                            entity == localPlayer.ControlledEntity || entity == entityToClick,
-                        ignoreInsideBlocker: true);
+                inRange = localPlayer.InRangeUnobstructed(entityToClick, ignoreInsideBlocker: true);
             }
 
             InteractionOutlineComponent outline;
-            if(!ConfigurationManager.GetCVar<bool>("outline.enabled"))
+            if(!ConfigurationManager.GetCVar(CCVars.OutlineEnabled))
             {
                 if(entityToClick != null && entityToClick.TryGetComponent(out outline))
                 {
@@ -116,9 +111,9 @@ namespace Content.Client.State
             return entitiesUnderPosition.Count > 0 ? entitiesUnderPosition[0] : null;
         }
 
-        public IList<IEntity> GetEntitiesUnderPosition(GridCoordinates coordinates)
+        public IList<IEntity> GetEntitiesUnderPosition(EntityCoordinates coordinates)
         {
-            return GetEntitiesUnderPosition(coordinates.ToMap(MapManager));
+            return GetEntitiesUnderPosition(coordinates.ToMap(EntityManager));
         }
 
         public IList<IEntity> GetEntitiesUnderPosition(MapCoordinates coordinates)
@@ -157,7 +152,7 @@ namespace Content.Client.State
         /// <param name="stateManager">state manager to use to get the current game screen</param>
         /// <param name="coordinates">coordinates to check</param>
         /// <returns>the entities under the position, empty list if none found</returns>
-        public static IList<IEntity> GetEntitiesUnderPosition(IStateManager stateManager, GridCoordinates coordinates)
+        public static IList<IEntity> GetEntitiesUnderPosition(IStateManager stateManager, EntityCoordinates coordinates)
         {
             if (stateManager.CurrentState is GameScreenBase gameScreenBase)
             {
@@ -187,9 +182,9 @@ namespace Content.Client.State
                 }
                 */
 
-                var transx = x.clicked.Transform;
-                var transy = y.clicked.Transform;
-                val = transx.GridPosition.Y.CompareTo(transy.GridPosition.Y);
+                var transX = x.clicked.Transform;
+                var transY = y.clicked.Transform;
+                val = transX.Coordinates.Y.CompareTo(transY.Coordinates.Y);
                 if (val != 0)
                 {
                     return val;
@@ -215,11 +210,11 @@ namespace Content.Client.State
             var mousePosWorld = EyeManager.ScreenToMap(args.PointerLocation);
             var entityToClick = GetEntityUnderPosition(mousePosWorld);
 
-            if (!MapManager.TryFindGridAt(mousePosWorld, out var grid))
-                grid = MapManager.GetDefaultGrid(mousePosWorld.MapId);
+            var coordinates = MapManager.TryFindGridAt(mousePosWorld, out var grid) ? grid.MapToGrid(mousePosWorld) :
+                EntityCoordinates.FromMap(EntityManager, MapManager, mousePosWorld);
 
             var message = new FullInputCmdMessage(Timing.CurTick, Timing.TickFraction, funcId, args.State,
-                grid.MapToGrid(mousePosWorld), args.PointerLocation,
+                coordinates , args.PointerLocation,
                 entityToClick?.Uid ?? EntityUid.Invalid);
 
             // client side command handlers will always be sent the local player session.

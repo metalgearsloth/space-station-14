@@ -1,10 +1,11 @@
-﻿using Robust.Server.Interfaces.Console;
+﻿using System;
+using System.Linq;
+using Content.Server.Administration;
+using Content.Shared.Administration;
+using Robust.Server.Interfaces.Console;
 using Robust.Server.Interfaces.Player;
-using Robust.Shared.GameObjects;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.IoC;
-using System;
-using System.Linq;
 
 namespace Content.Server.GameObjects.Components.Mobs.Speech
 {
@@ -18,6 +19,7 @@ namespace Content.Server.GameObjects.Components.Mobs.Speech
         public string Accentuate(string message);
     }
 
+    [AdminCommand(AdminFlags.Fun)]
     public class AddAccent : IClientCommand
     {
         public string Command => "addaccent";
@@ -39,12 +41,12 @@ namespace Content.Server.GameObjects.Components.Mobs.Speech
                 shell.SendText(player, "You don't have a player!");
                 return;
             }
-            
+
             var compFactory = IoCManager.Resolve<IComponentFactory>();
-            
+
             if (args[0] == "?")
             {
-                // Get all components that implement the ISpeechComponent except 
+                // Get all components that implement the ISpeechComponent except
                 var speeches = compFactory.GetAllRefTypes()
                 .Where(c => typeof(IAccentComponent).IsAssignableFrom(c) && c.IsClass);
                 var msg = "";

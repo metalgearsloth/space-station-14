@@ -1,13 +1,16 @@
 ﻿using System;
 using System.Linq;
+using Content.Server.Administration;
 using Content.Server.GameObjects.Components.GUI;
 using Content.Server.GameObjects.Components.Items.Storage;
 using Content.Server.GameObjects.Components.Observer;
 using Content.Server.Interfaces.Chat;
 using Content.Server.Interfaces.GameObjects;
-using Content.Server.Interfaces;
 using Content.Server.Observer;
 using Content.Server.Players;
+using Content.Server.Utility;
+using Content.Shared.Administration;
+using Content.Shared.Damage;
 using Content.Shared.GameObjects.Components.Damage;
 using Content.Shared.Interfaces;
 using Robust.Server.Interfaces.Console;
@@ -16,10 +19,10 @@ using Robust.Shared.Enums;
 using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.IoC;
 using Robust.Shared.Localization;
-using Content.Shared.Damage;
 
 namespace Content.Server.Chat
 {
+    [AnyCommand]
     internal class SayCommand : IClientCommand
     {
         public string Command => "say";
@@ -51,6 +54,7 @@ namespace Content.Server.Chat
         }
     }
 
+    [AnyCommand]
     internal class MeCommand : IClientCommand
     {
         public string Command => "me";
@@ -76,6 +80,7 @@ namespace Content.Server.Chat
         }
     }
 
+    [AnyCommand]
     internal class OOCCommand : IClientCommand
     {
         public string Command => "ooc";
@@ -96,6 +101,7 @@ namespace Content.Server.Chat
         }
     }
 
+    [AdminCommand(AdminFlags.Admin)]
     internal class AdminChatCommand : IClientCommand
     {
         public string Command => "asay";
@@ -116,11 +122,9 @@ namespace Content.Server.Chat
         }
     }
 
+    [AnyCommand]
     internal class SuicideCommand : IClientCommand
     {
-        [Dependency] private readonly IPlayerManager _playerManager = default!;
-        [Dependency] private readonly IServerNotifyManager _notifyManager = default!;
-
         public string Command => "suicide";
 
         public string Description => "Commits suicide";
@@ -138,12 +142,15 @@ namespace Content.Server.Chat
                 damageableComponent.ChangeDamage(kind switch
                     {
                         SuicideKind.Blunt => DamageType.Blunt,
+                        SuicideKind.Slash => DamageType.Slash,
                         SuicideKind.Piercing => DamageType.Piercing,
                         SuicideKind.Heat => DamageType.Heat,
-                        SuicideKind.Disintegration => DamageType.Disintegration,
-                        SuicideKind.Cellular => DamageType.Cellular,
-                        SuicideKind.DNA => DamageType.DNA,
+                        SuicideKind.Shock => DamageType.Shock,
+                        SuicideKind.Cold => DamageType.Cold,
+                        SuicideKind.Poison => DamageType.Poison,
+                        SuicideKind.Radiation => DamageType.Radiation,
                         SuicideKind.Asphyxiation => DamageType.Asphyxiation,
+                        SuicideKind.Bloodloss => DamageType.Bloodloss,
                         _ => DamageType.Blunt
                     },
                 500,
@@ -190,30 +197,19 @@ namespace Content.Server.Chat
                     }
                 }
             }
+
             // Default suicide, bite your tongue
-            PopupMessageOtherClientsInRange(owner, Loc.GetString("{0:theName} is attempting to bite {0:their} own tongue!", owner), 15);
-            _notifyManager.PopupMessage(owner, owner, Loc.GetString("You attempt to bite your own tongue!"));
+            var othersMessage = Loc.GetString("{0:theName} is attempting to bite {0:their} own tongue!", owner);
+            owner.PopupMessageOtherClients(othersMessage);
+
+            var selfMessage = Loc.GetString("You attempt to bite your own tongue!");
+            owner.PopupMessage(selfMessage);
+
             dmgComponent.ChangeDamage(DamageType.Piercing, 500, true, owner);
 
             // Prevent the player from returning to the body. Yes, this is an ugly hack.
             var ghost = new Ghost(){CanReturn = false};
             ghost.Execute(shell, player, Array.Empty<string>());
-        }
-        private void PopupMessageOtherClientsInRange(IEntity source, string message, int maxReceiveDistance)
-        {
-            var viewers = _playerManager.GetPlayersInRange(source.Transform.GridPosition, maxReceiveDistance);
-
-            foreach (var viewer in viewers)
-            {
-                var viewerEntity = viewer.AttachedEntity;
-
-                if (viewerEntity == null || source == viewerEntity)
-                {
-                    continue;
-                }
-
-                source.PopupMessage(viewer.AttachedEntity, message);
-            }
         }
     }
 }

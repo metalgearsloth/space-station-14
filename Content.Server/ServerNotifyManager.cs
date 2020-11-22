@@ -1,5 +1,7 @@
+using Content.Server.Administration;
 using Content.Server.Interfaces;
 using Content.Shared;
+using Content.Shared.Administration;
 using Content.Shared.Interfaces;
 using Robust.Server.Interfaces.Console;
 using Robust.Server.Interfaces.GameObjects;
@@ -44,7 +46,7 @@ namespace Content.Server
             _netManager.ServerSendMessage(netMessage, actor.playerSession.ConnectedClient);
         }
 
-        public override void PopupMessage(GridCoordinates coordinates, IEntity viewer, string message)
+        public override void PopupMessage(EntityCoordinates coordinates, IEntity viewer, string message)
         {
             if (!viewer.TryGetComponent(out IActorComponent actor))
             {
@@ -71,6 +73,7 @@ namespace Content.Server
             _netManager.ServerSendMessage(netMessage, actor.playerSession.ConnectedClient);
         }
 
+        [AdminCommand(AdminFlags.Debug)]
         public class PopupMsgCommand : IClientCommand
         {
             public string Command => "srvpopupmsg";

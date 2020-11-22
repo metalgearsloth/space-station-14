@@ -3,11 +3,10 @@ using System;
 using System.Linq;
 using Content.Server.GameObjects.Components.Mobs;
 using Content.Server.GameObjects.EntitySystems;
-using Content.Server.Interfaces;
-using Content.Server.Mobs;
 using Content.Server.Utility;
 using Content.Shared.GameObjects.Components.Instruments;
 using Content.Shared.GameObjects.EntitySystems;
+using Content.Shared.Interfaces;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Robust.Server.GameObjects;
 using Robust.Server.GameObjects.Components.UserInterface;
@@ -38,7 +37,6 @@ namespace Content.Server.GameObjects.Components.Instruments
             IUse,
             IThrown
     {
-        [Dependency] private readonly IServerNotifyManager _notifyManager = default!;
         [Dependency] private readonly IGameTiming _gameTiming = default!;
 
         private static readonly TimeSpan OneSecAgo = TimeSpan.FromSeconds(-1);
@@ -71,6 +69,47 @@ namespace Content.Server.GameObjects.Components.Instruments
 
         [ViewVariables]
         private int _midiEventCount = 0;
+
+        private byte _instrumentProgram;
+        private byte _instrumentBank;
+        private bool _allowPercussion;
+        private bool _allowProgramChange;
+
+        [ViewVariables(VVAccess.ReadWrite)]
+        public override byte InstrumentProgram { get => _instrumentProgram;
+            set
+            {
+                _instrumentProgram = value;
+                Dirty();
+            }
+        }
+
+        [ViewVariables(VVAccess.ReadWrite)]
+        public override byte InstrumentBank { get => _instrumentBank;
+            set
+            {
+                _instrumentBank = value;
+                Dirty();
+            }
+        }
+
+        [ViewVariables(VVAccess.ReadWrite)]
+        public override bool AllowPercussion { get => _allowPercussion;
+            set
+            {
+                _allowPercussion = value;
+                Dirty();
+            }
+        }
+
+        [ViewVariables(VVAccess.ReadWrite)]
+        public override bool AllowProgramChange { get => _allowProgramChange;
+            set
+            {
+                _allowProgramChange = value;
+                Dirty();
+            }
+        }
 
         /// <summary>
         ///     Whether the instrument is an item which can be held or not.
@@ -132,11 +171,15 @@ namespace Content.Server.GameObjects.Components.Instruments
         {
             base.ExposeData(serializer);
             serializer.DataField(ref _handheld, "handheld", false);
+            serializer.DataField(ref _instrumentProgram, "program", (byte) 1);
+            serializer.DataField(ref _instrumentBank, "bank", (byte) 0);
+            serializer.DataField(ref _allowPercussion, "allowPercussion", false);
+            serializer.DataField(ref _allowProgramChange, "allowProgramChange", false);
         }
 
         public override ComponentState GetComponentState()
         {
-            return new InstrumentState(Playing, _lastSequencerTick);
+            return new InstrumentState(Playing, InstrumentProgram, InstrumentBank, AllowPercussion, AllowProgramChange, _lastSequencerTick);
         }
 
         public override void HandleNetworkMessage(ComponentMessage message, INetChannel channel, ICommonSession? session = null)
@@ -166,11 +209,11 @@ namespace Content.Server.GameObjects.Components.Instruments
                         switch (_laggedBatches)
                         {
                             case (int) (MaxMidiLaggedBatches * (1 / 3d)) + 1:
-                                _notifyManager.PopupMessage(Owner, InstrumentPlayer.AttachedEntity,
+                                Owner.PopupMessage(InstrumentPlayer.AttachedEntity,
                                     "Your fingers are beginning to a cramp a little!");
                                 break;
                             case (int) (MaxMidiLaggedBatches * (2 / 3d)) + 1:
-                                _notifyManager.PopupMessage(Owner, InstrumentPlayer.AttachedEntity,
+                                Owner.PopupMessage(InstrumentPlayer.AttachedEntity,
                                     "Your fingers are seriously cramping up!");
                                 break;
                         }
@@ -246,9 +289,12 @@ namespace Content.Server.GameObjects.Components.Instruments
 
         public void HandSelected(HandSelectedEventArgs eventArgs)
         {
-            var session = eventArgs.User?.GetComponent<BasicActorComponent>()?.playerSession;
+            if (eventArgs.User == null || !eventArgs.User.TryGetComponent(out BasicActorComponent? actor))
+                return;
 
-            if (session == null) return;
+            var session = actor.playerSession;
+
+            if (session.Status != SessionStatus.InGame) return;
 
             InstrumentPlayer = session;
         }
@@ -293,7 +339,7 @@ namespace Content.Server.GameObjects.Components.Instruments
 
         private void OpenUserInterface(IPlayerSession session)
         {
-            UserInterface?.Open(session);
+            UserInterface?.Toggle(session);
         }
 
         public override void Update(float delta)
@@ -330,7 +376,7 @@ namespace Content.Server.GameObjects.Components.Instruments
 
                 InstrumentPlayer = null;
 
-                _notifyManager.PopupMessage(Owner, mob, "Your fingers cramp up from playing!");
+                Owner.PopupMessage(mob, "Your fingers cramp up from playing!");
             }
 
             _timer += delta;

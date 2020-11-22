@@ -6,31 +6,38 @@
   components:
   - type: Clickable
   - type: InteractionOutline
-  - type: Collidable
+  - type: Physics
   - type: SnapGrid
     offset: Center
-  - type: Icon
-    texture: Constructible/Power/eightdirwire.png
-  - type: Sprite
-    sprite: Constructible/Power/mv_cable.rsi
   - type: Destructible
     thresholdvalue: 100
+    resistances: metallicResistances
+  - type: Sprite
+    sprite: Constructible/Atmos/pump.rsi
+  - type: Icon
+    sprite: Constructible/Atmos/pump.rsi
 
 - type: entity
   parent: PumpBase
-  id: NorthFromSouthPipePump
-  name: North from south pipe pump
+  id: DebugPressurePump
+  name: Debug Pressure Pump
   components:
-  - type: Sprite
-    state: mvcable_3
   - type: NodeContainer
     nodes:
     - !type:PipeNode
       nodeGroupID: Pipe
-      pipeDirection: North
+      pipeDirection: West
     - !type:PipeNode
       nodeGroupID: Pipe
-      pipeDirection: South
-  - type: DebugPump
-    outletDirection: North
-    inletDirection: South
+      pipeDirection: East
+  - type: PressurePump
+    inletDirection: West
+    outletDirection: East
+  - type: Sprite
+    state: pumpPressure2
+  - type: Icon
+    state: pumpPressure2
+  - type: Appearance
+    visuals:
+    - type: PumpVisualizer
+      pumpEnabledState: pumpPressure2On

@@ -1,6 +1,6 @@
 using Content.Client.GameObjects.Components.Instruments;
 using Content.Client.UserInterface.Stylesheets;
-using Content.Shared.GameObjects.EntitySystems;
+using Content.Client.Utility;
 using Robust.Client.Audio.Midi;
 using Robust.Client.Graphics.Drawing;
 using Robust.Client.Interfaces.UserInterface;
@@ -9,7 +9,6 @@ using Robust.Client.UserInterface;
 using Robust.Client.UserInterface.Controls;
 using Robust.Client.UserInterface.CustomControls;
 using Robust.Shared.Containers;
-using Robust.Shared.GameObjects.Systems;
 using Robust.Shared.IoC;
 using Robust.Shared.Localization;
 using Robust.Shared.Log;
@@ -23,10 +22,10 @@ namespace Content.Client.Instruments
         [Dependency] private readonly IMidiManager _midiManager = default!;
         [Dependency] private readonly IFileDialogManager _fileDialogManager = default!;
 
-        private InstrumentBoundUserInterface _owner;
-        private Button midiLoopButton;
-        private Button midiStopButton;
-        private Button midiInputButton;
+        private readonly InstrumentBoundUserInterface _owner;
+        private readonly Button _midiLoopButton;
+        private readonly Button _midiStopButton;
+        private readonly Button _midiInputButton;
 
         protected override Vector2? CustomSize => (400, 150);
 
@@ -59,7 +58,7 @@ namespace Content.Client.Instruments
                 Align = BoxContainer.AlignMode.Center
             };
 
-            midiInputButton = new Button()
+            _midiInputButton = new Button()
             {
                 Text = Loc.GetString("MIDI Input"),
                 TextAlign = Label.AlignMode.Center,
@@ -69,7 +68,7 @@ namespace Content.Client.Instruments
                 Pressed = _owner.Instrument.IsInputOpen,
             };
 
-            midiInputButton.OnToggled += MidiInputButtonOnOnToggled;
+            _midiInputButton.OnToggled += MidiInputButtonOnOnToggled;
 
             var topSpacer = new Control()
             {
@@ -95,7 +94,7 @@ namespace Content.Client.Instruments
                 Align = BoxContainer.AlignMode.Center
             };
 
-            midiLoopButton = new Button()
+            _midiLoopButton = new Button()
             {
                 Text = Loc.GetString("Loop"),
                 TextAlign = Label.AlignMode.Center,
@@ -106,7 +105,7 @@ namespace Content.Client.Instruments
                 Pressed = _owner.Instrument.LoopMidi,
             };
 
-            midiLoopButton.OnToggled += MidiLoopButtonOnOnToggled;
+            _midiLoopButton.OnToggled += MidiLoopButtonOnOnToggled;
 
             var bottomSpacer = new Control()
             {
@@ -114,7 +113,7 @@ namespace Content.Client.Instruments
                 SizeFlagsStretchRatio = 2,
             };
 
-            midiStopButton = new Button()
+            _midiStopButton = new Button()
             {
                 Text = Loc.GetString("Stop"),
                 TextAlign = Label.AlignMode.Center,
@@ -123,13 +122,13 @@ namespace Content.Client.Instruments
                 Disabled = !_owner.Instrument.IsMidiOpen,
             };
 
-            midiStopButton.OnPressed += MidiStopButtonOnPressed;
+            _midiStopButton.OnPressed += MidiStopButtonOnPressed;
 
-            hBoxBottomButtons.AddChild(midiLoopButton);
+            hBoxBottomButtons.AddChild(_midiLoopButton);
             hBoxBottomButtons.AddChild(bottomSpacer);
-            hBoxBottomButtons.AddChild(midiStopButton);
+            hBoxBottomButtons.AddChild(_midiStopButton);
 
-            hBoxTopButtons.AddChild(midiInputButton);
+            hBoxTopButtons.AddChild(_midiInputButton);
             hBoxTopButtons.AddChild(topSpacer);
             hBoxTopButtons.AddChild(midiFileButton);
 
@@ -168,8 +167,8 @@ namespace Content.Client.Instruments
 
         public void MidiPlaybackSetButtonsDisabled(bool disabled)
         {
-            midiLoopButton.Disabled = disabled;
-            midiStopButton.Disabled = disabled;
+            _midiLoopButton.Disabled = disabled;
+            _midiStopButton.Disabled = disabled;
         }
 
         private async void MidiFileButtonOnOnPressed(BaseButton.ButtonEventArgs obj)
@@ -177,29 +176,10 @@ namespace Content.Client.Instruments
             var filters = new FileDialogFilters(new FileDialogFilters.Group("mid", "midi"));
             var filename = await _fileDialogManager.OpenFile(filters);
 
-            var instrumentEnt = _owner.Instrument.Owner;
-            var instrument = _owner.Instrument;
-
-            ContainerHelpers.TryGetContainerMan(_owner.Instrument.Owner, out var conMan);
-
-            var localPlayer = IoCManager.Resolve<IPlayerManager>().LocalPlayer;
-
             // The following checks are only in place to prevent players from playing MIDI songs locally.
             // There are equivalents for these checks on the server.
 
             if (string.IsNullOrEmpty(filename)) return;
-
-            // If we don't have a player or controlled entity, we return.
-            if(localPlayer?.ControlledEntity == null) return;
-
-            // If the instrument is handheld and we're not holding it, we return.
-            if((instrument.Handheld && (conMan == null
-                                        || conMan.Owner != localPlayer.ControlledEntity))) return;
-
-            // We check that we're in range unobstructed just in case.
-            if(!EntitySystem.Get<SharedInteractionSystem>()
-                    .InRangeUnobstructed(localPlayer.ControlledEntity.Transform.MapPosition,
-                        instrumentEnt.Transform.MapPosition, ignoredEnt:instrumentEnt)) return;
 
             if (!_midiManager.IsMidiFile(filename))
             {
@@ -207,23 +187,49 @@ namespace Content.Client.Instruments
                 return;
             }
 
+            if (!PlayCheck())
+                return;
+
             MidiStopButtonOnPressed(null);
             await Timer.Delay(100);
             if (!_owner.Instrument.OpenMidi(filename)) return;
             MidiPlaybackSetButtonsDisabled(false);
-            if (midiInputButton.Pressed)
-                midiInputButton.Pressed = false;
+            if (_midiInputButton.Pressed)
+                _midiInputButton.Pressed = false;
         }
 
         private void MidiInputButtonOnOnToggled(BaseButton.ButtonToggledEventArgs obj)
         {
             if (obj.Pressed)
             {
+                if (!PlayCheck())
+                    return;
+
                 MidiStopButtonOnPressed(null);
                 _owner.Instrument.OpenInput();
             }
             else
                 _owner.Instrument.CloseInput();
+        }
+
+        private bool PlayCheck()
+        {
+            var instrumentEnt = _owner.Instrument.Owner;
+            var instrument = _owner.Instrument;
+
+            _owner.Instrument.Owner.TryGetContainerMan(out var conMan);
+
+            var localPlayer = IoCManager.Resolve<IPlayerManager>().LocalPlayer;
+
+            // If we don't have a player or controlled entity, we return.
+            if(localPlayer?.ControlledEntity == null) return false;
+
+            // If the instrument is handheld and we're not holding it, we return.
+            if((instrument.Handheld && (conMan == null
+                                        || conMan.Owner != localPlayer.ControlledEntity))) return false;
+
+            // We check that we're in range unobstructed just in case.
+            return localPlayer.InRangeUnobstructed(instrumentEnt, predicate:(e) => e == instrumentEnt || e == localPlayer.ControlledEntity);
         }
 
         private void MidiStopButtonOnPressed(BaseButton.ButtonEventArgs obj)

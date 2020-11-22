@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using Content.Server.GameObjects.Components.Mobs;
+using Content.Shared.Alert;
 using Content.Shared.Damage;
 using Content.Shared.GameObjects.Components.Damage;
-using Content.Shared.GameObjects.Components.Mobs;
 using Content.Shared.GameObjects.Components.Movement;
 using Content.Shared.GameObjects.Components.Nutrition;
-using JetBrains.Annotations;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Interfaces.Random;
 using Robust.Shared.IoC;
@@ -19,6 +18,8 @@ namespace Content.Server.GameObjects.Components.Nutrition
     [RegisterComponent]
     public sealed class HungerComponent : SharedHungerComponent
     {
+        [Dependency] private readonly IRobustRandom _random = default!;
+
         // Base stuff
         [ViewVariables(VVAccess.ReadWrite)]
         public float BaseDecayRate
@@ -53,7 +54,7 @@ namespace Content.Server.GameObjects.Components.Nutrition
 
         [ViewVariables(VVAccess.ReadOnly)]
         public Dictionary<HungerThreshold, float> HungerThresholds => _hungerThresholds;
-        private Dictionary<HungerThreshold, float> _hungerThresholds = new Dictionary<HungerThreshold, float>
+        private readonly Dictionary<HungerThreshold, float> _hungerThresholds = new Dictionary<HungerThreshold, float>
         {
             {HungerThreshold.Overfed, 600.0f},
             {HungerThreshold.Okay, 450.0f},
@@ -69,11 +70,11 @@ namespace Content.Server.GameObjects.Components.Nutrition
         }
 
 
-        public static readonly Dictionary<HungerThreshold, string> HungerThresholdImages = new Dictionary<HungerThreshold, string>
+        public static readonly Dictionary<HungerThreshold, AlertType> HungerThresholdAlertTypes = new Dictionary<HungerThreshold, AlertType>
         {
-            { HungerThreshold.Overfed, "/Textures/Interface/StatusEffects/Hunger/Overfed.png" },
-            { HungerThreshold.Peckish, "/Textures/Interface/StatusEffects/Hunger/Peckish.png" },
-            { HungerThreshold.Starving, "/Textures/Interface/StatusEffects/Hunger/Starving.png" },
+            { HungerThreshold.Overfed, AlertType.Overfed },
+            { HungerThreshold.Peckish, AlertType.Peckish },
+            { HungerThreshold.Starving, AlertType.Starving },
         };
 
         public void HungerThresholdEffect(bool force = false)
@@ -88,15 +89,15 @@ namespace Content.Server.GameObjects.Components.Nutrition
                 }
 
                 // Update UI
-                Owner.TryGetComponent(out ServerStatusEffectsComponent statusEffectsComponent);
+                Owner.TryGetComponent(out ServerAlertsComponent alertsComponent);
 
-                if (HungerThresholdImages.TryGetValue(_currentHungerThreshold, out var statusTexture))
+                if (HungerThresholdAlertTypes.TryGetValue(_currentHungerThreshold, out var alertId))
                 {
-                    statusEffectsComponent?.ChangeStatusEffectIcon(StatusEffect.Hunger, statusTexture);
+                    alertsComponent?.ShowAlert(alertId);
                 }
                 else
                 {
-                    statusEffectsComponent?.RemoveStatusEffect(StatusEffect.Hunger);
+                    alertsComponent?.ClearAlertCategory(AlertCategory.Hunger);
                 }
 
                 switch (_currentHungerThreshold)
@@ -141,7 +142,7 @@ namespace Content.Server.GameObjects.Components.Nutrition
         {
             base.Startup();
             // Similar functionality to SS13. Should also stagger people going to the chef.
-            _currentHunger = IoCManager.Resolve<IRobustRandom>().Next(
+            _currentHunger = _random.Next(
                 (int)_hungerThresholds[HungerThreshold.Peckish] + 10,
                 (int)_hungerThresholds[HungerThreshold.Okay] - 1);
             _currentHungerThreshold = GetHungerThreshold(_currentHunger);
@@ -188,7 +189,7 @@ namespace Content.Server.GameObjects.Components.Nutrition
             {
                 if (Owner.TryGetComponent(out IDamageableComponent damageable))
                 {
-                    if (damageable.CurrentDamageState != DamageState.Dead)
+                    if (damageable.CurrentState != DamageState.Dead)
                     {
                         damageable.ChangeDamage(DamageType.Blunt, 2, true, null);
                     }

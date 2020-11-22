@@ -1,37 +1,34 @@
-﻿
-using Robust.Server.GameObjects;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using Content.Server.GameObjects.Components.GUI;
+using Content.Server.GameObjects.Components.Items.Storage;
+using Content.Server.GameObjects.Components.Mobs;
+using Content.Server.GameObjects.EntitySystems.DoAfter;
+using Content.Server.Interfaces.GameObjects.Components.Items;
+using Content.Shared.Alert;
+using Content.Shared.GameObjects.Components.ActionBlocking;
+using Content.Shared.GameObjects.Components.Mobs;
 using Content.Shared.GameObjects.EntitySystems;
+using Content.Shared.GameObjects.Verbs;
 using Content.Shared.Interfaces;
+using Content.Shared.Utility;
+using Robust.Server.GameObjects;
+using Robust.Server.GameObjects.Components.Container;
+using Robust.Server.GameObjects.EntitySystems;
 using Robust.Shared.GameObjects;
 using Robust.Shared.GameObjects.Systems;
 using Robust.Shared.Interfaces.GameObjects;
-using Robust.Shared.IoC;
 using Robust.Shared.Localization;
-using Content.Server.GameObjects.EntitySystems.DoAfter;
-using Robust.Shared.ViewVariables;
-using Content.Server.Interfaces.GameObjects.Components.Items;
-using Content.Shared.GameObjects.Components.ActionBlocking;
-using Content.Shared.GameObjects.Verbs;
-using Content.Server.GameObjects.Components.Items.Storage;
 using Robust.Shared.Log;
-using System.Linq;
-using Robust.Server.GameObjects.Components.Container;
-using Robust.Server.GameObjects.EntitySystems;
-using Content.Server.GameObjects.Components.Mobs;
-using Content.Shared.GameObjects.Components.Mobs;
 using Robust.Shared.Maths;
-using System;
-using System.Collections.Generic;
-using Content.Server.GameObjects.Components.GUI;
+using Robust.Shared.ViewVariables;
 
 namespace Content.Server.GameObjects.Components.ActionBlocking
 {
     [RegisterComponent]
     public class CuffableComponent : SharedCuffableComponent
     {
-        [Dependency]
-        private readonly ISharedNotifyManager _notifyManager;
-
         /// <summary>
         /// How many of this entity's hands are currently cuffed.
         /// </summary>
@@ -109,11 +106,7 @@ namespace Content.Server.GameObjects.Components.ActionBlocking
                 return;
             }
 
-            if (!EntitySystem.Get<SharedInteractionSystem>().InRangeUnobstructed(
-                    handcuff.Transform.MapPosition,
-                    Owner.Transform.MapPosition,
-                    _interactRange,
-                    ignoredEnt: Owner))
+            if (!handcuff.InRangeUnobstructed(Owner, _interactRange))
             {
                 Logger.Warning("Handcuffs being applied to player are obstructed or too far away! This should not happen!");
                 return;
@@ -122,8 +115,8 @@ namespace Content.Server.GameObjects.Components.ActionBlocking
             _container.Insert(handcuff);
             CanStillInteract = _hands.Hands.Count() > CuffedHandCount;
 
-            OnCuffedStateChanged.Invoke();
-            UpdateStatusEffect();
+            OnCuffedStateChanged?.Invoke();
+            UpdateAlert();
             UpdateHeldItems();
             Dirty();
         }
@@ -131,7 +124,7 @@ namespace Content.Server.GameObjects.Components.ActionBlocking
         /// <summary>
         /// Check the current amount of hands the owner has, and if there's less hands than active cuffs we remove some cuffs.
         /// </summary>
-        private void UpdateHandCount() 
+        private void UpdateHandCount()
         {
             var dirty = false;
             var handCount = _hands.Hands.Count();
@@ -142,7 +135,7 @@ namespace Content.Server.GameObjects.Components.ActionBlocking
 
                 var entity = _container.ContainedEntities[_container.ContainedEntities.Count - 1];
                 _container.Remove(entity);
-                entity.Transform.WorldPosition = Owner.Transform.GridPosition.Position;
+                entity.Transform.WorldPosition = Owner.Transform.Coordinates.Position;
             }
 
             if (dirty)
@@ -171,12 +164,12 @@ namespace Content.Server.GameObjects.Components.ActionBlocking
 
             if (freeHandCount < itemCount)
             {
-                foreach (ItemComponent item in _hands.GetAllHeldItems())
+                foreach (var item in _hands.GetAllHeldItems())
                 {
                     if (freeHandCount < itemCount)
                     {
                         freeHandCount++;
-                        _hands.Drop(item.Owner);
+                        _hands.Drop(item.Owner, false);
                     }
                     else
                     {
@@ -189,17 +182,17 @@ namespace Content.Server.GameObjects.Components.ActionBlocking
         /// <summary>
         /// Updates the status effect indicator on the HUD.
         /// </summary>
-        private void UpdateStatusEffect()
+        private void UpdateAlert()
         {
-            if (Owner.TryGetComponent(out ServerStatusEffectsComponent status))
+            if (Owner.TryGetComponent(out ServerAlertsComponent status))
             {
                 if (CanStillInteract)
                 {
-                    status.RemoveStatusEffect(StatusEffect.Cuffed);
+                    status.ClearAlert(AlertType.Handcuffed);
                 }
                 else
                 {
-                    status.ChangeStatusEffectIcon(StatusEffect.Cuffed, "/Textures/Interface/StatusEffects/Handcuffed/Handcuffed.png");
+                    status.ShowAlert(AlertType.Handcuffed);
                 }
             }
         }
@@ -234,32 +227,23 @@ namespace Content.Server.GameObjects.Components.ActionBlocking
 
             if (!isOwner && !ActionBlockerSystem.CanInteract(user))
             {
-                user.PopupMessage(user, Loc.GetString("You can't do that!"));
+                user.PopupMessage(Loc.GetString("You can't do that!"));
                 return;
             }
 
-            if (!isOwner &&
-                !EntitySystem.Get<SharedInteractionSystem>().InRangeUnobstructed(
-                    user.Transform.MapPosition,
-                    Owner.Transform.MapPosition,
-                    _interactRange,
-                    ignoredEnt: Owner))
+            if (!isOwner && !user.InRangeUnobstructed(Owner, _interactRange))
             {
-                user.PopupMessage(user, Loc.GetString("You are too far away to remove the cuffs."));
+                user.PopupMessage(Loc.GetString("You are too far away to remove the cuffs."));
                 return;
             }
 
-            if (!EntitySystem.Get<SharedInteractionSystem>().InRangeUnobstructed(
-                    cuffsToRemove.Transform.MapPosition,
-                    Owner.Transform.MapPosition,
-                    _interactRange,
-                    ignoredEnt: Owner))
+            if (!cuffsToRemove.InRangeUnobstructed(Owner, _interactRange))
             {
                 Logger.Warning("Handcuffs being removed from player are obstructed or too far away! This should not happen!");
                 return;
             }
 
-            user.PopupMessage(user, Loc.GetString("You start removing the cuffs."));
+            user.PopupMessage(Loc.GetString("You start removing the cuffs."));
 
             var audio = EntitySystem.Get<AudioSystem>();
             audio.PlayFromEntity(isOwner ? cuff.StartBreakoutSound : cuff.StartUncuffSound, Owner);
@@ -299,34 +283,34 @@ namespace Content.Server.GameObjects.Components.ActionBlocking
 
                 CanStillInteract = _hands.Hands.Count() > CuffedHandCount;
                 OnCuffedStateChanged.Invoke();
-                UpdateStatusEffect();
+                UpdateAlert();
                 Dirty();
 
                 if (CuffedHandCount == 0)
                 {
-                    _notifyManager.PopupMessage(user, user, Loc.GetString("You successfully remove the cuffs."));
+                    user.PopupMessage(Loc.GetString("You successfully remove the cuffs."));
 
                     if (!isOwner)
                     {
-                        _notifyManager.PopupMessage(user, Owner, Loc.GetString("{0:theName} uncuffs your hands.", user));
+                        user.PopupMessage(Owner, Loc.GetString("{0:theName} uncuffs your hands.", user));
                     }
                 }
                 else
                 {
                     if (!isOwner)
                     {
-                        _notifyManager.PopupMessage(user, user, Loc.GetString("You successfully remove the cuffs. {0} of {1:theName}'s hands remain cuffed.", CuffedHandCount, user));
-                        _notifyManager.PopupMessage(user, Owner, Loc.GetString("{0:theName} removes your cuffs. {1} of your hands remain cuffed.", user, CuffedHandCount));
+                        user.PopupMessage(Loc.GetString("You successfully remove the cuffs. {0} of {1:theName}'s hands remain cuffed.", CuffedHandCount, user));
+                        user.PopupMessage(Owner, Loc.GetString("{0:theName} removes your cuffs. {1} of your hands remain cuffed.", user, CuffedHandCount));
                     }
                     else
                     {
-                        _notifyManager.PopupMessage(user, user, Loc.GetString("You successfully remove the cuffs. {0} of your hands remain cuffed.", CuffedHandCount));
+                        user.PopupMessage(Loc.GetString("You successfully remove the cuffs. {0} of your hands remain cuffed.", CuffedHandCount));
                     }
                 }
             }
             else
             {
-                _notifyManager.PopupMessage(user, user, Loc.GetString("You fail to remove the cuffs."));
+                user.PopupMessage(Loc.GetString("You fail to remove the cuffs."));
             }
 
             return;

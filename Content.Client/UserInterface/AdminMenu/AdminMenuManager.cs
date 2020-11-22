@@ -1,24 +1,24 @@
-﻿using Content.Shared.Input;
+﻿using System.Collections.Generic;
+using Content.Shared.Input;
 using Robust.Client.Console;
 using Robust.Client.Interfaces.Input;
 using Robust.Client.UserInterface.CustomControls;
 using Robust.Shared.Input.Binding;
 using Robust.Shared.Interfaces.Network;
 using Robust.Shared.IoC;
-using System.Collections.Generic;
 
 namespace Content.Client.UserInterface.AdminMenu
 {
     internal class AdminMenuManager : IAdminMenuManager
     {
-        [Dependency] private INetManager _netManager = default!;
+        [Dependency] private readonly INetManager _netManager = default!;
         [Dependency] private readonly IInputManager _inputManager = default!;
         [Dependency] private readonly IClientConGroupController _clientConGroupController = default!;
 
         private SS14Window _window;
         private List<SS14Window> _commandWindows;
 
-        public void Initialize() 
+        public void Initialize()
         {
             _commandWindows = new List<SS14Window>();
             // Reset the AdminMenu Window on disconnect

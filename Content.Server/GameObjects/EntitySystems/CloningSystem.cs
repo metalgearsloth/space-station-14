@@ -1,24 +1,45 @@
 ﻿using System.Collections.Generic;
-using Robust.Shared.GameObjects;
+using System.Linq;
+using Content.Server.GameObjects.Components.Medical;
+using Content.Server.Mobs;
+using Content.Shared.GameTicking;
 using Robust.Shared.GameObjects.Systems;
 
 namespace Content.Server.GameObjects.EntitySystems
 {
-    internal sealed class CloningSystem : EntitySystem
+    internal sealed class CloningSystem : EntitySystem, IResettingEntitySystem
     {
-        public static List<EntityUid> scannedUids = new List<EntityUid>();
-
-        public static void AddToScannedUids(EntityUid uid)
+        public override void Update(float frameTime)
         {
-            if (!scannedUids.Contains(uid))
+            foreach (var comp in ComponentManager.EntityQuery<CloningPodComponent>())
             {
-                scannedUids.Add(uid);
+                comp.Update(frameTime);
             }
         }
 
-        public static bool HasUid(EntityUid uid)
+        public readonly Dictionary<int, Mind> Minds = new Dictionary<int, Mind>();
+
+        public void AddToDnaScans(Mind mind)
         {
-            return scannedUids.Contains(uid);
+            if (!Minds.ContainsValue(mind))
+            {
+                Minds.Add(Minds.Count(), mind);
+            }
+        }
+
+        public bool HasDnaScan(Mind mind)
+        {
+            return Minds.ContainsValue(mind);
+        }
+
+        public Dictionary<int, string> GetIdToUser()
+        {
+            return Minds.ToDictionary(m => m.Key, m => m.Value.CharacterName);
+        }
+
+        public void Reset()
+        {
+            Minds.Clear();
         }
     }
 }
