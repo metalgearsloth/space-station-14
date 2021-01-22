@@ -19,7 +19,9 @@ namespace Content.Server.GameObjects.Components.Explosion
         public override string Name => "FlashExplosive";
 
         private float _range;
+
         private float _duration;
+
         private string _sound;
         private bool _deleteOnFlash;
 
@@ -36,7 +38,7 @@ namespace Content.Server.GameObjects.Components.Explosion
         public bool Explode()
         {
             // If we're in a locker or whatever then can't flash anything
-            ContainerHelpers.TryGetContainer(Owner, out var container);
+            Owner.TryGetContainer(out var container);
             if (container == null || !container.Owner.HasComponent<EntityStorageComponent>())
             {
                 FlashableComponent.FlashAreaHelper(Owner, _range, _duration);

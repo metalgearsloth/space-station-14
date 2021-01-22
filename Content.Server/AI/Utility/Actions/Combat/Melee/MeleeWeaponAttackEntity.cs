@@ -21,7 +21,7 @@ namespace Content.Server.AI.Utility.Actions.Combat.Melee
 {
     public sealed class MeleeWeaponAttackEntity : UtilityAction
     {
-        private IEntity _entity;
+        private readonly IEntity _entity;
 
         public MeleeWeaponAttackEntity(IEntity owner, IEntity entity, float weight) : base(owner)
         {

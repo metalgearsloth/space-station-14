@@ -15,7 +15,7 @@ namespace Content.Server.AI.Utility.Actions.Nutrition.Food
 {
     public sealed class UseFoodInInventory : UtilityAction
     {
-        private IEntity _entity;
+        private readonly IEntity _entity;
 
         public UseFoodInInventory(IEntity owner, IEntity entity, float weight) : base(owner)
         {

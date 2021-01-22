@@ -1,14 +1,20 @@
 ﻿using System;
+using Content.Client.UserInterface.Stylesheets;
 using Robust.Client.Graphics;
+using Robust.Client.Graphics.Shaders;
 using Robust.Client.UserInterface;
 using Robust.Client.UserInterface.Controls;
 using Robust.Shared.Input;
+using Robust.Shared.IoC;
 using Robust.Shared.Maths;
+using Robust.Shared.Prototypes;
 
 namespace Content.Client.UserInterface
 {
     public class ItemSlotButton : MarginContainer
     {
+        private const string HighlightShader = "SelectionOutlineInrange";
+
         public TextureRect Button { get; }
         public SpriteView SpriteView { get; }
         public SpriteView HoverSpriteView { get; }
@@ -22,6 +28,8 @@ namespace Content.Client.UserInterface
         public bool EntityHover => HoverSpriteView.Sprite != null;
         public bool MouseIsHovering = false;
 
+        private readonly PanelContainer _highlightRect;
+
         public ItemSlotButton(Texture texture, Texture storageTexture)
         {
             CustomMinimumSize = (64, 64);
@@ -31,6 +39,13 @@ namespace Content.Client.UserInterface
                 Texture = texture,
                 TextureScale = (2, 2),
                 MouseFilter = MouseFilterMode.Stop
+            });
+
+            AddChild(_highlightRect = new PanelContainer
+            {
+                StyleClasses = { StyleNano.StyleClassHandSlotHighlight },
+                CustomMinimumSize = (32, 32),
+                Visible = false
             });
 
             Button.OnKeyBindDown += OnButtonPressed;
@@ -92,6 +107,18 @@ namespace Content.Client.UserInterface
             {
                 HoverSpriteView.Sprite?.Owner.Delete();
                 HoverSpriteView.Sprite = null;
+            }
+        }
+
+        public virtual void Highlight(bool highlight)
+        {
+            if (highlight)
+            {
+                _highlightRect.Visible = true;
+            }
+            else
+            {
+                _highlightRect.Visible = false;
             }
         }
 

@@ -169,12 +169,14 @@ namespace Content.Server.AI.Utility.AiLogic
 
             var currentOp = ActualCurrentAction?.ActionOperators.Peek();
             currentOp?.Shutdown(Outcome.Failed);
+            CurrentAction?.Shutdown();
+            CurrentAction = null;
         }
 
-        private void DeathHandle(HealthChangedEventArgs eventArgs)
+        public void MobStateChanged(MobStateChangedMessage message)
         {
             var oldDeadState = _isDead;
-            _isDead = eventArgs.Damageable.CurrentState == DamageState.Dead || eventArgs.Damageable.CurrentState == DamageState.Critical;
+            _isDead = message.Component.IsIncapacitated();
 
             if (oldDeadState != _isDead)
             {

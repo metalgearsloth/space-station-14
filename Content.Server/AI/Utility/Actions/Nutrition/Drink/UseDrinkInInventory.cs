@@ -15,7 +15,7 @@ namespace Content.Server.AI.Utility.Actions.Nutrition.Drink
 {
     public sealed class UseDrinkInInventory : UtilityAction
     {
-        private IEntity _entity;
+        private readonly IEntity _entity;
 
         public UseDrinkInInventory(IEntity owner, IEntity entity, float weight) : base(owner)
         {

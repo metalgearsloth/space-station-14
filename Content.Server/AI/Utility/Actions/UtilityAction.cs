@@ -78,7 +78,7 @@ namespace Content.Server.AI.Utility.Actions
                 return Outcome.Success;
             }
 
-            op.TryStartup();
+            op.Startup();
             var outcome = op.Execute(frameTime);
 
             switch (outcome)

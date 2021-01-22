@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using Content.Client.UserInterface;
 using Content.Client.Utility;
 using JetBrains.Annotations;
@@ -22,14 +23,15 @@ namespace Content.Client.GameObjects.Components.HUD.Inventory
         [Dependency] private readonly IItemSlotManager _itemSlotManager = default!;
 
         private readonly Dictionary<Slots, List<ItemSlotButton>> _inventoryButtons
-            = new Dictionary<Slots, List<ItemSlotButton>>();
+            = new();
 
         private ItemSlotButton _hudButtonPocket1;
         private ItemSlotButton _hudButtonPocket2;
         private ItemSlotButton _hudButtonBelt;
         private ItemSlotButton _hudButtonBack;
         private ItemSlotButton _hudButtonId;
-        private Control _quickButtonsContainer;
+        private Control _rightQuickButtonsContainer;
+        private Control _leftQuickButtonsContainer;
 
         public HumanInventoryInterfaceController(ClientInventoryComponent owner) : base(owner)
         {
@@ -68,21 +70,41 @@ namespace Content.Client.GameObjects.Components.HUD.Inventory
             AddButton(out _hudButtonBelt, Slots.BELT, "belt");
             AddButton(out _hudButtonId, Slots.IDCARD, "id");
 
-            _quickButtonsContainer = new HBoxContainer
+            _leftQuickButtonsContainer = new HBoxContainer
             {
                 Children =
                 {
                     _hudButtonId,
-                    _hudButtonBelt,
                     _hudButtonBack,
+                    _hudButtonBelt,
+                },
+                SeparationOverride = 5
+            };
+            _rightQuickButtonsContainer = new HBoxContainer
+            {
+                Children =
+                {
                     _hudButtonPocket1,
                     _hudButtonPocket2,
-                }
+                    // keeps this "balanced" with the left, so the hands will appear perfectly in the center
+                    new Control{CustomMinimumSize = (64, 64)}
+                },
+                SeparationOverride = 5
             };
         }
 
         public override SS14Window Window => _window;
         private HumanInventoryWindow _window;
+
+        public override IEnumerable<ItemSlotButton> GetItemSlotButtons(Slots slot)
+        {
+            if (!_inventoryButtons.TryGetValue(slot, out var buttons))
+            {
+                return Enumerable.Empty<ItemSlotButton>();
+            }
+
+            return buttons;
+        }
 
         public override void AddToSlot(Slots slot, IEntity entity)
         {
@@ -150,7 +172,8 @@ namespace Content.Client.GameObjects.Components.HUD.Inventory
         {
             base.PlayerAttached();
 
-            GameHud.InventoryQuickButtonContainer.AddChild(_quickButtonsContainer);
+            GameHud.RightInventoryQuickButtonContainer.AddChild(_rightQuickButtonsContainer);
+            GameHud.LeftInventoryQuickButtonContainer.AddChild(_leftQuickButtonsContainer);
 
             // Update all the buttons to make sure they check out.
 
@@ -172,7 +195,8 @@ namespace Content.Client.GameObjects.Components.HUD.Inventory
         {
             base.PlayerDetached();
 
-            GameHud.InventoryQuickButtonContainer.RemoveChild(_quickButtonsContainer);
+            GameHud.RightInventoryQuickButtonContainer.RemoveChild(_rightQuickButtonsContainer);
+            GameHud.LeftInventoryQuickButtonContainer.RemoveChild(_leftQuickButtonsContainer);
 
             foreach (var (slot, list) in _inventoryButtons)
             {
@@ -186,7 +210,7 @@ namespace Content.Client.GameObjects.Components.HUD.Inventory
         private class HumanInventoryWindow : SS14Window
         {
             private const int ButtonSize = 64;
-            private const int ButtonSeparation = 2;
+            private const int ButtonSeparation = 4;
             private const int RightSeparation = 2;
 
             public IReadOnlyDictionary<Slots, ItemSlotButton> Buttons { get; }

@@ -1,4 +1,4 @@
-﻿namespace Content.Server
+namespace Content.Server
 {
 
     public static class IgnoredComponents
@@ -10,7 +10,6 @@
             "SubFloorHide",
             "LowWall",
             "ReinforcedWall",
-            "CharacterInfo",
             "InteractionOutline",
             "MeleeWeaponArcAnimation",
             "AnimationsTest",
@@ -19,6 +18,7 @@
             "Clickable",
             "RadiatingLight",
             "Icon",
+            "ClientEntitySpawner"
         };
 
     }

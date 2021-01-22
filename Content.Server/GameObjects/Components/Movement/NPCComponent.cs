@@ -49,7 +49,7 @@ namespace Content.Server.GameObjects.Components.Movement
             if (StartingGearPrototype != null)
             {
                 var startingGear = _prototypeManager.Index<StartingGearPrototype>(StartingGearPrototype);
-                _gameTicker.EquipStartingGear(Owner, startingGear);
+                _gameTicker.EquipStartingGear(Owner, startingGear, null);
             }
         }
 

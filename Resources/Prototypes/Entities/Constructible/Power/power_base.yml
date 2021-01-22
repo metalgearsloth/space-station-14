@@ -30,6 +30,7 @@
     sprite: Constructible/Power/power.rsi
     state: generator
   - type: NodeContainer
+    examinable: true
     nodes:
     - !type:AdjacentNode
       nodeGroupID: HVPower
@@ -37,6 +38,9 @@
     supplyRate: 3000
   - type: Anchorable
   - type: Pullable
+  - type: ClientEntitySpawner
+    prototypes:
+    - HVDummyWire
 
 - type: entity
   id: BaseSmes
@@ -68,8 +72,8 @@
   - type: Sprite
     netsync: false
     sprite: Constructible/Power/smes.rsi
-    state: smes
     layers:
+    - state: smes
     - state: smes-display
       shader: unshaded
   - type: Smes
@@ -80,6 +84,7 @@
     maxCharge: 1000
     startingCharge: 1000
   - type: NodeContainer
+    examinable: true
     nodes:
     - !type:AdjacentNode
       nodeGroupID: HVPower
@@ -91,7 +96,10 @@
     activeSupplyRate: 1000
   - type: Anchorable
   - type: Pullable
-
+  - type: ClientEntitySpawner
+    prototypes:
+    - HVDummyWire
+    
 - type: entity
   id: BaseSubstation
   description: Reduces the voltage of electricity put into it.
@@ -120,12 +128,18 @@
   - type: SnapGrid
     offset: Center
   - type: Sprite
-    sprite: Constructible/Power/power.rsi
-    state: storage
+    sprite: Constructible/Power/substation.rsi
+    layers:
+    - state: substation
+    - state: screen
+      shader: unshaded
+    - state: full
+      shader: unshaded
   - type: Battery
     maxCharge: 1000
     startingCharge: 1000
   - type: NodeContainer
+    examinable: true
     nodes:
     - !type:AdjacentNode
       nodeGroupID: HVPower
@@ -140,7 +154,11 @@
     activeSupplyRate: 1000
   - type: Anchorable
   - type: Pullable
-
+  - type: ClientEntitySpawner
+    prototypes:
+    - HVDummyWire
+    - MVDummyWire
+  
 - type: entity
   id: BaseApc
   description: A control terminal for the area's electrical systems.
@@ -150,6 +168,8 @@
     mode: SnapgridCenter
   components:
   - type: Clickable
+  - type: AccessReader
+    access: [["Engineering"]]
   - type: InteractionOutline
   - type: Physics
     shapes:
@@ -170,6 +190,7 @@
     maxCharge: 10000
     startingCharge: 10000
   - type: NodeContainer
+    examinable: true
     nodes:
     - !type:AdjacentNode
       nodeGroupID: MVPower
@@ -187,7 +208,14 @@
     interfaces:
     - key: enum.ApcUiKey.Key
       type: ApcBoundUserInterface
-
+  - type: Construction
+    graph: apc
+    node: apc
+  - type: ClientEntitySpawner
+    prototypes:
+    - MVDummyWire
+    - LVDummyWire
+    
 - type: entity
   id: SolarPanel
   name: solar panel
@@ -216,6 +244,7 @@
     sprite: Constructible/Power/solar_panel.rsi
     state: normal
   - type: NodeContainer
+    examinable: true
     nodes:
     - !type:AdjacentNode
       nodeGroupID: HVPower
@@ -224,8 +253,16 @@
     supply: 1500
   - type: SnapGrid
     offset: Center
-  - type: Breakable
-    deadThreshold: 100
+  - type: Damageable
     resistances: metallicResistances
+  - type: Destructible
+    thresholds:
+      100:
+        behaviors:
+        - !type:DoActsBehavior
+          acts: ["Breakage"]
   - type: Anchorable
   - type: Pullable
+  - type: ClientEntitySpawner
+    prototypes:
+    - HVDummyWire
