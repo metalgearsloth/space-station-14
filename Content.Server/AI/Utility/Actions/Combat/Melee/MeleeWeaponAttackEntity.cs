@@ -29,7 +29,7 @@ namespace Content.Server.AI.Utility.Actions.Combat.Melee
             Bonus = weight;
         }
 
-        public override void SetupOperators(Blackboard context)
+        public override Queue<AiOperator> GetOperators(Blackboard context)
         {
             MoveToEntityOperator moveOperator;
             var equipped = context.GetState<EquippedEntityState>().GetValue();
@@ -43,7 +43,7 @@ namespace Content.Server.AI.Utility.Actions.Combat.Melee
                 moveOperator = new MoveToEntityOperator(Owner, _entity);
             }
 
-            ActionOperators = new Queue<AiOperator>(new AiOperator[]
+            return new Queue<AiOperator>(new AiOperator[]
             {
                 moveOperator,
                 new SwingMeleeWeaponOperator(Owner, _entity),
@@ -58,7 +58,7 @@ namespace Content.Server.AI.Utility.Actions.Combat.Melee
             var equipped = context.GetState<EquippedEntityState>().GetValue();
             context.GetState<WeaponEntityState>().SetValue(equipped);
         }
-        
+
         protected override IReadOnlyCollection<Func<float>> GetConsiderations(Blackboard context)
         {
             var considerationsManager = IoCManager.Resolve<ConsiderationsManager>();

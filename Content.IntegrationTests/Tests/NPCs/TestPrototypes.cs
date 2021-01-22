@@ -55,42 +55,5 @@ namespace Content.IntegrationTests.Tests.NPCs
                 yield return action;
             }
         }
-
-        [Test]
-        public async Task ProfilesTest()
-        {
-            var server = StartServerDummyTicker();
-            await server.WaitIdleAsync();
-
-            var protoManager = server.ResolveDependency<IPrototypeManager>();
-
-            server.Assert(() =>
-            {
-                foreach (var prototype in protoManager.EnumeratePrototypes<NPCProfilePrototype>())
-                {
-                    foreach (var bSet in GetBehaviorSets(prototype, protoManager))
-                    {
-                        Assert.That(protoManager.HasIndex<BehaviorSetPrototype>(bSet));
-                    }
-                }
-            });
-        }
-
-        private IEnumerable<string> GetBehaviorSets(NPCProfilePrototype profile, IPrototypeManager prototypeManager)
-        {
-            if (profile.Parent != null)
-            {
-                var parent = prototypeManager.Index<NPCProfilePrototype>(profile.Parent);
-                foreach (var action in GetBehaviorSets(parent, prototypeManager))
-                {
-                    yield return action;
-                }
-            }
-
-            foreach (var bSet in profile.BehaviorSets)
-            {
-                yield return bSet;
-            }
-        }
     }
 }

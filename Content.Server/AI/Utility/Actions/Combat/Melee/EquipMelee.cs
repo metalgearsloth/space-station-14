@@ -23,9 +23,9 @@ namespace Content.Server.AI.Utility.Actions.Combat.Melee
             Bonus = weight;
         }
 
-        public override void SetupOperators(Blackboard context)
+        public override Queue<AiOperator> GetOperators(Blackboard context)
         {
-            ActionOperators = new Queue<AiOperator>(new AiOperator[]
+            return new Queue<AiOperator>(new AiOperator[]
             {
                 new EquipEntityOperator(Owner, _entity)
             });

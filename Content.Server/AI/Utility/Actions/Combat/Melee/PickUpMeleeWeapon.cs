@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Content.Server.AI.Operators;
 using Content.Server.AI.Operators.Sequences;
 using Content.Server.AI.Utility.Considerations;
 using Content.Server.AI.Utility.Considerations.Combat.Melee;
@@ -23,9 +24,9 @@ namespace Content.Server.AI.Utility.Actions.Combat.Melee
             Bonus = weight;
         }
 
-        public override void SetupOperators(Blackboard context)
+        public override Queue<AiOperator> GetOperators(Blackboard context)
         {
-            ActionOperators = new GoPickupEntitySequence(Owner, _entity).Sequence;
+            return new GoPickupEntitySequence(Owner, _entity).Sequence;
         }
 
         protected override void UpdateBlackboard(Blackboard context)
@@ -34,7 +35,7 @@ namespace Content.Server.AI.Utility.Actions.Combat.Melee
             context.GetState<TargetEntityState>().SetValue(_entity);
             context.GetState<WeaponEntityState>().SetValue(_entity);
         }
-        
+
         protected override IReadOnlyCollection<Func<float>> GetConsiderations(Blackboard context)
         {
             var considerationsManager = IoCManager.Resolve<ConsiderationsManager>();

@@ -61,6 +61,11 @@ namespace Content.Server.GameObjects.EntitySystems.AI
             }
         }
 
+        /// <summary>
+        ///     Takes in a prototype and outputs the relevant instantiated actions.
+        /// </summary>
+        /// <param name="behaviorSetPrototype"></param>
+        /// <returns></returns>
         private IEnumerable<IAiUtility> GetActions(BehaviorSetPrototype behaviorSetPrototype)
         {
             if (behaviorSetPrototype.Parent != null)
@@ -91,32 +96,9 @@ namespace Content.Server.GameObjects.EntitySystems.AI
             }
         }
 
-        public IEnumerable<string> GetBehaviorSets(string profile)
+        public List<IAiUtility> GetBehaviorActions(string behaviorSet)
         {
-            if (!_prototypeManager.TryIndex<NPCProfilePrototype>(profile, out var npcProfile))
-            {
-                Logger.Error($"Unable to find NPCProfile {profile}");
-                yield break;
-            }
-
-            if (npcProfile.Parent != null)
-            {
-                foreach (var bSet in GetBehaviorSets(npcProfile.Parent))
-                {
-                    yield return bSet;
-                }
-            }
-
-            foreach (var bSet in npcProfile.BehaviorSets)
-            {
-                if (!_prototypeManager.HasIndex<BehaviorSetPrototype>(bSet))
-                {
-                    Logger.Error($"Unable to find NPC BehaviorSet {bSet} in {npcProfile.ID}");
-                    continue;
-                }
-
-                yield return bSet;
-            }
+            return new List<IAiUtility>(_behaviorSets[behaviorSet]);
         }
 
         /// <inheritdoc />
@@ -179,11 +161,6 @@ namespace Content.Server.GameObjects.EntitySystems.AI
         private void HandleAiSleep(SleepAiMessage message)
         {
             _queuedSleepMessages.Add(message);
-        }
-
-        public List<IAiUtility> GetBehaviorActions(string behaviorSet)
-        {
-            return new List<IAiUtility>(_behaviorSets[behaviorSet]);
         }
     }
 }

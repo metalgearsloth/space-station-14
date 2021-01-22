@@ -21,9 +21,9 @@ namespace Content.Server.AI.Utility.Actions.Clothing.Head
             Bonus = weight;
         }
 
-        public override void SetupOperators(Blackboard context)
+        public override Queue<AiOperator> GetOperators(Blackboard context)
         {
-            ActionOperators = new Queue<AiOperator>(new AiOperator[]
+            return new Queue<AiOperator>(new AiOperator[]
             {
                 new EquipEntityOperator(Owner, _entity),
                 new UseItemInInventoryOperator(Owner, _entity),

@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using Content.Server.AI.Operators;
 using Content.Server.AI.Utility.Actions;
@@ -61,10 +62,11 @@ namespace Content.Server.AI.Utility.AiLogic
         /// </summary>
         private bool _isDead = false;
 
-        [ViewVariables(VVAccess.ReadWrite)]
-        public string? NPCProfile { get; private set; }
-
-        // These 2 methods will be used eventually if / when we get a director AI
+        /// <summary>
+        ///     Adds a behavior set to this entity.
+        /// </summary>
+        /// <param name="behaviorSet"></param>
+        /// <param name="sort"></param>
         public void AddBehaviorSet(string behaviorSet, bool sort = true)
         {
             var aiSystem = EntitySystem.Get<NPCSystem>();
@@ -76,9 +78,7 @@ namespace Content.Server.AI.Utility.AiLogic
 
             if (BehaviorSets.Count == 1 && !aiSystem.IsAwake(this))
             {
-                IoCManager.Resolve<IEntityManager>()
-                    .EventBus
-                    .RaiseEvent(EventSource.Local, new SleepAiMessage(this, false));
+                Owner.EntityManager.EventBus.RaiseEvent(EventSource.Local, new SleepAiMessage(this, false));
             }
         }
 
@@ -92,14 +92,12 @@ namespace Content.Server.AI.Utility.AiLogic
 
             if (BehaviorSets.Count == 0)
             {
-                IoCManager.Resolve<IEntityManager>()
-                    .EventBus
-                    .RaiseEvent(EventSource.Local, new SleepAiMessage(this, true));
+                Owner.EntityManager.EventBus.RaiseEvent(EventSource.Local, new SleepAiMessage(this, true));
             }
         }
 
         /// <summary>
-        /// Whenever the behavior sets are changed we'll re-sort the actions by bonus
+        ///     Whenever the behavior sets are changed we'll re-sort the actions by bonus
         /// </summary>
         protected void SortActions()
         {
@@ -147,18 +145,16 @@ namespace Content.Server.AI.Utility.AiLogic
         {
             base.ExposeData(serializer);
 
-            serializer.DataReadWriteFunction("profile", null, value => NPCProfile = value, () => NPCProfile);
-
-            if (NPCProfile != null)
-            {
-                var npcSystem = EntitySystem.Get<NPCSystem>();
-
-                foreach (var behaviorSet in npcSystem.GetBehaviorSets(NPCProfile))
+            serializer.DataReadWriteFunction("behaviorSets", new List<string>(),
+                sets =>
                 {
-                    AddBehaviorSet(behaviorSet, false);
-                }
-                SortActions();
-            }
+                    foreach (var behaviorSet in sets)
+                    {
+                        AddBehaviorSet(behaviorSet, false);
+                    }
+                    SortActions();
+                },
+                () => BehaviorSets.Keys.ToList());
         }
 
         public override void OnRemove()

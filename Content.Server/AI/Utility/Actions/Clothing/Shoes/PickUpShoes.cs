@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Content.Server.AI.Operators;
 using Content.Server.AI.Operators.Sequences;
 using Content.Server.AI.Utility.Considerations;
 using Content.Server.AI.Utility.Considerations.Containers;
@@ -22,9 +23,9 @@ namespace Content.Server.AI.Utility.Actions.Clothing.Shoes
             Bonus = weight;
         }
 
-        public override void SetupOperators(Blackboard context)
+        public override Queue<AiOperator> GetOperators(Blackboard context)
         {
-            ActionOperators = new GoPickupEntitySequence(Owner, _entity).Sequence;
+            return new GoPickupEntitySequence(Owner, _entity).Sequence;
         }
 
         protected override void UpdateBlackboard(Blackboard context)

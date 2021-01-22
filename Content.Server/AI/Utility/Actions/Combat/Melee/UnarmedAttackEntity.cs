@@ -27,7 +27,7 @@ namespace Content.Server.AI.Utility.Actions.Combat.Melee
             Bonus = weight;
         }
 
-        public override void SetupOperators(Blackboard context)
+        public override Queue<AiOperator> GetOperators(Blackboard context)
         {
             MoveToEntityOperator moveOperator;
             if (Owner.TryGetComponent(out UnarmedCombatComponent unarmedCombatComponent))
@@ -41,10 +41,10 @@ namespace Content.Server.AI.Utility.Actions.Combat.Melee
                 moveOperator = new MoveToEntityOperator(Owner, _entity);
             }
 
-            ActionOperators = new Queue<AiOperator>(new AiOperator[]
+            return new Queue<AiOperator>(new AiOperator[]
             {
                 moveOperator,
-                new UnarmedCombatOperator(Owner, _entity), 
+                new UnarmedCombatOperator(Owner, _entity),
             });
         }
 
@@ -60,7 +60,7 @@ namespace Content.Server.AI.Utility.Actions.Combat.Melee
         protected override IReadOnlyCollection<Func<float>> GetConsiderations(Blackboard context)
         {
             var considerationsManager = IoCManager.Resolve<ConsiderationsManager>();
-            
+
             return new[]
             {
                 considerationsManager.Get<TargetIsDeadCon>()

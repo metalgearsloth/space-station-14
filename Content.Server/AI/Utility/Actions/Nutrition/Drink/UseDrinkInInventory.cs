@@ -23,21 +23,21 @@ namespace Content.Server.AI.Utility.Actions.Nutrition.Drink
             Bonus = weight;
         }
 
-        public override void SetupOperators(Blackboard context)
+        public override Queue<AiOperator> GetOperators(Blackboard context)
         {
-            ActionOperators = new Queue<AiOperator>(new AiOperator[]
+            return new Queue<AiOperator>(new AiOperator[]
             {
                 new EquipEntityOperator(Owner, _entity),
                 new UseDrinkInInventoryOperator(Owner, _entity),
             });
         }
- 
+
         protected override void UpdateBlackboard(Blackboard context)
         {
             base.UpdateBlackboard(context);
             context.GetState<TargetEntityState>().SetValue(_entity);
-        }   
-        
+        }
+
         protected override IReadOnlyCollection<Func<float>> GetConsiderations(Blackboard context)
         {
             var considerationsManager = IoCManager.Resolve<ConsiderationsManager>();

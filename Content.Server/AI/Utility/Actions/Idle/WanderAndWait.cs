@@ -28,7 +28,7 @@ namespace Content.Server.AI.Utility.Actions.Idle
 
         public WanderAndWait(IEntity owner) : base(owner) {}
 
-        public override void SetupOperators(Blackboard context)
+        public override Queue<AiOperator> GetOperators(Blackboard context)
         {
             var robustRandom = IoCManager.Resolve<IRobustRandom>();
             var randomGrid = FindRandomGrid(robustRandom);
@@ -42,7 +42,7 @@ namespace Content.Server.AI.Utility.Actions.Idle
                 waitTime = 0.0f;
             }
 
-            ActionOperators = new Queue<AiOperator>(new AiOperator[]
+            return new Queue<AiOperator>(new AiOperator[]
             {
                 new MoveToGridOperator(Owner, randomGrid),
                 new WaitOperator(waitTime),

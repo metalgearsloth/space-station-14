@@ -21,9 +21,9 @@ namespace Content.Server.AI.Utility.Actions.Clothing.Gloves
             Bonus = weight;
         }
 
-        public override void SetupOperators(Blackboard context)
+        public override Queue<AiOperator> GetOperators(Blackboard context)
         {
-            ActionOperators = new Queue<AiOperator>(new AiOperator[]
+            return new Queue<AiOperator>(new AiOperator[]
             {
                 new EquipEntityOperator(Owner, _entity),
                 new UseItemInInventoryOperator(Owner, _entity),
@@ -35,7 +35,7 @@ namespace Content.Server.AI.Utility.Actions.Clothing.Gloves
             base.UpdateBlackboard(context);
             context.GetState<TargetEntityState>().SetValue(_entity);
         }
-        
+
         protected override IReadOnlyCollection<Func<float>> GetConsiderations(Blackboard context)
         {
             var considerationsManager = IoCManager.Resolve<ConsiderationsManager>();
