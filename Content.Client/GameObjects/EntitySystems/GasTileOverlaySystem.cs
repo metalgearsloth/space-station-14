@@ -6,11 +6,8 @@ using Content.Shared.Atmos;
 using Content.Shared.GameObjects.EntitySystems.Atmos;
 using JetBrains.Annotations;
 using Robust.Client.Graphics;
-using Robust.Client.Interfaces.Graphics.Overlays;
-using Robust.Client.Interfaces.ResourceManagement;
 using Robust.Client.ResourceManagement;
 using Robust.Client.Utility;
-using Robust.Shared.Interfaces.Map;
 using Robust.Shared.IoC;
 using Robust.Shared.Map;
 using Robust.Shared.Maths;
@@ -23,8 +20,6 @@ namespace Content.Client.GameObjects.EntitySystems
     {
         [Dependency] private readonly IMapManager _mapManager = default!;
         [Dependency] private readonly IResourceCache _resourceCache = default!;
-
-        private readonly Dictionary<float, Color> _fireCache = new Dictionary<float, Color>();
 
         // Gas overlays
         private readonly float[] _timer = new float[Atmospherics.TotalNumberOfGases];
@@ -41,8 +36,8 @@ namespace Content.Client.GameObjects.EntitySystems
         private readonly int[] _fireFrameCounter = new int[FireStates];
         private readonly Texture[][] _fireFrames = new Texture[FireStates][];
 
-        private Dictionary<GridId, Dictionary<Vector2i, GasOverlayChunk>> _tileData =
-            new Dictionary<GridId, Dictionary<Vector2i, GasOverlayChunk>>();
+        private readonly Dictionary<GridId, Dictionary<Vector2i, GasOverlayChunk>> _tileData =
+            new();
 
         private AtmosphereSystem _atmosphereSystem = default!;
 

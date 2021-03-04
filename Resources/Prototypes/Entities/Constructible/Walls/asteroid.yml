@@ -14,9 +14,16 @@
     shapes:
     - !type:PhysShapeAabb
       layer: [MobMask]
-  - type: Destructible
-    deadThreshold: 100
+  - type: Damageable
     resistances: metallicResistances
+  - type: Destructible
+    thresholds:
+    - trigger:
+        !type:DamageTrigger
+        damage: 100
+      behaviors:
+      - !type:DoActsBehavior
+        acts: ["Destruction"]
   - type: Occluder
     sizeX: 32
     sizeY: 32

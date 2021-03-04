@@ -1,5 +1,4 @@
 using Content.Client.GameObjects.Components.IconSmoothing;
-using Content.Shared.GameObjects.Components;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Serialization;
 using Robust.Shared.ViewVariables;
@@ -51,7 +50,7 @@ namespace Content.Client.GameObjects.Components
             Sprite.LayerSetState(ReinforcedCornerLayers.NW, $"{_reinforcedStateBase}{(int) cornerNW}");
         }
 
-        public enum ReinforcedCornerLayers
+        public enum ReinforcedCornerLayers : byte
         {
             SE,
             NE,

@@ -1,16 +1,14 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Content.Shared.Utility;
 using NUnit.Framework;
-using Robust.Server.Interfaces.Timing;
 using Robust.Shared.GameObjects;
-using Robust.Shared.Interfaces.GameObjects;
-using Robust.Shared.Interfaces.Map;
 using Robust.Shared.Log;
 using Robust.Shared.Map;
 using Robust.Shared.Prototypes;
+using Robust.Shared.Timing;
 
 namespace Content.IntegrationTests.Tests
 {
@@ -177,7 +175,7 @@ namespace Content.IntegrationTests.Tests
                         }, "Component '{0}' threw an exception.",
                         component.Name);
 
-                    server.RunTicks(10);
+                    server.RunTicks(2);
 
                     entityManager.DeleteEntity(entity.Uid);
                 }
@@ -307,7 +305,7 @@ namespace Content.IntegrationTests.Tests
                             component.Name);
                     }
 
-                    server.RunTicks(48); // Run one full second on the server
+                    server.RunTicks(2);
 
                     entityManager.DeleteEntity(entity.Uid);
                 }

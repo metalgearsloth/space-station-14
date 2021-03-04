@@ -2,9 +2,8 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Contracts;
 using Content.Client.GameObjects.Components.IconSmoothing;
-using Robust.Client.Interfaces.GameObjects.Components;
+using Robust.Client.GameObjects;
 using Robust.Shared.GameObjects;
-using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Maths;
 using Robust.Shared.ViewVariables;
 using static Robust.Client.GameObjects.SpriteComponent;
@@ -39,6 +38,7 @@ namespace Content.Client.GameObjects.Components
 
             _overlayEntity = Owner.EntityManager.SpawnEntity("LowWallOverlay", Owner.Transform.Coordinates);
             _overlayEntity.Transform.AttachParent(Owner);
+            _overlayEntity.Transform.LocalPosition = Vector2.Zero;
 
             _overlaySprite = _overlayEntity.GetComponent<ISpriteComponent>();
 
@@ -217,7 +217,7 @@ namespace Content.Client.GameObjects.Components
         }
 
         [SuppressMessage("ReSharper", "InconsistentNaming")]
-        private enum OverCornerLayers
+        private enum OverCornerLayers : byte
         {
             SE,
             NE,

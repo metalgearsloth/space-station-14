@@ -1,7 +1,6 @@
 using System;
 using Content.Server.GameObjects.EntitySystems.AI.Steering;
-using Robust.Shared.GameObjects.Systems;
-using Robust.Shared.Interfaces.GameObjects;
+using Robust.Shared.GameObjects;
 using Robust.Shared.Utility;
 
 namespace Content.Server.AI.Operators.Movement
@@ -16,12 +15,12 @@ namespace Content.Server.AI.Operators.Movement
         public float ArrivalDistance { get; }
         public float PathfindingProximity { get; }
 
-        private bool _requiresInRangeUnobstructed;
+        private readonly bool _requiresInRangeUnobstructed;
 
         public MoveToEntityOperator(
-            IEntity owner, 
-            IEntity target, 
-            float arrivalDistance = 1.0f, 
+            IEntity owner,
+            IEntity target,
+            float arrivalDistance = 1.0f,
             float pathfindingProximity = 1.5f,
             bool requiresInRangeUnobstructed = false)
         {
@@ -32,9 +31,9 @@ namespace Content.Server.AI.Operators.Movement
             _requiresInRangeUnobstructed = requiresInRangeUnobstructed;
         }
 
-        public override bool TryStartup()
+        public override bool Startup()
         {
-            if (!base.TryStartup())
+            if (!base.Startup())
             {
                 return true;
             }
@@ -44,12 +43,15 @@ namespace Content.Server.AI.Operators.Movement
             steering.Register(_owner, _request);
             return true;
         }
-        
-        public override void Shutdown(Outcome outcome)
+
+        public override bool Shutdown(Outcome outcome)
         {
-            base.Shutdown(outcome);
+            if (!base.Shutdown(outcome))
+                return false;
+
             var steering = EntitySystem.Get<AiSteeringSystem>();
             steering.Unregister(_owner);
+            return true;
         }
 
         public override Outcome Execute(float frameTime)

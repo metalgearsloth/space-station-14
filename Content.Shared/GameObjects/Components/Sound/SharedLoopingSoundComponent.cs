@@ -1,7 +1,7 @@
+#nullable enable
 using System;
 using Robust.Shared.Audio;
 using Robust.Shared.GameObjects;
-using Robust.Shared.Interfaces.Serialization;
 using Robust.Shared.Serialization;
 
 namespace Content.Shared.GameObjects.Components.Sound
@@ -46,7 +46,7 @@ namespace Content.Shared.GameObjects.Components.Sound
     [NetSerializable, Serializable]
     public class ScheduledSoundMessage : ComponentMessage
     {
-        public ScheduledSound Schedule;
+        public ScheduledSound Schedule = new();
         public ScheduledSoundMessage()
         {
             Directed = true;
@@ -56,7 +56,7 @@ namespace Content.Shared.GameObjects.Components.Sound
     [NetSerializable, Serializable]
     public class StopSoundScheduleMessage : ComponentMessage
     {
-        public string Filename;
+        public string Filename = string.Empty;
         public StopSoundScheduleMessage()
         {
             Directed = true;
@@ -106,7 +106,7 @@ namespace Content.Shared.GameObjects.Components.Sound
         /// </summary>
         public bool Play = true;
 
-        public void ExposeData(ObjectSerializer serializer)
+        void IExposeData.ExposeData(ObjectSerializer serializer)
         {
             if (serializer.Writing)
                 return;

@@ -2,8 +2,7 @@ using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
 using Content.Shared.Utility;
 using JetBrains.Annotations;
 using Robust.Client.GameObjects;
-using Robust.Client.Interfaces.GameObjects.Components;
-using Robust.Shared.Interfaces.GameObjects;
+using Robust.Shared.GameObjects;
 using Robust.Shared.Utility;
 using YamlDotNet.RepresentationModel;
 
@@ -47,6 +46,8 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels.Visualize
 
         public override void OnChangeData(AppearanceComponent component)
         {
+            base.OnChangeData(component);
+
             // tl;dr
             // 1.If no mag then hide it OR
             // 2. If step 0 isn't visible then hide it (mag or unshaded)

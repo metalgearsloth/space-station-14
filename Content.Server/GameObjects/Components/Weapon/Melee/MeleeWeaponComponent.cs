@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Content.Server.GameObjects.EntitySystems;
@@ -6,21 +6,20 @@ using Content.Shared.Damage;
 using Content.Shared.GameObjects.Components.Damage;
 using Content.Shared.GameObjects.Components.Items;
 using Content.Shared.Interfaces.GameObjects.Components;
-using Robust.Server.GameObjects.EntitySystems;
+using Content.Shared.Physics;
+using Robust.Server.GameObjects;
 using Robust.Shared.GameObjects;
-using Robust.Shared.GameObjects.Systems;
-using Robust.Shared.Interfaces.GameObjects;
-using Robust.Shared.Interfaces.Physics;
-using Robust.Shared.Interfaces.Timing;
 using Robust.Shared.IoC;
 using Robust.Shared.Maths;
+using Robust.Shared.Physics;
 using Robust.Shared.Serialization;
+using Robust.Shared.Timing;
 using Robust.Shared.ViewVariables;
 
 namespace Content.Server.GameObjects.Components.Weapon.Melee
 {
     [RegisterComponent]
-    public class MeleeWeaponComponent : Component, IAttack
+    public class MeleeWeaponComponent : Component, IAttack, IHandSelected
     {
         [Dependency] private readonly IPhysicsManager _physicsManager = default!;
         [Dependency] private readonly IGameTiming _gameTiming = default!;
@@ -65,7 +64,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Melee
             serializer.DataField(this, x => x.Arc, "arc", "default");
             serializer.DataField(this, x => x.ClickArc, "clickArc", "punch");
             serializer.DataField(this, x => x._hitSound, "hitSound", "/Audio/Weapons/genhit1.ogg");
-            serializer.DataField(this, x => x._missSound, "hitSound", "/Audio/Weapons/punchmiss.ogg");
+            serializer.DataField(this, x => x._missSound, "missSound", "/Audio/Weapons/punchmiss.ogg");
             serializer.DataField(this, x => x.ArcCooldownTime, "arcCooldownTime", 1f);
             serializer.DataField(this, x => x.CooldownTime, "cooldownTime", 1f);
             serializer.DataField(this, x => x.DamageType, "damageType", DamageType.Blunt);
@@ -83,11 +82,12 @@ namespace Content.Server.GameObjects.Components.Weapon.Melee
 
             var curTime = _gameTiming.CurTime;
 
-            if(curTime < _cooldownEnd)
+            if (curTime < _cooldownEnd)
                 return true;
 
             var location = eventArgs.User.Transform.Coordinates;
-            var angle = new Angle(eventArgs.ClickLocation.ToMapPos(Owner.EntityManager) - location.ToMapPos(Owner.EntityManager));
+            var diff = eventArgs.ClickLocation.ToMapPos(Owner.EntityManager) - location.ToMapPos(Owner.EntityManager);
+            var angle = Angle.FromWorldVec(diff);
 
             // This should really be improved. GetEntitiesInArc uses pos instead of bounding boxes.
             var entities = ArcRayCast(eventArgs.User.Transform.WorldPosition, angle, eventArgs.User);
@@ -95,7 +95,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Melee
             var audioSystem = EntitySystem.Get<AudioSystem>();
             if (entities.Count != 0)
             {
-                audioSystem.PlayFromEntity( _hitSound, entities.First());
+                audioSystem.PlayFromEntity(_hitSound, entities.First());
             }
             else
             {
@@ -114,8 +114,9 @@ namespace Content.Server.GameObjects.Components.Weapon.Melee
                     hitEntities.Add(entity);
                 }
             }
+            SendMessage(new MeleeHitMessage(hitEntities));
 
-            if(!OnHitEntities(hitEntities, eventArgs)) return false;
+            if (!OnHitEntities(hitEntities, eventArgs)) return false;
 
             if (Arc != null)
             {
@@ -126,11 +127,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Melee
             _lastAttackTime = curTime;
             _cooldownEnd = _lastAttackTime + TimeSpan.FromSeconds(ArcCooldownTime);
 
-            if (Owner.TryGetComponent(out ItemCooldownComponent cooldown))
-            {
-                cooldown.CooldownStart = _lastAttackTime;
-                cooldown.CooldownEnd = _cooldownEnd;
-            }
+            RefreshItemCooldown();
 
             return true;
         }
@@ -141,18 +138,19 @@ namespace Content.Server.GameObjects.Components.Weapon.Melee
 
             var curTime = _gameTiming.CurTime;
 
-            if(curTime < _cooldownEnd || !eventArgs.Target.IsValid())
+            if (curTime < _cooldownEnd || !eventArgs.Target.IsValid())
                 return true;
 
             var target = eventArgs.TargetEntity;
 
             var location = eventArgs.User.Transform.Coordinates;
-            var angle = new Angle(eventArgs.ClickLocation.ToMapPos(Owner.EntityManager) - location.ToMapPos(Owner.EntityManager));
+            var diff = eventArgs.ClickLocation.ToMapPos(Owner.EntityManager) - location.ToMapPos(Owner.EntityManager);
+            var angle = Angle.FromWorldVec(diff);
 
             var audioSystem = EntitySystem.Get<AudioSystem>();
             if (target != null)
             {
-                audioSystem.PlayFromEntity( _hitSound, target);
+                audioSystem.PlayFromEntity(_hitSound, target);
             }
             else
             {
@@ -164,8 +162,9 @@ namespace Content.Server.GameObjects.Components.Weapon.Melee
             {
                 damageComponent.ChangeDamage(DamageType, Damage, false, Owner);
             }
+            SendMessage(new MeleeHitMessage(new List<IEntity> { target }));
 
-            var targets = new[] {target};
+            var targets = new[] { target };
 
             if (!OnHitEntities(targets, eventArgs))
                 return false;
@@ -179,11 +178,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Melee
             _lastAttackTime = curTime;
             _cooldownEnd = _lastAttackTime + TimeSpan.FromSeconds(CooldownTime);
 
-            if (Owner.TryGetComponent(out ItemCooldownComponent cooldown))
-            {
-                cooldown.CooldownStart = _lastAttackTime;
-                cooldown.CooldownEnd = _cooldownEnd;
-            }
+            RefreshItemCooldown();
 
             return true;
         }
@@ -201,7 +196,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Melee
             for (var i = 0; i < increments; i++)
             {
                 var castAngle = new Angle(baseAngle + increment * i);
-                var res = _physicsManager.IntersectRay(mapId, new CollisionRay(position, castAngle.ToVec(), 23), Range, ignore).FirstOrDefault();
+                var res = _physicsManager.IntersectRay(mapId, new CollisionRay(position, castAngle.ToWorldVec(), (int) (CollisionGroup.Impassable|CollisionGroup.MobImpassable)), Range, ignore).FirstOrDefault();
                 if (res.HitEntity != null)
                 {
                     resSet.Add(res.HitEntity);
@@ -209,6 +204,49 @@ namespace Content.Server.GameObjects.Components.Weapon.Melee
             }
 
             return resSet;
+        }
+
+        void IHandSelected.HandSelected(HandSelectedEventArgs eventArgs)
+        {
+            var curTime = _gameTiming.CurTime;
+            var cool = TimeSpan.FromSeconds(CooldownTime * 0.5f);
+
+            if (curTime < _cooldownEnd)
+            {
+                if (_cooldownEnd - curTime < cool)
+                {
+                    _lastAttackTime = curTime;
+                    _cooldownEnd += cool;
+                }
+                else
+                    return;
+            }
+            else
+            {
+                _lastAttackTime = curTime;
+                _cooldownEnd = curTime + cool;
+            }
+
+            RefreshItemCooldown();
+        }
+
+        private void RefreshItemCooldown()
+        {
+            if (Owner.TryGetComponent(out ItemCooldownComponent cooldown))
+            {
+                cooldown.CooldownStart = _lastAttackTime;
+                cooldown.CooldownEnd = _cooldownEnd;
+            }
+        }
+    }
+
+    public class MeleeHitMessage : ComponentMessage
+    {
+        public readonly List<IEntity> HitEntities;
+
+        public MeleeHitMessage(List<IEntity> hitEntities)
+        {
+            HitEntities = hitEntities;
         }
     }
 }

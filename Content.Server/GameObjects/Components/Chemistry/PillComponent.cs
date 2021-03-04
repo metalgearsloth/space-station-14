@@ -1,20 +1,18 @@
 ﻿using System.Linq;
+using System.Threading.Tasks;
 using Content.Server.GameObjects.Components.Body.Behavior;
 using Content.Server.GameObjects.Components.Nutrition;
-using Content.Server.GameObjects.Components.Utensil;
+using Content.Server.GameObjects.Components.Culinary;
 using Content.Shared.Chemistry;
 using Content.Shared.GameObjects.Components.Body;
-using Content.Shared.GameObjects.Components.Body.Mechanism;
 using Content.Shared.Interfaces;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Content.Shared.Utility;
-using Robust.Server.GameObjects.EntitySystems;
+using Robust.Server.GameObjects;
 using Robust.Shared.Audio;
 using Robust.Shared.GameObjects;
-using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.IoC;
 using Robust.Shared.Localization;
-using Robust.Shared.Log;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization;
 using Robust.Shared.ViewVariables;
@@ -22,11 +20,9 @@ using Robust.Shared.ViewVariables;
 namespace Content.Server.GameObjects.Components.Chemistry
 {
     [RegisterComponent]
-    [ComponentReference(typeof(IAfterInteract))]
     public class PillComponent : FoodComponent, IUse, IAfterInteract
     {
         [Dependency] private readonly IEntitySystemManager _entitySystem = default!;
-        [Dependency] private readonly IPrototypeManager _prototypeManager = default!;
 
         public override string Name => "Pill";
 
@@ -52,10 +48,7 @@ namespace Content.Server.GameObjects.Components.Chemistry
         {
             base.Initialize();
 
-            if (!Owner.EnsureComponent(out _contents))
-            {
-                Logger.Error($"Prototype {Owner.Prototype?.ID} had a {nameof(PillComponent)} without a {nameof(SolutionContainerComponent)}!");
-            }
+            Owner.EnsureComponentWarn(out _contents);
         }
 
         bool IUse.UseEntity(UseEntityEventArgs eventArgs)
@@ -64,14 +57,15 @@ namespace Content.Server.GameObjects.Components.Chemistry
         }
 
         // Feeding someone else
-        void IAfterInteract.AfterInteract(AfterInteractEventArgs eventArgs)
+        async Task<bool> IAfterInteract.AfterInteract(AfterInteractEventArgs eventArgs)
         {
             if (eventArgs.Target == null)
             {
-                return;
+                return false;
             }
 
             TryUseFood(eventArgs.User, eventArgs.Target);
+            return true;
         }
 
         public override bool TryUseFood(IEntity user, IEntity target, UtensilComponent utensilUsed = null)
@@ -84,7 +78,7 @@ namespace Content.Server.GameObjects.Components.Chemistry
             var trueTarget = target ?? user;
 
             if (!trueTarget.TryGetComponent(out IBody body) ||
-                !body.TryGetMechanismBehaviors<StomachBehaviorComponent>(out var stomachs))
+                !body.TryGetMechanismBehaviors<StomachBehavior>(out var stomachs))
             {
                 return false;
             }
@@ -108,11 +102,7 @@ namespace Content.Server.GameObjects.Components.Chemistry
 
             // TODO: Account for partial transfer.
 
-            foreach (var (reagentId, quantity) in split.Contents)
-            {
-                if (!_prototypeManager.TryIndex(reagentId, out ReagentPrototype reagent)) continue;
-                split.RemoveReagent(reagentId, reagent.ReactionEntity(trueTarget, ReactionMethod.Ingestion, quantity));
-            }
+            split.DoEntityReaction(trueTarget, ReactionMethod.Ingestion);
 
             firstStomach.TryTransferSolution(split);
 

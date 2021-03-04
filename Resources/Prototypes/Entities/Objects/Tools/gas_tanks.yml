@@ -1,0 +1,148 @@
+﻿- type: entity
+  parent: BaseItem
+  abstract: true
+  id: GasTankBase
+  components:
+    - type: Sprite
+      sprite: Objects/Tanks/generic.rsi
+      state: icon
+    - type: UserInterface
+      interfaces:
+        - key: enum.SharedGasTankUiKey.Key
+          type: GasTankBoundUserInterface
+    - type: Clothing
+      sprite: Objects/Tanks/generic.rsi
+      QuickEquip: false
+    - type: GasTank
+    - type: ItemActions
+      actions:
+        - actionType: ToggleInternals
+
+- type: entity
+  id: OxygenTank
+  parent: GasTankBase
+  suffix: ent-gas-tank-suffix-empty
+  components:
+    - type: Sprite
+      sprite: Objects/Tanks/oxygen.rsi
+    - type: GasTank
+      outputPressure: 21.27825
+      air:
+        volume: 70
+        temperature: 293.15
+    - type: Clothing
+      sprite: Objects/Tanks/oxygen.rsi
+      Slots:
+        - Back
+
+- type: entity
+  id: YellowOxygenTank
+  parent: OxygenTank
+  suffix: ent-gas-tank-suffix-empty
+  components:
+    - type: Sprite
+      sprite: Objects/Tanks/yellow.rsi
+    - type: Clothing
+      sprite: Objects/Tanks/yellow.rsi
+      Slots:
+        - Back
+
+- type: entity
+  id: RedOxygenTank
+  parent: OxygenTank
+  suffix: ent-gas-tank-suffix-empty
+  components:
+    - type: Sprite
+      sprite: Objects/Tanks/red.rsi
+    - type: Clothing
+      sprite: Objects/Tanks/red.rsi
+      Slots:
+        - Back
+
+- type: entity
+  id: EmergencyOxygenTank
+  parent: OxygenTank
+  suffix: ent-gas-tank-suffix-empty
+  components:
+    - type: Sprite
+      sprite: Objects/Tanks/emergency.rsi
+    - type: GasTank
+      outputPressure: 21.27825
+      air:
+        volume: 2
+        temperature: 293.15
+    - type: Clothing
+      sprite: Objects/Tanks/emergency.rsi
+      Slots:
+        - Pocket
+        - Belt
+
+- type: entity
+  id: ExtendedEmergencyOxygenTank
+  parent: EmergencyOxygenTank
+  suffix: ent-gas-tank-suffix-empty
+  components:
+    - type: Sprite
+      sprite: Objects/Tanks/emergency_yellow.rsi
+    - type: GasTank
+      outputPressure: 21.27825
+      air:
+        volume: 6
+        temperature: 293.15
+    - type: Clothing
+      sprite: Objects/Tanks/emergency_yellow.rsi
+      Slots:
+        - Pocket
+        - Belt
+
+- type: entity
+  id: DoubleEmergencyOxygenTank
+  parent: ExtendedEmergencyOxygenTank
+  suffix: ent-gas-tank-suffix-empty
+  components:
+    - type: Sprite
+      sprite: Objects/Tanks/emergency_double.rsi
+    - type: GasTank
+      outputPressure: 21.27825
+      air:
+        volume: 10
+        temperature: 293.15
+    - type: Clothing
+      sprite: Objects/Tanks/emergency_double.rsi
+      Slots:
+        - Pocket
+        - Belt
+
+- type: entity
+  id: AirTank
+  parent: GasTankBase
+  suffix: ent-gas-tank-suffix-empty
+  components:
+    - type: Sprite
+      sprite: Objects/Tanks/generic.rsi
+    - type: GasTank
+      outputPressure: 101.325
+      air:
+        volume: 70
+        temperature: 293.15
+    - type: Clothing
+      sprite: Objects/Tanks/generic.rsi
+      Slots:
+        - Back
+
+- type: entity
+  id: PlasmaTank
+  parent: GasTankBase
+  suffix: ent-gas-tank-suffix-empty
+  components:
+    - type: Sprite
+      sprite: Objects/Tanks/plasma.rsi
+    - type: GasTank
+      outputPressure: 101.325
+      air:
+        volume: 70
+        temperature: 293.15
+    - type: Clothing
+      sprite: Objects/Tanks/plasma.rsi
+      Slots:
+        - Belt

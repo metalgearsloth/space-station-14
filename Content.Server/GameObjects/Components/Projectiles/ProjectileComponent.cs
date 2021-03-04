@@ -4,11 +4,9 @@ using Content.Server.GameObjects.Components.Mobs;
 using Content.Shared.Damage;
 using Content.Shared.GameObjects.Components.Damage;
 using Content.Shared.GameObjects.Components.Projectiles;
-using Robust.Server.GameObjects.EntitySystems;
+using Robust.Server.GameObjects;
 using Robust.Shared.GameObjects;
-using Robust.Shared.GameObjects.Components;
-using Robust.Shared.GameObjects.Systems;
-using Robust.Shared.Interfaces.GameObjects;
+using Robust.Shared.Players;
 using Robust.Shared.Serialization;
 using Robust.Shared.ViewVariables;
 
@@ -51,6 +49,8 @@ namespace Content.Server.GameObjects.Components.Projectiles
             Dirty();
         }
 
+        private bool _internalDeleteOnCollide;
+
         /// <summary>
         /// Applies the damage when our projectile collides with its victim
         /// </summary>
@@ -65,8 +65,12 @@ namespace Content.Server.GameObjects.Components.Projectiles
             // This is so entities that shouldn't get a collision are ignored.
             if (entity.TryGetComponent(out IPhysicsComponent otherPhysics) && otherPhysics.Hard == false)
             {
-                DeleteOnCollide = false;
+                _internalDeleteOnCollide = false;
                 return;
+            }
+            else
+            {
+                _internalDeleteOnCollide = true;
             }
 
             DeleteOnCollide = true;
@@ -104,10 +108,10 @@ namespace Content.Server.GameObjects.Components.Projectiles
 
         void ICollideBehavior.PostCollide(int collideCount)
         {
-            if (collideCount > 0 && DeleteOnCollide) Owner.Delete();
+            if (collideCount > 0 && DeleteOnCollide && _internalDeleteOnCollide) Owner.Delete();
         }
 
-        public override ComponentState GetComponentState()
+        public override ComponentState GetComponentState(ICommonSession player)
         {
             return new ProjectileComponentState(NetID!.Value, Shooter, IgnoreShooter);
         }

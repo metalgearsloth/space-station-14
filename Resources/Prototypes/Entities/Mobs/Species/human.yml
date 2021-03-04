@@ -1,13 +1,16 @@
-# Both humans and NPCs inherit from this.
 # Anything human specific (e.g. UI, input) goes under HumanMob_Content
 - type: entity
   save: false
   name: Urist McHands
   id: BaseHumanMob_Content
-  description: A miserable pile of secrets
+  description: A miserable pile of secrets.
   drawdepth: Mobs
   abstract: true
   components:
+  - type: Tag
+    tags:
+    - Teleportable
+    - FootstepSound
   - type: Flashable
   - type: Hands
   - type: MovementSpeedModifier
@@ -20,12 +23,9 @@
   # Organs
   - type: SolutionContainer
     maxVol: 250
-    caps: AddTo, RemoveFrom, NoExamine
+    caps: Injectable, Drawable
   - type: Bloodstream
     max_volume: 100
-  - type: Stomach
-    max_volume: 250
-    digestionDelay: 20
   # StatusEffects
   - type: Stunnable
   # Other
@@ -37,6 +37,7 @@
     state: full
   - type: Sprite
     netsync: false
+    noRot: true
     drawdepth: Mobs
     layers:
     - map: [ "enum.HumanoidVisualLayers.Chest" ]
@@ -128,6 +129,7 @@
       layer:
       - Opaque
       - MobImpassable
+  - type: PlayerInputMover
   - type: AtmosExposed
   - type: Flammable
     fireSpread: true
@@ -144,9 +146,7 @@
     preset: HumanPreset
     centerSlot: torso
   - type: Damageable
-    damagePrototype: biologicalDamageContainer
-    criticalThreshold: 100
-    deadThreshold: 200
+    damageContainer: biologicalDamageContainer
   - type: Metabolism
     metabolismHeat: 5000
     radiatedHeat: 400
@@ -160,49 +160,65 @@
     producesGases:
       Oxygen: 0.00045572916
       CarbonDioxide: 0.00015190972
-  - type: MobStateManager
+  - type: Internals
+  - type: MobState
+    thresholds:
+      0: !type:NormalMobState {}
+      100: !type:CriticalMobState {}
+      200: !type:DeadMobState {}
+  - type: Destructible
+    thresholds:
+    - trigger:
+        !type:DamageTypeTrigger
+        type: Blunt
+        damage: 400
+      behaviors:
+      - !type:GibBehavior { }
   - type: HeatResistance
   - type: Appearance
     visuals:
     - type: RotationVisualizer
     - type: BuckleVisualizer
     - type: FireVisualizer
+      sprite: Mobs/Effects/onfire.rsi
       normalState: Generic_mob_burning
       alternateState: Standing
       fireStackAlternateState: 3
     - type: CreamPiedVisualizer
+      state: creampie_human
   - type: CombatMode
   - type: Climbing
   - type: Cuffable
-  - type: Teleportable
   - type: CharacterInfo
-  - type: FootstepSound
   - type: AnimationPlayer
   - type: Buckle
   - type: UnarmedCombat
     range: 0.8
     arcwidth: 30
     arc: fist
-  - type: Grammar
-    proper: true
   - type: Pullable
   - type: DoAfter
   - type: CreamPied
+  - type: Stripping
   - type: Strippable
   - type: UserInterface
     interfaces:
     - key: enum.StrippingUiKey.Key
       type: StrippableBoundUserInterface
-    - key: enum.AcceptCloningUiKey.Key
-      type: AcceptCloningBoundUserInterface
   - type: Puller
+  - type: Butcherable
+    meat: FoodMeat
+  - type: Recyclable
+    safe: false
+  - type: Speech
+  - type: Emoting
 
 - type: entity
   save: false
   name: Urist McHands
   id: HumanMob_Dummy
   abstract: true
-  description: A dummy human meant to be used in character setup
+  description: A dummy human meant to be used in character setup.
   components:
     - type: Hands
     - type: Inventory
@@ -301,12 +317,12 @@
       preset: HumanPreset
       centerSlot: torso
     - type: Damageable
-      damagePrototype: biologicalDamageContainer
-      criticalThreshold: 100
-      deadThreshold: 200
-    - type: MobStateManager
+      damageContainer: biologicalDamageContainer
+    - type: MobState
+      thresholds:
+        0: !type:NormalMobState {}
+        100: !type:CriticalMobState {}
+        200: !type:DeadMobState {}
     - type: Appearance
       visuals:
       - type: RotationVisualizer
-    - type: Grammar
-      proper: true

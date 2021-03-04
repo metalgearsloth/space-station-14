@@ -1,12 +1,16 @@
+# TODO: Add description (many)
 - type: entity
   parent: BaseItem
   id: FoodBase
   abstract: true
   components:
+  - type: Tag
+    tags:
+    - Grindable
   - type: Food
   - type: LoopingSound
   - type: SolutionContainer
-    caps: NoExamine
+    caps: None
   - type: Sprite
     state: icon
     netsync: false
@@ -24,7 +28,7 @@
   name: 4no raisins
   parent: FoodBase
   id: Food4NoRaisins
-  description: Dried raisins
+  description: Dried raisins.
   components:
   - type: Food
     trash: TrashRaisins
@@ -35,7 +39,6 @@
         Quantity: 12
   - type: Sprite
     sprite: Objects/Consumable/Food/4no_raisins.rsi
-
   - type: Item
     sprite: Objects/Consumable/Food/4no_raisins.rsi
 
@@ -74,7 +77,7 @@
   name: amanita jelly
   parent: FoodBase
   id: FoodAmanitaJelly
-  description: Looks curiously toxic
+  description: Looks curiously toxic.
   components:
   - type: Food
     trash: TrashSnackBowl
@@ -341,7 +344,6 @@
         Quantity: 20
   - type: Sprite
     sprite: Objects/Consumable/Food/candy.rsi
-
   - type: Item
     sprite: Objects/Consumable/Food/candy.rsi
 
@@ -424,7 +426,6 @@
         Quantity: 4
   - type: Sprite
     sprite: Objects/Consumable/Food/cheeseburger.rsi
-
   - type: Item
     sprite: Objects/Consumable/Food/cheeseburger.rsi
 
@@ -432,7 +433,7 @@
   name: cheesecake (slice)
   parent: FoodBase
   id: FoodCheeseCakeSlice
-  description: Slice of pure cheestisfaction
+  description: Slice of pure cheestisfaction.
   components:
   - type: Food
     trash: TrashPlate
@@ -464,7 +465,7 @@
   name: cheesie honkers
   parent: FoodBase
   id: FoodCheesieHonkers
-  description: Bite sized cheesie snacks that will honk all over your mouth
+  description: Bite sized cheesie snacks that will honk all over your mouth.
   components:
   - type: Food
     trash: TrashCheesieHonkers
@@ -513,7 +514,7 @@
   name: chips
   parent: FoodBase
   id: FoodChips
-  description: Commander Riker's What-The-Crisps
+  description: Commander Riker's What-The-Crisps.
   components:
   - type: Food
     trash: TrashChips
@@ -524,7 +525,6 @@
         Quantity: 6
   - type: Sprite
     sprite: Objects/Consumable/Food/chips.rsi
-
   - type: Item
     sprite: Objects/Consumable/Food/chips.rsi
 
@@ -549,7 +549,7 @@
   name: chocolate cake (slice)
   parent: FoodBase
   id: FoodChocolateCakeSlice
-  description: A cake with added chocolate
+  description: A cake with added chocolate.
   components:
   - type: Food
     trash: TrashPlate
@@ -590,7 +590,6 @@
         Quantity: 12
   - type: Sprite
     sprite: Objects/Consumable/Food/clownburger.rsi
-
   - type: Item
     sprite: Objects/Consumable/Food/clownburger.rsi
 
@@ -760,7 +759,6 @@
         Quantity: 6
   - type: Sprite
     sprite: Objects/Consumable/Food/donut1.rsi
-
   - type: Item
     sprite: Objects/Consumable/Food/donut1.rsi
 
@@ -777,7 +775,6 @@
         Quantity: 6
   - type: Sprite
     sprite: Objects/Consumable/Food/donut2.rsi
-
   - type: Item
     sprite: Objects/Consumable/Food/donut2.rsi.rsi
 
@@ -794,7 +791,6 @@
         Quantity: 2
   - type: Sprite
     sprite: Objects/Consumable/Food/egg-blue.rsi
-
   - type: Item
     sprite: Objects/Consumable/Food/egg-blue.rsi.rsi
 
@@ -811,7 +807,6 @@
         Quantity: 2
   - type: Sprite
     sprite: Objects/Consumable/Food/egg-green.rsi
-
   - type: Item
     sprite: Objects/Consumable/Food/egg-green.rsi.rsi
 
@@ -828,7 +823,6 @@
         Quantity: 2
   - type: Sprite
     sprite: Objects/Consumable/Food/egg-mime.rsi
-
   - type: Item
     sprite: Objects/Consumable/Food/egg-mime.rsi.rsi
 
@@ -845,7 +839,6 @@
         Quantity: 2
   - type: Sprite
     sprite: Objects/Consumable/Food/egg-orange.rsi
-
   - type: Item
     sprite: Objects/Consumable/Food/egg-orange.rsi.rsi
 
@@ -862,7 +855,6 @@
         Quantity: 2
   - type: Sprite
     sprite: Objects/Consumable/Food/egg-purple.rsi
-
   - type: Item
     sprite: Objects/Consumable/Food/egg-purple.rsi.rsi
 
@@ -879,7 +871,6 @@
         Quantity: 2
   - type: Sprite
     sprite: Objects/Consumable/Food/egg-rainbow.rsi
-
   - type: Item
     sprite: Objects/Consumable/Food/egg-rainbow.rsi.rsi
 
@@ -896,7 +887,6 @@
         Quantity: 2
   - type: Sprite
     sprite: Objects/Consumable/Food/egg-red.rsi
-
   - type: Item
     sprite: Objects/Consumable/Food/egg-red.rsi.rsi
 
@@ -914,7 +904,6 @@
         Quantity: 2
   - type: Sprite
     sprite: Objects/Consumable/Food/egg-yellow.rsi
-
   - type: Item
     sprite: Objects/Consumable/Food/egg-yellow.rsi
 
@@ -931,14 +920,15 @@
         Quantity: 2
   - type: Sprite
     sprite: Objects/Consumable/Food/egg.rsi
-
+  - type: Produce
+    seed: eggy
   - type: Item
     sprite: Objects/Consumable/Food/egg.rsi
 
 - type: entity
   parent: FoodBase
   id: FoodEggplantparm
-  name: eggplant parmigiana  # parma or parmi
+  name: eggplant parmigiana
   description: The only good recipe for eggplant.
   components:
   - type: Food
@@ -1039,7 +1029,6 @@
         Quantity: 12
   - type: Sprite
     sprite: Objects/Consumable/Food/fishburger.rsi
-
   - type: Item
     sprite: Objects/Consumable/Food/fishburger.rsi
 
@@ -1180,7 +1169,6 @@
         Quantity: 12
   - type: Sprite
     sprite: Objects/Consumable/Food/hburger.rsi
-
   - type: Item
     sprite: Objects/Consumable/Food/hburger.rsi
 
@@ -1336,7 +1324,6 @@
         Quantity: 10
   - type: Sprite
     sprite: Objects/Consumable/Food/jellyburger.rsi
-
   - type: Item
     sprite: Objects/Consumable/Food/jellyburger.rsi
 
@@ -1512,7 +1499,6 @@
         Quantity: 6
   - type: Sprite
     sprite: Objects/Consumable/Food/meatball.rsi
-
   - type: Item
     sprite: Objects/Consumable/Food/meatball.rsi
 
@@ -1656,7 +1642,7 @@
   components:
   - type: SolutionContainer
     contents:
-      reagents:
+      reagents: # TODO: mint toxin
       - ReagentId: chem.Nutriment
         Quantity: 2
   - type: Sprite
@@ -1690,27 +1676,8 @@
         Quantity: 12
   - type: Sprite
     sprite: Objects/Consumable/Food/hburger.rsi
-
   - type: Item
     sprite: Objects/Consumable/Food/hburger.rsi
-
-- type: entity
-  parent: FoodBase
-  id: FoodMonkeyCube
-  name: monkey cube
-  description: Just add water!
-  components:
-  - type: SolutionContainer
-    contents:
-      reagents:
-      - ReagentId: chem.Nutriment
-        Quantity: 10
-    maxVol: 11 # needs room for water
-    caps: AddTo, RemoveFrom, FitsInDispenser
-  - type: Sprite
-    sprite: Objects/Consumable/Food/monkeycube.rsi
-  - type: Rehydratable
-    target: MonkeyMob_Content
 
 - type: entity
   parent: FoodBase
@@ -2156,7 +2123,7 @@
   parent: FoodBase
   id: FoodSausage
   name: sausage  # sanga
-  description: A piece of mixed, long meat.
+  description: It's best not to see how this was made.
   components:
   - type: SolutionContainer
     contents:
@@ -2209,7 +2176,6 @@
     trash: TrashSOSJerky
   - type: Sprite
     sprite: Objects/Consumable/Food/sosjerky.rsi
-
   - type: Item
     sprite: Objects/Consumable/Food/sosjerky.rsi
 
@@ -2251,7 +2217,7 @@
 - type: entity
   parent: FoodBase
   id: FoodSoylentYellow
-  name: soylen virdians
+  name: soylent viridians
   description: Not made of people. Honest.
   components:
   - type: Food
@@ -2339,7 +2305,6 @@
         Quantity: 12
   - type: Sprite
     sprite: Objects/Consumable/Food/spellburger.rsi
-
   - type: Item
     sprite: Objects/Consumable/Food/spellburger.rsi
 
@@ -2499,7 +2464,7 @@
 
 - type: entity
   parent: FoodBase
-  id: FoodToastedsandwich
+  id: FoodToastedSandwich
   name: toasted sandwich
   description: Now if you only had a pepper bar.
   components:
@@ -2559,7 +2524,6 @@
         Quantity: 12
   - type: Sprite
     sprite: Objects/Consumable/Food/tofuburger.rsi
-
   - type: Item
     sprite: Objects/Consumable/Food/tofuburger.rsi
 
@@ -2770,7 +2734,6 @@
         Quantity: 16
   - type: Sprite
     sprite: Objects/Consumable/Food/xburger.rsi
-
   - type: Item
     sprite: Objects/Consumable/Food/xburger.rsi
 
@@ -2859,23 +2822,6 @@
 
 
 - type: entity
-  name: banana
-  parent: FoodBase
-  id: FoodBanana
-  description: Rich in potassium.
-  components:
-    - type: Food
-      trash: TrashBananaPeel
-    - type: SolutionContainer
-      contents:
-        reagents:
-          - ReagentId: chem.Nutriment
-            Quantity: 6
-    - type: Sprite
-      sprite: Objects/Consumable/Food/banana.rsi
-
-
-- type: entity
   name: memory leek
   parent: FoodBase
   id: FoodMemoryLeek
@@ -2891,3 +2837,405 @@
       sprite: Objects/Consumable/Food/memoryleek.rsi
       state: memoryLeek
 
+
+- type: entity
+  parent: FoodBase
+  name: apple cake
+  id: FoodAppleCake
+  components:
+  - type: Food
+    trash: TrashTray
+  - type: SliceableFood
+    slice: FoodAppleCakeSlice
+  - type: SolutionContainer
+    contents:
+      reagents:
+      - ReagentId: chem.Nutriment
+        Quantity: 40
+  - type: Sprite
+    sprite: Objects/Consumable/Food/apple_cake.rsi
+
+
+- type: entity
+  parent: FoodBase
+  name: banana bread
+  id: FoodBananaBread
+  components:
+  - type: Food
+    trash: TrashTray
+  - type: SliceableFood
+    slice: FoodBananaBreadSlice
+  - type: SolutionContainer
+    contents:
+      reagents:
+      - ReagentId: chem.Nutriment
+        Quantity: 40
+  - type: Sprite
+    sprite: Objects/Consumable/Food/bananabread.rsi
+
+
+- type: entity
+  parent: FoodBase
+  name: birthday cake
+  id: FoodBirthdayCake
+  components:
+  - type: Food
+    trash: TrashTray
+  - type: SliceableFood
+    slice: FoodBirthdayCakeSlice
+  - type: SolutionContainer
+    contents:
+      reagents:
+      - ReagentId: chem.Nutriment
+        Quantity: 40
+  - type: Sprite
+    sprite: Objects/Consumable/Food/birthdaycake.rsi
+
+
+- type: entity
+  parent: FoodBase
+  name: brain cake
+  id: FoodBrainCake
+  components:
+  - type: Food
+    trash: TrashTray
+  - type: SliceableFood
+    slice: FoodBrainCakeSlice
+  - type: SolutionContainer
+    contents:
+      reagents:
+      - ReagentId: chem.Nutriment
+        Quantity: 40
+  - type: Sprite
+    sprite: Objects/Consumable/Food/braincake.rsi
+
+
+- type: entity
+  parent: FoodBase
+  name: bread
+  id: FoodBread
+  components:
+  - type: Food
+    trash: TrashTray
+  - type: SliceableFood
+    slice: FoodBreadSlice
+  - type: SolutionContainer
+    contents:
+      reagents:
+      - ReagentId: chem.Nutriment
+        Quantity: 40
+  - type: Sprite
+    sprite: Objects/Consumable/Food/bread.rsi
+
+
+- type: entity
+  parent: FoodBase
+  name: carrot cake
+  id: FoodCarrotCake
+  components:
+  - type: Food
+    trash: TrashTray
+  - type: SliceableFood
+    slice: FoodCarrotCakeSlice
+  - type: SolutionContainer
+    contents:
+      reagents:
+      - ReagentId: chem.Nutriment
+        Quantity: 40
+  - type: Sprite
+    sprite: Objects/Consumable/Food/carrotcake.rsi
+
+
+- type: entity
+  parent: FoodBase
+  name: cheesecake
+  id: FoodCheeseCake
+  components:
+  - type: Food
+    trash: TrashTray
+  - type: SliceableFood
+    slice: FoodCheeseCakeSlice
+  - type: SolutionContainer
+    contents:
+      reagents:
+      - ReagentId: chem.Nutriment
+        Quantity: 40
+  - type: Sprite
+    sprite: Objects/Consumable/Food/cheesecake.rsi
+
+
+- type: entity
+  parent: FoodBase
+  name: cheese wheel
+  id: FoodCheeseWheel
+  components:
+  - type: Food
+    trash: TrashTray
+  - type: SliceableFood
+    slice: FoodCheeseWedge
+  - type: SolutionContainer
+    contents:
+      reagents:
+      - ReagentId: chem.Nutriment
+        Quantity: 40
+  - type: Sprite
+    sprite: Objects/Consumable/Food/apple_cake.rsi
+
+
+- type: entity
+  parent: FoodBase
+  name: chocolate cake
+  id: FoodChocolateCake
+  components:
+  - type: Food
+    trash: TrashTray
+  - type: SliceableFood
+    slice: FoodChocolateCakeSlice
+  - type: SolutionContainer
+    contents:
+      reagents:
+      - ReagentId: chem.Nutriment
+        Quantity: 40
+  - type: Sprite
+    sprite: Objects/Consumable/Food/chocolatecake.rsi
+
+
+- type: entity
+  parent: FoodBase
+  name: cream cheese bread
+  id: FoodCreamCheeseBread
+  components:
+  - type: Food
+    trash: TrashTray
+  - type: SliceableFood
+    slice: FoodCreamCheeseBreadSlice
+  - type: SolutionContainer
+    contents:
+      reagents:
+      - ReagentId: chem.Nutriment
+        Quantity: 40
+  - type: Sprite
+    sprite: Objects/Consumable/Food/creamcheesebread.rsi
+
+
+- type: entity
+  parent: FoodBase
+  name: lemon cake
+  id: FoodLemonCake
+  components:
+  - type: Food
+    trash: TrashTray
+  - type: SliceableFood
+    slice: FoodLemonCakeSlice
+  - type: SolutionContainer
+    contents:
+      reagents:
+      - ReagentId: chem.Nutriment
+        Quantity: 40
+  - type: Sprite
+    sprite: Objects/Consumable/Food/lemoncake.rsi
+
+
+- type: entity
+  parent: FoodBase
+  name: lime cake
+  id: FoodLimeCake
+  components:
+  - type: Food
+    trash: TrashTray
+  - type: SliceableFood
+    slice: FoodLimeCakeSlice
+  - type: SolutionContainer
+    contents:
+      reagents:
+      - ReagentId: chem.Nutriment
+        Quantity: 40
+  - type: Sprite
+    sprite: Objects/Consumable/Food/limecake.rsi
+
+
+- type: entity
+  parent: FoodBase
+  name: meat bread
+  id: FoodMeatBread
+  components:
+  - type: Food
+    trash: TrashTray
+  - type: SliceableFood
+    slice: FoodMeatBreadSlice
+  - type: SolutionContainer
+    contents:
+      reagents:
+      - ReagentId: chem.Nutriment
+        Quantity: 40
+  - type: Sprite
+    sprite: Objects/Consumable/Food/meatbread.rsi
+
+
+- type: entity
+  parent: FoodBase
+  name: meat pizza
+  id: FoodMeatPizza
+  components:
+  - type: Food
+    trash: TrashTray
+  - type: SliceableFood
+    count: 6
+    slice: FoodMeatPizzaSlice
+  - type: SolutionContainer
+    contents:
+      reagents:
+      - ReagentId: chem.Nutriment
+        Quantity: 48
+  - type: Sprite
+    sprite: Objects/Consumable/Food/meatpizza.rsi
+
+
+- type: entity
+  parent: FoodBase
+  name: mushroom pizza
+  id: FoodMushroomPizza
+  components:
+  - type: Food
+    trash: TrashTray
+  - type: SliceableFood
+    count: 6
+    slice: FoodMushroomPizzaSlice
+  - type: SolutionContainer
+    contents:
+      reagents:
+      - ReagentId: chem.Nutriment
+        Quantity: 48
+  - type: Sprite
+    sprite: Objects/Consumable/Food/mushroompizza.rsi
+
+
+- type: entity
+  parent: FoodBase
+  name: orange cake
+  id: FoodOrangeCake
+  components:
+  - type: Food
+    trash: TrashTray
+  - type: SliceableFood
+    slice: FoodOrangeCakeSlice
+  - type: SolutionContainer
+    contents:
+      reagents:
+      - ReagentId: chem.Nutriment
+        Quantity: 40
+  - type: Sprite
+    sprite: Objects/Consumable/Food/orangecake.rsi
+
+
+- type: entity
+  parent: FoodBase
+  name: margherita pizza
+  id: FoodMargheritaPizza
+  components:
+  - type: Food
+    trash: TrashTray
+  - type: SliceableFood
+    count: 6
+    slice: FoodMargheritaPizzaSlice
+  - type: SolutionContainer
+    contents:
+      reagents:
+      - ReagentId: chem.Nutriment
+        Quantity: 48
+  - type: Sprite
+    sprite: Objects/Consumable/Food/pizzamargherita.rsi
+
+
+- type: entity
+  parent: FoodBase
+  name: plain cake
+  id: FoodPlainCake
+  components:
+  - type: Food
+    trash: TrashTray
+  - type: SliceableFood
+    slice: FoodPlainCakeSlice
+  - type: SolutionContainer
+    contents:
+      reagents:
+      - ReagentId: chem.Nutriment
+        Quantity: 40
+  - type: Sprite
+    sprite: Objects/Consumable/Food/plaincake.rsi
+
+
+- type: entity
+  parent: FoodBase
+  name: pumpkin pie
+  id: FoodPumpkinPie
+  components:
+  - type: Food
+    trash: TrashTray
+  - type: SliceableFood
+    slice: FoodPumpkinPieSlice
+  - type: SolutionContainer
+    contents:
+      reagents:
+      - ReagentId: chem.Nutriment
+        Quantity: 40
+  - type: Sprite
+    sprite: Objects/Consumable/Food/pumpkinpie.rsi
+
+  - type: Item
+    sprite: Objects/Consumable/Food/pumpkinpie.rsi
+
+
+- type: entity
+  parent: FoodBase
+  name: tofu bread
+  id: FoodTofuBread
+  components:
+  - type: Food
+    trash: TrashTray
+  - type: SliceableFood
+    slice: FoodTofuBreadSlice
+  - type: SolutionContainer
+    contents:
+      reagents:
+      - ReagentId: chem.Nutriment
+        Quantity: 40
+  - type: Sprite
+    sprite: Objects/Consumable/Food/tofubread.rsi
+
+
+- type: entity
+  parent: FoodBase
+  name: vegetable pizza
+  id: FoodVegetablePizza
+  components:
+  - type: Food
+    trash: TrashTray
+  - type: SliceableFood
+    count: 6
+    slice: FoodVegetablePizzaSlice
+  - type: SolutionContainer
+    contents:
+      reagents:
+      - ReagentId: chem.Nutriment
+        Quantity: 48
+  - type: Sprite
+    sprite: Objects/Consumable/Food/vegetablepizza.rsi
+
+
+- type: entity
+  parent: FoodBase
+  name: xenomeat bread
+  id: FoodXenomeatBread
+  components:
+  - type: Food
+    trash: TrashTray
+  - type: SliceableFood
+    slice: FoodXenomeatBreadSlice
+  - type: SolutionContainer
+    contents:
+      reagents:
+      - ReagentId: chem.Nutriment
+        Quantity: 40
+  - type: Sprite
+    sprite: Objects/Consumable/Food/xenomeatbread.rsi

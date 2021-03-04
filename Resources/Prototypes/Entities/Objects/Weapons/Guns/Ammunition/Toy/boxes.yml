@@ -13,14 +13,25 @@
 # Boxes
 - type: entity
   id: BoxDonkSoftBox
-  name: "foamdart box"
+  name: "foam dart box"
   parent: BoxDonkSoftBase
   components:
   - type: RangedMagazine
     capacity: 40
     fillPrototype: BulletDonkSoft
-
   - type: Sprite
     sprite: Objects/Fun/toys.rsi
     state: foambox
     netsync: false
+    
+- type: entity
+  id: BoxCartridgeCap
+  name: "cap gun cartridge box"
+  parent: BoxDonkSoftBase
+  components:
+  - type: AmmoBox
+    capacity: 20
+    fillPrototype: CartridgeCap
+  - type: Sprite
+    sprite: Objects\Storage\boxes.rsi
+    state: box

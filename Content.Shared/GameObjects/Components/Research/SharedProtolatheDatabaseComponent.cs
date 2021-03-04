@@ -1,3 +1,4 @@
+#nullable enable
 using System;
 using System.Collections.Generic;
 using Content.Shared.Research;
@@ -15,7 +16,7 @@ namespace Content.Shared.GameObjects.Components.Research
         public override string Name => "ProtolatheDatabase";
         public sealed override uint? NetID => ContentNetIDs.PROTOLATHE_DATABASE;
 
-        private List<LatheRecipePrototype> _protolatheRecipes = new List<LatheRecipePrototype>();
+        private readonly List<LatheRecipePrototype> _protolatheRecipes = new();
 
         /// <summary>
         ///    A full list of recipes this protolathe can print.
@@ -35,7 +36,7 @@ namespace Content.Shared.GameObjects.Components.Research
 
                     foreach (var id in recipes)
                     {
-                        if (prototypeManager.TryIndex(id, out LatheRecipePrototype recipe))
+                        if (prototypeManager.TryIndex(id, out LatheRecipePrototype? recipe))
                         {
                             _protolatheRecipes.Add(recipe);
                         }

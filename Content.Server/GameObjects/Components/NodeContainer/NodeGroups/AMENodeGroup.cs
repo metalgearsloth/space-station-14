@@ -1,10 +1,13 @@
-﻿using System;
+#nullable enable
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Content.Server.Explosions;
 using Content.Server.GameObjects.Components.NodeContainer.Nodes;
 using Content.Server.GameObjects.Components.Power.AME;
-using Robust.Shared.GameObjects.Components.Transform;
+using Robust.Shared.GameObjects;
+using Robust.Shared.Random;
+using Robust.Shared.IoC;
 using Robust.Shared.ViewVariables;
 
 namespace Content.Server.GameObjects.Components.NodeContainer.NodeGroups
@@ -21,11 +24,14 @@ namespace Content.Server.GameObjects.Components.NodeContainer.NodeGroups
         /// since any part connected to the node group can easily find the master.
         /// </summary>
         [ViewVariables]
-        private AMEControllerComponent _masterController;
+        private AMEControllerComponent? _masterController;
 
-        public AMEControllerComponent MasterController => _masterController;
+        [Dependency]
+        private readonly IRobustRandom _random = default!;
 
-        private List<AMEShieldComponent> _cores = new List<AMEShieldComponent>();
+        public AMEControllerComponent? MasterController => _masterController;
+
+        private readonly List<AMEShieldComponent> _cores = new();
 
         public int CoreCount => _cores.Count;
 
@@ -46,20 +52,18 @@ namespace Content.Server.GameObjects.Components.NodeContainer.NodeGroups
             if (_masterController != null && _masterController?.Owner == node.Owner) { _masterController = null; }
         }
 
-        public void RefreshAMENodes(AMEControllerComponent controller)
+        public void RefreshAMENodes(AMEControllerComponent? controller)
         {
             if(_masterController == null && controller != null)
             {
                 _masterController = controller;
             }
 
-            if (_cores != null) {
-                foreach (AMEShieldComponent core in _cores)
-                {
-                    core.UnsetCore();
-                }
-                _cores.Clear();
+            foreach (AMEShieldComponent core in _cores)
+            {
+                core.UnsetCore();
             }
+            _cores.Clear();
 
             //Check each shield node to see if it meets core criteria
             foreach (Node node in Nodes)
@@ -73,10 +77,11 @@ namespace Content.Server.GameObjects.Components.NodeContainer.NodeGroups
                     .Select(entity => entity.TryGetComponent<AMEShieldComponent>(out var adjshield) ? adjshield : null)
                     .Where(adjshield => adjshield != null);
 
-                if (nodeNeighbors.Count() >= 8) { _cores.Add(shield); }
+                if (nodeNeighbors.Count() >= 8)
+                {
+                    _cores.Add(shield);
+                }
             }
-
-            if (_cores == null) { return; }
 
             foreach (AMEShieldComponent core in _cores)
             {
@@ -95,16 +100,42 @@ namespace Content.Server.GameObjects.Components.NodeContainer.NodeGroups
             }
         }
 
-        public int InjectFuel(int injectionAmount)
+        public int InjectFuel(int fuel, out bool overloading)
         {
-            if(injectionAmount > 0 && CoreCount > 0)
+            overloading = false;
+            if(fuel > 0 && CoreCount > 0)
             {
-                var instability = 2 * (injectionAmount / CoreCount);
-                foreach(AMEShieldComponent core in _cores)
+                var safeFuelLimit = CoreCount * 2;
+                if (fuel > safeFuelLimit)
                 {
-                    core.CoreIntegrity -= instability;
+                    // The AME is being overloaded.
+                    // Note about these maths: I would assume the general idea here is to make larger engines less safe to overload.
+                    // In other words, yes, those are supposed to be CoreCount, not safeFuelLimit.
+                    var instability = 0;
+                    var overloadVsSizeResult = fuel - CoreCount;
+
+                    // fuel > safeFuelLimit: Slow damage. Can safely run at this level for burst periods if the engine is small and someone is keeping an eye on it.
+                    if (_random.Prob(0.5f))
+                        instability = 1;
+                    // overloadVsSizeResult > 5: 
+                    if (overloadVsSizeResult > 5)
+                        instability = 5;
+                    // overloadVsSizeResult > 10: This will explode in at most 5 injections.
+                    if (overloadVsSizeResult > 10)
+                        instability = 20;
+
+                    // Apply calculated instability
+                    if (instability != 0)
+                    {
+                        overloading = true;
+                        foreach(AMEShieldComponent core in _cores)
+                        {
+                            core.CoreIntegrity -= instability;
+                        }
+                    }
                 }
-                return CoreCount * injectionAmount * 15000; //2 core engine injecting 2 fuel per core = 60kW(?)
+                // Note the float conversions. The maths will completely fail if not done using floats.
+                return (int) ((((float) fuel) / CoreCount) * fuel * 20000);
             }
             return 0;
         }
@@ -143,9 +174,7 @@ namespace Content.Server.GameObjects.Components.NodeContainer.NodeGroups
 
             intensity = Math.Min(intensity, 8);
 
-            ExplosionHelper.SpawnExplosion(epicenter.Owner.Transform.Coordinates, intensity / 2, intensity, intensity * 2, intensity * 3);
-
+            epicenter.Owner.SpawnExplosion(intensity / 2, intensity, intensity * 2, intensity * 3);
         }
-
     }
 }

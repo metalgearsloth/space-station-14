@@ -34,7 +34,7 @@
   name: lizard plushie
   parent: BaseItem
   id: PlushieLizard
-  description: An adorable stuffed toy that resembles a lizardperson.
+  description: An adorable stuffed toy that resembles a lizardperson. Made by CentCom as a token initiative to combat speciesism in work environments. "Welcome your new colleges as you do this plush, with open arms!"
   components:
   - type: Toys
   - type: LoopingSound
@@ -286,7 +286,7 @@
   name: ian toy
   parent: BaseItem
   id: ToyIan
-  description: Ian action figure
+  description: Ian action figure.
   components:
   - type: Sprite
     sprite: Objects/Fun/toys.rsi
@@ -440,7 +440,6 @@
   name: foam weapon base
   parent: BaseItem
   id: FoamWeaponBase
-  description:
   abstract: true
   components:
   - type: Sprite
@@ -526,7 +525,6 @@
   - type: Sprite
     sprite: Objects/Fun/toys.rsi
     state: foamblade
-
   - type: MeleeWeapon
     range: 2.0
     arcwidth: 0
@@ -536,6 +534,15 @@
     sprite: Objects/Fun/toys.rsi
     HeldPrefix: foamblade
   - type: ItemCooldown
+
+- type: entity
+  name: foamblade
+  parent: FoamBlade
+  id: FoamBladeAdminbus
+  suffix: adminbused
+  components:
+    - type: MeleeWeapon
+      damage: 1000
 
 # MISC
 
@@ -574,7 +581,7 @@
   name: syndie balloon
   parent: BaseItem
   id: BalloonSyn
-  description: Loud and proud
+  description: Loud and proud.
   components:
   - type: Sprite
     sprite: Objects/Fun/toys.rsi
@@ -589,7 +596,7 @@
   name: corgi balloon
   parent: BaseItem
   id: BalloonCorgi
-  description: Cute
+  description: Cute.
   components:
   - type: Sprite
     sprite: Objects/Fun/toys.rsi

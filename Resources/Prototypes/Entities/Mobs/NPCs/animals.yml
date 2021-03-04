@@ -2,29 +2,17 @@
 #1D2L3U4R
 
 - type: entity
-  save: false
   name: monkey
   id: MonkeyMob_Content
-  description: A description.
-  drawdepth: Mobs
-  suffix: AI
+  parent: SimpleMobBase
+  description: New church of neo-darwinists actually believe that EVERY animal evolved from a monkey. Tastes like pork, and killing them is both fun and relaxing.
   components:
-  - type: AiController
-    logic: Civilian
-  - type: AiFactionTag
-    factions:
-    - SimpleNeutral
-  - type: MovementSpeedModifier
-    baseWalkSpeed : 4
-    baseSprintSpeed : 4
-  - type: InteractionOutline
   - type: Sprite
     drawdepth: Mobs
     layers:
     - map: ["enum.DamageStateVisualLayers.Base"]
       state: monkey
       sprite: Mobs/Animals/monkey.rsi
-  - type: Clickable
   - type: Physics
     anchored: false
     mass: 50
@@ -33,43 +21,24 @@
       bounds: "-0.30,-0.25,0.40,0.25"
       mask:
       - Impassable
-      - MobImpassable
       - VaultImpassable
       - SmallImpassable
       layer:
       - Opaque
-      - MobImpassable
-  - type: Damageable
-    criticalThreshold: 50
-    deadThreshold: 100
-  - type: MobStateManager
-  - type: HeatResistance
-  - type: CombatMode
-  - type: Teleportable
-  - type: Stunnable
-  - type: UnarmedCombat
-    range: 1.5
-    arcwidth: 0
-    arc: bite
-    damage: 50
-  - type: MovementIgnoreGravity
   - type: Appearance
     visuals:
     - type: DamageStateVisualizer
       normal: monkey
       dead: dead
-  - type: Pullable
-  - type: Butcherable
-    meat: FoodMeat
+    - type: FireVisualizer
+      sprite: Mobs/Effects/onfire.rsi
+      normalState: Monkey_burning
 
 - type: entity
-  save: false
   name: gorilla
-  parent: MonkeyMob_Content
+  parent: SimpleMobBase
   id: GorillaMob_Content
-  description:
-  drawdepth: Mobs
-  suffix: AI
+  description: Smashes, roars, looks cool. Don't stand near one.
   components:
   - type: Sprite
     drawdepth: Mobs
@@ -85,12 +54,10 @@
       bounds: "-0.90,-0.50,0.05,0.50"
       mask:
       - Impassable
-      - MobImpassable
       - VaultImpassable
       - SmallImpassable
       layer:
       - Opaque
-      - MobImpassable
   - type: Appearance
     visuals:
     - type: DamageStateVisualizer
@@ -98,13 +65,10 @@
       dead: dead
 
 - type: entity
-  save: false
   name: chicken
-  parent: MonkeyMob_Content
+  parent: SimpleMobBase
   id: ChickenMob_Content
-  description:
-  drawdepth: Mobs
-  suffix: AI
+  description: Comes before an egg, and IS a dinosaur!
   components:
   - type: Sprite
     drawdepth: Mobs
@@ -120,12 +84,10 @@
       bounds: "-0.45,-0.20,0.10,0.20"
       mask:
       - Impassable
-      - MobImpassable
       - VaultImpassable
       - SmallImpassable
       layer:
       - Opaque
-      - MobImpassable
   - type: Appearance
     visuals:
     - type: DamageStateVisualizer
@@ -133,13 +95,10 @@
       dead: dead-0
 
 - type: entity
-  save: false
   name: butterfly
-  parent: MonkeyMob_Content
+  parent: SimpleMobBase
   id: ButterflyMob_Content
-  description:
-  drawdepth: Mobs
-  suffix: AI
+  description: Despite popular misconceptions, it's not actually made of butter.
   components:
   - type: MovementSpeedModifier
     baseWalkSpeed : 6
@@ -158,12 +117,10 @@
       bounds: "-0.20,-0.20,0.20,0.20"
       mask:
       - Impassable
-      - MobImpassable
       - VaultImpassable
       - SmallImpassable
       layer:
       - Opaque
-      - MobImpassable
   - type: RandomSpriteColor
     state: butterfly
     colors:
@@ -181,13 +138,10 @@
       dead: dead
 
 - type: entity
-  save: false
   name: bat
-  parent: MonkeyMob_Content
+  parent: SimpleMobBase
   id: BatMob_Content
-  description:
-  drawdepth: Mobs
-  suffix: AI
+  description: Some cultures find them terrifying, others crunchy on the teeth.
   components:
   - type: MovementSpeedModifier
     baseWalkSpeed : 6
@@ -206,12 +160,10 @@
       bounds: "-0.20,-0.20,0.20,0.20"
       mask:
       - Impassable
-      - MobImpassable
       - VaultImpassable
       - SmallImpassable
       layer:
       - Opaque
-      - MobImpassable
   - type: Appearance
     visuals:
     - type: DamageStateVisualizer
@@ -219,13 +171,10 @@
       dead: dead
 
 - type: entity
-  save: false
   name: bee
-  parent: MonkeyMob_Content
+  parent: SimpleMobBase
   id: BeeMob_Content
-  description:
-  drawdepth: Mobs
-  suffix: AI
+  description: Nice to have, but you can't build a civilization on a foundation of honey alone.
   components:
   - type: MovementSpeedModifier
     baseWalkSpeed : 7
@@ -245,12 +194,10 @@
       bounds: "-0.10,-0.10,0.10,0.10"
       mask:
       - Impassable
-      - MobImpassable
       - VaultImpassable
       - SmallImpassable
       layer:
       - Opaque
-      - MobImpassable
   - type: Appearance
     visuals:
     - type: DamageStateVisualizer
@@ -258,13 +205,10 @@
       dead: dead
 
 - type: entity
-  save: false
   name: goat
-  parent: MonkeyMob_Content
+  parent: SimpleMobBase
   id: GoatMob_Content
-  description:
-  drawdepth: Mobs
-  suffix: AI
+  description: His spine consists of long sharp segments, no wonder he is so grumpy.
   components:
   - type: Sprite
     drawdepth: Mobs
@@ -280,12 +224,10 @@
       bounds: "-0.60,-0.50,0.05,0.50"
       mask:
       - Impassable
-      - MobImpassable
       - VaultImpassable
       - SmallImpassable
       layer:
       - Opaque
-      - MobImpassable
   - type: Appearance
     visuals:
     - type: DamageStateVisualizer
@@ -294,13 +236,10 @@
 
 # Note that we gotta make this bitch vomit someday when you feed it anthrax or sumthin
 - type: entity
-  save: false
   name: goose
-  parent: MonkeyMob_Content
+  parent: SimpleMobBase
   id: GooseMob_Content
-  description:
-  drawdepth: Mobs
-  suffix: AI
+  description: Its stomach and mind are an enigma beyond human comprehension.
   components:
   - type: Sprite
     drawdepth: Mobs
@@ -316,12 +255,10 @@
       bounds: "-0.45,-0.35,0.45,0.35"
       mask:
       - Impassable
-      - MobImpassable
       - VaultImpassable
       - SmallImpassable
       layer:
       - Opaque
-      - MobImpassable
   - type: Appearance
     visuals:
     - type: DamageStateVisualizer
@@ -330,13 +267,10 @@
 
 # Would be cool to have some functionality for the parrot to be able to sit on stuff
 - type: entity
-  save: false
   name: parrot
-  parent: MonkeyMob_Content
+  parent: SimpleMobBase
   id: ParrotMob_Content
-  description:
-  drawdepth: Mobs
-  suffix: AI
+  description: Infiltrates your domain, spies on you, and somehow still a cool pet.
   components:
   - type: MovementSpeedModifier
     baseWalkSpeed : 6
@@ -355,12 +289,10 @@
       bounds: "-0.30,-0.35,0.35,0.35"
       mask:
       - Impassable
-      - MobImpassable
       - VaultImpassable
       - SmallImpassable
       layer:
       - Opaque
-      - MobImpassable
   - type: Appearance
     visuals:
     - type: DamageStateVisualizer
@@ -368,13 +300,10 @@
       dead: dead
 
 - type: entity
-  save: false
   name: snake
-  parent: MonkeyMob_Content
+  parent: SimpleMobBase
   id: SnakeMob_Content
-  description:
-  drawdepth: Mobs
-  suffix: AI
+  description: Hissss! Bites aren't poisonous.
   components:
   - type: Sprite
     drawdepth: Mobs
@@ -390,12 +319,10 @@
       bounds: "-0.30,-0.30,0.25,0.30"
       mask:
       - Impassable
-      - MobImpassable
       - VaultImpassable
       - SmallImpassable
       layer:
       - Opaque
-      - MobImpassable
   - type: Appearance
     visuals:
     - type: DamageStateVisualizer
@@ -406,13 +333,10 @@
 # Code unique spider prototypes or combine them all into one spider and get a
 # random sprite state when you spawn it.
 - type: entity
-  save: false
   name: tarantula
-  parent: MonkeyMob_Content
+  parent: SimpleMobBase
   id: GiantSpiderMob_Content
-  description:
-  drawdepth: Mobs
-  suffix: AI
+  description: Widely recognized to be the literal worst thing in existence.
   components:
   - type: Sprite
     drawdepth: Mobs
@@ -428,12 +352,10 @@
       bounds: "-0.30,-0.40,0.45,0.40"
       mask:
       - Impassable
-      - MobImpassable
       - VaultImpassable
       - SmallImpassable
       layer:
       - Opaque
-      - MobImpassable
   - type: Appearance
     visuals:
     - type: DamageStateVisualizer
@@ -441,13 +363,10 @@
       dead: tarantula_dead
 
 - type: entity
-  save: false
   name: crab
-  parent: MonkeyMob_Content
+  parent: SimpleMobBase
   id: CrabMob_Content
-  description:
-  drawdepth: Mobs
-  suffix: AI
+  description: A folk legend goes around that his claw snaps spacemen out of existance over distasteful remarks. Be polite and tolerant for your own safety.
   components:
   - type: Sprite
     drawdepth: Mobs
@@ -463,12 +382,10 @@
       bounds: "-0.40,-0.35,0.20,0.35"
       mask:
       - Impassable
-      - MobImpassable
       - VaultImpassable
       - SmallImpassable
       layer:
       - Opaque
-      - MobImpassable
   - type: Appearance
     visuals:
     - type: DamageStateVisualizer
@@ -476,13 +393,10 @@
       dead: dead
 
 - type: entity
-  save: false
   name: penguin
-  parent: MonkeyMob_Content
+  parent: SimpleMobBase
   id: PenguinMob_Content
-  description:
-  drawdepth: Mobs
-  suffix: AI
+  description: Their lives are constant pain due to their inner-body knees.
   components:
   - type: Sprite
     drawdepth: Mobs
@@ -498,12 +412,10 @@
       bounds: "-0.50,-0.30,0.35,0.30"
       mask:
       - Impassable
-      - MobImpassable
       - VaultImpassable
       - SmallImpassable
       layer:
       - Opaque
-      - MobImpassable
   - type: Appearance
     visuals:
     - type: DamageStateVisualizer

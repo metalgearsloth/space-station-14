@@ -1,7 +1,7 @@
-﻿using Content.Shared.Interfaces;
+﻿using Content.Server.GameObjects.Components.MachineLinking.Signals;
+using Content.Shared.Interfaces;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Robust.Shared.GameObjects;
-using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Localization;
 
 namespace Content.Server.GameObjects.Components.MachineLinking
@@ -11,12 +11,12 @@ namespace Content.Server.GameObjects.Components.MachineLinking
     {
         public override string Name => "SignalButton";
 
-        public void Activate(ActivateEventArgs eventArgs)
+        void IActivate.Activate(ActivateEventArgs eventArgs)
         {
             TransmitSignal(eventArgs.User);
         }
 
-        public bool InteractHand(InteractHandEventArgs eventArgs)
+        bool IInteractHand.InteractHand(InteractHandEventArgs eventArgs)
         {
             TransmitSignal(eventArgs.User);
             return true;
@@ -29,10 +29,14 @@ namespace Content.Server.GameObjects.Components.MachineLinking
                 return;
             }
 
-            if (transmitter.TransmitSignal(user, SignalState.Toggle))
+            if (transmitter.TransmitSignal(new ToggleSignal()))
             {
                 // Since the button doesn't have an animation, I'm going to use a popup message
                 Owner.PopupMessage(user, Loc.GetString("Click."));
+            }
+            else
+            {
+                Owner.PopupMessage(user, Loc.GetString("No receivers connected."));
             }
         }
 

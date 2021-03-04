@@ -1,9 +1,8 @@
 using Content.Server.GameObjects.Components.Items.Storage;
-using Robust.Server.GameObjects.Components.Container;
+using Robust.Server.GameObjects;
+using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
-using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Localization;
-using Robust.Shared.Timers;
 using static Content.Shared.GameObjects.Components.Inventory.EquipmentSlotDefines;
 
 namespace Content.Server.GameObjects.Components.GUI
@@ -67,7 +66,7 @@ namespace Content.Server.GameObjects.Components.GUI
             switch (message)
             {
                 case ContainerContentsModifiedMessage contentsModified:
-                    Timer.Spawn(0, DropIdAndPocketsIfWeNoLongerHaveAUniform);
+                    Owner.SpawnTimer(0, DropIdAndPocketsIfWeNoLongerHaveAUniform);
                     break;
             }
         }

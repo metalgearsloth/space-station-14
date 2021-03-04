@@ -1,23 +1,21 @@
-﻿#nullable enable
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using Content.Server.GameObjects.Components.Body.Behavior;
 using Content.Server.GameObjects.Components.Chemistry;
 using Content.Server.GameObjects.Components.GUI;
 using Content.Server.GameObjects.Components.Items.Storage;
-using Content.Server.GameObjects.Components.Utensil;
+using Content.Server.GameObjects.Components.Culinary;
 using Content.Shared.Chemistry;
 using Content.Shared.GameObjects.Components.Body;
-using Content.Shared.GameObjects.Components.Body.Behavior;
-using Content.Shared.GameObjects.Components.Body.Mechanism;
-using Content.Shared.GameObjects.Components.Utensil;
 using Content.Shared.Interfaces;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Content.Shared.Utility;
-using Robust.Server.GameObjects.EntitySystems;
+using Robust.Server.GameObjects;
 using Robust.Shared.Audio;
 using Robust.Shared.GameObjects;
-using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.IoC;
 using Robust.Shared.Localization;
 using Robust.Shared.Prototypes;
@@ -27,11 +25,9 @@ using Robust.Shared.ViewVariables;
 namespace Content.Server.GameObjects.Components.Nutrition
 {
     [RegisterComponent]
-    [ComponentReference(typeof(IAfterInteract))]
     public class FoodComponent : Component, IUse, IAfterInteract
     {
         [Dependency] private readonly IEntitySystemManager _entitySystem = default!;
-        [Dependency] private readonly IPrototypeManager _prototypeManager = default!;
 
         public override string Name => "Food";
 
@@ -87,14 +83,14 @@ namespace Content.Server.GameObjects.Components.Nutrition
         public override void Initialize()
         {
             base.Initialize();
-            Owner.EnsureComponent<SolutionContainerComponent>();
+            Owner.EnsureComponentWarn<SolutionContainerComponent>();
         }
 
         bool IUse.UseEntity(UseEntityEventArgs eventArgs)
         {
             if (_utensilsNeeded != UtensilType.None)
             {
-                eventArgs.User.PopupMessage(Loc.GetString("You need to use a {0} to eat that!", _utensilsNeeded));
+                eventArgs.User.PopupMessage(Loc.GetString("food-you-need-utensil", ("utensil", _utensilsNeeded)));
                 return false;
             }
 
@@ -102,14 +98,15 @@ namespace Content.Server.GameObjects.Components.Nutrition
         }
 
         // Feeding someone else
-        void IAfterInteract.AfterInteract(AfterInteractEventArgs eventArgs)
+        async Task<bool> IAfterInteract.AfterInteract(AfterInteractEventArgs eventArgs)
         {
             if (eventArgs.Target == null)
             {
-                return;
+                return false;
             }
 
             TryUseFood(eventArgs.User, eventArgs.Target);
+            return true;
         }
 
         public virtual bool TryUseFood(IEntity? user, IEntity? target, UtensilComponent? utensilUsed = null)
@@ -133,7 +130,7 @@ namespace Content.Server.GameObjects.Components.Nutrition
             var trueTarget = target ?? user;
 
             if (!trueTarget.TryGetComponent(out IBody? body) ||
-                !body.TryGetMechanismBehaviors<SharedStomachBehaviorComponent>(out var stomachs))
+                !body.TryGetMechanismBehaviors<StomachBehavior>(out var stomachs))
             {
                 return false;
             }
@@ -163,7 +160,7 @@ namespace Content.Server.GameObjects.Components.Nutrition
 
                 if (!types.HasFlag(_utensilsNeeded))
                 {
-                    trueTarget.PopupMessage(user, Loc.GetString("You need to be holding a {0} to eat that!", _utensilsNeeded));
+                    trueTarget.PopupMessage(user, Loc.GetString("food-you-need-to-hold-utensil", ("utensil", _utensilsNeeded)));
                     return false;
                 }
             }
@@ -185,11 +182,7 @@ namespace Content.Server.GameObjects.Components.Nutrition
 
             // TODO: Account for partial transfer.
 
-            foreach (var (reagentId, quantity) in split.Contents)
-            {
-                if (!_prototypeManager.TryIndex(reagentId, out ReagentPrototype reagent)) continue;
-                split.RemoveReagent(reagentId, reagent.ReactionEntity(trueTarget, ReactionMethod.Ingestion, quantity));
-            }
+            split.DoEntityReaction(trueTarget, ReactionMethod.Ingestion);
 
             firstStomach.TryTransferSolution(split);
 

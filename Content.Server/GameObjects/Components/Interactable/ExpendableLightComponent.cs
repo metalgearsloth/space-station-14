@@ -1,17 +1,14 @@
-﻿
+
 using Content.Server.GameObjects.Components.Items.Clothing;
 using Content.Server.GameObjects.Components.Items.Storage;
 using Content.Server.GameObjects.Components.Sound;
 using Content.Shared.GameObjects.Components;
-using Content.Shared.GameObjects.EntitySystems;
+using Content.Shared.GameObjects.EntitySystems.ActionBlocker;
 using Content.Shared.GameObjects.Verbs;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Robust.Server.GameObjects;
-using Robust.Server.GameObjects.EntitySystems;
 using Robust.Shared.Audio;
 using Robust.Shared.GameObjects;
-using Robust.Shared.GameObjects.Systems;
-using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.ViewVariables;
 
 namespace Content.Server.GameObjects.Components.Interactable
@@ -22,7 +19,7 @@ namespace Content.Server.GameObjects.Components.Interactable
     [RegisterComponent]
     public class ExpendableLightComponent : SharedExpendableLightComponent, IUse
     {
-        private static readonly AudioParams LoopedSoundParams = new AudioParams(0, 1, "Master", 62.5f, 1, AudioMixTarget.Stereo, true, 0.3f);
+        private static readonly AudioParams LoopedSoundParams = new(0, 1, "Master", 62.5f, 1, AudioMixTarget.Stereo, true, 0.3f);
 
         /// <summary>
         ///     Status of light, whether or not it is emitting light.
@@ -45,7 +42,7 @@ namespace Content.Server.GameObjects.Components.Interactable
 
             if (Owner.TryGetComponent<ItemComponent>(out var item))
             {
-                item.EquippedPrefix = "off";
+                item.EquippedPrefix = "unlit";
             }
 
             CurrentState = ExpendableLightState.BrandNew;
@@ -62,7 +59,7 @@ namespace Content.Server.GameObjects.Components.Interactable
             {
                 if (Owner.TryGetComponent<ItemComponent>(out var item))
                 {
-                    item.EquippedPrefix = "on";
+                    item.EquippedPrefix = "lit";
                 }
 
                 CurrentState = ExpendableLightState.Lit;
@@ -116,9 +113,13 @@ namespace Content.Server.GameObjects.Components.Interactable
                             EntitySystem.Get<AudioSystem>().PlayFromEntity(LitSound, Owner);
                         }
 
+                        if (IconStateLit != string.Empty)
+                        {
+                            sprite.LayerSetState(2, IconStateLit);
+                            sprite.LayerSetShader(2, "shaded");
+                        }
+
                         sprite.LayerSetVisible(1, true);
-                        sprite.LayerSetState(2, IconStateLit);
-                        sprite.LayerSetShader(2, "unshaded");
                         break;
 
                     case ExpendableLightState.Fading:
@@ -137,9 +138,9 @@ namespace Content.Server.GameObjects.Components.Interactable
                             loopSound.StopAllSounds();
                         }
 
+                        sprite.LayerSetState(0, IconStateSpent);
+                        sprite.LayerSetShader(0, "shaded");
                         sprite.LayerSetVisible(1, false);
-                        sprite.LayerSetState(2, IconStateSpent);
-                        sprite.LayerSetShader(2, "shaded");
                         break;
                 }
             }
@@ -181,7 +182,7 @@ namespace Content.Server.GameObjects.Components.Interactable
 
                         if (Owner.TryGetComponent<ItemComponent>(out var item))
                         {
-                            item.EquippedPrefix = "off";
+                            item.EquippedPrefix = "unlit";
                         }
 
                         break;

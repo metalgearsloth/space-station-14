@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using Content.Server.GameTicking;
 using Content.Server.Interfaces.GameTicking;
 using Content.Shared.Roles;
-using Robust.Server.Interfaces.Player;
-using Robust.Shared.Interfaces.GameObjects;
+using Content.Shared.Preferences;
+using Content.Server.Mobs;
+using Robust.Server.Player;
+using Robust.Shared.GameObjects;
 using Robust.Shared.Map;
 using Robust.Shared.Timing;
 
@@ -49,6 +51,11 @@ namespace Content.IntegrationTests
         {
         }
 
+        public bool OnGhostAttempt(Mind mind, bool canReturnGlobal)
+        {
+            return false;
+        }
+
         public void MakeObserve(IPlayerSession player)
         {
         }
@@ -69,13 +76,13 @@ namespace Content.IntegrationTests
         public EntityCoordinates GetJobSpawnPoint(string jobId) => EntityCoordinates.Invalid;
         public EntityCoordinates GetObserverSpawnPoint() => EntityCoordinates.Invalid;
 
-        public void EquipStartingGear(IEntity entity, StartingGearPrototype startingGear)
+        public void EquipStartingGear(IEntity entity, StartingGearPrototype startingGear, HumanoidCharacterProfile profile)
         {
         }
 
         public T AddGameRule<T>() where T : GameRule, new()
         {
-            return new T();
+            return new();
         }
 
         public bool HasGameRule(Type type)
@@ -120,7 +127,7 @@ namespace Content.IntegrationTests
 
         public Dictionary<string, int> GetAvailablePositions()
         {
-            return new Dictionary<string, int>();
+            return new();
         }
     }
 }

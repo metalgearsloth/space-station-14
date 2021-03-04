@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,13 +16,8 @@ using Content.Shared.Interfaces.GameObjects.Components;
 using Content.Shared.Utility;
 using JetBrains.Annotations;
 using Robust.Server.GameObjects;
-using Robust.Server.GameObjects.Components.UserInterface;
-using Robust.Server.GameObjects.EntitySystems;
-using Robust.Server.Interfaces.GameObjects;
-using Robust.Server.Interfaces.Player;
+using Robust.Server.Player;
 using Robust.Shared.GameObjects;
-using Robust.Shared.GameObjects.Systems;
-using Robust.Shared.Interfaces.Random;
 using Robust.Shared.IoC;
 using Robust.Shared.Localization;
 using Robust.Shared.Random;
@@ -118,22 +113,22 @@ namespace Content.Server.GameObjects.Components
         /// Contains all registered wires.
         /// </summary>
         [ViewVariables]
-        public readonly List<Wire> WiresList = new List<Wire>();
+        public readonly List<Wire> WiresList = new();
 
         /// <summary>
         /// Status messages are displayed at the bottom of the UI.
         /// </summary>
         [ViewVariables]
-        private readonly Dictionary<object, object> _statuses = new Dictionary<object, object>();
+        private readonly Dictionary<object, object> _statuses = new();
 
         /// <summary>
         /// <see cref="AssignAppearance"/> and <see cref="WiresBuilder.CreateWire"/>.
         /// </summary>
         private readonly List<WireColor> _availableColors =
-            new List<WireColor>((WireColor[]) Enum.GetValues(typeof(WireColor)));
+            new((WireColor[]) Enum.GetValues(typeof(WireColor)));
 
         private readonly List<WireLetter> _availableLetters =
-            new List<WireLetter>((WireLetter[]) Enum.GetValues(typeof(WireLetter)));
+            new((WireLetter[]) Enum.GetValues(typeof(WireLetter)));
 
         private string _boardName = default!;
 
@@ -373,6 +368,14 @@ namespace Content.Server.GameObjects.Components
             UserInterface?.Open(session);
         }
 
+        /// <summary>
+        /// Closes all wire UIs.
+        /// </summary>
+        public void CloseAll()
+        {
+            UserInterface?.CloseAll();
+        }
+
         private void UserInterfaceOnReceiveMessage(ServerBoundUserInterfaceMessage serverMsg)
         {
             var message = serverMsg.Message;
@@ -479,15 +482,33 @@ namespace Content.Server.GameObjects.Components
         async Task<bool> IInteractUsing.InteractUsing(InteractUsingEventArgs eventArgs)
         {
             if (!eventArgs.Using.TryGetComponent<ToolComponent>(out var tool))
+            {
                 return false;
-            if (!await tool.UseTool(eventArgs.User, Owner, 0.5f, ToolQuality.Screwing))
-                return false;
+            }
 
-            IsPanelOpen = !IsPanelOpen;
-            EntitySystem.Get<AudioSystem>()
-                .PlayFromEntity(IsPanelOpen ? "/Audio/Machines/screwdriveropen.ogg" : "/Audio/Machines/screwdriverclose.ogg",
-                    Owner);
-            return true;
+            // opens the wires ui if using a tool with cutting or multitool quality on it
+            if (IsPanelOpen &&
+               (tool.HasQuality(ToolQuality.Cutting) ||
+                tool.HasQuality(ToolQuality.Multitool)))
+            {
+                if (eventArgs.User.TryGetComponent(out IActorComponent? actor))
+                {
+                    OpenInterface(actor.playerSession);
+                    return true;
+                }
+            }
+
+            // screws the panel open if the tool can do so
+            else if (await tool.UseTool(eventArgs.User, Owner, 0.5f, ToolQuality.Screwing))
+            {
+                IsPanelOpen = !IsPanelOpen;
+                EntitySystem.Get<AudioSystem>()
+                    .PlayFromEntity(IsPanelOpen ? "/Audio/Machines/screwdriveropen.ogg" : "/Audio/Machines/screwdriverclose.ogg",
+                        Owner);
+                return true;
+            }
+
+            return false;
         }
 
         void IExamine.Examine(FormattedMessage message, bool inDetailsRange)

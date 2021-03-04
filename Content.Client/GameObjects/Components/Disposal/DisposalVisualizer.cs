@@ -2,9 +2,7 @@
 using Content.Shared.GameObjects.Components.Disposal;
 using JetBrains.Annotations;
 using Robust.Client.GameObjects;
-using Robust.Client.Interfaces.GameObjects.Components;
 using Robust.Shared.GameObjects;
-using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Utility;
 using YamlDotNet.RepresentationModel;
 
@@ -69,12 +67,6 @@ namespace Content.Client.GameObjects.Components.Disposal
         public override void OnChangeData(AppearanceComponent component)
         {
             base.OnChangeData(component);
-
-            if (component.Owner.Deleted)
-            {
-                return;
-            }
-
             ChangeState(component);
         }
     }

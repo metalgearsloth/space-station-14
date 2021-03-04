@@ -1,19 +1,19 @@
 #nullable enable
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Content.Shared.GameObjects;
 using NUnit.Framework;
 using Robust.Client.GameObjects;
-using Robust.Client.Interfaces.GameStates;
-using Robust.Server.Interfaces.Player;
+using Robust.Client.GameStates;
+using Robust.Server.Player;
 using Robust.Shared.GameObjects;
-using Robust.Shared.GameObjects.Systems;
-using Robust.Shared.Interfaces.GameObjects;
-using Robust.Shared.Interfaces.Map;
-using Robust.Shared.Interfaces.Timing;
 using Robust.Shared.IoC;
 using Robust.Shared.Map;
+using Robust.Shared.Players;
+using Robust.Shared.Reflection;
+using Robust.Shared.Serialization;
 using Robust.Shared.Timing;
 
 namespace Content.IntegrationTests.Tests.Networking
@@ -47,7 +47,7 @@ namespace Content.IntegrationTests.Tests.Networking
                     ContentBeforeIoC = () =>
                     {
                         IoCManager.Resolve<IEntitySystemManager>().LoadExtraSystemType<PredictionTestEntitySystem>();
-                        IoCManager.Resolve<IComponentFactory>().Register<PredictionTestComponent>();
+                        IoCManager.Resolve<IComponentFactory>().RegisterClass<PredictionTestComponent>();
                     }
                 },
                 new ServerContentIntegrationOption
@@ -55,7 +55,7 @@ namespace Content.IntegrationTests.Tests.Networking
                     ContentBeforeIoC = () =>
                     {
                         IoCManager.Resolve<IEntitySystemManager>().LoadExtraSystemType<PredictionTestEntitySystem>();
-                        IoCManager.Resolve<IComponentFactory>().Register<PredictionTestComponent>();
+                        IoCManager.Resolve<IComponentFactory>().RegisterClass<PredictionTestComponent>();
                     }
                 });
 
@@ -401,7 +401,7 @@ namespace Content.IntegrationTests.Tests.Networking
 
             public override void HandleComponentState(ComponentState? curState, ComponentState? nextState)
             {
-                if (!(curState is PredictionComponentState pred))
+                if (curState is not PredictionComponentState pred)
                 {
                     return;
                 }
@@ -409,11 +409,12 @@ namespace Content.IntegrationTests.Tests.Networking
                 Foo = pred.Foo;
             }
 
-            public override ComponentState GetComponentState()
+            public override ComponentState GetComponentState(ICommonSession player)
             {
                 return new PredictionComponentState(Foo);
             }
 
+            [Serializable, NetSerializable]
             private sealed class PredictionComponentState : ComponentState
             {
                 public bool Foo { get; }
@@ -425,13 +426,14 @@ namespace Content.IntegrationTests.Tests.Networking
             }
         }
 
+        [Reflect(false)]
         private sealed class PredictionTestEntitySystem : EntitySystem
         {
             public bool Allow { get; set; } = true;
 
             // Queue of all the events that come in so we can test that they come in perfectly as expected.
             public List<(GameTick tick, bool firstPredict, bool old, bool @new, bool value)> EventTriggerList { get; } =
-                new List<(GameTick, bool, bool, bool, bool)>();
+                new();
 
             [Dependency] private readonly IGameTiming _gameTiming = default!;
 

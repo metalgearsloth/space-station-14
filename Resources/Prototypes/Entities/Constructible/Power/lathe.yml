@@ -2,6 +2,8 @@
   id: BaseLathe
   name: "lathe"
   abstract: true
+  placement:
+    mode: SnapgridCenter
   components:
   - type: Clickable
   - type: InteractionOutline
@@ -10,7 +12,12 @@
     anchored: true
     shapes:
     - !type:PhysShapeAabb
-      bounds: "-0.4,-0.25,0.4,0.25"
+      bounds: "-0.4,-0.4,0.4,0.4"
+      mask:
+      - Impassable
+      - MobImpassable
+      - VaultImpassable
+      - SmallImpassable
       layer:
       - Opaque
       - Impassable
@@ -21,6 +28,7 @@
   - type: Lathe
   - type: MaterialStorage
   - type: Anchorable
+  - type: Pullable
   - type: UserInterface
     interfaces:
     - key: enum.LatheUiKey.Key
@@ -36,23 +44,35 @@
   - type: Sprite
     sprite: Constructible/Power/autolathe.rsi
     layers:
-    - state: autolathe
+    - state: icon
       map: ["enum.AutolatheVisualLayers.Base"]
-    - state: autolathe_unlit
+    - state: unlit
       shader: unshaded
       map: ["enum.AutolatheVisualLayers.BaseUnlit"]
-
-  - type: Physics
-    shapes:
-    - !type:PhysShapeAabb
-      layer:
-      - Opaque
-      - Impassable
-      - MobImpassable
-      - VaultImpassable
-  - type: SnapGrid
-    offset: Center
-  - type: Lathe
+    - state: icon
+      map: ["enum.AutolatheVisualLayers.AnimationLayer"]
+    - state: panel
+      map: ["enum.WiresVisualLayers.MaintenancePanel"]
+  - type: Construction
+    graph: machine
+    node: machine
+  - type: Damageable
+    resistances: metallicResistances
+  - type: Destructible
+    thresholds:
+    - trigger:
+        !type:DamageTrigger
+        damage: 100
+      behaviors:
+      - !type:ChangeConstructionNodeBehavior
+        node: machineFrame
+      - !type:DoActsBehavior
+        acts: ["Destruction"]
+  - type: Machine
+    board: AutolatheMachineCircuitboard
+  - type: Wires
+    BoardName: "Autolathe"
+    LayoutId: Autolathe
   - type: LatheDatabase
     static: true
     recipes:
@@ -60,7 +80,7 @@
       - Ointment
       - LightTube
       - LightBulb
-      - MetalStack
+      - SheetSteel
       - GlassStack
       - Wirecutter
       - Screwdriver
@@ -69,9 +89,15 @@
       - CableStack
       - Crowbar
       - Multitool
+      - MiniHoe
+      - Scythe
+      - Hatchet
+      - Shovel
+      - Spade
   - type: Appearance
     visuals:
     - type: AutolatheVisualizer
+    - type: WiresVisualizer
 
 - type: entity
   parent: BaseLathe
@@ -82,25 +108,36 @@
   - type: Sprite
     sprite: Constructible/Power/protolathe.rsi
     layers:
-    - state: protolathe
+    - state: icon
       map: ["enum.ProtolatheVisualLayers.Base"]
-    - state: protolathe_unlit
+    - state: unlit
       shader: unshaded
       map: ["enum.ProtolatheVisualLayers.BaseUnlit"]
-    - state: protolathe
+    - state: icon
       map: ["enum.ProtolatheVisualLayers.AnimationLayer"]
-
-  - type: Physics
-    shapes:
-    - !type:PhysShapeAabb
-      layer:
-      - Opaque
-      - Impassable
-      - MobImpassable
-      - VaultImpassable
-  - type: SnapGrid
-    offset: Center
+    - state: panel
+      map: ["enum.WiresVisualLayers.MaintenancePanel"]
   - type: ResearchClient
+  - type: Construction
+    graph: machine
+    node: machine
+  - type: Damageable
+    resistances: metallicResistances
+  - type: Destructible
+    thresholds:
+    - trigger:
+        !type:DamageTrigger
+        damage: 100
+      behaviors:
+      - !type:ChangeConstructionNodeBehavior
+        node: machineFrame
+      - !type:DoActsBehavior
+        acts: ["Destruction"]
+  - type: Machine
+    board: ProtolatheMachineCircuitboard
+  - type: Wires
+    BoardName: "Protolathe"
+    LayoutId: Protolathe
   - type: TechnologyDatabase
   - type: ProtolatheDatabase
     protolatherecipes:
@@ -108,7 +145,7 @@
       - Ointment
       - LightTube
       - LightBulb
-      - MetalStack
+      - SheetSteel
       - GlassStack
       - Wirecutter
       - Screwdriver
@@ -117,6 +154,7 @@
       - CableStack
       - Crowbar
       - Multitool
+      - ConveyorAssembly
   - type: UserInterface
     interfaces:
     - key: enum.LatheUiKey.Key
@@ -126,3 +164,4 @@
   - type: Appearance
     visuals:
     - type: ProtolatheVisualizer
+    - type: WiresVisualizer

@@ -3,9 +3,6 @@ using Content.Shared.GameObjects.Components;
 using JetBrains.Annotations;
 using Robust.Client.Animations;
 using Robust.Client.GameObjects;
-using Robust.Client.GameObjects.Components.Animations;
-using Robust.Client.Interfaces.GameObjects.Components;
-using Robust.Shared.Animations;
 using Robust.Shared.Maths;
 using Robust.Shared.Utility;
 using YamlDotNet.RepresentationModel;
@@ -53,9 +50,9 @@ namespace Content.Client.GameObjects.Components.Atmos
                 return;
             }
 
-            if (component.TryGetData<double>(VaporVisuals.Rotation, out var radians))
+            if (component.TryGetData<Angle>(VaporVisuals.Rotation, out var radians))
             {
-                SetRotation(component, new Angle(radians));
+                SetRotation(component, radians);
             }
 
             if (component.TryGetData<Color>(VaporVisuals.Color, out var color))
@@ -94,7 +91,7 @@ namespace Content.Client.GameObjects.Components.Atmos
         }
     }
 
-    public enum VaporVisualLayers
+    public enum VaporVisualLayers : byte
     {
         Base
     }

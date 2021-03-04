@@ -5,8 +5,7 @@ using Content.Server.GameObjects.Components;
 using Content.Server.GameObjects.Components.Disposal;
 using Content.Server.GameObjects.Components.Power.ApcNetComponents;
 using NUnit.Framework;
-using Robust.Shared.Interfaces.GameObjects;
-using Robust.Shared.Interfaces.Map;
+using Robust.Shared.GameObjects;
 using Robust.Shared.IoC;
 using Robust.Shared.Map;
 
@@ -50,7 +49,7 @@ namespace Content.IntegrationTests.Tests.Disposal
             UnitContains(unit, result, entities);
         }
 
-        private void Flush(DisposalUnitComponent unit, bool result, DisposalEntryComponent? entry = null, params IEntity[] entities)
+        private void Flush(DisposalUnitComponent unit, bool result, params IEntity[] entities)
         {
             Assert.That(unit.ContainedEntities, Is.SupersetOf(entities));
             Assert.That(entities.Length, Is.EqualTo(unit.ContainedEntities.Count));
@@ -59,15 +58,48 @@ namespace Content.IntegrationTests.Tests.Disposal
             Assert.That(result || entities.Length == 0, Is.EqualTo(unit.ContainedEntities.Count == 0));
         }
 
+        private const string Prototypes = @"
+- type: entity
+  name: HumanDummy
+  id: HumanDummy
+  components:
+  - type: Damageable
+    damagePrototype: biologicalDamageContainer
+
+- type: entity
+  name: WrenchDummy
+  id: WrenchDummy
+  components:
+  - type: Tool
+    qualities:
+      - Anchoring
+
+- type: entity
+  name: DisposalUnitDummy
+  id: DisposalUnitDummy
+  components:
+  - type: DisposalUnit
+  - type: Anchorable
+  - type: PowerReceiver
+  - type: Physics
+    anchored: true
+
+- type: entity
+  name: DisposalTrunkDummy
+  id: DisposalTrunkDummy
+  components:
+  - type: DisposalEntry
+";
+
         [Test]
         public async Task Test()
         {
-            var server = StartServerDummyTicker();
+            var options = new ServerIntegrationOptions{ExtraPrototypes = Prototypes};
+            var server = StartServerDummyTicker(options);
 
             IEntity human;
             IEntity wrench;
             DisposalUnitComponent unit;
-            DisposalEntryComponent entry;
 
             server.Assert(async () =>
             {
@@ -78,14 +110,14 @@ namespace Content.IntegrationTests.Tests.Disposal
                 var entityManager = IoCManager.Resolve<IEntityManager>();
 
                 // Spawn the entities
-                human = entityManager.SpawnEntity("HumanMob_Content", MapCoordinates.Nullspace);
-                wrench = entityManager.SpawnEntity("Wrench", MapCoordinates.Nullspace);
-                var disposalUnit = entityManager.SpawnEntity("DisposalUnit", MapCoordinates.Nullspace);
-                var disposalTrunk = entityManager.SpawnEntity("DisposalTrunk", disposalUnit.Transform.MapPosition);
+                human = entityManager.SpawnEntity("HumanDummy", MapCoordinates.Nullspace);
+                wrench = entityManager.SpawnEntity("WrenchDummy", MapCoordinates.Nullspace);
+                var disposalUnit = entityManager.SpawnEntity("DisposalUnitDummy", MapCoordinates.Nullspace);
+                var disposalTrunk = entityManager.SpawnEntity("DisposalTrunkDummy", disposalUnit.Transform.MapPosition);
 
                 // Test for components existing
                 Assert.True(disposalUnit.TryGetComponent(out unit!));
-                Assert.True(disposalTrunk.TryGetComponent(out entry!));
+                Assert.True(disposalTrunk.HasComponent<DisposalEntryComponent>());
 
                 // Can't insert, unanchored and unpowered
                 var disposalUnitAnchorable = disposalUnit.GetComponent<AnchorableComponent>();
@@ -112,13 +144,13 @@ namespace Content.IntegrationTests.Tests.Disposal
                 disposalTrunk.Transform.WorldPosition += (1, 0);
 
                 // Fail to flush with a mob and an item
-                Flush(unit, false, null, human, wrench);
+                Flush(unit, false, human, wrench);
 
                 // Move the disposal trunk back
                 disposalTrunk.Transform.WorldPosition -= (1, 0);
 
                 // Fail to flush with a mob and an item, no power
-                Flush(unit, false, entry, human, wrench);
+                Flush(unit, false, human, wrench);
 
                 // Remove power need
                 Assert.True(disposalUnit.TryGetComponent(out PowerReceiverComponent? power));
@@ -126,10 +158,10 @@ namespace Content.IntegrationTests.Tests.Disposal
                 Assert.True(unit.Powered);
 
                 // Flush with a mob and an item
-                Flush(unit, true, entry, human, wrench);
+                Flush(unit, true, human, wrench);
 
                 // Re-pressurizing
-                Flush(unit, false, entry);
+                Flush(unit, false);
             });
 
             await server.WaitIdleAsync();

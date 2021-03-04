@@ -1,9 +1,7 @@
-﻿using System;
+﻿#nullable enable
+using System;
 using System.Collections.Generic;
-using System.IO;
-using Content.Shared.GameObjects.Components.Power;
 using Content.Shared.Interfaces;
-using Robust.Shared.Interfaces.Serialization;
 using Robust.Shared.IoC;
 using Robust.Shared.Serialization;
 using Robust.Shared.Utility;
@@ -15,12 +13,12 @@ namespace Content.Shared.Construction
     [Serializable]
     public class ConstructionGraphEdge : IExposeData
     {
-        private List<ConstructionGraphStep> _steps = new List<ConstructionGraphStep>();
-        private List<IEdgeCondition> _conditions;
-        private List<IGraphAction> _completed;
+        private List<ConstructionGraphStep> _steps = new();
+        private List<IEdgeCondition> _conditions = new();
+        private List<IGraphAction> _completed = new();
 
         [ViewVariables]
-        public string Target { get; private set; }
+        public string Target { get; private set; } = string.Empty;
 
         [ViewVariables]
         public IReadOnlyList<IEdgeCondition> Conditions => _conditions;
@@ -31,7 +29,12 @@ namespace Content.Shared.Construction
         [ViewVariables]
         public IReadOnlyList<ConstructionGraphStep> Steps => _steps;
 
-        public void ExposeData(ObjectSerializer serializer)
+        void IExposeData.ExposeData(ObjectSerializer serializer)
+        {
+            InternalExposeData(serializer);
+        }
+
+        private void InternalExposeData(ObjectSerializer serializer)
         {
             var moduleManager = IoCManager.Resolve<IModuleManager>();
 
@@ -44,9 +47,9 @@ namespace Content.Shared.Construction
         public void LoadFrom(YamlMappingNode mapping)
         {
             var serializer = YamlObjectSerializer.NewReader(mapping);
-            ExposeData(serializer);
+            InternalExposeData(serializer);
 
-            if (!mapping.TryGetNode("steps", out YamlSequenceNode stepsMapping)) return;
+            if (!mapping.TryGetNode("steps", out YamlSequenceNode? stepsMapping)) return;
 
             foreach (var yamlNode in stepsMapping)
             {
@@ -85,6 +88,20 @@ namespace Content.Shared.Construction
                 var component = new ComponentConstructionGraphStep();
                 component.ExposeData(stepSerializer);
                 return component;
+            }
+
+            if (mapping.TryGetNode("tag", out _))
+            {
+                var tags = new TagConstructionGraphStep();
+                tags.ExposeData(stepSerializer);
+                return tags;
+            }
+
+            if (mapping.TryGetNode("allTags", out _) || mapping.TryGetNode("anyTags", out _))
+            {
+                var tags = new MultipleTagsConstructionGraphStep();
+                tags.ExposeData(stepSerializer);
+                return tags;
             }
 
             if(mapping.TryGetNode("steps", out _))

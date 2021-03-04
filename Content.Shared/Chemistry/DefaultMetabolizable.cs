@@ -1,12 +1,12 @@
-﻿using Content.Shared.Interfaces.Chemistry;
-using Robust.Shared.Interfaces.GameObjects;
-using Robust.Shared.Interfaces.Serialization;
+﻿#nullable enable
+using Content.Shared.Interfaces.Chemistry;
+using Robust.Shared.GameObjects;
 using Robust.Shared.Serialization;
 
 namespace Content.Shared.Chemistry
 {
     //Default metabolism for reagents. Metabolizes the reagent with no effects
-    class DefaultMetabolizable : IMetabolizable
+    public class DefaultMetabolizable : IMetabolizable
     {
         //Rate of metabolism in units / second
         private double _metabolismRate = 1;

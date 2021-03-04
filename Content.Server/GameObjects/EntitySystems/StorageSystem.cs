@@ -2,16 +2,17 @@
 using Content.Server.GameObjects.Components.Items.Storage;
 using Content.Server.GameObjects.EntitySystems.Click;
 using JetBrains.Annotations;
-using Robust.Server.GameObjects.EntitySystemMessages;
-using Robust.Server.Interfaces.Player;
-using Robust.Shared.GameObjects.Systems;
+using Robust.Server.GameObjects;
+using Robust.Server.Player;
+using Robust.Shared.Containers;
+using Robust.Shared.GameObjects;
 
 namespace Content.Server.GameObjects.EntitySystems
 {
     [UsedImplicitly]
     internal sealed class StorageSystem : EntitySystem
     {
-        private readonly List<IPlayerSession> _sessionCache = new List<IPlayerSession>();
+        private readonly List<IPlayerSession> _sessionCache = new();
 
         /// <inheritdoc />
         public override void Initialize()
@@ -23,7 +24,7 @@ namespace Content.Server.GameObjects.EntitySystems
         /// <inheritdoc />
         public override void Update(float frameTime)
         {
-            foreach (var component in ComponentManager.EntityQuery<ServerStorageComponent>())
+            foreach (var component in ComponentManager.EntityQuery<ServerStorageComponent>(true))
             {
                 CheckSubscribedEntities(component);
             }

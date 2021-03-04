@@ -1,27 +1,25 @@
-﻿#nullable enable
+#nullable enable
 using System;
 using System.Collections.Generic;
+using Content.Server.GameObjects.Components.Observer;
 using Content.Server.GameObjects.Components.Pointing;
 using Content.Server.Players;
-using Content.Shared.GameObjects.EntitySystems;
+using Content.Shared.GameObjects.EntitySystems.ActionBlocker;
 using Content.Shared.Input;
 using Content.Shared.Interfaces;
+using Content.Shared.Utility;
 using JetBrains.Annotations;
-using Robust.Server.GameObjects.Components;
-using Robust.Server.Interfaces.Player;
+using Robust.Server.GameObjects;
 using Robust.Server.Player;
 using Robust.Shared.Enums;
 using Robust.Shared.GameObjects;
-using Robust.Shared.GameObjects.Systems;
 using Robust.Shared.Input.Binding;
-using Robust.Shared.Interfaces.GameObjects;
-using Robust.Shared.Interfaces.Map;
-using Robust.Shared.Interfaces.Timing;
 using Robust.Shared.IoC;
 using Robust.Shared.Localization;
 using Robust.Shared.Map;
 using Robust.Shared.Maths;
 using Robust.Shared.Players;
+using Robust.Shared.Timing;
 
 namespace Content.Server.GameObjects.EntitySystems
 {
@@ -39,7 +37,7 @@ namespace Content.Server.GameObjects.EntitySystems
         ///     A dictionary of players to the last time that they
         ///     pointed at something.
         /// </summary>
-        private readonly Dictionary<ICommonSession, TimeSpan> _pointers = new Dictionary<ICommonSession, TimeSpan>();
+        private readonly Dictionary<ICommonSession, TimeSpan> _pointers = new();
 
         private const float PointingRange = 15f;
 
@@ -75,9 +73,15 @@ namespace Content.Server.GameObjects.EntitySystems
             }
         }
 
-        public bool InRange(EntityCoordinates from, EntityCoordinates to)
+        public bool InRange(IEntity pointer, EntityCoordinates coordinates)
         {
-            return from.InRange(EntityManager, to, 15);
+            if (pointer.HasComponent<GhostComponent>()){
+                return pointer.Transform.Coordinates.InRange(EntityManager, coordinates, 15);
+            }
+            else
+            {
+                return pointer.InRangeUnOccluded(coordinates, 15, e => e == pointer);
+            }
         }
 
         public bool TryPoint(ICommonSession? session, EntityCoordinates coords, EntityUid uid)
@@ -100,7 +104,7 @@ namespace Content.Server.GameObjects.EntitySystems
                 return false;
             }
 
-            if (!InRange(coords, player.Transform.Coordinates))
+            if (!InRange(player, coords))
             {
                 player.PopupMessage(Loc.GetString("You can't reach there!"));
                 return false;
@@ -190,7 +194,7 @@ namespace Content.Server.GameObjects.EntitySystems
 
         public override void Update(float frameTime)
         {
-            foreach (var component in ComponentManager.EntityQuery<PointingArrowComponent>())
+            foreach (var component in ComponentManager.EntityQuery<PointingArrowComponent>(true))
             {
                 component.Update(frameTime);
             }

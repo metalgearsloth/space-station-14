@@ -2,8 +2,8 @@
 using System.Threading.Tasks;
 using Content.Shared.Construction;
 using JetBrains.Annotations;
-using Robust.Server.GameObjects.Components.Container;
-using Robust.Shared.Interfaces.GameObjects;
+using Robust.Shared.Containers;
+using Robust.Shared.GameObjects;
 using Robust.Shared.Serialization;
 using Robust.Shared.Utility;
 
@@ -15,7 +15,7 @@ namespace Content.Server.Construction.Conditions
         public string Container { get; private set; } = string.Empty;
         public string Text { get; private set; } = string.Empty;
 
-        public void ExposeData(ObjectSerializer serializer)
+        void IExposeData.ExposeData(ObjectSerializer serializer)
         {
             serializer.DataField(this, x => x.Container, "container", string.Empty);
             serializer.DataField(this, x => x.Text, "text", string.Empty);
@@ -29,13 +29,17 @@ namespace Content.Server.Construction.Conditions
             return container.ContainedEntities.Count == 0;
         }
 
-        public void DoExamine(IEntity entity, FormattedMessage message, bool inDetailsRange)
+        public bool DoExamine(IEntity entity, FormattedMessage message, bool inDetailsRange)
         {
             if (!entity.TryGetComponent(out ContainerManagerComponent? containerManager) ||
-                !containerManager.TryGetContainer(Container, out var container)) return;
+                !containerManager.TryGetContainer(Container, out var container)) return false;
 
-            if (container.ContainedEntities.Count != 0)
-                message.AddMarkup(Text);
+            if (container.ContainedEntities.Count == 0)
+                return false;
+
+            message.AddMarkup(Text);
+            return true;
+
         }
     }
 }

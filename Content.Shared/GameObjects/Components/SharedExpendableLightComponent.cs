@@ -1,4 +1,5 @@
-﻿using System;
+﻿#nullable enable
+using System;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Serialization;
 using Robust.Shared.ViewVariables;
@@ -28,10 +29,10 @@ namespace Content.Shared.GameObjects.Components
         protected ExpendableLightState CurrentState { get; set; }
 
         [ViewVariables]
-        protected string TurnOnBehaviourID { get; set; }
+        protected string TurnOnBehaviourID { get; set; } = string.Empty;
 
         [ViewVariables]
-        protected string FadeOutBehaviourID { get; set; }
+        protected string FadeOutBehaviourID { get; set; } = string.Empty;
 
         [ViewVariables]
         protected float GlowDuration { get; set; }
@@ -40,41 +41,41 @@ namespace Content.Shared.GameObjects.Components
         protected float FadeOutDuration { get; set; }
 
         [ViewVariables]
-        protected string SpentDesc { get; set; }
+        protected string SpentDesc { get; set; } = string.Empty;
 
         [ViewVariables]
-        protected string SpentName { get; set; }
+        protected string SpentName { get; set; } = string.Empty;
 
         [ViewVariables]
-        protected string IconStateSpent { get; set; }
+        protected string IconStateSpent { get; set; } = string.Empty;
 
         [ViewVariables]
-        protected string IconStateLit { get; set; }
+        protected string IconStateLit { get; set; } = string.Empty;
 
         [ViewVariables]
-        protected string LitSound { get; set; }
+        protected string LitSound { get; set; } = string.Empty;
 
         [ViewVariables]
-        protected string LoopedSound { get; set; }
+        protected string LoopedSound { get; set; } = string.Empty;
 
         [ViewVariables]
-        protected string DieSound { get; set; }
+        protected string DieSound { get; set; } = string.Empty;
 
         public override void ExposeData(ObjectSerializer serializer)
         {
             base.ExposeData(serializer);
 
-            serializer.DataField(this, x => TurnOnBehaviourID, "turnOnBehaviourID", string.Empty);
-            serializer.DataField(this, x => FadeOutBehaviourID, "fadeOutBehaviourID", string.Empty);
-            serializer.DataField(this, x => GlowDuration, "glowDuration", 60 * 15f);
-            serializer.DataField(this, x => FadeOutDuration, "fadeOutDuration", 60 * 5f);
-            serializer.DataField(this, x => SpentName, "spentName", string.Empty);
-            serializer.DataField(this, x => SpentDesc, "spentDesc", string.Empty);
-            serializer.DataField(this, x => IconStateLit, "iconStateOn", string.Empty);
-            serializer.DataField(this, x => IconStateSpent, "iconStateSpent", string.Empty);
-            serializer.DataField(this, x => LitSound, "litSound", string.Empty);
-            serializer.DataField(this, x => LoopedSound, "loopedSound", string.Empty);
-            serializer.DataField(this, x => DieSound, "dieSound", string.Empty);
+            serializer.DataField(this, x => x.TurnOnBehaviourID, "turnOnBehaviourID", string.Empty);
+            serializer.DataField(this, x => x.FadeOutBehaviourID, "fadeOutBehaviourID", string.Empty);
+            serializer.DataField(this, x => x.GlowDuration, "glowDuration", 60 * 15f);
+            serializer.DataField(this, x => x.FadeOutDuration, "fadeOutDuration", 60 * 5f);
+            serializer.DataField(this, x => x.SpentName, "spentName", string.Empty);
+            serializer.DataField(this, x => x.SpentDesc, "spentDesc", string.Empty);
+            serializer.DataField(this, x => x.IconStateLit, "iconStateOn", string.Empty);
+            serializer.DataField(this, x => x.IconStateSpent, "iconStateSpent", string.Empty);
+            serializer.DataField(this, x => x.LitSound, "litSound", string.Empty);
+            serializer.DataField(this, x => x.LoopedSound, "loopedSound", string.Empty);
+            serializer.DataField(this, x => x.DieSound, "dieSound", string.Empty);
         }
     }
 }

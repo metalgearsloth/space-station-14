@@ -1,4 +1,6 @@
 ﻿#nullable enable
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Content.Server.GameObjects.EntitySystems;
 using Content.Server.Interfaces.GameObjects.Components.Items;
 using Content.Server.Utility;
@@ -9,25 +11,18 @@ using Content.Shared.GameObjects.EntitySystems;
 using Content.Shared.Interfaces;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Robust.Server.GameObjects;
-using Robust.Server.GameObjects.Components.UserInterface;
-using Robust.Server.Interfaces.GameObjects;
-using Robust.Server.Interfaces.Player;
+using Robust.Server.Player;
 using Robust.Shared.GameObjects;
-using Robust.Shared.GameObjects.Systems;
-using Robust.Shared.Interfaces.GameObjects;
-using Robust.Shared.IoC;
 using Robust.Shared.Localization;
 using Robust.Shared.Map;
+using Robust.Shared.Players;
 using Robust.Shared.ViewVariables;
-using System.Collections.Generic;
 
 namespace Content.Server.GameObjects.Components.Atmos
 {
     [RegisterComponent]
     public class GasAnalyzerComponent : SharedGasAnalyzerComponent, IAfterInteract, IDropped, IUse
     {
-        [Dependency] private readonly IEntityManager _entityManager = default!;
-
         private GasAnalyzerDanger _pressureDanger;
         private float _timeSinceSync;
         private const float TimeBetweenSyncs = 2f;
@@ -50,7 +45,7 @@ namespace Content.Server.GameObjects.Components.Atmos
             Owner.TryGetComponent(out _appearance);
         }
 
-        public override ComponentState GetComponentState()
+        public override ComponentState GetComponentState(ICommonSession player)
         {
             return new GasAnalyzerComponentState(_pressureDanger);
         }
@@ -131,7 +126,7 @@ namespace Content.Server.GameObjects.Components.Atmos
             // Already get the pressure before Dirty(), because we can't get the EntitySystem in that thread or smth
             var pressure = 0f;
             var gam = EntitySystem.Get<AtmosphereSystem>().GetGridAtmosphere(Owner.Transform.GridID);
-            var tile = gam?.GetTile(Owner.Transform.Coordinates).Air;
+            var tile = gam?.GetTile(Owner.Transform.Coordinates)?.Air;
             if (tile != null)
             {
                 pressure = tile.Pressure;
@@ -183,15 +178,15 @@ namespace Content.Server.GameObjects.Components.Atmos
             if (!_checkPlayer && _position.HasValue)
             {
                 // Check if position is out of range => don't update
-                if (!_position.Value.InRange(_entityManager, pos, SharedInteractionSystem.InteractionRange))
+                if (!_position.Value.InRange(Owner.EntityManager, pos, SharedInteractionSystem.InteractionRange))
                     return;
 
                 pos = _position.Value;
             }
 
             var atmosSystem = EntitySystem.Get<AtmosphereSystem>();
-            var gam = atmosSystem.GetGridAtmosphere(pos.GetGridId(_entityManager));
-            var tile = gam?.GetTile(pos).Air;
+            var gam = atmosSystem.GetGridAtmosphere(pos.GetGridId(Owner.EntityManager));
+            var tile = gam.GetTile(pos)?.Air;
             if (tile == null)
             {
                 error = "No Atmosphere!";
@@ -254,18 +249,20 @@ namespace Content.Server.GameObjects.Components.Atmos
             }
         }
 
-        void IAfterInteract.AfterInteract(AfterInteractEventArgs eventArgs)
+        async Task<bool> IAfterInteract.AfterInteract(AfterInteractEventArgs eventArgs)
         {
             if (!eventArgs.CanReach)
             {
                 eventArgs.User.PopupMessage(Loc.GetString("You can't reach there!"));
-                return;
+                return true;
             }
 
             if (eventArgs.User.TryGetComponent(out IActorComponent? actor))
             {
                 OpenInterface(actor.playerSession, eventArgs.ClickLocation);
             }
+
+            return true;
         }
 
 

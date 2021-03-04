@@ -1,21 +1,19 @@
 using System;
-using System.IO;
 using System.Threading.Tasks;
 using Content.Client;
 using Content.Client.Interfaces.Parallax;
 using Content.Server;
 using Content.Server.Interfaces.GameTicking;
+using Content.Shared;
 using NUnit.Framework;
-using Robust.Server.Interfaces.Maps;
-using Robust.Server.Interfaces.Timing;
+using Robust.Server.Maps;
 using Robust.Shared.ContentPack;
-using Robust.Shared.Interfaces.Map;
-using Robust.Shared.Interfaces.Network;
 using Robust.Shared.IoC;
+using Robust.Shared.Log;
 using Robust.Shared.Map;
-using Robust.Shared.Prototypes;
+using Robust.Shared.Network;
+using Robust.Shared.Timing;
 using Robust.UnitTesting;
-using EntryPoint = Content.Client.EntryPoint;
 
 namespace Content.IntegrationTests
 {
@@ -25,10 +23,14 @@ namespace Content.IntegrationTests
         protected sealed override ClientIntegrationInstance StartClient(ClientIntegrationOptions options = null)
         {
             options ??= new ClientIntegrationOptions();
-
             // ReSharper disable once RedundantNameQualifier
-            options.ClientContentAssembly = typeof(EntryPoint).Assembly;
-            options.SharedContentAssembly = typeof(Shared.EntryPoint).Assembly;
+            options.ContentAssemblies = new[]
+            {
+                typeof(Shared.EntryPoint).Assembly,
+                typeof(Client.EntryPoint).Assembly,
+                typeof(ContentIntegrationTest).Assembly
+            };
+
             options.BeforeStart += () =>
             {
                 IoCManager.Resolve<IModLoader>().SetModuleBaseCallbacks(new ClientModuleTestingCallbacks
@@ -41,13 +43,14 @@ namespace Content.IntegrationTests
                         }
 
                         IoCManager.Register<IParallaxManager, DummyParallaxManager>(true);
+                        IoCManager.Resolve<ILogManager>().GetSawmill("loc").Level = LogLevel.Error;
                     }
                 });
             };
 
             // Connecting to Discord is a massive waste of time.
             // Basically just makes the CI logs a mess.
-            options.CVarOverrides["discord.enabled"] = "true";
+            options.CVarOverrides["discord.enabled"] = "false";
 
             return base.StartClient(options);
         }
@@ -55,8 +58,37 @@ namespace Content.IntegrationTests
         protected override ServerIntegrationInstance StartServer(ServerIntegrationOptions options = null)
         {
             options ??= new ServerIntegrationOptions();
-            options.ServerContentAssembly = typeof(Server.EntryPoint).Assembly;
-            options.SharedContentAssembly = typeof(Shared.EntryPoint).Assembly;
+            options.ContentAssemblies = new[]
+            {
+                typeof(Shared.EntryPoint).Assembly,
+                typeof(Server.EntryPoint).Assembly,
+                typeof(ContentIntegrationTest).Assembly
+            };
+            options.BeforeStart += () =>
+            {
+                IoCManager.Resolve<IModLoader>().SetModuleBaseCallbacks(new ServerModuleTestingCallbacks
+                {
+                    ServerBeforeIoC = () =>
+                    {
+                        if (options is ServerContentIntegrationOption contentOptions)
+                        {
+                            contentOptions.ContentBeforeIoC?.Invoke();
+                        }
+                    }
+                });
+
+                IoCManager.Resolve<ILogManager>().GetSawmill("loc").Level = LogLevel.Error;
+            };
+
+            // Avoid funny race conditions with the database.
+            options.CVarOverrides[CCVars.DatabaseSynchronous.Name] = "true";
+
+            // Disable holidays as some of them might mess with the map at round start.
+            options.CVarOverrides[CCVars.HolidaysEnabled.Name] = "false";
+
+            // Avoid loading a large map by default for integration tests.
+            options.CVarOverrides[CCVars.GameMap.Name] = "Maps/Test/empty.yml";
+
             return base.StartServer(options);
         }
 
@@ -69,11 +101,6 @@ namespace Content.IntegrationTests
                 {
                     ServerBeforeIoC = () =>
                     {
-                        if (options is ServerContentIntegrationOption contentOptions)
-                        {
-                            contentOptions.ContentBeforeIoC?.Invoke();
-                        }
-
                         IoCManager.Register<IGameTicker, DummyGameTicker>(true);
                     }
                 });
@@ -82,7 +109,9 @@ namespace Content.IntegrationTests
             return StartServer(options);
         }
 
-        protected async Task<(ClientIntegrationInstance client, ServerIntegrationInstance server)> StartConnectedServerClientPair(ClientIntegrationOptions clientOptions = null, ServerIntegrationOptions serverOptions = null)
+        protected async Task<(ClientIntegrationInstance client, ServerIntegrationInstance server)>
+            StartConnectedServerClientPair(ClientIntegrationOptions clientOptions = null,
+                ServerIntegrationOptions serverOptions = null)
         {
             var client = StartClient(clientOptions);
             var server = StartServer(serverOptions);
@@ -93,7 +122,9 @@ namespace Content.IntegrationTests
         }
 
 
-        protected async Task<(ClientIntegrationInstance client, ServerIntegrationInstance server)> StartConnectedServerDummyTickerClientPair(ClientIntegrationOptions clientOptions = null, ServerIntegrationOptions serverOptions = null)
+        protected async Task<(ClientIntegrationInstance client, ServerIntegrationInstance server)>
+            StartConnectedServerDummyTickerClientPair(ClientIntegrationOptions clientOptions = null,
+                ServerIntegrationOptions serverOptions = null)
         {
             var client = StartClient(clientOptions);
             var server = StartServerDummyTicker(serverOptions);
@@ -129,24 +160,33 @@ namespace Content.IntegrationTests
             return grid;
         }
 
-        protected async Task WaitUntil(IntegrationInstance instance, Func<bool> func, int tickStep = 10, int maxTicks = 600)
+        protected async Task WaitUntil(IntegrationInstance instance, Func<bool> func, int maxTicks = 600,
+            int tickStep = 1)
         {
             var ticksAwaited = 0;
             bool passed;
 
+            await instance.WaitIdleAsync();
+
             while (!(passed = func()) && ticksAwaited < maxTicks)
             {
-                await instance.WaitIdleAsync();
-                instance.RunTicks(tickStep);
-                ticksAwaited += tickStep;
-            }
+                var ticksToRun = tickStep;
 
-            await instance.WaitIdleAsync();
+                if (ticksAwaited + tickStep > maxTicks)
+                {
+                    ticksToRun = maxTicks - ticksAwaited;
+                }
+
+                await instance.WaitRunTicks(ticksToRun);
+
+                ticksAwaited += ticksToRun;
+            }
 
             Assert.That(passed);
         }
 
-        private static async Task StartConnectedPairShared(ClientIntegrationInstance client, ServerIntegrationInstance server)
+        private static async Task StartConnectedPairShared(ClientIntegrationInstance client,
+            ServerIntegrationInstance server)
         {
             await Task.WhenAll(client.WaitIdleAsync(), server.WaitIdleAsync());
 
@@ -160,7 +200,8 @@ namespace Content.IntegrationTests
         /// <summary>
         ///     Runs <paramref name="ticks"/> ticks on both server and client while keeping their main loop in sync.
         /// </summary>
-        protected static async Task RunTicksSync(ClientIntegrationInstance client, ServerIntegrationInstance server, int ticks)
+        protected static async Task RunTicksSync(ClientIntegrationInstance client, ServerIntegrationInstance server,
+            int ticks)
         {
             for (var i = 0; i < ticks; i++)
             {

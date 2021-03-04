@@ -1,4 +1,4 @@
-using Content.Shared.GameObjects.EntitySystems;
+using Content.Shared.GameObjects.EntitySystems.EffectBlocker;
 using Robust.Shared.GameObjects;
 
 namespace Content.Server.GameObjects.Components.Movement

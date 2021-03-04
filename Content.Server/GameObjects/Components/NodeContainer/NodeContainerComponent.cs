@@ -1,10 +1,12 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+#nullable enable
+using System.Collections.Generic;
+using Content.Server.GameObjects.Components.NodeContainer.NodeGroups;
 using Content.Server.GameObjects.Components.NodeContainer.Nodes;
+using Content.Shared.GameObjects.EntitySystems;
 using Robust.Shared.GameObjects;
-using Robust.Shared.GameObjects.Components.Transform;
-using Robust.Shared.Maths;
+using Robust.Shared.Localization;
 using Robust.Shared.Serialization;
+using Robust.Shared.Utility;
 using Robust.Shared.ViewVariables;
 
 namespace Content.Server.GameObjects.Components.NodeContainer
@@ -13,18 +15,20 @@ namespace Content.Server.GameObjects.Components.NodeContainer
     ///     Creates and maintains a set of <see cref="Node"/>s.
     /// </summary>
     [RegisterComponent]
-    public class NodeContainerComponent : Component
+    public class NodeContainerComponent : Component, IExamine
     {
         public override string Name => "NodeContainer";
 
         [ViewVariables]
         public IReadOnlyList<Node> Nodes => _nodes;
-        private List<Node> _nodes = new List<Node>();
+        private List<Node> _nodes = new();
+        private bool _examinable;
 
         public override void ExposeData(ObjectSerializer serializer)
         {
             base.ExposeData(serializer);
             serializer.DataField(ref _nodes, "nodes", new List<Node>());
+            serializer.DataField(ref _examinable, "examinable", false);
         }
 
         public override void Initialize()
@@ -34,8 +38,6 @@ namespace Content.Server.GameObjects.Components.NodeContainer
             {
                 node.Initialize(Owner);
             }
-
-            Owner.EntityManager.EventBus.SubscribeEvent<RotateEvent>(EventSource.Local, this, RotateEvent);
         }
 
         protected override void Startup()
@@ -47,23 +49,61 @@ namespace Content.Server.GameObjects.Components.NodeContainer
             }
         }
 
-        public override void OnRemove()
+        public override void HandleMessage(ComponentMessage message, IComponent? component)
         {
-            foreach (var node in _nodes)
+            base.HandleMessage(message, component);
+            switch (message)
             {
-                node.OnContainerRemove();
+                case AnchoredChangedMessage:
+                    AnchorUpdate();
+                    break;
             }
-            base.OnRemove();
         }
 
-        private void RotateEvent(RotateEvent ev)
+        protected override void Shutdown()
         {
-            if (ev.Sender != Owner || ev.NewRotation == ev.OldRotation)
-                return;
+            base.Shutdown();
 
-            foreach (var rotatableNode in Nodes.OfType<IRotatableNode>())
+            foreach (var node in _nodes)
             {
-                rotatableNode.RotateEvent(ev);
+                node.OnContainerShutdown();
+            }
+        }
+
+        private void AnchorUpdate()
+        {
+            foreach (var node in Nodes)
+            {
+                node.AnchorUpdate();
+            }
+        }
+
+        public void Examine(FormattedMessage message, bool inDetailsRange)
+        {
+            if (!_examinable || !inDetailsRange) return;
+
+            for (var i = 0; i < Nodes.Count; i++)
+            {
+                var node = Nodes[i];
+                if (node == null) continue;
+                switch (node.NodeGroupID)
+                {
+                    case NodeGroupID.HVPower:
+                        message.AddMarkup(
+                            Loc.GetString("It has a connector for [color=orange]HV cables[/color]."));
+                        break;
+                    case NodeGroupID.MVPower:
+                        message.AddMarkup(
+                            Loc.GetString("It has a connector for [color=yellow]MV cables[/color]."));
+                        break;
+                    case NodeGroupID.Apc:
+                        message.AddMarkup(
+                            Loc.GetString("It has a connector for [color=green]APC cables[/color]."));
+                        break;
+                }
+
+                if(i != Nodes.Count - 1)
+                    message.AddMarkup("\n");
             }
         }
     }

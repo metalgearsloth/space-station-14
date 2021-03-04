@@ -3,7 +3,7 @@
   parent: BaseItem
   id: BaseHandheldInstrument
   abstract: true
-  description: That's a Instrument
+  description: That's an instrument.
   components:
   - type: Instrument
     handheld: true
@@ -67,8 +67,11 @@
   - type: Instrument
     program: 56
   - type: Sprite
-    sprite: Objects/Fun/Instruments/otherinstruments.rsi
-    state: trumpet
+    sprite: Objects/Fun/Instruments/trumpet.rsi
+    state: icon
+  - type: Item
+    size: 24
+    sprite: Objects/Fun/Instruments/trumpet.rsi
 
 - type: entity
   name: electric guitar
@@ -202,7 +205,26 @@
   - type: Sprite
     sprite: Objects/Fun/Instruments/bike_horn.rsi
     state: icon
-
-  - type: Item
+  - type: Clothing
     size: 24
     sprite: Objects/Fun/Instruments/bike_horn.rsi
+    Slots:
+      - Belt
+    QuickEquip: false
+
+- type: entity
+  name: super synthesizer
+  description: Blasting the ghetto with Touhou MIDIs since 2020.
+  parent: BaseHandheldInstrument
+  id: SuperSynthesizerInstrument
+  components:
+    - type: Instrument
+      allowPercussion: true
+      allowProgramChange: true
+    - type: Sprite
+      sprite: Objects/Fun/Instruments/h_synthesizer.rsi
+      state: icon
+
+    - type: Item
+      size: 24
+      sprite: Objects/Fun/Instruments/h_synthesizer.rsi

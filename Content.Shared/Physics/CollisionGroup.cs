@@ -1,4 +1,5 @@
-﻿using System;
+#nullable enable
+using System;
 using JetBrains.Annotations;
 using Robust.Shared.Map;
 using Robust.Shared.Serialization;
@@ -21,7 +22,8 @@ namespace Content.Shared.Physics
 		SmallImpassable = 1 <<  4, // 16 Things a smaller object - a cat, a crab - can't go through - a wall, but not a computer terminal or a table
         Clickable       = 1 <<  5, // 32 Temporary "dummy" layer to ensure that objects can still be clicked even if they don't collide with anything (you can't interact with objects that have no layer, including items)
         GhostImpassable = 1 <<  6, // 64 Things impassible by ghosts/observers, ie blessed tiles or forcefields
-
+        Underplating    = 1 <<  7, // 128 Things that are under plating
+        Passable        = 1 <<  8, // 256 Things that are passable
         MapGrid         = MapGridHelpers.CollisionGroup, // Map grids, like shuttles. This is the actual grid itself, not the walls or other entities connected to the grid.
 
         MobMask = Impassable | MobImpassable | VaultImpassable | SmallImpassable,

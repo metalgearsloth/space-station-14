@@ -1,6 +1,4 @@
-#nullable enable
-using Content.Client.GameObjects.Components.Disposal;
-using Content.Client.GameObjects.Components.MedicalScanner;
+﻿#nullable enable
 using Content.Shared.GameObjects.Components.Body;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Robust.Shared.GameObjects;
@@ -11,15 +9,14 @@ namespace Content.Client.GameObjects.Components.Body
     [ComponentReference(typeof(IBody))]
     public class BodyComponent : SharedBodyComponent, IDraggable
     {
-        public bool CanDrop(CanDropEventArgs eventArgs)
+        bool IDraggable.CanStartDrag(StartDragDropEventArgs args)
         {
-            if (eventArgs.Target.HasComponent<DisposalUnitComponent>() ||
-                eventArgs.Target.HasComponent<MedicalScannerComponent>())
-            {
-                return true;
-            }
+            return true;
+        }
 
-            return false;
+        bool IDraggable.CanDrop(CanDropEventArgs args)
+        {
+            return true;
         }
     }
 }

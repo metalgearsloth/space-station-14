@@ -1,10 +1,11 @@
-﻿using Robust.Shared.GameObjects.Components;
+﻿#nullable enable
+using Robust.Shared.GameObjects;
 
 namespace Content.Shared.Physics.Pull
 {
     public class PullStartedMessage : PullMessage
     {
-        public PullStartedMessage(PullController controller, IPhysicsComponent puller, IPhysicsComponent pulled) :
+        public PullStartedMessage(IPhysicsComponent puller, IPhysicsComponent pulled) :
             base(puller, pulled)
         {
         }

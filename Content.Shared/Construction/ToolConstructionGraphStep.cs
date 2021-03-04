@@ -1,4 +1,4 @@
-﻿using System;
+﻿#nullable enable
 using Content.Shared.GameObjects.Components.Interactable;
 using Robust.Shared.Localization;
 using Robust.Shared.Serialization;
@@ -10,7 +10,7 @@ namespace Content.Shared.Construction
     {
         public ToolQuality Tool { get; private set; }
         public float Fuel { get; private set; }
-        public string ExamineOverride { get; private set; }
+        public string ExamineOverride { get; private set; } = string.Empty;
 
         public override void ExposeData(ObjectSerializer serializer)
         {

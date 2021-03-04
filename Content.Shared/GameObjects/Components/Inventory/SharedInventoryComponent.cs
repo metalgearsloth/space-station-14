@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using Content.Shared.GameObjects.Components.Movement;
 using Robust.Shared.GameObjects;
-using Robust.Shared.Interfaces.Reflection;
 using Robust.Shared.IoC;
+using Robust.Shared.Reflection;
 using Robust.Shared.Serialization;
 using Robust.Shared.Utility;
 using Robust.Shared.ViewVariables;
@@ -10,7 +11,7 @@ using static Content.Shared.GameObjects.Components.Inventory.EquipmentSlotDefine
 
 namespace Content.Shared.GameObjects.Components.Inventory
 {
-    public abstract class SharedInventoryComponent : Component
+    public abstract class SharedInventoryComponent : Component, IMoveSpeedModifier
     {
         // ReSharper disable UnassignedReadonlyField
         [Dependency] protected readonly IReflectionManager ReflectionManager;
@@ -46,6 +47,10 @@ namespace Content.Shared.GameObjects.Components.Inventory
             DebugTools.Assert(type != null);
             InventoryInstance = DynamicTypeFactory.CreateInstance<Inventory>(type);
         }
+
+        /// <returns>true if the item is equipped to an equip slot (NOT inside an equipped container
+        /// like inside a backpack)</returns>
+        public abstract bool IsEquipped(IEntity item);
 
         [Serializable, NetSerializable]
         protected class InventoryComponentState : ComponentState
@@ -95,5 +100,8 @@ namespace Content.Shared.GameObjects.Components.Inventory
                 Slot = slot;
             }
         }
+
+        public abstract float WalkSpeedModifier { get; }
+        public abstract float SprintSpeedModifier { get; }
     }
 }

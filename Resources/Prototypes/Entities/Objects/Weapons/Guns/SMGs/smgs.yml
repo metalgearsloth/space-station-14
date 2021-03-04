@@ -38,7 +38,7 @@
   name: Atreides
   parent: SmgBase
   id: SmgAtreides
-  description: Pla-ket-ket-ket-ket
+  description: Pla-ket-ket-ket-ket!
   components:
   - type: Sprite
     sprite: Objects/Weapons/Guns/SMGs/atreides.rsi
@@ -78,7 +78,7 @@
   name: C-20r sub machine gun
   parent: SmgBase
   id: SmgC20r
-  description: A rooty tooty point and shooty.
+  description: A firearm that is often used by the infamous nuclear operatives.
   components:
   - type: Sprite
     sprite: Objects/Weapons/Guns/SMGs/c20r.rsi
@@ -120,7 +120,7 @@
   name: Drozd
   parent: SmgBase
   id: SmgDrozd
-  description: An excellent fully automatic Heavy SMG. Rifled to take a larger caliber than a typical submachine gun, but unlike other heavy SMGs makes use of increased caliber to achieve excellent armor penetration capabilities. Suffers a bit less from poor recoil control and has worse than average fire rate.
+  description: An excellent fully automatic Heavy SMG.
   components:
   - type: Sprite
     sprite: Objects/Weapons/Guns/SMGs/drozd.rsi
@@ -161,7 +161,7 @@
   name: WT550
   parent: SmgBase
   id: SmgWt550
-  description: A rooty tooty point and shooty.
+  description: An excellent SMG, produced by NanoTrasen's Small Arms Division.
   components:
   - type: Sprite
     sprite: Objects/Weapons/Guns/SMGs/wt550.rsi
@@ -201,7 +201,7 @@
   name: Zoric
   parent: SmgBase
   id: SmgZoric
-  description: A rooty tooty point and shooty.
+  description: A compact, robust SMG that uses high caliber rounds.
   components:
   - type: Sprite
     sprite: Objects/Weapons/Guns/SMGs/zoric.rsi

@@ -16,44 +16,37 @@ namespace Content.Client.Research
     {
         [Dependency] private readonly IPrototypeManager _prototypeManager = default!;
 
-        private ItemList Items;
-        private ItemList Materials;
-        private LineEdit AmountLineEdit;
-        private LineEdit SearchBar;
+        private readonly ItemList _items;
+        private readonly ItemList _materials;
+        private readonly LineEdit _amountLineEdit;
+        private readonly LineEdit _searchBar;
         public Button QueueButton;
         public Button ServerConnectButton;
         public Button ServerSyncButton;
-        protected override Vector2? CustomSize => (300, 450);
 
         public LatheBoundUserInterface Owner { get; set; }
 
-        private List<LatheRecipePrototype> _recipes = new List<LatheRecipePrototype>();
-        private List<LatheRecipePrototype> _shownRecipes = new List<LatheRecipePrototype>();
+        private readonly List<LatheRecipePrototype> _shownRecipes = new();
 
         public LatheMenu(LatheBoundUserInterface owner = null)
         {
+            SetSize = MinSize = (300, 450);
             IoCManager.InjectDependencies(this);
 
             Owner = owner;
 
             Title = "Lathe Menu";
 
-            var margin = new MarginContainer()
-            {
-                SizeFlagsVertical = SizeFlags.FillExpand,
-                SizeFlagsHorizontal = SizeFlags.FillExpand,
-            };
-
             var vBox = new VBoxContainer()
             {
-                SizeFlagsVertical = SizeFlags.FillExpand,
+                VerticalExpand = true,
                 SeparationOverride = 5,
             };
 
             var hBoxButtons = new HBoxContainer()
             {
-                SizeFlagsHorizontal = SizeFlags.FillExpand,
-                SizeFlagsVertical = SizeFlags.FillExpand,
+                HorizontalExpand = true,
+                VerticalExpand = true,
                 SizeFlagsStretchRatio = 1,
             };
 
@@ -61,7 +54,6 @@ namespace Content.Client.Research
             {
                 Text = "Queue",
                 TextAlign = Label.AlignMode.Center,
-                SizeFlagsHorizontal = SizeFlags.Fill,
                 SizeFlagsStretchRatio = 1,
             };
 
@@ -69,7 +61,6 @@ namespace Content.Client.Research
             {
                 Text = "Server list",
                 TextAlign = Label.AlignMode.Center,
-                SizeFlagsHorizontal = SizeFlags.Fill,
                 SizeFlagsStretchRatio = 1,
             };
 
@@ -77,62 +68,60 @@ namespace Content.Client.Research
             {
                 Text = "Sync",
                 TextAlign = Label.AlignMode.Center,
-                SizeFlagsHorizontal = SizeFlags.Fill,
                 SizeFlagsStretchRatio = 1,
             };
 
             var spacer = new Control()
             {
-                SizeFlagsHorizontal = SizeFlags.FillExpand,
+                HorizontalExpand = true,
                 SizeFlagsStretchRatio = 3,
             };
 
             var hBoxFilter = new HBoxContainer()
             {
-                SizeFlagsHorizontal = SizeFlags.FillExpand,
-                SizeFlagsVertical = SizeFlags.FillExpand,
+                HorizontalExpand = true,
+                VerticalExpand = true,
                 SizeFlagsStretchRatio = 1
             };
 
-            SearchBar = new LineEdit()
+            _searchBar = new LineEdit()
             {
                 PlaceHolder = "Search Designs",
-                SizeFlagsHorizontal = SizeFlags.FillExpand,
+                HorizontalExpand = true,
                 SizeFlagsStretchRatio = 3
             };
 
-            SearchBar.OnTextChanged += Populate;
+            _searchBar.OnTextChanged += Populate;
 
             var filterButton = new Button()
             {
                 Text = "Filter",
                 TextAlign = Label.AlignMode.Center,
-                SizeFlagsHorizontal = SizeFlags.Fill,
                 SizeFlagsStretchRatio = 1,
                 Disabled = true,
             };
 
-            Items = new ItemList()
+            _items = new ItemList()
             {
                 SizeFlagsStretchRatio = 8,
-                SizeFlagsVertical = SizeFlags.FillExpand,
+                VerticalExpand = true,
                 SelectMode = ItemList.ItemListSelectMode.Button,
             };
 
-            Items.OnItemSelected += ItemSelected;
+            _items.OnItemSelected += ItemSelected;
 
-            AmountLineEdit = new LineEdit()
+            _amountLineEdit = new LineEdit()
             {
                 PlaceHolder = "Amount",
                 Text = "1",
-                SizeFlagsHorizontal = SizeFlags.FillExpand,
+                HorizontalExpand = true,
             };
 
-            AmountLineEdit.OnTextChanged += PopulateDisabled;
+            _amountLineEdit.OnTextChanged += PopulateDisabled;
 
-            Materials = new ItemList()
+            _materials = new ItemList()
             {
-                SizeFlagsVertical = SizeFlags.FillExpand,
+                VerticalExpand = true,
                 SizeFlagsStretchRatio = 3
             };
 
@@ -145,36 +134,34 @@ namespace Content.Client.Research
             }
             hBoxButtons.AddChild(QueueButton);
 
-            hBoxFilter.AddChild(SearchBar);
+            hBoxFilter.AddChild(_searchBar);
             hBoxFilter.AddChild(filterButton);
 
             vBox.AddChild(hBoxButtons);
             vBox.AddChild(hBoxFilter);
-            vBox.AddChild(Items);
-            vBox.AddChild(AmountLineEdit);
-            vBox.AddChild(Materials);
+            vBox.AddChild(_items);
+            vBox.AddChild(_amountLineEdit);
+            vBox.AddChild(_materials);
 
-            margin.AddChild(vBox);
-
-            Contents.AddChild(margin);
+            Contents.AddChild(vBox);
         }
 
         public void ItemSelected(ItemList.ItemListSelectedEventArgs args)
         {
-            int.TryParse(AmountLineEdit.Text, out var quantity);
+            int.TryParse(_amountLineEdit.Text, out var quantity);
             if (quantity <= 0) quantity = 1;
             Owner.Queue(_shownRecipes[args.ItemIndex], quantity);
         }
 
         public void PopulateMaterials()
         {
-            Materials.Clear();
+            _materials.Clear();
 
             foreach (var (id, amount) in Owner.Storage)
             {
                 if (!_prototypeManager.TryIndex(id, out MaterialPrototype materialPrototype)) continue;
                 var material = materialPrototype.Material;
-                Materials.AddItem($"{material.Name} {amount} cm³", material.Icon.Frame0(), false);
+                _materials.AddItem($"{material.Name} {amount} cm³", material.Icon.Frame0(), false);
             }
         }
 
@@ -183,12 +170,12 @@ namespace Content.Client.Research
         /// </summary>
         public void PopulateDisabled()
         {
-            int.TryParse(AmountLineEdit.Text, out var quantity);
+            int.TryParse(_amountLineEdit.Text, out var quantity);
             if (quantity <= 0) quantity = 1;
             for (var i = 0; i < _shownRecipes.Count; i++)
             {
                 var prototype = _shownRecipes[i];
-                Items[i].Disabled = !Owner.Lathe.CanProduce(prototype, quantity);
+                _items[i].Disabled = !Owner.Lathe.CanProduce(prototype, quantity);
             }
         }
 
@@ -203,10 +190,10 @@ namespace Content.Client.Research
         /// </summary>
         public void PopulateList()
         {
-            Items.Clear();
+            _items.Clear();
             foreach (var prototype in _shownRecipes)
             {
-                Items.AddItem(prototype.Name, prototype.Icon.Frame0());
+                _items.AddItem(prototype.Name, prototype.Icon.Frame0());
             }
 
             PopulateDisabled();
@@ -221,9 +208,9 @@ namespace Content.Client.Research
 
             foreach (var prototype in Owner.Database)
             {
-                if (SearchBar.Text.Trim().Length != 0)
+                if (_searchBar.Text.Trim().Length != 0)
                 {
-                    if (prototype.Name.ToLowerInvariant().Contains(SearchBar.Text.Trim().ToLowerInvariant()))
+                    if (prototype.Name.ToLowerInvariant().Contains(_searchBar.Text.Trim().ToLowerInvariant()))
                         _shownRecipes.Add(prototype);
                     continue;
                 }

@@ -1,495 +1,210 @@
 {
   "version": 1,
+  "license": "CC-BY-SA-3.0",
+  "copyright": "Taken from tgstation at commit https://github.com/tgstation/tgstation/commit/d917f4c2a088419d5c3aec7656b7ff8cebd1822e",
   "size": {
     "x": 32,
     "y": 32
   },
   "states": [
     {
-      "name": "assigned",
-      "directions": 1,
-      "delays": [
-        [
-          1
-        ]
-      ]
+      "name": "default"
     },
     {
-      "name": "gold",
-      "directions": 1,
-      "delays": [
-        [
-          1
-        ]
-      ]
+      "name": "centcom"
     },
     {
-      "name": "default",
-      "directions": 1,
-      "delays": [
-        [
-          1
-        ]
-      ]
+      "name": "ert_chaplain"
     },
     {
-      "name": "idassistant",
-      "directions": 1,
-      "delays": [
-        [
-          1
-        ]
-      ]
+      "name": "ert_commander"
     },
     {
-      "name": "idcaptain",
-      "directions": 1,
-      "delays": [
-        [
-          1
-        ]
-      ]
+      "name": "ert_engineer"
     },
     {
-      "name": "idcargotechnician",
-      "directions": 1,
-      "delays": [
-        [
-          1
-        ]
-      ]
+      "name": "ert_janitor"
     },
     {
-      "name": "idcentcom",
-      "directions": 1,
-      "delays": [
-        [
-          1
-        ]
-      ]
+      "name": "ert_medic"
     },
     {
-      "name": "idchiefengineer",
-      "directions": 1,
-      "delays": [
-        [
-          1
-        ]
-      ]
+      "name": "ert_security"
     },
     {
-      "name": "idchiefmedicalofficer",
-      "directions": 1,
-      "delays": [
-        [
-          1
-        ]
-      ]
+      "name": "gold"
     },
     {
-      "name": "idclown",
-      "directions": 1,
-      "delays": [
-        [
-          1
-        ]
-      ]
+      "name": "idassistant"
     },
     {
-      "name": "idheadofpersonnel",
-      "directions": 1,
-      "delays": [
-        [
-          1
-        ]
-      ]
+      "name": "idatmospherictechnician"
     },
     {
-      "name": "idheadofsecurity",
-      "directions": 1,
-      "delays": [
-        [
-          1
-        ]
-      ]
+      "name": "idbartender"
     },
     {
-      "name": "idjanitor",
-      "directions": 1,
-      "delays": [
-        [
-          1
-        ]
-      ]
+      "name": "idbotanist"
     },
     {
-      "name": "idmedicaldoctor",
-      "directions": 1,
-      "delays": [
-        [
-          1
-        ]
-      ]
+      "name": "idcaptain"
     },
     {
-      "name": "idresearchdirector",
-      "directions": 1,
-      "delays": [
-        [
-          1
-        ]
-      ]
+      "name": "idcargotechnician"
     },
     {
-      "name": "idscientist",
-      "directions": 1,
-      "delays": [
-        [
-          1
-        ]
-      ]
+      "name": "idcentcom"
     },
     {
-      "name": "idsecurityofficer",
-      "directions": 1,
-      "delays": [
-        [
-          1
-        ]
-      ]
+      "name": "idchaplain"
     },
     {
-      "name": "idcargotechnician",
-      "directions": 1,
-      "delays": [
-        [
-          1
-        ]
-      ]
+      "name": "idchemist"
     },
     {
-      "name": "idstationengineer",
-      "directions": 1,
-      "delays": [
-        [
-          1
-        ]
-      ]
+      "name": "idchiefengineer"
     },
     {
-      "name": "idmime",
-      "directions": 1,
-      "delays": [
-        [
-          1
-        ]
-      ]
+      "name": "idchiefmedicalofficer"
     },
     {
-      "name": "idassistant_icon",
-      "directions": 1,
-      "delays": [
-        [
-          1
-        ]
-      ]
+      "name": "idclown"
     },
     {
-      "name": "idcaptain_icon",
-      "directions": 1,
-      "delays": [
-        [
-          1
-        ]
-      ]
+      "name": "idcook"
     },
     {
-      "name": "idcargotechnician_icon",
-      "directions": 1,
-      "delays": [
-        [
-          1
-        ]
-      ]
+      "name": "idcurator"
     },
     {
-      "name": "idcentcom_icon",
-      "directions": 1,
-      "delays": [
-        [
-          1
-        ]
-      ]
+      "name": "iddetective"
     },
     {
-      "name": "idchiefengineer_icon",
-      "directions": 1,
-      "delays": [
-        [
-          1
-        ]
-      ]
+      "name": "idgeneticist"
     },
     {
-      "name": "idchiefmedicalofficer_icon",
-      "directions": 1,
-      "delays": [
-        [
-          1
-        ]
-      ]
+      "name": "idheadofpersonnel"
     },
     {
-      "name": "idclown_icon",
-      "directions": 1,
-      "delays": [
-        [
-          1
-        ]
-      ]
+      "name": "idheadofsecurity"
     },
     {
-      "name": "idheadofpersonnel_icon",
-      "directions": 1,
-      "delays": [
-        [
-          1
-        ]
-      ]
+      "name": "idjanitor"
     },
     {
-      "name": "idheadofsecurity_icon",
-      "directions": 1,
-      "delays": [
-        [
-          1
-        ]
-      ]
+      "name": "idlawyer"
     },
     {
-      "name": "idjanitor_icon",
-      "directions": 1,
-      "delays": [
-        [
-          1
-        ]
-      ]
+      "name": "idmedicaldoctor"
     },
     {
-      "name": "idmedicaldoctor_icon",
-      "directions": 1,
-      "delays": [
-        [
-          1
-        ]
-      ]
+      "name": "idmime"
     },
     {
-      "name": "idresearchdirector_icon",
-      "directions": 1,
-      "delays": [
-        [
-          1
-        ]
-      ]
+      "name": "idparamedic"
     },
     {
-      "name": "idscientist_icon",
-      "directions": 1,
-      "delays": [
-        [
-          1
-        ]
-      ]
+      "name": "idprisoner"
     },
     {
-      "name": "idsecurityofficer_icon",
-      "directions": 1,
-      "delays": [
-        [
-          1
-        ]
-      ]
+      "name": "idquartermaster"
     },
     {
-      "name": "idcargotechnician_icon",
-      "directions": 1,
-      "delays": [
-        [
-          1
-        ]
-      ]
+      "name": "idresearchdirector"
     },
     {
-      "name": "idstationengineer_icon",
-      "directions": 1,
-      "delays": [
-        [
-          1
-        ]
-      ]
+      "name": "idroboticist"
     },
     {
-      "name": "idmime_icon",
-      "directions": 1,
-      "delays": [
-        [
-          1
-        ]
-      ]
+      "name": "idscientist"
     },
     {
-      "name": "silver",
-      "directions": 1,
-      "delays": [
-        [
-          1
-        ]
-      ]
+      "name": "idsecurityofficer"
     },
     {
-      "name": "default-inhand-left",
-      "directions": 4,
-      "delays": [
-        [
-          1
-        ],
-        [
-          1
-        ],
-        [
-          1
-        ],
-        [
-          1
-        ]
-      ]
+      "name": "idshaftminer"
+    },
+    {
+      "name": "idstationengineer"
+    },
+    {
+      "name": "idunknown"
+    },
+    {
+      "name": "idvirologist"
+    },
+    {
+      "name": "idwarden"
+    },
+    {
+      "name": "orange"
+    },
+    {
+      "name": "prisoner_001"
+    },
+    {
+      "name": "prisoner_002"
+    },
+    {
+      "name": "prisoner_003"
+    },
+    {
+      "name": "prisoner_004"
+    },
+    {
+      "name": "prisoner_005"
+    },
+    {
+      "name": "prisoner_006"
+    },
+    {
+      "name": "prisoner_007"
+    },
+    {
+      "name": "silver"
+    },
+    {
+      "name": "syndie"
     },
     {
       "name": "gold-inhand-left",
-      "directions": 4,
-      "delays": [
-        [
-          1
-        ],
-        [
-          1
-        ],
-        [
-          1
-        ],
-        [
-          1
-        ]
-      ]
-    },
-    {
-      "name": "silver-inhand-left",
-      "directions": 4,
-      "delays": [
-        [
-          1
-        ],
-        [
-          1
-        ],
-        [
-          1
-        ],
-        [
-          1
-        ]
-      ]
-    },
-    {
-      "name": "default-inhand-right",
-      "directions": 4,
-      "delays": [
-        [
-          1
-        ],
-        [
-          1
-        ],
-        [
-          1
-        ],
-        [
-          1
-        ]
-      ]
+      "directions": 4
     },
     {
       "name": "gold-inhand-right",
-      "directions": 4,
-      "delays": [
-        [
-          1
-        ],
-        [
-          1
-        ],
-        [
-          1
-        ],
-        [
-          1
-        ]
-      ]
+      "directions": 4
+    },
+    {
+      "name": "default-inhand-right",
+      "directions": 4
+    },
+    {
+      "name": "default-inhand-right",
+      "directions": 4
+    },
+    {
+      "name": "silver-inhand-left",
+      "directions": 4
     },
     {
       "name": "silver-inhand-right",
-      "directions": 4,
-      "delays": [
-        [
-          1
-        ],
-        [
-          1
-        ],
-        [
-          1
-        ],
-        [
-          1
-        ]
-      ]
+      "directions": 4
     },
     {
-      "name": "idbartender",
-      "directions": 1,
-      "delays": [
-        [
-          1
-        ]
-      ]
+      "name": "orange-inhand-left",
+      "directions": 4
     },
     {
-      "name": "idcook",
-      "directions": 1,
-      "delays": [
-        [
-          1
-        ]
-      ]
+      "name": "orange-inhand-right",
+      "directions": 4
     },
     {
-      "name": "idbartender_icon",
-      "directions": 1,
-      "delays": [
-        [
-          1
-        ]
-      ]
+      "name": "blue-inhand-left",
+      "directions": 4
     },
     {
-      "name": "idcook_icon",
-      "directions": 1,
-      "delays": [
-        [
-          1
-        ]
-      ]
+      "name": "blue-inhand-right",
+      "directions": 4
     }
   ]
 }

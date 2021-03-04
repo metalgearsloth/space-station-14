@@ -6,14 +6,30 @@
   - type: Clickable
   - type: InteractionOutline
   - type: Physics
+    mass: 25
+    anchored: true
+    shapes:
+    - !type:PhysShapeAabb
+      bounds: "-0.45, -0.45, 0.05, 0.45"
+      mask:
+      - Impassable
+      - VaultImpassable
+      - SmallImpassable
   - type: Sprite
     sprite: Constructible/Misc/furniture.rsi
     state: bed
   - type: Strap
     position: Down
     rotation: -90
-  - type: Destructible
-    deadThreshold: 75
+  - type: Damageable
     resistances: metallicResistances
+  - type: Destructible
+    thresholds:
+    - trigger:
+        !type:DamageTrigger
+        damage: 75
+      behaviors:
+      - !type:DoActsBehavior
+        acts: ["Destruction"]
   placement:
     mode: SnapgridCenter

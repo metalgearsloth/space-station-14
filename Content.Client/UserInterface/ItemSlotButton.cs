@@ -1,4 +1,5 @@
 ﻿using System;
+using Content.Client.UserInterface.Stylesheets;
 using Robust.Client.Graphics;
 using Robust.Client.UserInterface;
 using Robust.Client.UserInterface.Controls;
@@ -7,8 +8,10 @@ using Robust.Shared.Maths;
 
 namespace Content.Client.UserInterface
 {
-    public class ItemSlotButton : MarginContainer
+    public class ItemSlotButton : Control
     {
+        private const string HighlightShader = "SelectionOutlineInrange";
+
         public TextureRect Button { get; }
         public SpriteView SpriteView { get; }
         public SpriteView HoverSpriteView { get; }
@@ -22,15 +25,24 @@ namespace Content.Client.UserInterface
         public bool EntityHover => HoverSpriteView.Sprite != null;
         public bool MouseIsHovering = false;
 
+        private readonly PanelContainer _highlightRect;
+
         public ItemSlotButton(Texture texture, Texture storageTexture)
         {
-            CustomMinimumSize = (64, 64);
+            MinSize = (64, 64);
 
             AddChild(Button = new TextureRect
             {
                 Texture = texture,
                 TextureScale = (2, 2),
                 MouseFilter = MouseFilterMode.Stop
+            });
+
+            AddChild(_highlightRect = new PanelContainer
+            {
+                StyleClasses = { StyleNano.StyleClassHandSlotHighlight },
+                MinSize = (32, 32),
+                Visible = false
             });
 
             Button.OnKeyBindDown += OnButtonPressed;
@@ -51,8 +63,8 @@ namespace Content.Client.UserInterface
             {
                 TextureNormal = storageTexture,
                 Scale = (0.75f, 0.75f),
-                SizeFlagsHorizontal = SizeFlags.ShrinkEnd,
-                SizeFlagsVertical = SizeFlags.ShrinkEnd,
+                HorizontalAlignment = HAlignment.Right,
+                VerticalAlignment = VAlignment.Bottom,
                 Visible = false,
             });
 
@@ -80,8 +92,6 @@ namespace Content.Client.UserInterface
 
             AddChild(CooldownDisplay = new CooldownGraphic
             {
-                SizeFlagsHorizontal = SizeFlags.Fill,
-                SizeFlagsVertical = SizeFlags.Fill,
                 Visible = false,
             });
         }
@@ -92,6 +102,18 @@ namespace Content.Client.UserInterface
             {
                 HoverSpriteView.Sprite?.Owner.Delete();
                 HoverSpriteView.Sprite = null;
+            }
+        }
+
+        public virtual void Highlight(bool highlight)
+        {
+            if (highlight)
+            {
+                _highlightRect.Visible = true;
+            }
+            else
+            {
+                _highlightRect.Visible = false;
             }
         }
 

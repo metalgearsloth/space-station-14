@@ -42,7 +42,9 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         
         public override void HandleComponentState(ComponentState? curState, ComponentState? nextState)
         {
-            if (!(curState is PumpBarrelComponentState cast))
+            base.HandleComponentState(curState, nextState);
+
+            if (curState is not PumpBarrelComponentState cast)
                 return;
             
             _chamber = cast.Chamber;
@@ -144,30 +146,31 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 
             public StatusControl(ClientPumpBarrelComponent parent)
             {
+                MinHeight = 15;
                 _parent = parent;
-                SizeFlagsHorizontal = SizeFlags.FillExpand;
-                SizeFlagsVertical = SizeFlags.ShrinkCenter;
+                HorizontalExpand = true;
+                VerticalAlignment = VAlignment.Center;
                 AddChild(new VBoxContainer
                 {
-                    SizeFlagsHorizontal = SizeFlags.FillExpand,
-                    SizeFlagsVertical = SizeFlags.ShrinkCenter,
+                    HorizontalExpand = true,
+                    VerticalAlignment = VAlignment.Center,
                     SeparationOverride = 0,
                     Children =
                     {
                         (_bulletsListTop = new HBoxContainer {SeparationOverride = 0}),
                         new HBoxContainer
                         {
-                            SizeFlagsHorizontal = SizeFlags.FillExpand,
+                            HorizontalExpand = true,
                             Children =
                             {
                                 new Control
                                 {
-                                    SizeFlagsHorizontal = SizeFlags.FillExpand,
+                                    HorizontalExpand = true,
                                     Children =
                                     {
                                         (_bulletsListBottom = new HBoxContainer
                                         {
-                                            SizeFlagsVertical = SizeFlags.ShrinkCenter,
+                                            VerticalAlignment = VAlignment.Center,
                                             SeparationOverride = 0
                                         }),
                                         (_noMagazineLabel = new Label
@@ -180,8 +183,8 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                                 (_chamberedBullet = new TextureRect
                                 {
                                     Texture = StaticIoC.ResC.GetTexture("/Textures/Interface/ItemStatus/Bullets/chambered.png"),
-                                    SizeFlagsVertical = SizeFlags.ShrinkCenter,
-                                    SizeFlagsHorizontal = SizeFlags.ShrinkEnd | SizeFlags.Fill,
+                                    VerticalAlignment = VAlignment.Center,
+                                    HorizontalAlignment = HAlignment.Right,
                                 })
                             }
                         }
@@ -268,11 +271,6 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 
                     altColor ^= true;
                 }
-            }
-
-            protected override Vector2 CalculateMinimumSize()
-            {
-                return Vector2.ComponentMax((0, 15), base.CalculateMinimumSize());
             }
         }
 

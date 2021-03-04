@@ -4,11 +4,10 @@ using Content.Client.GameObjects.Components.Mobs;
 using Content.Client.UserInterface;
 using Content.Shared.Input;
 using Robust.Client.GameObjects;
-using Robust.Client.Interfaces.Input;
+using Robust.Client.Input;
 using Robust.Client.UserInterface.Controls;
 using Robust.Client.UserInterface.CustomControls;
 using Robust.Shared.GameObjects;
-using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.IoC;
 
 namespace Content.Client.GameObjects.Components.Actor
@@ -116,6 +115,7 @@ namespace Content.Client.GameObjects.Components.Actor
         public class CharacterWindow : SS14Window
         {
             private readonly VBoxContainer _contentsVBox;
+            private readonly List<ICharacterUI> _windowComponents;
 
             public CharacterWindow(List<ICharacterUI> windowComponents)
             {
@@ -128,6 +128,17 @@ namespace Content.Client.GameObjects.Components.Actor
                 foreach (var element in windowComponents)
                 {
                     _contentsVBox.AddChild(element.Scene);
+                }
+
+                _windowComponents = windowComponents;
+            }
+
+            protected override void Opened()
+            {
+                base.Opened();
+                foreach (var windowComponent in _windowComponents)
+                {
+                    windowComponent.Opened();
                 }
             }
         }

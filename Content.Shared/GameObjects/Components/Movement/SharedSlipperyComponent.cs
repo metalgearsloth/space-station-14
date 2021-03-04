@@ -1,14 +1,12 @@
-﻿using System;
+﻿#nullable enable
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Content.Shared.GameObjects.Components.Mobs;
-using Content.Shared.GameObjects.EntitySystems;
+using Content.Shared.GameObjects.EntitySystems.EffectBlocker;
 using Content.Shared.Physics;
 using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
-using Robust.Shared.GameObjects.Components;
-using Robust.Shared.Interfaces.GameObjects;
-using Robust.Shared.IoC;
 using Robust.Shared.Serialization;
 using Robust.Shared.ViewVariables;
 
@@ -16,7 +14,6 @@ namespace Content.Shared.GameObjects.Components.Movement
 {
     public abstract class SharedSlipperyComponent : Component, ICollideBehavior
     {
-        [Dependency] private readonly IEntityManager _entityManager = default!;
 
         public sealed override string Name => "Slippery";
 
@@ -24,7 +21,7 @@ namespace Content.Shared.GameObjects.Components.Movement
         ///     The list of entities that have been slipped by this component,
         ///     and which have not stopped colliding with its owner yet.
         /// </summary>
-        protected readonly List<EntityUid> _slipped = new List<EntityUid>();
+        protected readonly List<EntityUid> _slipped = new();
 
         /// <summary>
         ///     How many seconds the mob will be paralyzed for.
@@ -59,11 +56,11 @@ namespace Content.Shared.GameObjects.Components.Movement
         private bool TrySlip(IEntity entity)
         {
             if (!Slippery
-                || ContainerHelpers.IsInContainer(Owner)
+                || Owner.IsInContainer()
                 ||  _slipped.Contains(entity.Uid)
-                ||  !entity.TryGetComponent(out SharedStunnableComponent stun)
-                ||  !entity.TryGetComponent(out IPhysicsComponent otherBody)
-                ||  !Owner.TryGetComponent(out IPhysicsComponent body))
+                ||  !entity.TryGetComponent(out SharedStunnableComponent? stun)
+                ||  !entity.TryGetComponent(out IPhysicsComponent? otherBody)
+                ||  !Owner.TryGetComponent(out IPhysicsComponent? body))
             {
                 return false;
             }
@@ -85,7 +82,7 @@ namespace Content.Shared.GameObjects.Components.Movement
                 return false;
             }
 
-            if (entity.TryGetComponent(out IPhysicsComponent physics))
+            if (entity.TryGetComponent(out IPhysicsComponent? physics))
             {
                 var controller = physics.EnsureController<SlipController>();
                 controller.LinearVelocity = physics.LinearVelocity * LaunchForwardsMultiplier;
@@ -110,13 +107,13 @@ namespace Content.Shared.GameObjects.Components.Movement
         {
             foreach (var uid in _slipped.ToArray())
             {
-                if (!uid.IsValid() || !_entityManager.EntityExists(uid))
+                if (!uid.IsValid() || !Owner.EntityManager.EntityExists(uid))
                 {
                     _slipped.Remove(uid);
                     continue;
                 }
 
-                var entity = _entityManager.GetEntity(uid);
+                var entity = Owner.EntityManager.GetEntity(uid);
                 var physics = Owner.GetComponent<IPhysicsComponent>();
                 var otherPhysics = entity.GetComponent<IPhysicsComponent>();
 
@@ -150,7 +147,7 @@ namespace Content.Shared.GameObjects.Components.Movement
 
             serializer.DataField(this, x => x.ParalyzeTime, "paralyzeTime", 3f);
             serializer.DataField(this, x  => x.IntersectPercentage, "intersectPercentage", 0.3f);
-            serializer.DataField(this, x => x.RequiredSlipSpeed, "requiredSlipSpeed", 0f);
+            serializer.DataField(this, x => x.RequiredSlipSpeed, "requiredSlipSpeed", 0.1f);
             serializer.DataField(this, x => x.LaunchForwardsMultiplier, "launchForwardsMultiplier", 1f);
             serializer.DataField(this, x => x.Slippery, "slippery", true);
         }

@@ -1,21 +1,16 @@
 ﻿#nullable enable
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Content.Shared.GameObjects.Components.Portal;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Robust.Server.GameObjects;
-using Robust.Server.GameObjects.EntitySystems;
-using Robust.Server.Interfaces.GameObjects;
 using Robust.Shared.GameObjects;
-using Robust.Shared.GameObjects.Components;
-using Robust.Shared.GameObjects.Systems;
-using Robust.Shared.Interfaces.GameObjects;
-using Robust.Shared.Interfaces.Random;
 using Robust.Shared.IoC;
 using Robust.Shared.Map;
 using Robust.Shared.Maths;
+using Robust.Shared.Random;
 using Robust.Shared.Serialization;
-using Robust.Shared.Timers;
 using Robust.Shared.ViewVariables;
 
 namespace Content.Server.GameObjects.Components.Portal
@@ -76,7 +71,7 @@ namespace Content.Server.GameObjects.Components.Portal
             _state = newState;
         }
 
-        void IAfterInteract.AfterInteract(AfterInteractEventArgs eventArgs)
+        async Task<bool> IAfterInteract.AfterInteract(AfterInteractEventArgs eventArgs)
         {
             if (_teleporterType == TeleporterType.Directed)
             {
@@ -87,6 +82,8 @@ namespace Content.Server.GameObjects.Components.Portal
             {
                 TryRandomTeleport(eventArgs.User);
             }
+
+            return true;
         }
 
         public void TryDirectedTeleport(IEntity user, MapCoordinates mapCoords)
@@ -125,14 +122,14 @@ namespace Content.Server.GameObjects.Components.Portal
                 return;
             }
 
-            Timer.Spawn(TimeSpan.FromSeconds(_chargeTime), () => Teleport(user, mapCoords.Position));
+            Owner.SpawnTimer(TimeSpan.FromSeconds(_chargeTime), () => Teleport(user, mapCoords.Position));
             StartCooldown();
         }
 
         public void StartCooldown()
         {
             SetState(ItemTeleporterState.Cooldown);
-            Timer.Spawn(TimeSpan.FromSeconds(_chargeTime + _cooldown), () => SetState(ItemTeleporterState.Off));
+            Owner.SpawnTimer(TimeSpan.FromSeconds(_chargeTime + _cooldown), () => SetState(ItemTeleporterState.Off));
             if (_cooldownSound != null)
             {
                 var soundPlayer = EntitySystem.Get<AudioSystem>();
@@ -212,7 +209,7 @@ namespace Content.Server.GameObjects.Components.Portal
             }
 
             // Seemed easier to just start the cd timer at the same time
-            Timer.Spawn(TimeSpan.FromSeconds(_chargeTime), () => Teleport(user, targetVector));
+            Owner.SpawnTimer(TimeSpan.FromSeconds(_chargeTime), () => Teleport(user, targetVector));
             StartCooldown();
         }
 

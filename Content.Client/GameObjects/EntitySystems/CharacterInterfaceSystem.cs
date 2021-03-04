@@ -1,14 +1,16 @@
 using Content.Client.GameObjects.Components.Actor;
 using Content.Client.UserInterface;
 using Content.Shared.Input;
+using JetBrains.Annotations;
 using Robust.Client.Player;
 using Robust.Client.UserInterface.CustomControls;
-using Robust.Shared.GameObjects.Systems;
+using Robust.Shared.GameObjects;
 using Robust.Shared.Input.Binding;
 using Robust.Shared.IoC;
 
 namespace Content.Client.GameObjects.EntitySystems
 {
+    [UsedImplicitly]
     public sealed class CharacterInterfaceSystem : EntitySystem
     {
         [Dependency] private readonly IGameHud _gameHud = default!;

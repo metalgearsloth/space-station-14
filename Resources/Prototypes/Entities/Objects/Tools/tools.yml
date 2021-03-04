@@ -4,6 +4,9 @@
   id: Wirecutter
   description: This kills the wire.
   components:
+  - type: Tag
+    tags:
+    - PlantSampleTaker
   - type: Sprite
     sprite: Objects/Tools/wirecutters.rsi
     layers:
@@ -32,15 +35,13 @@
   name: screwdriver
   parent: BaseItem
   id: Screwdriver
-  description: Industrial grade torque in a small screwdriving package
+  description: Industrial grade torque in a small screwdriving package.
   components:
   - type: Sprite
     sprite: Objects/Tools/screwdriver.rsi
     layers:
       - state: screwdriver-map
       - state: screwdriver-screwybits
-
-
   - type: Item
     sprite: Objects/Tools/screwdriver.rsi
   - type: ItemCooldown
@@ -61,44 +62,10 @@
       yellow: "#ffa500"
 
 - type: entity
-  name: welding tool
-  parent: BaseItem
-  id: Welder
-  description: 'Melts anything as long as it''s fueled, don''t forget your eye protection!'
-  components:
-  - type: Sprite
-    sprite: Objects/Tools/welder.rsi
-    layers:
-    - state: welder
-    - state: welder_flame
-      shader: unshaded
-      visible: false
-  - type: Item
-    size: 10
-    sprite: Objects/Tools/welder.rsi
-    HeldPrefix: off
-  - type: ItemCooldown
-  - type: MeleeWeapon
-  - type: ItemStatus
-  - type: SolutionContainer
-    maxVol: 100
-    caps: AddTo, NoExamine
-    contents:
-      reagents:
-        - ReagentId: chem.WeldingFuel
-          Quantity: 100
-  - type: Welder
-    weldSoundCollection: Welder
-  - type: PointLight
-    enabled: false
-    radius: 1.5
-    color: orange
-
-- type: entity
   name: wrench
   parent: BaseItem
   id: Wrench
-  description: A common tool for assembly and disassembly, righty tighty lefty loosey
+  description: A common tool for assembly and disassembly, righty tighty lefty loosey.
   components:
   - type: Sprite
     sprite: Objects/Tools/wrench.rsi
@@ -116,7 +83,7 @@
   name: crowbar
   parent: BaseItem
   id: Crowbar
-  description: A multipurpose tool to pry open doors and fight interdimensional invaders
+  description: A multipurpose tool to pry open doors and fight interdimensional invaders.
   components:
   - type: Sprite
     sprite: Objects/Tools/crowbar.rsi
@@ -135,7 +102,7 @@
   name: emergency crowbar
   parent: BaseItem
   id: CrowbarRed
-  description: A multipurpose tool to pry open doors and fight interdimensional invaders
+  description: A multipurpose tool to pry open doors and fight interdimensional invaders.
   components:
   - type: Sprite
     sprite: Objects/Tools/crowbar_red.rsi
@@ -158,40 +125,20 @@
   components:
   - type: Sprite
     sprite: Objects/Tools/multitool.rsi
-    state: multitool
-  - type: Item
+    layers:
+    - state: icon
+    - state: green-unlit
+      shader: unshaded
+  - type: Clothing
+    size: 10
     sprite: Objects/Tools/multitool.rsi
+    QuickEquip: false
+    Slots:
+    - Belt
   - type: Tool
     qualities:
       - Multitool
   - type: SignalLinker
-
-- type: entity
-  name: jaws of life
-  parent: BaseItem
-  id: JawsOfLife
-  description: A set of jaws of life, compressed through the magic of science.
-  components:
-    - type: Sprite
-      sprite: Objects/Tools/jaws_of_life.rsi
-      state: jaws_pry
-    - type: Item
-      sprite: Objects/Tools/jaws_of_life.rsi
-    - type: TilePrying
-    - type: Tool
-      qualities:
-        - Prying
-      statusShowBehavior: true
-    - type: MultiTool
-      tools:
-        - behavior: Prying
-          state: jaws_pry
-          useSound: /Audio/Items/jaws_pry.ogg
-          changeSound: /Audio/Items/change_jaws.ogg
-        - behavior: Cutting
-          state: jaws_cutter
-          useSound: /Audio/Items/jaws_cut.ogg
-          changeSound: /Audio/Items/change_jaws.ogg
 
 - type: entity
   name: power drill
@@ -204,6 +151,7 @@
       state: drill_screw
     - type: Item
       sprite: Objects/Tools/drill.rsi
+      size: 20
     - type: Tool
       qualities:
         - Screwing
@@ -230,9 +178,13 @@
     delay: 1.0
   - type: Sprite
     sprite: Objects/Tools/rcd.rsi
-    state: rcd
-  - type: Item
+    state: icon
+  - type: Clothing
+    size: 20
     sprite: Objects/Tools/rcd.rsi
+    QuickEquip: false
+    Slots:
+    - Belt
 
 - type: entity
   name: RCD Ammo
@@ -244,3 +196,20 @@
     - type: Sprite
       sprite: Objects/Tools/rcd.rsi
       state: rcd_ammo
+
+- type: entity
+  name: shovel
+  parent: BaseItem
+  id: Shovel
+  description: A large tool for digging and moving dirt.
+  components:
+    - type: Tag
+      tags:
+      - Shovel
+    - type: Sprite
+      sprite: Objects/Tools/shovel.rsi
+      state: icon
+    - type: ItemCooldown
+    - type: MeleeWeapon
+    - type: Item
+      sprite: Objects/Tools/shovel.rsi

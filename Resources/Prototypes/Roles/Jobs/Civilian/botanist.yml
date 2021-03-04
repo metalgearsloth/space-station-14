@@ -1,0 +1,25 @@
+- type: job
+  id: Botanist
+  name: "botanist"
+  positions: 2
+  spawnPositions: 2
+  startingGear: BotanistGear
+  departments:
+  - Civilian
+  icon: "Botanist"
+  access:
+  - Service
+  - Maintenance
+
+- type: startingGear
+  id: BotanistGear
+  equipment:
+    innerclothing: ClothingUniformJumpsuitHydroponics
+    backpack: ClothingBackpackHydroponicsFilled
+    shoes: ClothingShoesColorBrown
+    idcard: BotanistPDA
+    ears: ClothingHeadsetService
+    outerclothing: ClothingOuterApronBotanist
+  innerclothingskirt: ClothingUniformJumpskirtHydroponics
+  satchel: ClothingBackpackSatchelHydroponicsFilled
+  duffelbag: ClothingBackpackDuffelFilled

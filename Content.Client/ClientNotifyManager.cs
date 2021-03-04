@@ -1,19 +1,19 @@
+#nullable enable
 using System;
 using System.Collections.Generic;
 using Content.Client.Interfaces;
 using Content.Client.UserInterface.Stylesheets;
 using Content.Shared;
-using Robust.Client.Interfaces.Console;
-using Robust.Client.Interfaces.Graphics.ClientEye;
-using Robust.Client.Interfaces.Input;
-using Robust.Client.Interfaces.UserInterface;
+using Robust.Client.Graphics;
 using Robust.Client.Player;
+using Robust.Client.UserInterface;
 using Robust.Client.UserInterface.Controls;
-using Robust.Shared.Interfaces.GameObjects;
-using Robust.Shared.Interfaces.Network;
+using Robust.Shared.Console;
+using Robust.Shared.GameObjects;
 using Robust.Shared.IoC;
 using Robust.Shared.Map;
 using Robust.Shared.Maths;
+using Robust.Shared.Network;
 using Robust.Shared.Timing;
 using Robust.Shared.Utility;
 
@@ -23,12 +23,11 @@ namespace Content.Client
     {
         [Dependency] private readonly IPlayerManager _playerManager = default!;
         [Dependency] private readonly IUserInterfaceManager _userInterfaceManager = default!;
-        [Dependency] private readonly IInputManager _inputManager = default!;
         [Dependency] private readonly IEyeManager _eyeManager = default!;
         [Dependency] private readonly IClientNetManager _netManager = default!;
         [Dependency] private readonly IEntityManager _entityManager = default!;
 
-        private readonly List<PopupLabel> _aliveLabels = new List<PopupLabel>();
+        private readonly List<PopupLabel> _aliveLabels = new();
         private bool _initialized;
 
         public void Initialize()
@@ -54,27 +53,23 @@ namespace Content.Client
 
         private void DoNotifyEntity(MsgDoNotifyEntity message)
         {
-            if (!_entityManager.TryGetEntity(message.Entity, out var entity))
+            if (_playerManager.LocalPlayer?.ControlledEntity == null ||
+                !_entityManager.TryGetEntity(message.Entity, out var entity))
             {
                 return;
             }
 
-            PopupMessage(_eyeManager.CoordinatesToScreen(entity.Transform.Coordinates), message.Message);
+            PopupMessage(entity, _playerManager.LocalPlayer.ControlledEntity, message.Message);
         }
 
         public override void PopupMessage(IEntity source, IEntity viewer, string message)
         {
-            if (viewer != _playerManager.LocalPlayer?.ControlledEntity)
-            {
-                return;
-            }
-
-            PopupMessage(_eyeManager.CoordinatesToScreen(source.Transform.Coordinates), message);
+            PopupMessage(_eyeManager.CoordinatesToScreen(source.Transform.Coordinates), message, source);
         }
 
         public override void PopupMessage(EntityCoordinates coordinates, IEntity viewer, string message)
         {
-            if (viewer != _playerManager.LocalPlayer.ControlledEntity)
+            if (viewer != _playerManager.LocalPlayer?.ControlledEntity)
             {
                 return;
             }
@@ -84,7 +79,7 @@ namespace Content.Client
 
         public override void PopupMessageCursor(IEntity viewer, string message)
         {
-            if (viewer != _playerManager.LocalPlayer.ControlledEntity)
+            if (viewer != _playerManager.LocalPlayer?.ControlledEntity)
             {
                 return;
             }
@@ -94,20 +89,30 @@ namespace Content.Client
 
         public void PopupMessage(ScreenCoordinates coordinates, string message)
         {
-            var label = new PopupLabel
+            PopupMessage(coordinates, message, null);
+        }
+
+        public void PopupMessage(ScreenCoordinates coordinates, string message, IEntity? entity)
+        {
+            var label = new PopupLabel(_eyeManager)
             {
+                Entity = entity,
                 Text = message,
                 StyleClasses = { StyleNano.StyleClassPopupMessage },
             };
+
             _userInterfaceManager.PopupRoot.AddChild(label);
-            var minimumSize = label.CombinedMinimumSize;
-            LayoutContainer.SetPosition(label, label.InitialPos = coordinates.Position - minimumSize / 2);
+            label.Measure(Vector2.Infinity);
+            var minimumSize = label.DesiredSize;
+
+            label.InitialPos = (coordinates.Position / _userInterfaceManager.UIScale) - minimumSize / 2;
+            LayoutContainer.SetPosition(label, label.InitialPos);
             _aliveLabels.Add(label);
         }
 
         public void PopupMessage(string message)
         {
-            PopupMessage(new ScreenCoordinates(_inputManager.MouseScreenPosition), message);
+            PopupMessage(new ScreenCoordinates(_userInterfaceManager.MousePositionScaled), message);
         }
 
         public void FrameUpdate(FrameEventArgs eventArgs)
@@ -125,20 +130,30 @@ namespace Content.Client
 
         private class PopupLabel : Label
         {
+            private readonly IEyeManager _eyeManager;
+
             public float TimeLeft { get; private set; }
             public Vector2 InitialPos { get; set; }
+            public IEntity? Entity { get; set; }
 
-            public PopupLabel()
+            public PopupLabel(IEyeManager eyeManager)
             {
+                _eyeManager = eyeManager;
                 ShadowOffsetXOverride = 1;
                 ShadowOffsetYOverride = 1;
                 FontColorShadowOverride = Color.Black;
             }
 
-            protected override void Update(FrameEventArgs eventArgs)
+            protected override void FrameUpdate(FrameEventArgs eventArgs)
             {
                 TimeLeft += eventArgs.DeltaSeconds;
-                LayoutContainer.SetPosition(this, InitialPos - (0, 20 * (TimeLeft * TimeLeft + TimeLeft)));
+
+                var position = Entity == null
+                    ? InitialPos
+                    : (_eyeManager.CoordinatesToScreen(Entity.Transform.Coordinates).Position / UIScale) - DesiredSize / 2;
+
+                LayoutContainer.SetPosition(this, position - (0, 20 * (TimeLeft * TimeLeft + TimeLeft)));
+
                 if (TimeLeft > 0.5f)
                 {
                     Modulate = Color.White.WithAlpha(1f - 0.2f * (float)Math.Pow(TimeLeft - 0.5f, 3f));
@@ -153,12 +168,11 @@ namespace Content.Client
         public string Description => "";
         public string Help => "";
 
-        public bool Execute(IDebugConsole console, params string[] args)
+        public void Execute(IConsoleShell shell, string argStr, string[] args)
         {
             var arg = args[0];
             var mgr = IoCManager.Resolve<IClientNotifyManager>();
             mgr.PopupMessage(arg);
-            return false;
         }
     }
 }

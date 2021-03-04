@@ -3,12 +3,11 @@ using System.Linq;
 using Content.Server.GameObjects.Components.Gravity;
 using Content.Server.GameObjects.Components.Mobs;
 using Content.Shared.GameObjects.Components.Gravity;
+using Content.Shared.GameObjects.EntitySystemMessages.Gravity;
 using JetBrains.Annotations;
-using Robust.Server.GameObjects.EntitySystems;
-using Robust.Server.Interfaces.Player;
-using Robust.Shared.GameObjects.Systems;
-using Robust.Shared.Interfaces.Map;
-using Robust.Shared.Interfaces.Random;
+using Robust.Server.GameObjects;
+using Robust.Server.Player;
+using Robust.Shared.GameObjects;
 using Robust.Shared.IoC;
 using Robust.Shared.Map;
 using Robust.Shared.Maths;
@@ -27,7 +26,7 @@ namespace Content.Server.GameObjects.EntitySystems
 
         private const uint ShakeTimes = 10;
 
-        private Dictionary<GridId, uint> _gridsToShake = new Dictionary<GridId, uint>();
+        private Dictionary<GridId, uint> _gridsToShake = new();
 
         private float _internalTimer = 0.0f;
 
@@ -35,13 +34,13 @@ namespace Content.Server.GameObjects.EntitySystems
         {
             _internalTimer += frameTime;
             var gridsWithGravity = new List<GridId>();
-            foreach (var generator in ComponentManager.EntityQuery<GravityGeneratorComponent>())
+            foreach (var generator in ComponentManager.EntityQuery<GravityGeneratorComponent>(true))
             {
                 if (generator.NeedsUpdate)
                 {
                     generator.UpdateState();
                 }
-                
+
                 if (generator.Status == GravityGeneratorStatus.On)
                 {
                     gridsWithGravity.Add(generator.Owner.Transform.GridID);
@@ -52,12 +51,11 @@ namespace Content.Server.GameObjects.EntitySystems
             {
                 if (grid.HasGravity && !gridsWithGravity.Contains(grid.Index))
                 {
-                    grid.HasGravity = false;
-                    ScheduleGridToShake(grid.Index, ShakeTimes);
-                } else if (!grid.HasGravity && gridsWithGravity.Contains(grid.Index))
+                    DisableGravity(grid);
+                }
+                else if (!grid.HasGravity && gridsWithGravity.Contains(grid.Index))
                 {
-                    grid.HasGravity = true;
-                    ScheduleGridToShake(grid.Index, ShakeTimes);
+                    EnableGravity(grid);
                 }
             }
 
@@ -66,6 +64,26 @@ namespace Content.Server.GameObjects.EntitySystems
                 ShakeGrids();
                 _internalTimer = 0.0f;
             }
+        }
+
+        private void EnableGravity(IMapGrid grid)
+        {
+            grid.HasGravity = true;
+            ScheduleGridToShake(grid.Index, ShakeTimes);
+
+            var message = new GravityChangedMessage(grid);
+
+            RaiseLocalEvent(message);
+        }
+
+        private void DisableGravity(IMapGrid grid)
+        {
+            grid.HasGravity = false;
+            ScheduleGridToShake(grid.Index, ShakeTimes);
+
+            var message = new GravityChangedMessage(grid);
+
+            RaiseLocalEvent(message);
         }
 
         private void ScheduleGridToShake(GridId gridId, uint shakeTimes)

@@ -1,14 +1,10 @@
-﻿#nullable enable
+#nullable enable
 using System;
 using Content.Server.GameObjects.Components.NodeContainer.NodeGroups;
 using Content.Shared.GameObjects.Components.Power;
 using Content.Shared.GameObjects.EntitySystems;
 using Robust.Server.GameObjects;
-using Robust.Server.Interfaces.GameObjects;
 using Robust.Shared.GameObjects;
-using Robust.Shared.GameObjects.ComponentDependencies;
-using Robust.Shared.GameObjects.Components;
-using Robust.Shared.Interfaces.Map;
 using Robust.Shared.IoC;
 using Robust.Shared.Localization;
 using Robust.Shared.Serialization;
@@ -29,14 +25,14 @@ namespace Content.Server.GameObjects.Components.Power.ApcNetComponents
 
         public override string Name => "PowerReceiver";
 
-        public event EventHandler<PowerStateEventArgs>? OnPowerStateChanged;
-
         [ViewVariables]
         public bool Powered => (HasApcPower || !NeedsPower) && !PowerDisabled;
 
+        /// <summary>
+        ///     If this is being powered by an Apc.
+        /// </summary>
         [ViewVariables]
-        public bool HasApcPower { get => _hasApcPower; set => SetHasApcPower(value); }
-        private bool _hasApcPower;
+        public bool HasApcPower { get; private set; }
 
         /// <summary>
         ///     The max distance from a <see cref="PowerProviderComponent"/> that this can receive power from.
@@ -99,16 +95,11 @@ namespace Content.Server.GameObjects.Components.Power.ApcNetComponents
             if (_physicsComponent != null)
             {
                 AnchorUpdate();
-                _physicsComponent.AnchoredChanged += AnchorUpdate;
             }
         }
 
-        public override void OnRemove()
+        public override void OnRemove() 
         {
-            if (_physicsComponent != null)
-            {
-                _physicsComponent.AnchoredChanged -= AnchorUpdate;
-            }
             _provider.RemoveReceiver(this);
             base.OnRemove();
         }
@@ -119,6 +110,25 @@ namespace Content.Server.GameObjects.Components.Power.ApcNetComponents
             {
                 Provider = provider;
             }
+        }
+
+        public override void HandleMessage(ComponentMessage message, IComponent? component)
+        {
+            base.HandleMessage(message, component);
+            switch (message)
+            {
+                case AnchoredChangedMessage:
+                    AnchorUpdate();
+                    break;
+            }
+        }
+
+        public void ApcPowerChanged()
+        {
+            var oldPowered = Powered;
+            HasApcPower = Provider.HasApcPower;
+            if (Powered != oldPowered)
+                OnNewPowerState();
         }
 
         private bool TryFindAvailableProvider(out IPowerProvider foundProvider)
@@ -152,7 +162,7 @@ namespace Content.Server.GameObjects.Components.Power.ApcNetComponents
             _provider.RemoveReceiver(this);
             _provider = PowerProviderComponent.NullProvider;
             NeedsProvider = true;
-            HasApcPower = false;
+            ApcPowerChanged();
         }
 
         private void SetProvider(IPowerProvider newProvider)
@@ -161,16 +171,7 @@ namespace Content.Server.GameObjects.Components.Power.ApcNetComponents
             _provider = newProvider;
             newProvider.AddReceiver(this);
             NeedsProvider = false;
-        }
-
-        private void SetHasApcPower(bool newHasApcPower)
-        {
-            var oldPowered = Powered;
-            _hasApcPower = newHasApcPower;
-            if (oldPowered != Powered)
-            {
-                OnNewPowerState();
-            }
+            ApcPowerChanged();
         }
 
         private void SetPowerReceptionRange(int newPowerReceptionRange)
@@ -182,6 +183,7 @@ namespace Content.Server.GameObjects.Components.Power.ApcNetComponents
 
         private void SetLoad(int newLoad)
         {
+            Provider.UpdateReceiverLoad(Load, newLoad);
             _load = newLoad;
         }
 
@@ -207,7 +209,8 @@ namespace Content.Server.GameObjects.Components.Power.ApcNetComponents
 
         private void OnNewPowerState()
         {
-            OnPowerStateChanged?.Invoke(this, new PowerStateEventArgs(Powered));
+            SendMessage(new PowerChangedMessage(Powered));
+
             if (Owner.TryGetComponent<AppearanceComponent>(out var appearance))
             {
                 appearance.SetData(PowerDeviceVisuals.Powered, Powered);
@@ -228,21 +231,21 @@ namespace Content.Server.GameObjects.Components.Power.ApcNetComponents
                 ClearProvider();
             }
         }
+
         ///<summary>
         ///Adds some markup to the examine text of whatever object is using this component to tell you if it's powered or not, even if it doesn't have an icon state to do this for you.
         ///</summary>
-
         public void Examine(FormattedMessage message, bool inDetailsRange)
         {
-            message.AddMarkup(Loc.GetString("It appears to be {0}.", this.Powered ? "[color=darkgreen]powered[/color]" : "[color=darkred]un-powered[/color]"));
+            message.AddMarkup(Loc.GetString("It appears to be {0}.", Powered ? "[color=darkgreen]powered[/color]" : "[color=darkred]un-powered[/color]"));
         }
     }
 
-    public class PowerStateEventArgs : EventArgs
+    public class PowerChangedMessage : ComponentMessage
     {
         public readonly bool Powered;
 
-        public PowerStateEventArgs(bool powered)
+        public PowerChangedMessage(bool powered)
         {
             Powered = powered;
         }

@@ -1,8 +1,6 @@
 using System.Collections.Generic;
 using Content.Server.GameObjects.Components.Research;
 using Robust.Shared.GameObjects;
-using Robust.Shared.GameObjects.Systems;
-using Robust.Shared.Interfaces.GameObjects;
 
 namespace Content.Server.GameObjects.EntitySystems
 {
@@ -11,7 +9,7 @@ namespace Content.Server.GameObjects.EntitySystems
         public const float ResearchConsoleUIUpdateTime = 30f;
 
         private float _timer = ResearchConsoleUIUpdateTime;
-        private readonly List<ResearchServerComponent> _servers = new List<ResearchServerComponent>();
+        private readonly List<ResearchServerComponent> _servers = new();
         private readonly IEntityQuery ConsoleQuery;
         public IReadOnlyList<ResearchServerComponent> Servers => _servers;
 

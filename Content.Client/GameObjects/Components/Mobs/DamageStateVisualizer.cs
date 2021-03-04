@@ -1,10 +1,8 @@
 using System.Collections.Generic;
 using Content.Shared.GameObjects;
-using Content.Shared.GameObjects.Components.Damage;
 using Content.Shared.GameObjects.Components.Mobs;
 using JetBrains.Annotations;
 using Robust.Client.GameObjects;
-using Robust.Client.Interfaces.GameObjects.Components;
 using Robust.Shared.Utility;
 using YamlDotNet.RepresentationModel;
 
@@ -14,7 +12,7 @@ namespace Content.Client.GameObjects.Components.Mobs
     public sealed class DamageStateVisualizer : AppearanceVisualizer
     {
         private DamageState _data = DamageState.Alive;
-        private readonly Dictionary<DamageState, string> _stateMap = new Dictionary<DamageState, string>();
+        private readonly Dictionary<DamageState, string> _stateMap = new();
         private int? _originalDrawDepth;
 
         public override void LoadData(YamlMappingNode node)
@@ -71,7 +69,7 @@ namespace Content.Client.GameObjects.Components.Mobs
         }
     }
 
-    public enum DamageStateVisualLayers
+    public enum DamageStateVisualLayers : byte
     {
         Base
     }

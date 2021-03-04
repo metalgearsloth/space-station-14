@@ -1,3 +1,4 @@
+#nullable enable
 using System;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Serialization;
@@ -11,18 +12,17 @@ namespace Content.Shared.GameObjects.Components
 
         protected abstract bool HasCell { get; }
 
+        protected const int StatusLevels = 6;
+
         [Serializable, NetSerializable]
         protected sealed class HandheldLightComponentState : ComponentState
         {
-            public HandheldLightComponentState(float? charge, bool hasCell) : base(ContentNetIDs.HANDHELD_LIGHT)
+            public byte? Charge { get; }
+
+            public HandheldLightComponentState(byte? charge) : base(ContentNetIDs.HANDHELD_LIGHT)
             {
                 Charge = charge;
-                HasCell = hasCell;
             }
-
-            public float? Charge { get; }
-
-            public bool HasCell { get; }
         }
     }
 

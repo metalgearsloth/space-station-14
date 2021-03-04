@@ -1,17 +1,15 @@
 ﻿using Content.Shared.Chat;
-using Robust.Client.Console;
-using Robust.Client.Graphics.Drawing;
+using Robust.Client.Graphics;
 using Robust.Client.UserInterface;
 using Robust.Client.UserInterface.Controls;
 using Robust.Shared.Input;
-using Robust.Shared.IoC;
 using Robust.Shared.Localization;
 using Robust.Shared.Maths;
 using Robust.Shared.Utility;
 
 namespace Content.Client.Chat
 {
-    public class ChatBox : MarginContainer
+    public class ChatBox : Control
     {
         public delegate void TextSubmitHandler(ChatBox chatBox, string text);
 
@@ -25,6 +23,7 @@ namespace Content.Client.Chat
         public Button LocalButton { get; }
         public Button OOCButton { get; }
         public Button AdminButton { get; }
+        public Button DeadButton { get; }
 
         /// <summary>
         ///     Default formatting string for the ClientChatConsole.
@@ -37,13 +36,6 @@ namespace Content.Client.Chat
 
         public ChatBox()
         {
-            /*MarginLeft = -475.0f;
-            MarginTop = 10.0f;
-            MarginRight = -10.0f;
-            MarginBottom = 235.0f;
-
-            AnchorLeft = 1.0f;
-            AnchorRight = 1.0f;*/
             MouseFilter = MouseFilterMode.Stop;
 
             var outerVBox = new VBoxContainer();
@@ -51,7 +43,7 @@ namespace Content.Client.Chat
             var panelContainer = new PanelContainer
             {
                 PanelOverride = new StyleBoxFlat {BackgroundColor = Color.FromHex("#25252aaa")},
-                SizeFlagsVertical = SizeFlags.FillExpand
+                VerticalExpand = true
             };
             var vBox = new VBoxContainer();
             panelContainer.AddChild(vBox);
@@ -60,15 +52,8 @@ namespace Content.Client.Chat
             outerVBox.AddChild(panelContainer);
             outerVBox.AddChild(hBox);
 
-
-            var contentMargin = new MarginContainer
-            {
-                MarginLeftOverride = 4, MarginRightOverride = 4,
-                SizeFlagsVertical = SizeFlags.FillExpand
-            };
-            Contents = new OutputPanel();
-            contentMargin.AddChild(Contents);
-            vBox.AddChild(contentMargin);
+            Contents = new OutputPanel {Margin = new Thickness(4, 0), VerticalExpand = true};
+            vBox.AddChild(Contents);
 
             Input = new HistoryLineEdit();
             Input.OnKeyBindDown += InputKeyBindDown;
@@ -79,7 +64,8 @@ namespace Content.Client.Chat
             {
                 Text = Loc.GetString("All"),
                 Name = "ALL",
-                SizeFlagsHorizontal = SizeFlags.ShrinkEnd | SizeFlags.Expand,
+                HorizontalExpand = true,
+                HorizontalAlignment = HAlignment.Right,
                 ToggleMode = true,
             };
 
@@ -97,29 +83,33 @@ namespace Content.Client.Chat
                 ToggleMode = true,
             };
 
-            var groupController = IoCManager.Resolve<IClientConGroupController>();
-            if(groupController.CanCommand("asay"))
+            AdminButton = new Button
             {
-                AdminButton = new Button
-                {
-                    Text = Loc.GetString("Admin"),
-                    Name = "Admin",
-                    ToggleMode = true,
-                };
-            }
+                Text = Loc.GetString("Admin"),
+                Name = "Admin",
+                ToggleMode = true,
+                Visible = false
+            };
+
+            DeadButton = new Button
+            {
+                Text = Loc.GetString("Dead"),
+                Name = "Dead",
+                ToggleMode = true,
+                Visible = false
+            };
 
             AllButton.OnToggled += OnFilterToggled;
             LocalButton.OnToggled += OnFilterToggled;
             OOCButton.OnToggled += OnFilterToggled;
+            AdminButton.OnToggled += OnFilterToggled;
+            DeadButton.OnToggled += OnFilterToggled;
 
             hBox.AddChild(AllButton);
             hBox.AddChild(LocalButton);
+            hBox.AddChild(DeadButton);
             hBox.AddChild(OOCButton);
-            if(AdminButton != null)
-            {
-                AdminButton.OnToggled += OnFilterToggled;
-                hBox.AddChild(AdminButton);
-            }
+            hBox.AddChild(AdminButton);
 
             AddChild(outerVBox);
         }
@@ -160,6 +150,20 @@ namespace Content.Client.Chat
             var formatted = new FormattedMessage(3);
             formatted.PushColor(color);
             formatted.AddText(message);
+            formatted.Pop();
+            Contents.AddMessage(formatted);
+        }
+
+        public void AddLine(FormattedMessage message, Color color)
+        {
+            if (Disposed)
+            {
+                return;
+            }
+
+            var formatted = new FormattedMessage(3);
+            formatted.PushColor(color);
+            formatted.AddMessage(message);
             formatted.Pop();
             Contents.AddMessage(formatted);
         }

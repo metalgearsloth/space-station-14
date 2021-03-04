@@ -1,16 +1,11 @@
-﻿using Content.Server.GameObjects.EntitySystems.Click;
-using Content.Shared.Damage;
+using Content.Server.GameObjects.EntitySystems.Click;
 using Content.Shared.GameObjects;
-using Content.Shared.GameObjects.Components.Damage;
 using Content.Shared.Physics;
+using Robust.Server.GameObjects;
 using Robust.Shared.GameObjects;
-using Robust.Shared.GameObjects.Components;
-using Robust.Shared.GameObjects.Systems;
-using Robust.Shared.Interfaces.GameObjects;
-using Robust.Shared.Interfaces.Physics;
 using Robust.Shared.IoC;
 using Robust.Shared.Maths;
-using Robust.Shared.Timers;
+using Robust.Shared.Physics;
 
 namespace Content.Server.GameObjects.Components.Projectiles
 {
@@ -28,11 +23,11 @@ namespace Content.Server.GameObjects.Components.Projectiles
         /// <summary>
         ///     User who threw the item.
         /// </summary>
-        public IEntity User;
+        public IEntity User { get; set; }
 
         void ICollideBehavior.CollideWith(IEntity entity)
         {
-            if (!_shouldCollide) return;
+            if (!_shouldCollide || entity.Deleted) return;
             if (entity.TryGetComponent(out PhysicsComponent collid))
             {
                 if (!collid.Hard) // ignore non hard
@@ -43,16 +38,12 @@ namespace Content.Server.GameObjects.Components.Projectiles
                 // Raise an event.
                 EntitySystem.Get<InteractionSystem>().ThrowCollideInteraction(User, Owner, entity, Owner.Transform.Coordinates);
             }
-            if (entity.TryGetComponent(out IDamageableComponent damage))
-            {
-                damage.ChangeDamage(DamageType.Blunt, 10, false, Owner);
-            }
 
             // Stop colliding with mobs, this mimics not having enough velocity to do damage
             // after impacting the first object.
             // For realism this should actually be changed when the velocity of the object is less than a threshold.
             // This would allow ricochets off walls, and weird gravity effects from slowing the object.
-            if (Owner.TryGetComponent(out IPhysicsComponent body) && body.PhysicsShapes.Count >= 1)
+            if (!Owner.Deleted && Owner.TryGetComponent(out IPhysicsComponent body) && body.PhysicsShapes.Count >= 1)
             {
                 _shouldCollide = false;
             }
@@ -97,12 +88,15 @@ namespace Content.Server.GameObjects.Components.Projectiles
             var controller = comp.EnsureController<ThrownController>();
             controller.Push(direction, speed);
 
+            EntitySystem.Get<AudioSystem>()
+                .PlayFromEntity("/Audio/Effects/toss.ogg", Owner);
+
             StartStopTimer();
         }
 
         private void StartStopTimer()
         {
-            Timer.Spawn((int) (DefaultThrowTime * 1000), MaybeStopThrow);
+            Owner.SpawnTimer((int) (DefaultThrowTime * 1000), MaybeStopThrow);
         }
 
         private void MaybeStopThrow()
@@ -119,13 +113,6 @@ namespace Content.Server.GameObjects.Components.Projectiles
             }
 
             StopThrow();
-        }
-
-        public override void Initialize()
-        {
-            base.Initialize();
-
-            Owner.EnsureComponent<PhysicsComponent>().EnsureController<ThrownController>();
         }
     }
 }

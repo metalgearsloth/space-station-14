@@ -2,9 +2,7 @@
 using Content.Shared.GameObjects.Components.Conveyor;
 using JetBrains.Annotations;
 using Robust.Client.GameObjects;
-using Robust.Client.Interfaces.GameObjects.Components;
 using Robust.Shared.GameObjects;
-using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Utility;
 using YamlDotNet.RepresentationModel;
 
@@ -16,7 +14,6 @@ namespace Content.Client.GameObjects.Components.Conveyor
         private string _stateRunning;
         private string _stateStopped;
         private string _stateReversed;
-        private string _stateLoose;
 
         private void ChangeState(AppearanceComponent appearance)
         {
@@ -32,7 +29,6 @@ namespace Content.Client.GameObjects.Components.Conveyor
                 ConveyorState.Off => _stateStopped,
                 ConveyorState.Forward => _stateRunning,
                 ConveyorState.Reversed => _stateReversed,
-                ConveyorState.Loose => _stateLoose,
                 _ => throw new ArgumentOutOfRangeException()
             };
 
@@ -46,7 +42,6 @@ namespace Content.Client.GameObjects.Components.Conveyor
             _stateRunning = node.GetNode("state_running").AsString();
             _stateStopped = node.GetNode("state_stopped").AsString();
             _stateReversed = node.GetNode("state_reversed").AsString();
-            _stateLoose = node.GetNode("state_loose").AsString();
         }
 
         public override void InitializeEntity(IEntity entity)
@@ -60,12 +55,6 @@ namespace Content.Client.GameObjects.Components.Conveyor
         public override void OnChangeData(AppearanceComponent component)
         {
             base.OnChangeData(component);
-
-            if (component.Owner.Deleted)
-            {
-                return;
-            }
-
             ChangeState(component);
         }
     }

@@ -11,11 +11,10 @@ using Content.Shared.Interfaces;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Content.Shared.GameObjects.Verbs;
 using Content.Shared.GameObjects.EntitySystems;
-using Robust.Server.GameObjects.Components.Container;
-using Robust.Server.GameObjects.Components.UserInterface;
-using Robust.Server.Interfaces.GameObjects;
+using Content.Shared.GameObjects.EntitySystems.ActionBlocker;
+using Robust.Server.GameObjects;
+using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
-using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.IoC;
 using Robust.Shared.Localization;
 using Robust.Shared.Log;
@@ -42,19 +41,13 @@ namespace Content.Server.GameObjects.Components.Access
         {
             base.Initialize();
 
-            _privilegedIdContainer = ContainerManagerComponent.Ensure<ContainerSlot>($"{Name}-privilegedId", Owner);
-            _targetIdContainer = ContainerManagerComponent.Ensure<ContainerSlot>($"{Name}-targetId", Owner);
+            _privilegedIdContainer = ContainerHelpers.EnsureContainer<ContainerSlot>(Owner, $"{Name}-privilegedId");
+            _targetIdContainer = ContainerHelpers.EnsureContainer<ContainerSlot>(Owner, $"{Name}-targetId");
 
-            if (!Owner.EnsureComponent(out AccessReader _))
-            {
-                Logger.Warning($"Entity {Owner} at {Owner.Transform.MapPosition} didn't have a {nameof(AccessReader)}");
-            }
+            Owner.EnsureComponentWarn<AccessReader>();
+            Owner.EnsureComponentWarn<ServerUserInterfaceComponent>();
 
-            if (UserInterface == null)
-            {
-                Logger.Warning($"Entity {Owner} at {Owner.Transform.MapPosition} doesn't have a {nameof(ServerUserInterfaceComponent)}");
-            }
-            else
+            if (UserInterface != null)
             {
                 UserInterface.OnReceiveMessage += OnUiReceiveMessage;
             }
@@ -219,7 +212,7 @@ namespace Content.Server.GameObjects.Components.Access
             UserInterface?.SetState(newState);
         }
 
-        public void Activate(ActivateEventArgs eventArgs)
+        void IActivate.Activate(ActivateEventArgs eventArgs)
         {
             if(!eventArgs.User.TryGetComponent(out IActorComponent? actor))
             {
@@ -229,7 +222,7 @@ namespace Content.Server.GameObjects.Components.Access
             UserInterface?.Open(actor.playerSession);
         }
 
-        public async Task<bool> InteractUsing(InteractUsingEventArgs eventArgs)
+        async Task<bool> IInteractUsing.InteractUsing(InteractUsingEventArgs eventArgs)
         {
             var item = eventArgs.Using;
             var user = eventArgs.User;

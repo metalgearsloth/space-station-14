@@ -1,9 +1,9 @@
-﻿using Content.Shared.GameObjects.EntitySystems;
+﻿using Content.Shared.GameObjects.EntitySystems.ActionBlocker;
 using Content.Shared.GameObjects.Verbs;
+using Content.Shared.Interfaces;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Robust.Server.GameObjects;
 using Robust.Shared.GameObjects;
-using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Localization;
 using Robust.Shared.Serialization;
 
@@ -30,12 +30,12 @@ namespace Content.Server.GameObjects.Components.MachineLinking
             serializer.DataField(ref _on, "on", true);
         }
 
-        public void Activate(ActivateEventArgs eventArgs)
+        void IActivate.Activate(ActivateEventArgs eventArgs)
         {
             TransmitSignal(eventArgs.User);
         }
 
-        public bool InteractHand(InteractHandEventArgs eventArgs)
+        bool IInteractHand.InteractHand(InteractHandEventArgs eventArgs)
         {
             TransmitSignal(eventArgs.User);
             return true;
@@ -52,7 +52,10 @@ namespace Content.Server.GameObjects.Components.MachineLinking
                 return;
             }
 
-            transmitter.TransmitSignal(user, _on ? SignalState.On : SignalState.Off);
+            if (!transmitter.TransmitSignal(_on))
+            {
+                Owner.PopupMessage(user, Loc.GetString("No receivers connected."));
+            }
         }
 
         private void UpdateSprite()

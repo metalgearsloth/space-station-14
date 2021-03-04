@@ -6,6 +6,7 @@
   - type: Clickable
   - type: InteractionOutline
   - type: Anchorable
+    snap: true
   - type: Construction
     graph: girder
     node: girder
@@ -13,13 +14,35 @@
     sprite: Constructible/Structures/Walls/solid.rsi
     state: wall_girder
   - type: Physics
+    mass: 25
+    anchored: true
     shapes:
     - !type:PhysShapeAabb
-      layer: [MobMask, Opaque]
-  - type: Destructible
-    deadThreshold: 50
+      layer:
+      - Opaque
+      - Impassable
+      - MobImpassable
+      - VaultImpassable
+      - SmallImpassable
+  - type: Tag
+    tags:
+    - ExplosivePassable
+  - type: Pullable
+  - type: Damageable
     resistances: metallicResistances
-    spawnOnDestroy: SteelSheet1
+  - type: Destructible
+    thresholds:
+    - trigger:
+        !type:DamageTrigger
+        damage: 50
+      behaviors:
+      - !type:SpawnEntitiesBehavior
+        spawn:
+          SheetSteel1:
+            min: 1
+            max: 1
+      - !type:DoActsBehavior
+        acts: [ "Destruction" ]
   - type: SnapGrid
     offset: Edge
   placement:

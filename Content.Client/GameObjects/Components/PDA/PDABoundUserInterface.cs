@@ -2,13 +2,13 @@
 using Content.Client.GameObjects.EntitySystems;
 using Content.Client.Utility;
 using Content.Shared.GameObjects.Components.PDA;
-using Robust.Client.GameObjects.Components.UserInterface;
-using Robust.Client.Graphics.Drawing;
-using Robust.Client.Interfaces.UserInterface;
+using JetBrains.Annotations;
+using Robust.Client.GameObjects;
+using Robust.Client.Graphics;
+using Robust.Client.UserInterface;
 using Robust.Client.UserInterface.Controls;
 using Robust.Client.UserInterface.CustomControls;
 using Robust.Shared.GameObjects;
-using Robust.Shared.GameObjects.Components.UserInterface;
 using Robust.Shared.IoC;
 using Robust.Shared.Localization;
 using Robust.Shared.Maths;
@@ -17,13 +17,14 @@ using Robust.Shared.Utility;
 
 namespace Content.Client.GameObjects.Components.PDA
 {
+    [UsedImplicitly]
     public class PDABoundUserInterface : BoundUserInterface
     {
         [Dependency] private readonly IPrototypeManager _prototypeManager = default!;
         [Dependency] private readonly IUserInterfaceManager _userInterfaceManager = default!;
 
         private PDAMenu _menu;
-        private PDAMenuPopup failPopup;
+        private PDAMenuPopup _failPopup;
 
         public PDABoundUserInterface(ClientUserInterfaceComponent owner, object uiKey) : base(owner, uiKey)
         {
@@ -47,6 +48,11 @@ namespace Content.Client.GameObjects.Components.PDA
                 SendMessage(new PDAEjectIDMessage());
             };
 
+            _menu.EjectPenButton.OnPressed += args =>
+            {
+                SendMessage(new PDAEjectPenMessage());
+            };
+
             _menu.MasterTabContainer.OnTabChanged += i =>
             {
                 var tab = _menu.MasterTabContainer.GetChild(i);
@@ -60,12 +66,12 @@ namespace Content.Client.GameObjects.Components.PDA
             {
                 if (_menu.CurrentLoggedInAccount.DataBalance < listing.Price)
                 {
-                    failPopup = new PDAMenuPopup(Loc.GetString("Insufficient funds!"));
-                    _userInterfaceManager.ModalRoot.AddChild(failPopup);
-                    failPopup.Open(UIBox2.FromDimensions(_menu.Position.X + 150, _menu.Position.Y + 60, 156, 24));
+                    _failPopup = new PDAMenuPopup(Loc.GetString("Insufficient funds!"));
+                    _userInterfaceManager.ModalRoot.AddChild(_failPopup);
+                    _failPopup.Open(UIBox2.FromDimensions(_menu.Position.X + 150, _menu.Position.Y + 60, 156, 24));
                     _menu.OnClose += () =>
                     {
-                        failPopup.Dispose();
+                        _failPopup.Dispose();
                     };
                 }
 
@@ -106,6 +112,7 @@ namespace Content.Client.GameObjects.Components.PDA
                     }
 
                     _menu.EjectIDButton.Visible = msg.PDAOwnerInfo.IdOwner != null;
+                    _menu.EjectPenButton.Visible = msg.HasPen;
                     if (msg.Account != null)
                     {
                         _menu.CurrentLoggedInAccount = msg.Account;
@@ -214,14 +221,13 @@ namespace Content.Client.GameObjects.Components.PDA
 
         private class PDAMenu : SS14Window
         {
-            protected override Vector2? CustomSize => (512, 256);
-
             private PDABoundUserInterface _owner { get; }
 
             public Button FlashLightToggleButton { get; }
             public Button EjectIDButton { get; }
+            public Button EjectPenButton { get; }
 
-            public TabContainer MasterTabContainer;
+            public readonly TabContainer MasterTabContainer;
 
             public RichTextLabel PDAOwnerLabel { get; }
             public PanelContainer IDInfoContainer { get; }
@@ -229,14 +235,14 @@ namespace Content.Client.GameObjects.Components.PDA
 
             public VBoxContainer UplinkTabContainer { get; }
 
-            protected HSplitContainer CategoryAndListingsContainer;
+            protected readonly HSplitContainer CategoryAndListingsContainer;
 
-            private IPrototypeManager _prototypeManager;
+            private readonly IPrototypeManager _prototypeManager;
 
-            public VBoxContainer UplinkListingsContainer;
+            public readonly VBoxContainer UplinkListingsContainer;
 
-            public VBoxContainer CategoryListContainer;
-            public RichTextLabel BalanceInfo;
+            public readonly VBoxContainer CategoryListContainer;
+            public readonly RichTextLabel BalanceInfo;
             public event Action<BaseButton.ButtonEventArgs, UplinkListingData> OnListingButtonPressed;
             public event Action<BaseButton.ButtonEventArgs, UplinkCategory> OnCategoryButtonPressed;
 
@@ -267,6 +273,8 @@ namespace Content.Client.GameObjects.Components.PDA
 
             public PDAMenu(PDABoundUserInterface owner, IPrototypeManager prototypeManager)
             {
+                MinSize = SetSize = (512, 256);
+
                 _owner = owner;
                 _prototypeManager = prototypeManager;
                 Title = Loc.GetString("PDA");
@@ -279,14 +287,20 @@ namespace Content.Client.GameObjects.Components.PDA
 
                 IDInfoLabel = new RichTextLabel()
                 {
-                    SizeFlagsHorizontal = SizeFlags.FillExpand,
+                    HorizontalExpand = true,
                 };
 
                 EjectIDButton = new Button
                 {
                     Text = Loc.GetString("Eject ID"),
-                    SizeFlagsHorizontal = SizeFlags.ShrinkCenter,
-                    SizeFlagsVertical = SizeFlags.ShrinkCenter
+                    HorizontalAlignment = HAlignment.Center,
+                    VerticalAlignment = VAlignment.Center
+                };
+                EjectPenButton = new Button
+                {
+                    Text = Loc.GetString("Eject Pen"),
+                    HorizontalAlignment = HAlignment.Center,
+                    VerticalAlignment = VAlignment.Center
                 };
 
                 var innerHBoxContainer = new HBoxContainer
@@ -294,13 +308,13 @@ namespace Content.Client.GameObjects.Components.PDA
                     Children =
                     {
                         IDInfoLabel,
-                        EjectIDButton
+                        EjectIDButton,
+                        EjectPenButton
                     }
                 };
 
                 IDInfoContainer = new PanelContainer
                 {
-                    SizeFlagsHorizontal = SizeFlags.Fill,
                     Children =
                     {
                         innerHBoxContainer,
@@ -315,9 +329,9 @@ namespace Content.Client.GameObjects.Components.PDA
 
                 var mainMenuTabContainer = new VBoxContainer
                 {
-                    SizeFlagsVertical = SizeFlags.FillExpand,
-                    SizeFlagsHorizontal = SizeFlags.FillExpand,
-                    CustomMinimumSize = (50, 50),
+                    VerticalExpand = true,
+                    HorizontalExpand = true,
+                    MinSize = (50, 50),
 
                     Children =
                     {
@@ -337,36 +351,36 @@ namespace Content.Client.GameObjects.Components.PDA
 
                 BalanceInfo = new RichTextLabel
                 {
-                    SizeFlagsHorizontal = SizeFlags.ShrinkCenter,
+                    HorizontalAlignment = HAlignment.Center,
                 };
 
                 //Red background container.
                 var masterPanelContainer = new PanelContainer
                 {
                     PanelOverride = new StyleBoxFlat { BackgroundColor = Color.Black },
-                    SizeFlagsVertical = SizeFlags.FillExpand
+                    VerticalExpand = true
                 };
 
                 //This contains both the panel of the category buttons and the listings box.
                 CategoryAndListingsContainer = new HSplitContainer
                 {
-                    SizeFlagsVertical = SizeFlags.FillExpand,
+                    VerticalExpand = true,
                 };
 
 
                 var uplinkShopScrollContainer = new ScrollContainer
                 {
-                    SizeFlagsHorizontal = SizeFlags.FillExpand,
-                    SizeFlagsVertical = SizeFlags.FillExpand,
+                    HorizontalExpand = true,
+                    VerticalExpand = true,
                     SizeFlagsStretchRatio = 2,
-                    CustomMinimumSize = (100, 256)
+                    MinSize = (100, 256)
                 };
 
                 //Add the category list to the left side. The store items to center.
                 var categoryListContainerBackground = new PanelContainer
                 {
                     PanelOverride = new StyleBoxFlat { BackgroundColor = Color.Gray.WithAlpha(0.02f) },
-                    SizeFlagsVertical = SizeFlags.FillExpand,
+                    VerticalExpand = true,
                     Children =
                     {
                         CategoryListContainer
@@ -380,16 +394,16 @@ namespace Content.Client.GameObjects.Components.PDA
                 //Actual list of buttons for buying a listing from the uplink.
                 UplinkListingsContainer = new VBoxContainer
                 {
-                    SizeFlagsHorizontal = SizeFlags.FillExpand,
-                    SizeFlagsVertical = SizeFlags.FillExpand,
+                    HorizontalExpand = true,
+                    VerticalExpand = true,
                     SizeFlagsStretchRatio = 2,
-                    CustomMinimumSize = (100, 256),
+                    MinSize = (100, 256),
                 };
                 uplinkShopScrollContainer.AddChild(UplinkListingsContainer);
 
                 var innerVboxContainer = new VBoxContainer
                 {
-                    SizeFlagsVertical = SizeFlags.FillExpand,
+                    VerticalExpand = true,
 
                     Children =
                     {
@@ -457,7 +471,7 @@ namespace Content.Client.GameObjects.Components.PDA
                 {
                     Text = listing.ListingName == string.Empty ? prototype.Name : listing.ListingName,
                     ToolTip = listing.Description == string.Empty ? prototype.Description : listing.Description,
-                    SizeFlagsHorizontal = SizeFlags.FillExpand,
+                    HorizontalExpand = true,
                     Modulate = _loggedInUplinkAccount.DataBalance >= listing.Price
                     ? Color.White
                     : Color.Gray.WithAlpha(0.30f)
@@ -466,7 +480,7 @@ namespace Content.Client.GameObjects.Components.PDA
                 var priceLabel = new Label
                 {
                     Text = $"{listing.Price} TC",
-                    SizeFlagsHorizontal = SizeFlags.ShrinkEnd,
+                    HorizontalAlignment = HAlignment.Right,
                     Modulate = _loggedInUplinkAccount.DataBalance >= listing.Price
                     ? weightedColor
                     : Color.Gray.WithAlpha(0.30f)
@@ -475,8 +489,7 @@ namespace Content.Client.GameObjects.Components.PDA
                 //Padding for the price lable.
                 var pricePadding = new HBoxContainer
                 {
-                    CustomMinimumSize = (32, 1),
-                    SizeFlagsHorizontal = SizeFlags.Fill,
+                    MinSize = (32, 1),
                 };
 
                 //Contains the name of the item and its price. Used for spacing item name and price.
@@ -501,7 +514,6 @@ namespace Content.Client.GameObjects.Components.PDA
                 var pdaUplinkListingButton = new PDAUplinkItemButton
                 {
                     ButtonListing = listing,
-                    SizeFlagsVertical = SizeFlags.Fill,
                     Children =
                     {
                         listingButtonPanelContainer

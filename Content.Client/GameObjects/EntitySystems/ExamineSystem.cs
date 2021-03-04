@@ -5,15 +5,12 @@ using Content.Shared.GameObjects.EntitySystemMessages;
 using Content.Shared.GameObjects.EntitySystems;
 using Content.Shared.Input;
 using JetBrains.Annotations;
-using Robust.Client.Interfaces.GameObjects.Components;
-using Robust.Client.Interfaces.Input;
-using Robust.Client.Interfaces.UserInterface;
+using Robust.Client.GameObjects;
 using Robust.Client.Player;
 using Robust.Client.UserInterface;
 using Robust.Client.UserInterface.Controls;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Input.Binding;
-using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.IoC;
 using Robust.Shared.Map;
 using Robust.Shared.Maths;
@@ -25,9 +22,7 @@ namespace Content.Client.GameObjects.EntitySystems
     [UsedImplicitly]
     internal sealed class ExamineSystem : ExamineSystemShared
     {
-        [Dependency] private readonly IInputManager _inputManager = default!;
         [Dependency] private readonly IUserInterfaceManager _userInterfaceManager = default!;
-        [Dependency] private readonly IEntityManager _entityManager = default!;
         [Dependency] private readonly IPlayerManager _playerManager = default!;
 
         public const string StyleClassEntityTooltip = "entity-tooltip";
@@ -52,7 +47,7 @@ namespace Content.Client.GameObjects.EntitySystems
 
         private bool HandleExamine(ICommonSession session, EntityCoordinates coords, EntityUid uid)
         {
-            if (!uid.IsValid() || !_entityManager.TryGetEntity(uid, out var examined))
+            if (!uid.IsValid() || !EntityManager.TryGetEntity(uid, out var examined))
             {
                 return false;
             }
@@ -73,7 +68,7 @@ namespace Content.Client.GameObjects.EntitySystems
             const float minWidth = 300;
             CloseTooltip();
 
-            var popupPos = _inputManager.MouseScreenPosition;
+            var popupPos = _userInterfaceManager.MousePositionScaled;
 
             // Actually open the tooltip.
             _examineTooltipOpen = new Popup();
@@ -95,10 +90,11 @@ namespace Content.Client.GameObjects.EntitySystems
             hBox.AddChild(new Label
             {
                 Text = entity.Name,
-                SizeFlagsHorizontal = Control.SizeFlags.FillExpand,
+                HorizontalExpand = true,
             });
 
-            var size = Vector2.ComponentMax((minWidth, 0), panel.CombinedMinimumSize);
+            panel.Measure(Vector2.Infinity);
+            var size = Vector2.ComponentMax((minWidth, 0), panel.DesiredSize);
 
             _examineTooltipOpen.Open(UIBox2.FromDimensions(popupPos, size));
 

@@ -1,11 +1,10 @@
-﻿using System;
+#nullable enable
+using System;
 using System.Collections.Generic;
 using Content.Shared.GameObjects.EntitySystems;
 using Robust.Server.GameObjects;
 using Robust.Shared.GameObjects;
-using Robust.Shared.GameObjects.Systems;
 using Robust.Shared.Localization;
-using Robust.Shared.Log;
 using Robust.Shared.Serialization;
 using Robust.Shared.Utility;
 using Robust.Shared.ViewVariables;
@@ -34,7 +33,7 @@ namespace Content.Server.GameObjects.Components.Power.ApcNetComponents.PowerRece
             }
         }
 
-        private EmergencyLightState _state = EmergencyLightState.Charging;
+        private EmergencyLightState _state = EmergencyLightState.Empty;
 
         [ViewVariables(VVAccess.ReadWrite)]
         private float _wattage;
@@ -54,7 +53,7 @@ namespace Content.Server.GameObjects.Components.Power.ApcNetComponents.PowerRece
         /// <summary>
         ///     For attaching UpdateState() to events.
         /// </summary>
-        public void UpdateState(object sender, EventArgs e)
+        public void UpdateState(PowerChangedMessage e)
         {
             UpdateState();
         }
@@ -64,7 +63,7 @@ namespace Content.Server.GameObjects.Components.Power.ApcNetComponents.PowerRece
         /// </summary>
         public void UpdateState()
         {
-            if (!Owner.TryGetComponent(out PowerReceiverComponent receiver))
+            if (!Owner.TryGetComponent(out PowerReceiverComponent? receiver))
             {
                 return;
             }
@@ -84,7 +83,7 @@ namespace Content.Server.GameObjects.Components.Power.ApcNetComponents.PowerRece
 
         public void OnUpdate(float frameTime)
         {
-            if (Owner.Deleted || !Owner.TryGetComponent(out BatteryComponent battery))
+            if (Owner.Deleted || !Owner.TryGetComponent(out BatteryComponent? battery))
             {
                 return;
             }
@@ -102,7 +101,7 @@ namespace Content.Server.GameObjects.Components.Power.ApcNetComponents.PowerRece
                 battery.CurrentCharge += _chargingWattage * frameTime * _chargingEfficiency;
                 if (battery.BatteryState == BatteryState.Full)
                 {
-                    if (Owner.TryGetComponent(out PowerReceiverComponent receiver))
+                    if (Owner.TryGetComponent(out PowerReceiverComponent? receiver))
                     {
                         receiver.Load = 1;
                     }
@@ -114,12 +113,12 @@ namespace Content.Server.GameObjects.Components.Power.ApcNetComponents.PowerRece
 
         private void TurnOff()
         {
-            if (Owner.TryGetComponent(out SpriteComponent sprite))
+            if (Owner.TryGetComponent(out SpriteComponent? sprite))
             {
                 sprite.LayerSetState(0, "emergency_light_off");
             }
 
-            if (Owner.TryGetComponent(out PointLightComponent light))
+            if (Owner.TryGetComponent(out PointLightComponent? light))
             {
                 light.Enabled = false;
             }
@@ -127,38 +126,26 @@ namespace Content.Server.GameObjects.Components.Power.ApcNetComponents.PowerRece
 
         private void TurnOn()
         {
-            if (Owner.TryGetComponent(out SpriteComponent sprite))
+            if (Owner.TryGetComponent(out SpriteComponent? sprite))
             {
                 sprite.LayerSetState(0, "emergency_light_on");
             }
 
-            if (Owner.TryGetComponent(out PointLightComponent light))
+            if (Owner.TryGetComponent(out PointLightComponent? light))
             {
                 light.Enabled = true;
             }
         }
 
-        public override void Initialize()
+        public override void HandleMessage(ComponentMessage message, IComponent? component)
         {
-            base.Initialize();
-
-            if (!Owner.EnsureComponent(out PowerReceiverComponent receiver))
+            base.HandleMessage(message, component);
+            switch (message)
             {
-                Logger.Warning($"Entity {Owner.Name} at {Owner.Transform.MapPosition} didn't have a {nameof(PowerReceiverComponent)}");
+                case PowerChangedMessage powerChanged:
+                    UpdateState(powerChanged);
+                    break;
             }
-
-            receiver.OnPowerStateChanged += UpdateState;
-            State = EmergencyLightState.Charging;
-        }
-
-        public override void OnRemove()
-        {
-            if (Owner.TryGetComponent(out PowerReceiverComponent receiver))
-            {
-                receiver.OnPowerStateChanged -= UpdateState;
-            }
-
-            base.OnRemove();
         }
 
         void IExamine.Examine(FormattedMessage message, bool inDetailsRange)
@@ -174,7 +161,7 @@ namespace Content.Server.GameObjects.Components.Power.ApcNetComponents.PowerRece
             On
         }
 
-        public Dictionary<EmergencyLightState, string> BatteryStateText = new Dictionary<EmergencyLightState, string>
+        public Dictionary<EmergencyLightState, string> BatteryStateText = new()
         {
             { EmergencyLightState.Full, "[color=darkgreen]Full[/color]"},
             { EmergencyLightState.Empty, "[color=darkred]Empty[/color]"},

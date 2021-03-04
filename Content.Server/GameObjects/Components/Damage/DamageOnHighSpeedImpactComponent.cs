@@ -3,24 +3,20 @@ using Content.Server.GameObjects.Components.Mobs;
 using Content.Shared.Audio;
 using Content.Shared.Damage;
 using Content.Shared.GameObjects.Components.Damage;
-using Robust.Server.GameObjects.EntitySystems;
+using Robust.Server.GameObjects;
 using Robust.Shared.GameObjects;
-using Robust.Shared.GameObjects.Components;
-using Robust.Shared.GameObjects.Systems;
-using Robust.Shared.Interfaces.GameObjects;
-using Robust.Shared.Interfaces.Random;
-using Robust.Shared.Interfaces.Timing;
 using Robust.Shared.IoC;
 using Robust.Shared.Random;
 using Robust.Shared.Serialization;
+using Robust.Shared.Timing;
 
 namespace Content.Server.GameObjects.Components.Damage
 {
     [RegisterComponent]
     public class DamageOnHighSpeedImpactComponent : Component, ICollideBehavior
     {
-        [Dependency] private IRobustRandom _robustRandom = default!;
-        [Dependency] private IGameTiming _gameTiming = default!;
+        [Dependency] private readonly IRobustRandom _robustRandom = default!;
+        [Dependency] private readonly IGameTiming _gameTiming = default!;
 
         public override string Name => "DamageOnHighSpeedImpact";
 
@@ -39,15 +35,15 @@ namespace Content.Server.GameObjects.Components.Damage
         {
             base.ExposeData(serializer);
 
-            serializer.DataField(this, x => Damage, "damage", DamageType.Blunt);
-            serializer.DataField(this, x => MinimumSpeed, "minimumSpeed", 20f);
-            serializer.DataField(this, x => BaseDamage, "baseDamage", 5);
-            serializer.DataField(this, x => Factor, "factor", 1f);
-            serializer.DataField(this, x => SoundHit, "soundHit", "");
-            serializer.DataField(this, x => StunChance, "stunChance", 0.25f);
-            serializer.DataField(this, x => StunSeconds, "stunSeconds", 1f);
-            serializer.DataField(this, x => DamageCooldown, "damageCooldown", 2f);
-            serializer.DataField(this, x => StunMinimumDamage, "stunMinimumDamage", 10);
+            serializer.DataField(this, x => x.Damage, "damage", DamageType.Blunt);
+            serializer.DataField(this, x => x.MinimumSpeed, "minimumSpeed", 20f);
+            serializer.DataField(this, x => x.BaseDamage, "baseDamage", 5);
+            serializer.DataField(this, x => x.Factor, "factor", 1f);
+            serializer.DataField(this, x => x.SoundHit, "soundHit", "");
+            serializer.DataField(this, x => x.StunChance, "stunChance", 0.25f);
+            serializer.DataField(this, x => x.StunSeconds, "stunSeconds", 1f);
+            serializer.DataField(this, x => x.DamageCooldown, "damageCooldown", 2f);
+            serializer.DataField(this, x => x.StunMinimumDamage, "stunMinimumDamage", 10);
         }
 
         public void CollideWith(IEntity collidedWith)

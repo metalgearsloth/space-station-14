@@ -1,17 +1,19 @@
 ﻿#nullable enable
 using Content.Shared.GameObjects.Components.Gravity;
 using Robust.Client.GameObjects;
-using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Utility;
 using System;
 using System.Collections.Generic;
+using JetBrains.Annotations;
+using Robust.Shared.GameObjects;
 using YamlDotNet.RepresentationModel;
 
 namespace Content.Client.GameObjects.Components.Gravity
 {
+    [UsedImplicitly]
     public class GravityGeneratorVisualizer : AppearanceVisualizer
     {
-        private Dictionary<GravityGeneratorStatus, string> _spriteMap = new Dictionary<GravityGeneratorStatus, string>();
+        private readonly Dictionary<GravityGeneratorStatus, string> _spriteMap = new();
 
         public override void InitializeEntity(IEntity entity)
         {
@@ -60,7 +62,7 @@ namespace Content.Client.GameObjects.Components.Gravity
             }
         }
 
-        public enum GravityGeneratorVisualLayers
+        public enum GravityGeneratorVisualLayers : byte
         {
             Base,
             Core

@@ -6,9 +6,7 @@ using Content.Shared.Input;
 using Content.Shared.Physics.Pull;
 using JetBrains.Annotations;
 using Robust.Shared.GameObjects;
-using Robust.Shared.GameObjects.Systems;
 using Robust.Shared.Input.Binding;
-using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Map;
 using Robust.Shared.Players;
 
@@ -17,8 +15,11 @@ namespace Content.Shared.GameObjects.EntitySystems
     [UsedImplicitly]
     public class SharedPullingSystem : EntitySystem
     {
+        /// <summary>
+        ///     A mapping of pullers to the entity that they are pulling.
+        /// </summary>
         private readonly Dictionary<IEntity, IEntity> _pullers =
-            new Dictionary<IEntity, IEntity>();
+            new();
 
         public override void Initialize()
         {
@@ -26,6 +27,7 @@ namespace Content.Shared.GameObjects.EntitySystems
 
             SubscribeLocalEvent<PullStartedMessage>(OnPullStarted);
             SubscribeLocalEvent<PullStoppedMessage>(OnPullStopped);
+            SubscribeLocalEvent<MoveEvent>(PullerMoved);
 
             CommandBinds.Builder
                 .Bind(ContentKeyFunctions.MovePulledObject, new PointerInputCmdHandler(HandleMovePulledObject))
@@ -35,12 +37,33 @@ namespace Content.Shared.GameObjects.EntitySystems
 
         private void OnPullStarted(PullStartedMessage message)
         {
+            if (_pullers.TryGetValue(message.Puller.Owner, out var pulled) &&
+                pulled.TryGetComponent(out SharedPullableComponent? pulledComponent))
+            {
+                pulledComponent.TryStopPull();
+            }
+
             SetPuller(message.Puller.Owner, message.Pulled.Owner);
         }
 
         private void OnPullStopped(PullStoppedMessage message)
         {
             RemovePuller(message.Puller.Owner);
+        }
+
+        private void PullerMoved(MoveEvent ev)
+        {
+            if (!TryGetPulled(ev.Sender, out var pulled))
+            {
+                return;
+            }
+
+            if (!pulled.TryGetComponent(out IPhysicsComponent? physics))
+            {
+                return;
+            }
+
+            physics.WakeBody();
         }
 
         private bool HandleMovePulledObject(ICommonSession? session, EntityCoordinates coords, EntityUid uid)

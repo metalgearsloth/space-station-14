@@ -2,38 +2,44 @@
 using System.Linq;
 using Content.Server.GameObjects.Components.Medical;
 using Content.Server.Mobs;
-using Robust.Shared.GameObjects.Systems;
+using Content.Shared.GameTicking;
+using Robust.Shared.GameObjects;
 
 namespace Content.Server.GameObjects.EntitySystems
 {
-    internal sealed class CloningSystem : EntitySystem
+    internal sealed class CloningSystem : EntitySystem, IResettingEntitySystem
     {
         public override void Update(float frameTime)
         {
-            foreach (var comp in ComponentManager.EntityQuery<CloningPodComponent>())
+            foreach (var comp in ComponentManager.EntityQuery<CloningPodComponent>(true))
             {
                 comp.Update(frameTime);
             }
         }
 
-        public static Dictionary<int, Mind> Minds = new Dictionary<int, Mind>();
+        public readonly Dictionary<int, Mind> Minds = new();
 
-        public static void AddToDnaScans(Mind mind)
+        public void AddToDnaScans(Mind mind)
         {
             if (!Minds.ContainsValue(mind))
             {
-                Minds.Add(Minds.Count(), mind);
+                Minds.Add(Minds.Count, mind);
             }
         }
 
-        public static bool HasDnaScan(Mind mind)
+        public bool HasDnaScan(Mind mind)
         {
             return Minds.ContainsValue(mind);
         }
 
-        public static Dictionary<int, string> getIdToUser()
+        public Dictionary<int, string> GetIdToUser()
         {
             return Minds.ToDictionary(m => m.Key, m => m.Value.CharacterName);
+        }
+
+        public void Reset()
+        {
+            Minds.Clear();
         }
     }
 }

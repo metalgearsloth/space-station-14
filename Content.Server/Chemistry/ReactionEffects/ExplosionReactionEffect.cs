@@ -1,13 +1,13 @@
-﻿using System;
+using System;
 using Content.Server.Explosions;
 using Content.Server.GameObjects.Components.Chemistry;
 using Content.Server.Interfaces.Chemistry;
-using Robust.Shared.Interfaces.GameObjects;
+using Robust.Shared.GameObjects;
 using Robust.Shared.Serialization;
 
 namespace Content.Server.Chemistry.ReactionEffects
 {
-    class ExplosionReactionEffect : IReactionEffect
+    public class ExplosionReactionEffect : IReactionEffect
     {
         private float _devastationRange;
         private float _heavyImpactRange;
@@ -24,7 +24,7 @@ namespace Content.Server.Chemistry.ReactionEffects
         /// </summary>
         private float _maxScale;
 
-        public void ExposeData(ObjectSerializer serializer)
+        void IExposeData.ExposeData(ObjectSerializer serializer)
         {
             serializer.DataField(ref _devastationRange, "devastationRange", 1);
             serializer.DataField(ref _heavyImpactRange, "heavyImpactRange", 2);
@@ -58,7 +58,7 @@ namespace Content.Server.Chemistry.ReactionEffects
             int finalHeavyImpactRange = (int)MathF.Round(_heavyImpactRange * floatIntensity);
             int finalLightImpactRange = (int)MathF.Round(_lightImpactRange * floatIntensity);
             int finalFlashRange = (int)MathF.Round(_flashRange * floatIntensity);
-            ExplosionHelper.SpawnExplosion(solutionEntity.Transform.Coordinates, finalDevastationRange,
+            solutionEntity.SpawnExplosion(finalDevastationRange,
                 finalHeavyImpactRange, finalLightImpactRange, finalFlashRange);
         }
     }

@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Content.Server.Utility;
 using Content.Shared.GameObjects.Components.Body;
 using Content.Shared.GameObjects.Components.Body.Mechanism;
@@ -8,9 +9,7 @@ using Content.Shared.GameObjects.Components.Body.Surgery;
 using Content.Shared.Interfaces;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Robust.Server.GameObjects;
-using Robust.Server.GameObjects.Components.UserInterface;
-using Robust.Server.Interfaces.GameObjects;
-using Robust.Server.Interfaces.Player;
+using Robust.Server.Player;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Localization;
 using Robust.Shared.Utility;
@@ -35,11 +34,11 @@ namespace Content.Server.GameObjects.Components.Body
             }
         }
 
-        void IAfterInteract.AfterInteract(AfterInteractEventArgs eventArgs)
+        async Task<bool> IAfterInteract.AfterInteract(AfterInteractEventArgs eventArgs)
         {
             if (eventArgs.Target == null)
             {
-                return;
+                return false;
             }
 
             CloseAllSurgeryUIs();
@@ -60,6 +59,8 @@ namespace Content.Server.GameObjects.Components.Body
                     eventArgs.Target.PopupMessage(eventArgs.User, Loc.GetString("You can't fit it in!"));
                 }
             }
+
+            return true;
         }
 
         private void SendBodyPartListToUser(AfterInteractEventArgs eventArgs, IBody body)

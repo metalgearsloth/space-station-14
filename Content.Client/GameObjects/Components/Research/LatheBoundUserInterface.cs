@@ -2,8 +2,8 @@ using System.Collections.Generic;
 using Content.Client.Research;
 using Content.Shared.GameObjects.Components.Research;
 using Content.Shared.Research;
-using Robust.Client.GameObjects.Components.UserInterface;
-using Robust.Shared.GameObjects.Components.UserInterface;
+using Robust.Client.GameObjects;
+using Robust.Shared.GameObjects;
 using Robust.Shared.IoC;
 using Robust.Shared.Prototypes;
 using Robust.Shared.ViewVariables;
@@ -25,7 +25,7 @@ namespace Content.Client.GameObjects.Components.Research
 
         [ViewVariables]
         public Queue<LatheRecipePrototype> QueuedRecipes => _queuedRecipes;
-        private Queue<LatheRecipePrototype> _queuedRecipes = new Queue<LatheRecipePrototype>();
+        private readonly Queue<LatheRecipePrototype> _queuedRecipes = new();
 
         public LatheBoundUserInterface(ClientUserInterfaceComponent owner, object uiKey) : base(owner, uiKey)
         {

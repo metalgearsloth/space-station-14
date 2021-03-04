@@ -1,3 +1,4 @@
+#nullable enable
 using System;
 using System.Collections.Generic;
 using Robust.Shared.GameObjects;
@@ -29,6 +30,19 @@ namespace Content.Shared.GameObjects.EntitySystemMessages
             public List<EntityUid> Hits { get; }
             public bool TextureEffect { get; }
             public bool ArcFollowAttacker { get; }
+        }
+
+        [Serializable, NetSerializable]
+        public sealed class PlayLungeAnimationMessage : EntitySystemMessage
+        {
+            public Angle Angle { get; }
+            public EntityUid Source { get; }
+
+            public PlayLungeAnimationMessage(Angle angle, EntityUid source)
+            {
+                Angle = angle;
+                Source = source;
+            }
         }
     }
 }

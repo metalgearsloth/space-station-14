@@ -1,12 +1,11 @@
 using System;
-using Content.Client.Animations;
 using Content.Client.GameObjects.EntitySystems;
 using Content.Client.UserInterface.Stylesheets;
 using Content.Client.Utility;
 using Content.Shared.GameObjects.Components;
 using Robust.Client.Animations;
-using Robust.Client.Graphics.Drawing;
-using Robust.Client.Interfaces.ResourceManagement;
+using Robust.Client.Graphics;
+using Robust.Client.ResourceManagement;
 using Robust.Client.UserInterface;
 using Robust.Client.UserInterface.Controls;
 using Robust.Client.UserInterface.CustomControls;
@@ -21,6 +20,8 @@ namespace Content.Client.GameObjects.Components.Wires
 {
     public class WiresMenu : BaseWindow
     {
+        [Dependency] private readonly IResourceCache _resourceCache = default!;
+
         public WiresBoundUserInterface Owner { get; }
 
         private readonly Control _wiresHBox;
@@ -34,7 +35,7 @@ namespace Content.Client.GameObjects.Components.Wires
 
         public WiresMenu(WiresBoundUserInterface owner)
         {
-            var resourceCache = IoCManager.Resolve<IResourceCache>();
+            IoCManager.InjectDependencies(this);
 
             Owner = owner;
             var rootContainer = new LayoutContainer {Name = "WireRoot"};
@@ -42,7 +43,7 @@ namespace Content.Client.GameObjects.Components.Wires
 
             MouseFilter = MouseFilterMode.Stop;
 
-            var panelTex = resourceCache.GetTexture("/Textures/Interface/Nano/button.svg.96dpi.png");
+            var panelTex = _resourceCache.GetTexture("/Textures/Interface/Nano/button.svg.96dpi.png");
             var back = new StyleBoxTexture
             {
                 Texture = panelTex,
@@ -71,30 +72,30 @@ namespace Content.Client.GameObjects.Components.Wires
                 {
                     new PanelContainer
                     {
-                        CustomMinimumSize = (2, 0),
+                        MinSize = (2, 0),
                         PanelOverride = new StyleBoxFlat {BackgroundColor = Color.FromHex("#525252ff")}
                     },
                     new PanelContainer
                     {
-                        SizeFlagsHorizontal = SizeFlags.FillExpand,
+                        HorizontalExpand = true,
                         MouseFilter = MouseFilterMode.Stop,
                         Name = "Shadow",
                         PanelOverride = new StyleBoxFlat {BackgroundColor = Color.Black.WithAlpha(0.5f)}
                     },
                     new PanelContainer
                     {
-                        CustomMinimumSize = (2, 0),
+                        MinSize = (2, 0),
                         PanelOverride = new StyleBoxFlat {BackgroundColor = Color.FromHex("#525252ff")}
                     },
                 }
             };
 
             var wrappingHBox = new HBoxContainer();
-            _wiresHBox = new HBoxContainer {SeparationOverride = 4, SizeFlagsVertical = SizeFlags.ShrinkEnd};
+            _wiresHBox = new HBoxContainer {SeparationOverride = 4, VerticalAlignment = VAlignment.Bottom};
 
-            wrappingHBox.AddChild(new Control {CustomMinimumSize = (20, 0)});
+            wrappingHBox.AddChild(new Control {MinSize = (20, 0)});
             wrappingHBox.AddChild(_wiresHBox);
-            wrappingHBox.AddChild(new Control {CustomMinimumSize = (20, 0)});
+            wrappingHBox.AddChild(new Control {MinSize = (20, 0)});
 
             bottomWrap.AddChild(bottomPanel);
 
@@ -127,7 +128,7 @@ namespace Content.Client.GameObjects.Components.Wires
                 Children =
                 {
                     (_topContainer = new VBoxContainer()),
-                    new Control {CustomMinimumSize = (0, 110)}
+                    new Control {MinSize = (0, 110)}
                 }
             };
 
@@ -135,57 +136,42 @@ namespace Content.Client.GameObjects.Components.Wires
 
             LayoutContainer.SetAnchorPreset(topContainerWrap, LayoutContainer.LayoutPreset.Wide);
 
-            var font = resourceCache.GetFont("/Fonts/Boxfont-round/Boxfont Round.ttf", 13);
-            var fontSmall = resourceCache.GetFont("/Fonts/Boxfont-round/Boxfont Round.ttf", 10);
+            var font = _resourceCache.GetFont("/Fonts/Boxfont-round/Boxfont Round.ttf", 13);
+            var fontSmall = _resourceCache.GetFont("/Fonts/Boxfont-round/Boxfont Round.ttf", 10);
 
             Button helpButton;
-            var topRow = new MarginContainer
+            var topRow = new HBoxContainer
             {
-                MarginLeftOverride = 4,
-                MarginTopOverride = 2,
-                MarginRightOverride = 12,
-                MarginBottomOverride = 2,
+                Margin = new Thickness(4, 2, 12, 2),
                 Children =
                 {
-                    new HBoxContainer
+                    (_nameLabel = new Label
                     {
-                        Children =
-                        {
-                            (_nameLabel = new Label
-                            {
-                                Text = Loc.GetString("Wires"),
-                                FontOverride = font,
-                                FontColorOverride = StyleNano.NanoGold,
-                                SizeFlagsVertical = SizeFlags.ShrinkCenter
-                            }),
-                            new Control
-                            {
-                                CustomMinimumSize = (8, 0),
-                            },
-                            (_serialLabel = new Label
-                            {
-                                Text = Loc.GetString("DEAD-BEEF"),
-                                FontOverride = fontSmall,
-                                FontColorOverride = Color.Gray,
-                                SizeFlagsVertical = SizeFlags.ShrinkCenter
-                            }),
-                            new Control
-                            {
-                                CustomMinimumSize = (20, 0),
-                                SizeFlagsHorizontal = SizeFlags.Expand
-                            },
-                            (helpButton = new Button {Text = "?"}),
-                            new Control
-                            {
-                                CustomMinimumSize = (2, 0),
-                            },
-                            (CloseButton = new TextureButton
-                            {
-                                StyleClasses = {SS14Window.StyleClassWindowCloseButton},
-                                SizeFlagsVertical = SizeFlags.ShrinkCenter
-                            })
-                        }
-                    }
+                        Text = Loc.GetString("Wires"),
+                        FontOverride = font,
+                        FontColorOverride = StyleNano.NanoGold,
+                        VerticalAlignment = VAlignment.Center,
+                    }),
+                    (_serialLabel = new Label
+                    {
+                        Text = Loc.GetString("DEAD-BEEF"),
+                        FontOverride = fontSmall,
+                        FontColorOverride = Color.Gray,
+                        VerticalAlignment = VAlignment.Center,
+                        Margin = new Thickness(8, 0, 20, 0),
+                        HorizontalAlignment = HAlignment.Left,
+                        HorizontalExpand = true,
+                    }),
+                    (helpButton = new Button
+                    {
+                        Text = "?",
+                        Margin = new Thickness(0, 0, 2, 0),
+                    }),
+                    (CloseButton = new TextureButton
+                    {
+                        StyleClasses = {SS14Window.StyleClassWindowCloseButton},
+                        VerticalAlignment = VAlignment.Center
+                    })
                 }
             };
 
@@ -206,21 +192,12 @@ namespace Content.Client.GameObjects.Components.Wires
                     {
                         Children =
                         {
-                            new MarginContainer
+                            (_statusContainer = new GridContainer
                             {
-                                MarginLeftOverride = 8,
-                                MarginRightOverride = 8,
-                                MarginTopOverride = 4,
-                                MarginBottomOverride = 4,
-                                Children =
-                                {
-                                    (_statusContainer = new GridContainer
-                                    {
-                                        // TODO: automatically change columns count.
-                                        Columns = 3
-                                    })
-                                }
-                            }
+                                Margin = new Thickness(8, 4),
+                                // TODO: automatically change columns count.
+                                Columns = 3
+                            })
                         }
                     }
                 }
@@ -229,17 +206,17 @@ namespace Content.Client.GameObjects.Components.Wires
             _topContainer.AddChild(topRow);
             _topContainer.AddChild(new PanelContainer
             {
-                CustomMinimumSize = (0, 2),
+                MinSize = (0, 2),
                 PanelOverride = new StyleBoxFlat {BackgroundColor = Color.FromHex("#525252ff")}
             });
             _topContainer.AddChild(middle);
             _topContainer.AddChild(new PanelContainer
             {
-                CustomMinimumSize = (0, 2),
+                MinSize = (0, 2),
                 PanelOverride = new StyleBoxFlat {BackgroundColor = Color.FromHex("#525252ff")}
             });
             CloseButton.OnPressed += _ => Close();
-            LayoutContainer.SetSize(this, (300, 200));
+            SetSize = (320, 200);
         }
 
 
@@ -255,9 +232,9 @@ namespace Content.Client.GameObjects.Components.Wires
                 var mirror = random.Next(2) == 0;
                 var flip = random.Next(2) == 0;
                 var type = random.Next(2);
-                var control = new WireControl(wire.Color, wire.Letter, wire.IsCut, flip, mirror, type)
+                var control = new WireControl(wire.Color, wire.Letter, wire.IsCut, flip, mirror, type, _resourceCache)
                 {
-                    SizeFlagsVertical = SizeFlags.ShrinkEnd
+                    VerticalAlignment = VAlignment.Bottom
                 };
                 _wiresHBox.AddChild(control);
 
@@ -278,7 +255,7 @@ namespace Content.Client.GameObjects.Components.Wires
             {
                 if (status.Value is StatusLightData statusLightData)
                 {
-                    _statusContainer.AddChild(new StatusLight(statusLightData));
+                    _statusContainer.AddChild(new StatusLight(statusLightData, _resourceCache));
                 }
                 else
                 {
@@ -305,17 +282,20 @@ namespace Content.Client.GameObjects.Components.Wires
 
         private sealed class WireControl : Control
         {
+            private IResourceCache _resourceCache;
+
             private const string TextureContact = "/Textures/Interface/WireHacking/contact.svg.96dpi.png";
 
             public event Action WireClicked;
             public event Action ContactsClicked;
 
-            public WireControl(WireColor color, WireLetter letter, bool isCut, bool flip, bool mirror, int type)
+            public WireControl(WireColor color, WireLetter letter, bool isCut, bool flip, bool mirror, int type,
+                IResourceCache resourceCache)
             {
-                SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
-                MouseFilter = MouseFilterMode.Stop;
+                _resourceCache = resourceCache;
 
-                var resourceCache = IoCManager.Resolve<IResourceCache>();
+                HorizontalAlignment = HAlignment.Center;
+                MouseFilter = MouseFilterMode.Stop;
 
                 var layout = new LayoutContainer();
                 AddChild(layout);
@@ -323,10 +303,10 @@ namespace Content.Client.GameObjects.Components.Wires
                 var greek = new Label
                 {
                     Text = letter.Letter().ToString(),
-                    SizeFlagsVertical = SizeFlags.ShrinkEnd,
-                    SizeFlagsHorizontal = SizeFlags.ShrinkCenter,
+                    VerticalAlignment = VAlignment.Bottom,
+                    HorizontalAlignment = HAlignment.Center,
                     Align = Label.AlignMode.Center,
-                    FontOverride = resourceCache.GetFont("/Fonts/NotoSansDisplay/NotoSansDisplay-Bold.ttf", 12),
+                    FontOverride = _resourceCache.GetFont("/Fonts/NotoSansDisplay/NotoSansDisplay-Bold.ttf", 12),
                     FontColorOverride = Color.Gray,
                     ToolTip = letter.Name(),
                     MouseFilter = MouseFilterMode.Stop
@@ -337,7 +317,7 @@ namespace Content.Client.GameObjects.Components.Wires
                 LayoutContainer.SetGrowVertical(greek, LayoutContainer.GrowDirection.Begin);
                 LayoutContainer.SetGrowHorizontal(greek, LayoutContainer.GrowDirection.Both);
 
-                var contactTexture = resourceCache.GetTexture(TextureContact);
+                var contactTexture = _resourceCache.GetTexture(TextureContact);
                 var contact1 = new TextureRect
                 {
                     Texture = contactTexture,
@@ -356,19 +336,14 @@ namespace Content.Client.GameObjects.Components.Wires
                 layout.AddChild(contact2);
                 LayoutContainer.SetPosition(contact2, (0, 60));
 
-                var wire = new WireRender(color, isCut, flip, mirror, type);
+                var wire = new WireRender(color, isCut, flip, mirror, type, _resourceCache);
 
                 layout.AddChild(wire);
                 LayoutContainer.SetPosition(wire, (2, 16));
 
                 ToolTip = color.Name();
+                MinSize = (20, 102);
             }
-
-            protected override Vector2 CalculateMinimumSize()
-            {
-                return (20, 102);
-            }
-
 
             protected override void KeyBindDown(GUIBoundKeyEventArgs args)
             {
@@ -420,26 +395,25 @@ namespace Content.Client.GameObjects.Components.Wires
                     "/Textures/Interface/WireHacking/wire_2_copper.svg.96dpi.png"
                 };
 
-                public WireRender(WireColor color, bool isCut, bool flip, bool mirror, int type)
+                private readonly IResourceCache _resourceCache;
+
+                public WireRender(WireColor color, bool isCut, bool flip, bool mirror, int type,
+                    IResourceCache resourceCache)
                 {
+                    _resourceCache = resourceCache;
                     _color = color;
                     _isCut = isCut;
                     _flip = flip;
                     _mirror = mirror;
                     _type = type;
-                }
 
-                protected override Vector2 CalculateMinimumSize()
-                {
-                    return (16, 50);
+                    SetSize = (16, 50);
                 }
 
                 protected override void Draw(DrawingHandleScreen handle)
                 {
-                    var resC = IoCManager.Resolve<IResourceCache>();
-
                     var colorValue = _color.ColorValue();
-                    var tex = resC.GetTexture(_isCut ? TextureCut[_type] : TextureNormal[_type]);
+                    var tex = _resourceCache.GetTexture(_isCut ? TextureCut[_type] : TextureNormal[_type]);
 
                     var l = 0f;
                     var r = tex.Width + l;
@@ -465,7 +439,7 @@ namespace Content.Client.GameObjects.Components.Wires
                     if (_isCut)
                     {
                         var copper = Color.Orange;
-                        var copperTex = resC.GetTexture(TextureCopper[_type]);
+                        var copperTex = _resourceCache.GetTexture(TextureCopper[_type]);
                         handle.DrawTextureRect(copperTex, rect, copper);
                     }
 
@@ -476,7 +450,7 @@ namespace Content.Client.GameObjects.Components.Wires
 
         private sealed class StatusLight : Control
         {
-            private static readonly Animation _blinkingFast = new Animation
+            private static readonly Animation _blinkingFast = new()
             {
                 Length = TimeSpan.FromSeconds(0.2),
                 AnimationTracks =
@@ -495,7 +469,7 @@ namespace Content.Client.GameObjects.Components.Wires
                 }
             };
 
-            private static readonly Animation _blinkingSlow = new Animation
+            private static readonly Animation _blinkingSlow = new()
             {
                 Length = TimeSpan.FromSeconds(0.8),
                 AnimationTracks =
@@ -516,9 +490,8 @@ namespace Content.Client.GameObjects.Components.Wires
                 }
             };
 
-            public StatusLight(StatusLightData data)
+            public StatusLight(StatusLightData data, IResourceCache resourceCache)
             {
-                var resC = IoCManager.Resolve<IResourceCache>();
                 var hsv = Color.ToHsv(data.Color);
                 hsv.Z /= 2;
                 var dimColor = Color.FromHsv(hsv);
@@ -526,11 +499,12 @@ namespace Content.Client.GameObjects.Components.Wires
 
                 var lightContainer = new Control
                 {
+                    SetSize = (20, 20),
                     Children =
                     {
                         new TextureRect
                         {
-                            Texture = resC.GetTexture(
+                            Texture = resourceCache.GetTexture(
                                 "/Textures/Interface/WireHacking/light_off_base.svg.96dpi.png"),
                             Stretch = TextureRect.StretchMode.KeepCentered,
                             ModulateSelfOverride = dimColor
@@ -540,7 +514,7 @@ namespace Content.Client.GameObjects.Components.Wires
                             ModulateSelfOverride = data.Color.WithAlpha(0.4f),
                             Stretch = TextureRect.StretchMode.KeepCentered,
                             Texture =
-                                resC.GetTexture("/Textures/Interface/WireHacking/light_on_base.svg.96dpi.png"),
+                                resourceCache.GetTexture("/Textures/Interface/WireHacking/light_on_base.svg.96dpi.png"),
                         })
                     }
                 };
@@ -577,7 +551,7 @@ namespace Content.Client.GameObjects.Components.Wires
                     };
                 }
 
-                var font = IoCManager.Resolve<IResourceCache>().GetFont("/Fonts/Boxfont-round/Boxfont Round.ttf", 12);
+                var font = resourceCache.GetFont("/Fonts/Boxfont-round/Boxfont Round.ttf", 12);
 
                 var hBox = new HBoxContainer {SeparationOverride = 4};
                 hBox.AddChild(new Label
@@ -585,10 +559,10 @@ namespace Content.Client.GameObjects.Components.Wires
                     Text = data.Text,
                     FontOverride = font,
                     FontColorOverride = Color.FromHex("#A1A6AE"),
-                    SizeFlagsVertical = SizeFlags.ShrinkCenter,
+                    VerticalAlignment = VAlignment.Center,
                 });
                 hBox.AddChild(lightContainer);
-                hBox.AddChild(new Control {CustomMinimumSize = (6, 0)});
+                hBox.AddChild(new Control {MinSize = (6, 0)});
                 AddChild(hBox);
             }
         }

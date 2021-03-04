@@ -3,12 +3,8 @@ using System.Linq;
 using Content.Server.Explosions;
 using Content.Shared.GameObjects.Components.Pointing;
 using Robust.Server.GameObjects;
-using Robust.Server.GameObjects.EntitySystems;
-using Robust.Server.Interfaces.Player;
+using Robust.Server.Player;
 using Robust.Shared.GameObjects;
-using Robust.Shared.GameObjects.Systems;
-using Robust.Shared.Interfaces.GameObjects;
-using Robust.Shared.Interfaces.Random;
 using Robust.Shared.IoC;
 using Robust.Shared.Maths;
 using Robust.Shared.Random;
@@ -127,7 +123,7 @@ namespace Content.Server.GameObjects.Components.Pointing
                 return;
             }
 
-            ExplosionHelper.SpawnExplosion(Owner.Transform.Coordinates, 0, 2, 1, 1);
+            Owner.SpawnExplosion(0, 2, 1, 1);
             EntitySystem.Get<AudioSystem>().PlayFromEntity("/Audio/Effects/explosion.ogg", Owner);
 
             Owner.Delete();

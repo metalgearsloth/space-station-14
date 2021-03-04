@@ -1,10 +1,8 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using Content.Server.GameObjects.Components.Arcade;
 using Content.Shared.Arcade;
-using Robust.Shared.GameObjects.Systems;
+using Robust.Shared.GameObjects;
 using Robust.Shared.Utility;
 
 namespace Content.Server.GameObjects.EntitySystems
@@ -12,8 +10,8 @@ namespace Content.Server.GameObjects.EntitySystems
     // ReSharper disable once ClassNeverInstantiated.Global
     public class BlockGameSystem : EntitySystem
     {
-        private readonly List<BlockGameMessages.HighScoreEntry> _roundHighscores = new List<BlockGameMessages.HighScoreEntry>();
-        private readonly List<BlockGameMessages.HighScoreEntry> _globalHighscores = new List<BlockGameMessages.HighScoreEntry>();
+        private readonly List<BlockGameMessages.HighScoreEntry> _roundHighscores = new();
+        private readonly List<BlockGameMessages.HighScoreEntry> _globalHighscores = new();
 
         public HighScorePlacement RegisterHighScore(string name, int score)
         {
@@ -63,7 +61,7 @@ namespace Content.Server.GameObjects.EntitySystems
 
         public override void Update(float frameTime)
         {
-            foreach (var comp in ComponentManager.EntityQuery<BlockGameArcadeComponent>())
+            foreach (var comp in ComponentManager.EntityQuery<BlockGameArcadeComponent>(true))
             {
                 comp.DoGameTick(frameTime);
             }

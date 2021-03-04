@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,31 +7,26 @@ using Content.Server.GameObjects.Components.Chemistry;
 using Content.Server.GameObjects.Components.GUI;
 using Content.Server.GameObjects.Components.Items.Storage;
 using Content.Server.GameObjects.Components.Power.ApcNetComponents;
-using Content.Server.GameObjects.EntitySystems;
 using Content.Server.Interfaces.Chat;
 using Content.Server.Interfaces.GameObjects;
 using Content.Server.Utility;
 using Content.Shared.Chemistry;
 using Content.Shared.GameObjects.Components.Body;
 using Content.Shared.GameObjects.Components.Body.Part;
+using Content.Shared.GameObjects.Components.Chemistry;
 using Content.Shared.GameObjects.Components.Power;
+using Content.Shared.GameObjects.EntitySystems;
 using Content.Shared.Interfaces;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Content.Shared.Kitchen;
 using Content.Shared.Prototypes.Kitchen;
 using Robust.Server.GameObjects;
-using Robust.Server.GameObjects.Components.Container;
-using Robust.Server.GameObjects.Components.UserInterface;
-using Robust.Server.GameObjects.EntitySystems;
-using Robust.Server.Interfaces.GameObjects;
 using Robust.Shared.Audio;
+using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
-using Robust.Shared.GameObjects.Systems;
-using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.IoC;
 using Robust.Shared.Localization;
 using Robust.Shared.Serialization;
-using Robust.Shared.Timers;
 using Robust.Shared.ViewVariables;
 
 namespace Content.Server.GameObjects.Components.Kitchen
@@ -40,7 +35,6 @@ namespace Content.Server.GameObjects.Components.Kitchen
     [ComponentReference(typeof(IActivate))]
     public class MicrowaveComponent : SharedMicrowaveComponent, IActivate, IInteractUsing, ISolutionChange, ISuicideAct
     {
-        [Dependency] private readonly IEntityManager _entityManager = default!;
         [Dependency] private readonly RecipeManager _recipeManager = default!;
 
         #region YAMLSERIALIZE
@@ -90,7 +84,7 @@ namespace Content.Server.GameObjects.Components.Kitchen
 
             Owner.EnsureComponent<SolutionContainerComponent>();
 
-            _storage = ContainerManagerComponent.Ensure<Container>("microwave_entity_container", Owner, out var existed);
+            _storage = ContainerHelpers.EnsureContainer<Container>(Owner, "microwave_entity_container", out var existed);
             _audioSystem = EntitySystem.Get<AudioSystem>();
 
             if (UserInterface != null)
@@ -198,7 +192,7 @@ namespace Content.Server.GameObjects.Components.Kitchen
             UserInterface?.Toggle(actor.playerSession);
         }
 
-        public async Task<bool> InteractUsing(InteractUsingEventArgs eventArgs)
+        async Task<bool> IInteractUsing.InteractUsing(InteractUsingEventArgs eventArgs)
         {
             if (!Powered)
             {
@@ -214,10 +208,10 @@ namespace Content.Server.GameObjects.Components.Kitchen
                 return false;
             }
 
-            if (itemEntity.TryGetComponent<PourableComponent>(out var attackPourable))
+            if (itemEntity.TryGetComponent<SolutionTransferComponent>(out var attackPourable))
             {
-                if (!itemEntity.TryGetComponent<SolutionContainerComponent>(out var attackSolution)
-                    || !attackSolution.CanRemoveSolutions)
+                if (!itemEntity.TryGetComponent<ISolutionInteractionsComponent>(out var attackSolution)
+                    || !attackSolution.CanDrain)
                 {
                     return false;
                 }
@@ -236,7 +230,7 @@ namespace Content.Server.GameObjects.Components.Kitchen
                 }
 
                 //Move units from attackSolution to targetSolution
-                var removedSolution = attackSolution.SplitSolution(realTransferAmount);
+                var removedSolution = attackSolution.Drain(realTransferAmount);
                 if (!solution.TryAddSolution(removedSolution))
                 {
                     return false;
@@ -307,12 +301,9 @@ namespace Content.Server.GameObjects.Components.Kitchen
                 recipeToCook = r;
             }
 
-            var goodMeal = (recipeToCook != null)
-                           &&
-                           (_currentCookTimerTime == (uint)recipeToCook.CookTime);
             SetAppearance(MicrowaveVisualState.Cooking);
             _audioSystem.PlayFromEntity(_startCookingSound, Owner, AudioParams.Default);
-            Timer.Spawn((int)(_currentCookTimerTime * _cookTimeMultiplier), (Action)(() =>
+            Owner.SpawnTimer((int)(_currentCookTimerTime * _cookTimeMultiplier), (Action)(() =>
             {
                 if (_lostPower)
                 {
@@ -326,20 +317,16 @@ namespace Content.Server.GameObjects.Components.Kitchen
                 }
                 else
                 {
-                    if (goodMeal)
+                    if (recipeToCook != null)
                     {
-                        SubtractContents(recipeToCook!);
+                        SubtractContents(recipeToCook);
+                        Owner.EntityManager.SpawnEntity(recipeToCook.Result, Owner.Transform.Coordinates);
                     }
                     else
                     {
                         VaporizeReagents();
                         VaporizeSolids();
-                    }
-
-                    if (recipeToCook != null)
-                    {
-                        var entityToSpawn = goodMeal ? recipeToCook.Result : _badRecipeName;
-                        _entityManager.SpawnEntity(entityToSpawn, Owner.Transform.Coordinates);
+                        Owner.EntityManager.SpawnEntity(_badRecipeName, Owner.Transform.Coordinates);
                     }
                 }
                 _audioSystem.PlayFromEntity(_cookingCompleteSound, Owner, AudioParams.Default.WithVolume(-1f));
@@ -390,9 +377,9 @@ namespace Content.Server.GameObjects.Components.Kitchen
 
         private void EjectSolid(EntityUid entityID)
         {
-            if (_entityManager.EntityExists(entityID))
+            if (Owner.EntityManager.EntityExists(entityID))
             {
-                _storage.Remove(_entityManager.GetEntity(entityID));
+                _storage.Remove(Owner.EntityManager.GetEntity(entityID));
             }
         }
 
@@ -434,6 +421,11 @@ namespace Content.Server.GameObjects.Components.Kitchen
 
         private MicrowaveSuccessState CanSatisfyRecipe(FoodRecipePrototype recipe, Dictionary<string,int> solids)
         {
+            if (_currentCookTimerTime != (uint) recipe.CookTime)
+            {
+                return MicrowaveSuccessState.RecipeFail;
+            }
+
             if (!Owner.TryGetComponent(out SolutionContainerComponent? solution))
             {
                 return MicrowaveSuccessState.RecipeFail;
@@ -441,7 +433,7 @@ namespace Content.Server.GameObjects.Components.Kitchen
 
             foreach (var reagent in recipe.IngredientsReagents)
             {
-                if (!solution.ContainsReagent(reagent.Key, out var amount))
+                if (!solution.Solution.ContainsReagent(reagent.Key, out var amount))
                 {
                     return MicrowaveSuccessState.RecipeFail;
                 }
@@ -465,7 +457,6 @@ namespace Content.Server.GameObjects.Components.Kitchen
                 }
             }
 
-
             return MicrowaveSuccessState.RecipePass;
         }
 
@@ -474,7 +465,7 @@ namespace Content.Server.GameObjects.Components.Kitchen
             _audioSystem.PlayFromEntity("/Audio/Machines/machine_switch.ogg",Owner,AudioParams.Default.WithVolume(-2f));
         }
 
-        public SuicideKind Suicide(IEntity victim, IChatManager chat)
+        SuicideKind ISuicideAct.Suicide(IEntity victim, IChatManager chat)
         {
             var headCount = 0;
 

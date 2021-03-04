@@ -1,5 +1,7 @@
+#nullable enable
 using System;
 using System.Collections.Generic;
+using Content.Server.GameObjects.EntitySystems.AI;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Serialization;
 
@@ -15,7 +17,7 @@ namespace Content.Server.GameObjects.Components.AI
         public override void ExposeData(ObjectSerializer serializer)
         {
             base.ExposeData(serializer);
-            
+
             serializer.DataReadWriteFunction(
                 "factions",
                 new List<Faction>(),
@@ -34,16 +36,5 @@ namespace Content.Server.GameObjects.Components.AI
                     return writeFactions;
                 });
         }
-    }
-
-    [Flags]
-    public enum Faction
-    {
-        None = 0,
-        NanoTransen = 1 << 0,
-        SimpleHostile = 1 << 1,
-        SimpleNeutral = 1 << 2,
-        Syndicate = 1 << 3,
-        Xeno = 1 << 4,
     }
 }

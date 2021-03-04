@@ -1,9 +1,8 @@
 ﻿using Content.Server.GameObjects.Components.Pointing;
 using Content.Server.GameObjects.EntitySystems;
 using Content.Shared.GameObjects.Verbs;
-using Robust.Server.Interfaces.GameObjects;
-using Robust.Shared.GameObjects.Systems;
-using Robust.Shared.Interfaces.GameObjects;
+using Robust.Server.GameObjects;
+using Robust.Shared.GameObjects;
 using Robust.Shared.Localization;
 
 namespace Content.Server.GlobalVerbs
@@ -25,7 +24,7 @@ namespace Content.Server.GlobalVerbs
                 return;
             }
 
-            if (!EntitySystem.Get<PointingSystem>().InRange(user.Transform.Coordinates, target.Transform.Coordinates))
+            if (!EntitySystem.Get<PointingSystem>().InRange(user, target.Transform.Coordinates))
             {
                 return;
             }

@@ -2,11 +2,11 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 using Content.Server.GameObjects.Components.Interactable;
+using Content.Server.GameObjects.Components.Pulling;
+using Content.Server.Utility;
 using Content.Shared.GameObjects.Components.Interactable;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Robust.Shared.GameObjects;
-using Robust.Shared.GameObjects.Components;
-using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Serialization;
 using Robust.Shared.ViewVariables;
 
@@ -17,17 +17,21 @@ namespace Content.Server.GameObjects.Components
     {
         public override string Name => "Anchorable";
 
-        public override void ExposeData(ObjectSerializer serializer)
-        {
-            base.ExposeData(serializer);
-            serializer.DataField(this, x => x.Tool, "tool", ToolQuality.Anchoring);
-        }
-
         [ViewVariables]
         public ToolQuality Tool { get; private set; } = ToolQuality.Anchoring;
 
         [ViewVariables]
         int IInteractUsing.Priority => 1;
+
+        [ViewVariables(VVAccess.ReadWrite)]
+        public bool Snap { get; private set; }
+
+        public override void ExposeData(ObjectSerializer serializer)
+        {
+            base.ExposeData(serializer);
+            serializer.DataField(this, x => x.Tool, "tool", ToolQuality.Anchoring);
+            serializer.DataField(this, x => x.Snap, "snap", false);
+        }
 
         /// <summary>
         ///     Checks if a tool can change the anchored status.
@@ -36,7 +40,7 @@ namespace Content.Server.GameObjects.Components
         /// <param name="utilizing">The tool being used, can be null if forcing it</param>
         /// <param name="force">Whether or not to check if the tool is valid</param>
         /// <returns>true if it is valid, false otherwise</returns>
-        private async Task<bool> Valid(IEntity user, IEntity? utilizing, [MaybeNullWhen(false)] bool force = false)
+        private async Task<bool> Valid(IEntity user, IEntity? utilizing, [NotNullWhen(true)] bool force = false)
         {
             if (!Owner.HasComponent<IPhysicsComponent>())
             {
@@ -72,6 +76,17 @@ namespace Content.Server.GameObjects.Components
 
             var physics = Owner.GetComponent<IPhysicsComponent>();
             physics.Anchored = true;
+
+            if (Owner.TryGetComponent(out PullableComponent? pullableComponent))
+            {
+                if (pullableComponent.Puller != null)
+                {
+                    pullableComponent.TryStopPull();
+                }
+            }
+
+            if (Snap)
+                Owner.SnapToGrid(SnapGridOffset.Center, Owner.EntityManager);
 
             return true;
         }

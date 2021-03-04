@@ -1,6 +1,6 @@
-﻿using System.Collections.Generic;
+﻿#nullable enable
+using System.Collections.Generic;
 using System.IO;
-using Robust.Shared.Serialization;
 using Robust.Shared.Utility;
 using YamlDotNet.RepresentationModel;
 
@@ -8,11 +8,11 @@ namespace Content.Shared.Construction
 {
     public class NestedConstructionGraphStep : ConstructionGraphStep
     {
-        public List<List<ConstructionGraphStep>> Steps { get; private set; } = new List<List<ConstructionGraphStep>>();
+        public List<List<ConstructionGraphStep>> Steps { get; private set; } = new();
 
         public void LoadFrom(YamlMappingNode mapping)
         {
-            if (!mapping.TryGetNode("steps", out YamlSequenceNode steps)) return;
+            if (!mapping.TryGetNode("steps", out YamlSequenceNode? steps)) return;
 
             foreach (var node in steps)
             {

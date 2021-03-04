@@ -2,7 +2,6 @@ using Content.Shared.GameObjects.Components.Nutrition;
 using Content.Shared.Utility;
 using JetBrains.Annotations;
 using Robust.Client.GameObjects;
-using Robust.Client.Interfaces.GameObjects.Components;
 using Robust.Shared.Utility;
 using YamlDotNet.RepresentationModel;
 
@@ -22,7 +21,9 @@ namespace Content.Client.GameObjects.Components.Nutrition
 
         public override void OnChangeData(AppearanceComponent component)
         {
+            base.OnChangeData(component);
             var sprite = component.Owner.GetComponent<ISpriteComponent>();
+
             if (!component.TryGetData<float>(SharedFoodComponent.FoodVisuals.MaxUses, out var maxUses))
             {
                 return;

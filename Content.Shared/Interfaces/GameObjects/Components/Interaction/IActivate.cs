@@ -1,14 +1,18 @@
 using System;
 using JetBrains.Annotations;
+using Robust.Shared.Analyzers;
 using Robust.Shared.GameObjects;
-using Robust.Shared.Interfaces.GameObjects;
 
 namespace Content.Shared.Interfaces.GameObjects.Components
 {
     /// <summary>
-    ///     This interface gives components behavior when being activated in the world when the user
-    ///     is in range and has unobstructed access to the target entity (allows inside blockers).
+    ///     This interface gives components behavior when being activated (by default,
+    ///     this is done via the "E" key) when the user is in range and has unobstructed access to the target entity
+    ///     (allows inside blockers). This includes activating an object in the world as well as activating an
+    ///     object in inventory. Unlike IUse, this can be performed on entities that aren't in the active hand,
+    ///     even when the active hand is currently holding something else.
     /// </summary>
+    [RequiresExplicitImplementation]
     public interface IActivate
     {
         /// <summary>

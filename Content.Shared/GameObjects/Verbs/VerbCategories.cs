@@ -1,3 +1,5 @@
+#nullable enable
+
 namespace Content.Shared.GameObjects.Verbs
 {
     /// <summary>
@@ -9,5 +11,6 @@ namespace Content.Shared.GameObjects.Verbs
             ("Debug", "/Textures/Interface/VerbIcons/debug.svg.96dpi.png");
 
         public static readonly VerbCategoryData Rotate = ("Rotate", null);
+        public static readonly VerbCategoryData Construction = ("Construction", null);
     }
 }

@@ -1,8 +1,5 @@
 using Content.Server.GameObjects.Components.Mobs;
 using Robust.Shared.GameObjects;
-using Robust.Shared.GameObjects.Components;
-using Robust.Shared.Interfaces.GameObjects;
-using Robust.Shared.Log;
 using Robust.Shared.Serialization;
 
 namespace Content.Server.GameObjects.Components.Projectiles
@@ -32,11 +29,7 @@ namespace Content.Server.GameObjects.Components.Projectiles
         {
             base.Initialize();
 
-            if (!Owner.EnsureComponent(out ProjectileComponent _))
-            {
-                Logger.Warning(
-                    $"Entity {Owner.Name} at {Owner.Transform.MapPosition} didn't have a {nameof(ProjectileComponent)}");
-            }
+            Owner.EnsureComponentWarn(out ProjectileComponent _);
         }
 
         void ICollideBehavior.CollideWith(IEntity entity)

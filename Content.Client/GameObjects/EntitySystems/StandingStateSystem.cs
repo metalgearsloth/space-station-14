@@ -1,9 +1,7 @@
-﻿using Content.Shared.Audio;
-using Content.Shared.GameObjects.Components.Rotation;
+﻿using Content.Shared.GameObjects.Components.Rotation;
 using Content.Shared.GameObjects.EntitySystems;
 using Robust.Client.GameObjects;
-using Robust.Client.GameObjects.EntitySystems;
-using Robust.Shared.Interfaces.GameObjects;
+using Robust.Shared.GameObjects;
 
 namespace Content.Client.GameObjects.EntitySystems
 {
@@ -22,12 +20,6 @@ namespace Content.Client.GameObjects.EntitySystems
             if (newState != oldState)
             {
                 appearance.SetData(RotationVisuals.RotationState, newState);
-            }
-
-            if (playSound)
-            {
-                var file = AudioHelpers.GetRandomFileFromSoundCollection("bodyfall");
-                Get<AudioSystem>().Play(file, entity, AudioHelpers.WithVariation(0.25f));
             }
 
             return true;

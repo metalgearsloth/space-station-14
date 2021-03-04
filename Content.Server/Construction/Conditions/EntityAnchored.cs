@@ -1,8 +1,7 @@
 ﻿using System.Threading.Tasks;
 using Content.Shared.Construction;
 using JetBrains.Annotations;
-using Robust.Shared.GameObjects.Components;
-using Robust.Shared.Interfaces.GameObjects;
+using Robust.Shared.GameObjects;
 using Robust.Shared.Serialization;
 using Robust.Shared.Utility;
 
@@ -13,7 +12,7 @@ namespace Content.Server.Construction.Conditions
     {
         public bool Anchored { get; private set; }
 
-        public void ExposeData(ObjectSerializer serializer)
+        void IExposeData.ExposeData(ObjectSerializer serializer)
         {
             serializer.DataField(this, x => x.Anchored, "anchored", true);
         }
@@ -25,15 +24,21 @@ namespace Content.Server.Construction.Conditions
             return physics.Anchored == Anchored;
         }
 
-        public void DoExamine(IEntity entity, FormattedMessage message, bool inDetailsRange)
+        public bool DoExamine(IEntity entity, FormattedMessage message, bool inDetailsRange)
         {
-            if (!entity.TryGetComponent(out IPhysicsComponent physics)) return;
+            if (!entity.TryGetComponent(out IPhysicsComponent physics)) return false;
 
-            if(Anchored && !physics.Anchored)
-                message.AddMarkup("First, anchor it.\n");
+            switch (Anchored)
+            {
+                case true when !physics.Anchored:
+                    message.AddMarkup("First, anchor it.\n");
+                    return true;
+                case false when physics.Anchored:
+                    message.AddMarkup("First, unanchor it.\n");
+                    return true;
+            }
 
-            if(!Anchored && physics.Anchored)
-                message.AddMarkup("First, unanchor it.\n");
+            return false;
         }
     }
 }

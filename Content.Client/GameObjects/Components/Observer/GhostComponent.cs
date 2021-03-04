@@ -1,12 +1,12 @@
 using System.Collections.Generic;
+using Content.Client.Interfaces.Chat;
 using Content.Client.UserInterface;
 using Content.Shared.GameObjects.Components.Observer;
 using Robust.Client.GameObjects;
 using Robust.Client.Player;
 using Robust.Shared.GameObjects;
-using Robust.Shared.Interfaces.GameObjects;
-using Robust.Shared.Interfaces.Network;
 using Robust.Shared.IoC;
+using Robust.Shared.Network;
 using Robust.Shared.Players;
 using Robust.Shared.ViewVariables;
 
@@ -19,8 +19,10 @@ namespace Content.Client.GameObjects.Components.Observer
         [Dependency] private readonly IGameHud _gameHud = default!;
         [Dependency] private readonly IPlayerManager _playerManager = default!;
         [Dependency] private readonly IComponentManager _componentManager = default!;
-        public List<string> WarpNames = new List<string>();
-        public Dictionary<EntityUid,string> PlayerNames = new Dictionary<EntityUid,string>();
+        [Dependency] private readonly IChatManager _chatManager = default!;
+
+        public List<string> WarpNames = new();
+        public Dictionary<EntityUid,string> PlayerNames = new();
 
         private GhostGui? _gui ;
 
@@ -41,10 +43,9 @@ namespace Content.Client.GameObjects.Components.Observer
             }
         }
 
-
         private void SetGhostVisibility(bool visibility)
         {
-            foreach (var ghost in _componentManager.GetAllComponents(typeof(GhostComponent)))
+            foreach (var ghost in _componentManager.GetAllComponents(typeof(GhostComponent), true))
             {
                 if (ghost.Owner.TryGetComponent(out SpriteComponent? component))
                 {
@@ -83,6 +84,7 @@ namespace Content.Client.GameObjects.Components.Observer
                     _gameHud.HandsContainer.AddChild(_gui);
                     SetGhostVisibility(true);
                     _isAttached = true;
+                    _chatManager.ToggleDeadChatButtonVisibility(true);
 
                     break;
 
@@ -90,13 +92,16 @@ namespace Content.Client.GameObjects.Components.Observer
                     _gui!.Parent?.RemoveChild(_gui);
                     SetGhostVisibility(false);
                     _isAttached = false;
+                    _chatManager.ToggleDeadChatButtonVisibility(false);
                     break;
             }
         }
 
         public void SendReturnToBodyMessage() => SendNetworkMessage(new ReturnToBodyComponentMessage());
 
-        public void SendGhostWarpRequestMessage(EntityUid target = default, string warpName = default!) => SendNetworkMessage(new GhostWarpRequestMessage(target, warpName));
+        public void SendGhostWarpRequestMessage(string warpName) => SendNetworkMessage(new GhostWarpToLocationRequestMessage(warpName));
+
+        public void SendGhostWarpRequestMessage(EntityUid target) => SendNetworkMessage(new GhostWarpToTargetRequestMessage(target));
 
         public void GhostRequestWarpPoint() => SendNetworkMessage(new GhostRequestWarpPointData());
 
@@ -106,7 +111,7 @@ namespace Content.Client.GameObjects.Components.Observer
         {
             base.HandleComponentState(curState, nextState);
 
-            if (!(curState is GhostComponentState state)) return;
+            if (curState is not GhostComponentState state) return;
 
             CanReturnToBody = state.CanReturnToBody;
 

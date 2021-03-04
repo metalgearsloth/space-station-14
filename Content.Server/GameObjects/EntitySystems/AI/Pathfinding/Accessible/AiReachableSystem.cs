@@ -6,14 +6,11 @@ using Content.Shared.AI;
 using Content.Shared.GameTicking;
 using JetBrains.Annotations;
 using Robust.Server.GameObjects;
-using Robust.Shared.GameObjects.Components;
-using Robust.Shared.GameObjects.Systems;
-using Robust.Shared.Interfaces.GameObjects;
-using Robust.Shared.Interfaces.Map;
-using Robust.Shared.Interfaces.Timing;
+using Robust.Shared.GameObjects;
 using Robust.Shared.IoC;
 using Robust.Shared.Map;
 using Robust.Shared.Maths;
+using Robust.Shared.Timing;
 using Robust.Shared.Utility;
 
 namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Accessible
@@ -39,14 +36,13 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Accessible
          */
         [Dependency] private readonly IMapManager _mapManager = default!;
         [Dependency] private readonly IGameTiming _gameTiming = default!;
-        [Dependency] private readonly IEntityManager _entityManager = default!;
 
         private PathfindingSystem _pathfindingSystem;
 
         /// <summary>
         /// Queued region updates
         /// </summary>
-        private HashSet<PathfindingChunk> _queuedUpdates = new HashSet<PathfindingChunk>();
+        private readonly HashSet<PathfindingChunk> _queuedUpdates = new();
 
         // Oh god the nesting. Shouldn't need to go beyond this
         /// <summary>
@@ -54,8 +50,8 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Accessible
         /// Regions are groups of nodes with the same profile (for pathfinding purposes)
         /// i.e. same collision, not-space, same access, etc.
         /// </summary>
-        private Dictionary<GridId, Dictionary<PathfindingChunk, HashSet<PathfindingRegion>>> _regions =
-            new Dictionary<GridId, Dictionary<PathfindingChunk, HashSet<PathfindingRegion>>>();
+        private readonly Dictionary<GridId, Dictionary<PathfindingChunk, HashSet<PathfindingRegion>>> _regions =
+            new();
 
         /// <summary>
         /// Minimum time for the cached reachable regions to be stored
@@ -71,10 +67,10 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Accessible
 
         // Also, didn't use a dictionary because there didn't seem to be a clean way to do the lookup
         // Plus this way we can check if everything is equal except for vision so an entity with a lower vision radius can use an entity with a higher vision radius' cached result
-        private Dictionary<ReachableArgs, Dictionary<PathfindingRegion, (TimeSpan CacheTime, HashSet<PathfindingRegion> Regions)>> _cachedAccessible =
-            new Dictionary<ReachableArgs, Dictionary<PathfindingRegion, (TimeSpan, HashSet<PathfindingRegion>)>>();
+        private readonly Dictionary<ReachableArgs, Dictionary<PathfindingRegion, (TimeSpan CacheTime, HashSet<PathfindingRegion> Regions)>> _cachedAccessible =
+            new();
 
-        private readonly List<PathfindingRegion> _queuedCacheDeletions = new List<PathfindingRegion>();
+        private readonly List<PathfindingRegion> _queuedCacheDeletions = new();
 
 #if DEBUG
         private int _runningCacheIdx = 0;
@@ -717,7 +713,7 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Accessible
 
                     foreach (var node in region.Nodes)
                     {
-                        var nodeVector = grid.GridTileToLocal(node.TileRef.GridIndices).ToMapPos(_entityManager);
+                        var nodeVector = grid.GridTileToLocal(node.TileRef.GridIndices).ToMapPos(EntityManager);
                         debugRegionNodes.Add(nodeVector);
                     }
 
@@ -746,7 +742,7 @@ namespace Content.Server.GameObjects.EntitySystems.AI.Pathfinding.Accessible
 
                 foreach (var node in region.Nodes)
                 {
-                    var nodeVector = grid.GridTileToLocal(node.TileRef.GridIndices).ToMapPos(_entityManager);
+                    var nodeVector = grid.GridTileToLocal(node.TileRef.GridIndices).ToMapPos(EntityManager);
 
                     debugResult[_runningCacheIdx].Add(nodeVector);
                 }

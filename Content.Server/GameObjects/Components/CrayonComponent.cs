@@ -1,4 +1,6 @@
 ﻿#nullable enable
+using System.Linq;
+using System.Threading.Tasks;
 using Content.Server.Utility;
 using Content.Shared.Audio;
 using Content.Shared.GameObjects.Components;
@@ -6,18 +8,14 @@ using Content.Shared.Interfaces;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Content.Shared.Utility;
 using Robust.Server.GameObjects;
-using Robust.Server.GameObjects.Components.UserInterface;
-using Robust.Server.GameObjects.EntitySystems;
-using Robust.Server.Interfaces.GameObjects;
 using Robust.Shared.GameObjects;
-using Robust.Shared.GameObjects.Systems;
 using Robust.Shared.IoC;
 using Robust.Shared.Localization;
 using Robust.Shared.Maths;
+using Robust.Shared.Players;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization;
 using Robust.Shared.ViewVariables;
-using System.Linq;
 
 namespace Content.Server.GameObjects.Components
 {
@@ -86,7 +84,7 @@ namespace Content.Server.GameObjects.Components
             }
         }
 
-        public override ComponentState GetComponentState()
+        public override ComponentState GetComponentState(ICommonSession player)
         {
             return new CrayonComponentState(_color, SelectedState, Charges, Capacity);
         }
@@ -108,19 +106,22 @@ namespace Content.Server.GameObjects.Components
             return false;
         }
 
-        void IAfterInteract.AfterInteract(AfterInteractEventArgs eventArgs)
+        async Task<bool> IAfterInteract.AfterInteract(AfterInteractEventArgs eventArgs)
         {
             if (!eventArgs.InRangeUnobstructed(ignoreInsideBlocker: false, popup: true,
-                collisionMask: Shared.Physics.CollisionGroup.MobImpassable)) return;
+                collisionMask: Shared.Physics.CollisionGroup.MobImpassable))
+            {
+                return true;
+            }
 
             if (Charges <= 0)
             {
                 eventArgs.User.PopupMessage(Loc.GetString("Not enough left."));
-                return;
+                return true;
             }
 
             var entityManager = IoCManager.Resolve<IServerEntityManager>();
-            
+
             var entity = entityManager.SpawnEntity("CrayonDecal", eventArgs.ClickLocation);
             if (entity.TryGetComponent(out AppearanceComponent? appearance))
             {
@@ -137,6 +138,7 @@ namespace Content.Server.GameObjects.Components
             // Decrease "Ammo"
             Charges--;
             Dirty();
+            return true;
         }
 
         void IDropped.Dropped(DroppedEventArgs eventArgs)

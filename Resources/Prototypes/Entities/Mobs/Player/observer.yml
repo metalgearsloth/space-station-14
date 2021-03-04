@@ -6,6 +6,8 @@
   description: Boo!
   components:
   - type: Mind
+  - type: Clickable
+  - type: InteractionOutline
   - type: Physics
     anchored: false
     mass: 5
@@ -15,6 +17,7 @@
       mask:
       - GhostImpassable
     status: InAir
+  - type: PlayerInputMover
   - type: Eye
     zoom: 0.5, 0.5
     drawFov: false
@@ -26,6 +29,7 @@
   - type: Ghost
   - type: Sprite
     netsync: false
+    noRot: true
     drawdepth: Ghosts
     sprite: Mobs/Ghosts/ghost_human.rsi
     state: animated
@@ -37,5 +41,6 @@
     baseSprintSpeed: 14
     baseWalkSpeed: 7
   - type: MovementIgnoreGravity
-  - type: Grammar
-    proper: true
+  - type: Actions
+    innateActions:
+      - GhostBoo

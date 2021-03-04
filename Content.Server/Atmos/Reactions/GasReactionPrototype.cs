@@ -1,9 +1,8 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Content.Server.Interfaces;
 using Content.Shared.Atmos;
-using Robust.Server.GameObjects.EntitySystems.TileLookup;
-using Robust.Shared.GameObjects;
+using Robust.Server.GameObjects;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization;
 using YamlDotNet.RepresentationModel;
@@ -24,7 +23,7 @@ namespace Content.Server.Atmos.Reactions
     }
 
     [Prototype("gasReaction")]
-    public class GasReactionPrototype : IPrototype, IIndexedPrototype
+    public class GasReactionPrototype : IPrototype
     {
         public string ID { get; private set; }
 
@@ -58,11 +57,11 @@ namespace Content.Server.Atmos.Reactions
         {
             var serializer = YamlObjectSerializer.NewReader(mapping);
 
-            serializer.DataField(this, x => ID, "id", string.Empty);
-            serializer.DataField(this, x => Priority, "priority", 100);
-            serializer.DataField(this, x => MinimumRequirements, "minimumRequirements", new float[Atmospherics.TotalNumberOfGases]);
-            serializer.DataField(this, x => MinimumTemperatureRequirement, "minimumTemperature", Atmospherics.TCMB);
-            serializer.DataField(this, x => MinimumEnergyRequirement, "minimumEnergy", 0f);
+            serializer.DataField(this, x => x.ID, "id", string.Empty);
+            serializer.DataField(this, x => x.Priority, "priority", 100);
+            serializer.DataField(this, x => x.MinimumRequirements, "minimumRequirements", new float[Atmospherics.TotalNumberOfGases]);
+            serializer.DataField(this, x => x.MinimumTemperatureRequirement, "minimumTemperature", Atmospherics.TCMB);
+            serializer.DataField(this, x => x.MinimumEnergyRequirement, "minimumEnergy", 0f);
             serializer.DataField(ref _effects, "effects", new List<IGasReactionEffect>());
         }
 

@@ -1,0 +1,13 @@
+- type: entity
+  parent: Clothing
+  id: ClothingNeckBase
+  abstract: true
+  name: neck
+  components:
+  - type: Clothing
+    size: 10
+    QuickEquip: true
+    Slots:
+    - neck
+  - type: Sprite
+    state: icon

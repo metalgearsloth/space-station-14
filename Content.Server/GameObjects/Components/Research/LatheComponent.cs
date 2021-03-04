@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,11 +12,8 @@ using Content.Shared.GameObjects.Components.Research;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Content.Shared.Research;
 using Robust.Server.GameObjects;
-using Robust.Server.GameObjects.Components.UserInterface;
-using Robust.Server.Interfaces.GameObjects;
-using Robust.Server.Interfaces.Player;
+using Robust.Server.Player;
 using Robust.Shared.GameObjects;
-using Robust.Shared.Timers;
 using Robust.Shared.ViewVariables;
 
 namespace Content.Server.GameObjects.Components.Research
@@ -25,10 +22,10 @@ namespace Content.Server.GameObjects.Components.Research
     [ComponentReference(typeof(IActivate))]
     public class LatheComponent : SharedLatheComponent, IInteractUsing, IActivate
     {
-        public const int VolumePerSheet = 3750;
+        public const int VolumePerSheet = 100;
 
         [ViewVariables]
-        public Queue<LatheRecipePrototype> Queue { get; } = new Queue<LatheRecipePrototype>();
+        public Queue<LatheRecipePrototype> Queue { get; } = new();
 
         [ViewVariables]
         public bool Producing { get; private set; }
@@ -68,7 +65,7 @@ namespace Content.Server.GameObjects.Components.Research
             switch (message.Message)
             {
                 case LatheQueueRecipeMessage msg:
-                    PrototypeManager.TryIndex(msg.ID, out LatheRecipePrototype recipe);
+                    PrototypeManager.TryIndex(msg.ID, out LatheRecipePrototype? recipe);
                     if (recipe != null!)
                         for (var i = 0; i < msg.Quantity; i++)
                         {
@@ -102,11 +99,8 @@ namespace Content.Server.GameObjects.Components.Research
         }
 
         internal bool Produce(LatheRecipePrototype recipe)
-        {   if(!Powered)
-            {
-                return false;
-            }
-            if (Producing || !CanProduce(recipe) || !Owner.TryGetComponent(out MaterialStorageComponent? storage)) return false;
+        {
+            if (Producing || !Powered || !CanProduce(recipe) || !Owner.TryGetComponent(out MaterialStorageComponent? storage)) return false;
 
             UserInterface?.SendMessage(new LatheFullQueueMessage(GetIdQueue()));
 
@@ -124,7 +118,7 @@ namespace Content.Server.GameObjects.Components.Research
             State = LatheState.Producing;
             SetAppearance(LatheVisualState.Producing);
 
-            Timer.Spawn(recipe.CompleteTime, () =>
+            Owner.SpawnTimer(recipe.CompleteTime, () =>
             {
                 Producing = false;
                 _producingRecipe = null;
@@ -184,18 +178,24 @@ namespace Content.Server.GameObjects.Components.Research
             State = LatheState.Inserting;
             switch (material.MaterialTypes.Values.First().Name)
             {
-                case "Steel":
+                case "steel":
                     SetAppearance(LatheVisualState.InsertingMetal);
                     break;
-                case "Glass":
+                case "glass":
                     SetAppearance(LatheVisualState.InsertingGlass);
                     break;
-                case "Gold":
+                case "gold":
                     SetAppearance(LatheVisualState.InsertingGold);
+                    break;
+                case "plastic":
+                    SetAppearance(LatheVisualState.InsertingPlastic);
+                    break;
+                case "plasma":
+                    SetAppearance(LatheVisualState.InsertingPlasma);
                     break;
             }
 
-            Timer.Spawn(InsertionTime, () =>
+            Owner.SpawnTimer(InsertionTime, () =>
             {
                 State = LatheState.Base;
                 SetAppearance(LatheVisualState.Idle);

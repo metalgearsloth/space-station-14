@@ -1,43 +1,37 @@
-﻿#nullable enable
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Content.Server.Atmos;
 using Content.Server.GameObjects.Components.GUI;
-using Content.Server.GameObjects.Components.Items.Storage;
 using Content.Server.GameObjects.Components.Power.ApcNetComponents;
-using Content.Server.GameObjects.Components.Projectiles;
+using Content.Server.GameObjects.Components.Items.Storage;
+using Content.Server.GameObjects.EntitySystems;
 using Content.Server.GameObjects.EntitySystems.DoAfter;
+using Content.Server.Interfaces;
 using Content.Server.Interfaces.GameObjects.Components.Items;
 using Content.Server.Utility;
-using Content.Shared.GameObjects.Components.Body;
 using Content.Shared.GameObjects.Components.Disposal;
-using Content.Shared.GameObjects.Components.Items;
-using Content.Shared.GameObjects.EntitySystems;
+using Content.Shared.Atmos;
+using Content.Shared.GameObjects.Components.Body;
+using Content.Shared.GameObjects.Components.Mobs.State;
+using Content.Shared.GameObjects.EntitySystems.ActionBlocker;
 using Content.Shared.GameObjects.Verbs;
 using Content.Shared.Interfaces;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Robust.Server.GameObjects;
-using Robust.Server.GameObjects.Components.Container;
-using Robust.Server.GameObjects.Components.UserInterface;
-using Robust.Server.GameObjects.EntitySystems;
-using Robust.Server.Interfaces.GameObjects;
 using Robust.Shared.Audio;
 using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
-using Robust.Shared.GameObjects.Components;
-using Robust.Shared.GameObjects.Components.Transform;
-using Robust.Shared.GameObjects.Systems;
-using Robust.Shared.Interfaces.GameObjects;
-using Robust.Shared.Interfaces.Random;
-using Robust.Shared.Interfaces.Timing;
 using Robust.Shared.IoC;
 using Robust.Shared.Localization;
 using Robust.Shared.Log;
+using Robust.Shared.Random;
 using Robust.Shared.Serialization;
+using Robust.Shared.Timing;
 using Robust.Shared.ViewVariables;
-using Timer = Robust.Shared.Timers.Timer;
 
 namespace Content.Server.GameObjects.Components.Disposal
 {
@@ -45,7 +39,7 @@ namespace Content.Server.GameObjects.Components.Disposal
     [ComponentReference(typeof(SharedDisposalUnitComponent))]
     [ComponentReference(typeof(IActivate))]
     [ComponentReference(typeof(IInteractUsing))]
-    public class DisposalUnitComponent : SharedDisposalUnitComponent, IInteractHand, IActivate, IInteractUsing, IDragDropOn, IThrowCollide
+    public class DisposalUnitComponent : SharedDisposalUnitComponent, IInteractHand, IActivate, IInteractUsing, IThrowCollide, IGasMixtureHolder
     {
         [Dependency] private readonly IGameTiming _gameTiming = default!;
 
@@ -77,8 +71,17 @@ namespace Content.Server.GameObjects.Components.Disposal
         [ViewVariables(VVAccess.ReadWrite)]
         private TimeSpan _flushDelay;
 
+        /// <summary>
+        ///     Delay from trying to enter disposals ourselves.
+        /// </summary>
         [ViewVariables(VVAccess.ReadWrite)]
         private float _entryDelay;
+
+        /// <summary>
+        ///     Delay from trying to shove someone else into disposals.
+        /// </summary>
+        [ViewVariables(VVAccess.ReadWrite)]
+        private float _draggedEntryDelay;
 
         /// <summary>
         ///     Token used to cancel the automatic engage of a disposal unit
@@ -129,17 +132,20 @@ namespace Content.Server.GameObjects.Components.Disposal
         /// </summary>
         private (PressureState State, string Localized) _locState;
 
-        public bool CanInsert(IEntity entity)
+        public GasMixture Air { get; set; } = default!;
+
+        public override bool CanInsert(IEntity entity)
         {
-            if (!Anchored)
-            {
+            if (!base.CanInsert(entity))
                 return false;
-            }
 
             if (!entity.TryGetComponent(out IPhysicsComponent? physics) ||
                 !physics.CanCollide)
             {
-                return false;
+                if (entity.TryGetComponent(out IMobStateComponent? state) && state.IsDead())
+                {
+                    return false;
+                }
             }
 
             if (!entity.HasComponent<ItemComponent>() &&
@@ -160,7 +166,7 @@ namespace Content.Server.GameObjects.Components.Disposal
 
             _automaticEngageToken = new CancellationTokenSource();
 
-            Timer.Spawn(_automaticEngageTime, () =>
+            Owner.SpawnTimer(_automaticEngageTime, () =>
             {
                 if (!TryFlush())
                 {
@@ -186,11 +192,15 @@ namespace Content.Server.GameObjects.Components.Disposal
             if (!CanInsert(entity))
                 return false;
 
-            if (user != null && _entryDelay > 0f)
+            var delay = user == entity ? _entryDelay : _draggedEntryDelay;
+
+            if (user != null && delay > 0.0f)
             {
                 var doAfterSystem = EntitySystem.Get<DoAfterSystem>();
 
-                var doAfterArgs = new DoAfterEventArgs(user, _entryDelay, default, Owner)
+                // Can't check if our target AND disposals moves currently so we'll just check target.
+                // if you really want to check if disposals moves then add a predicate.
+                var doAfterArgs = new DoAfterEventArgs(user, delay, default, entity)
                 {
                     BreakOnDamage = true,
                     BreakOnStun = true,
@@ -203,7 +213,6 @@ namespace Content.Server.GameObjects.Components.Disposal
 
                 if (result == DoAfterStatus.Cancelled)
                     return false;
-
             }
 
             if (!_container.Insert(entity))
@@ -255,7 +264,7 @@ namespace Content.Server.GameObjects.Components.Disposal
 
             if (Engaged && CanFlush())
             {
-                Timer.Spawn(_flushDelay, () => TryFlush());
+                Owner.SpawnTimer(_flushDelay, () => TryFlush());
             }
         }
 
@@ -277,13 +286,23 @@ namespace Content.Server.GameObjects.Components.Disposal
             }
 
             var entryComponent = entry.GetComponent<DisposalEntryComponent>();
-            var entities = _container.ContainedEntities.ToList();
-            foreach (var entity in _container.ContainedEntities.ToList())
+
+            if (Owner.Transform.Coordinates.TryGetTileAtmosphere(out var tileAtmos) &&
+                tileAtmos.Air != null &&
+                tileAtmos.Air.Temperature > 0)
             {
-                _container.Remove(entity);
+                var tileAir = tileAtmos.Air;
+                var transferMoles = 0.1f * (0.05f * Atmospherics.OneAtmosphere * 1.01f - Air.Pressure) * Air.Volume / (tileAir.Temperature * Atmospherics.R);
+
+                Air = tileAir.Remove(transferMoles);
+
+                var atmosSystem = EntitySystem.Get<AtmosphereSystem>();
+                atmosSystem
+                    .GetGridAtmosphere(Owner.Transform.GridID)?
+                    .Invalidate(tileAtmos.GridIndices);
             }
 
-            entryComponent.TryInsert(entities);
+            entryComponent.TryInsert(this);
 
             _automaticEngageToken?.Cancel();
             _automaticEngageToken = null;
@@ -375,7 +394,7 @@ namespace Content.Server.GameObjects.Components.Disposal
                 return;
             }
 
-            if (!(obj.Message is UiButtonPressedMessage message))
+            if (obj.Message is not UiButtonPressedMessage message)
             {
                 return;
             }
@@ -391,7 +410,6 @@ namespace Content.Server.GameObjects.Components.Disposal
                 case UiButton.Power:
                     TogglePower();
                     EntitySystem.Get<AudioSystem>().PlayFromEntity("/Audio/Machines/machine_switch.ogg", Owner, AudioParams.Default.WithVolume(-2f));
-
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
@@ -481,7 +499,7 @@ namespace Content.Server.GameObjects.Components.Disposal
             UpdateInterface();
         }
 
-        private void PowerStateChanged(object? sender, PowerStateEventArgs args)
+        private void PowerStateChanged(PowerChangedMessage args)
         {
             if (!args.Powered)
             {
@@ -519,18 +537,16 @@ namespace Content.Server.GameObjects.Components.Disposal
                 seconds => _flushDelay = TimeSpan.FromSeconds(seconds),
                 () => (int) _flushDelay.TotalSeconds);
 
-            serializer.DataReadWriteFunction(
-                "entryDelay",
-                0.5f,
-                seconds => _entryDelay = seconds,
-                () => (int) _entryDelay);
+            serializer.DataField(this, x => x.Air, "air", new GasMixture(Atmospherics.CellVolume));
+            serializer.DataField(ref _entryDelay, "entryDelay", 1.0f);
+            serializer.DataField(ref _draggedEntryDelay, "draggedEntryDelay", 3.0f);
         }
 
         public override void Initialize()
         {
             base.Initialize();
 
-            _container = ContainerManagerComponent.Ensure<Container>(Name, Owner);
+            _container = ContainerHelpers.EnsureContainer<Container>(Owner, Name);
 
             if (UserInterface != null)
             {
@@ -549,31 +565,11 @@ namespace Content.Server.GameObjects.Components.Disposal
                 Logger.WarningS("VitalComponentMissing", $"Disposal unit {Owner.Uid} is missing an anchorable component");
             }
 
-            if (Owner.TryGetComponent(out IPhysicsComponent? physics))
-            {
-                physics.AnchoredChanged += UpdateVisualState;
-            }
-
-            if (Owner.TryGetComponent(out PowerReceiverComponent? receiver))
-            {
-                receiver.OnPowerStateChanged += PowerStateChanged;
-            }
-
             UpdateVisualState();
         }
 
         public override void OnRemove()
         {
-            if (Owner.TryGetComponent(out IPhysicsComponent? physics))
-            {
-                physics.AnchoredChanged -= UpdateVisualState;
-            }
-
-            if (Owner.TryGetComponent(out PowerReceiverComponent? receiver))
-            {
-                receiver.OnPowerStateChanged -= PowerStateChanged;
-            }
-
             foreach (var entity in _container.ContainedEntities.ToArray())
             {
                 _container.ForceRemove(entity);
@@ -606,6 +602,14 @@ namespace Content.Server.GameObjects.Components.Disposal
                     _lastExitAttempt = _gameTiming.CurTime;
                     Remove(msg.Entity);
                     break;
+
+                case AnchoredChangedMessage:
+                    UpdateVisualState();
+                    break;
+
+                case PowerChangedMessage powerChanged:
+                    PowerStateChanged(powerChanged);
+                    break;
             }
         }
 
@@ -617,7 +621,7 @@ namespace Content.Server.GameObjects.Components.Disposal
                 return false;
             }
 
-            if (ContainerHelpers.IsInContainer(eventArgs.User))
+            if (eventArgs.User.IsInContainer())
             {
                 Owner.PopupMessage(eventArgs.User, Loc.GetString("You can't reach there!"));
                 return false;
@@ -672,12 +676,14 @@ namespace Content.Server.GameObjects.Components.Disposal
             return TryDrop(eventArgs.User, eventArgs.Using);
         }
 
-        bool IDragDropOn.CanDragDropOn(DragDropEventArgs eventArgs)
+        public override bool CanDragDropOn(DragDropEventArgs eventArgs)
         {
+            // Base is redundant given this already calls the base CanInsert
+            // If that changes then update this
             return CanInsert(eventArgs.Dragged);
         }
 
-        bool IDragDropOn.DragDropOn(DragDropEventArgs eventArgs)
+        public override bool DragDropOn(DragDropEventArgs eventArgs)
         {
             _ = TryInsert(eventArgs.Dragged, eventArgs.User);
             return true;

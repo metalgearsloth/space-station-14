@@ -1,13 +1,15 @@
 ﻿using System;
 using JetBrains.Annotations;
+using Robust.Shared.Analyzers;
 using Robust.Shared.GameObjects;
-using Robust.Shared.Interfaces.GameObjects;
 
 namespace Content.Shared.Interfaces.GameObjects.Components
 {
     /// <summary>
-    /// This interface gives components behavior when using the entity in your hands
+    /// This interface gives components behavior when using the entity in your active hand
+    /// (done by clicking the entity in the active hand or pressing the keybind that defaults to Z).
     /// </summary>
+    [RequiresExplicitImplementation]
     public interface IUse
     {
         /// <summary>

@@ -1,5 +1,4 @@
-using Robust.Client.GameObjects;
-using Robust.Client.Interfaces.GameObjects.Components;
+﻿using Robust.Client.GameObjects;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Maths;
 
@@ -35,25 +34,13 @@ namespace Content.Client.GameObjects.Components.Mobs
             }
             else
             {
-                offset = _angle.RotateVec((BaseOffset, 0));
+                offset = _angle.RotateVec((0, -BaseOffset));
                 offset *= (ResetTime - _time) / ResetTime;
-            }
-
-            if (Owner.TryGetComponent(out CameraRecoilComponent recoilComponent))
-            {
-                recoilComponent.BaseOffset = offset;
-            }
-            else if (Owner.TryGetComponent(out EyeComponent eyeComponent))
-            {
-                eyeComponent.Offset = offset;
             }
 
             if (Owner.TryGetComponent(out ISpriteComponent spriteComponent))
             {
-                // We have to account for rotation so the offset still checks out.
-                // SpriteComponent.Offset is applied before transform rotation (as expected).
-                var worldRotation = Owner.Transform.WorldRotation;
-                spriteComponent.Offset = new Angle(-worldRotation).RotateVec(offset);
+                spriteComponent.Offset = offset;
             }
 
             if (deleteSelf)

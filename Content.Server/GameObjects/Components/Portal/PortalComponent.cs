@@ -1,15 +1,11 @@
-﻿#nullable enable
+#nullable enable
 using System;
 using System.Collections.Generic;
 using Content.Shared.GameObjects.Components.Portal;
+using Content.Shared.GameObjects.Components.Tag;
 using Robust.Server.GameObjects;
-using Robust.Server.GameObjects.EntitySystems;
 using Robust.Shared.GameObjects;
-using Robust.Shared.GameObjects.Components;
-using Robust.Shared.GameObjects.Systems;
-using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Serialization;
-using Robust.Shared.Timers;
 using Robust.Shared.ViewVariables;
 
 namespace Content.Server.GameObjects.Components.Portal
@@ -30,7 +26,7 @@ namespace Content.Server.GameObjects.Components.Portal
         [ViewVariables] private bool _onCooldown;
         [ViewVariables] private string _departureSound = "";
         [ViewVariables] private string _arrivalSound = "";
-        public readonly List<IEntity> ImmuneEntities = new List<IEntity>(); // K
+        public readonly List<IEntity> ImmuneEntities = new(); // K
         [ViewVariables(VVAccess.ReadWrite)] private float _aliveTime;
 
         public override void ExposeData(ObjectSerializer serializer)
@@ -58,7 +54,7 @@ namespace Content.Server.GameObjects.Components.Portal
 
             if (_aliveTime > 0)
             {
-                Timer.Spawn(TimeSpan.FromSeconds(_aliveTime), () => Owner.Delete());
+                Owner.SpawnTimer(TimeSpan.FromSeconds(_aliveTime), () => Owner.Delete());
             }
         }
 
@@ -115,7 +111,7 @@ namespace Content.Server.GameObjects.Components.Portal
         {
             // TODO: Check if it's slotted etc. Otherwise the slot item itself gets ported.
             return !ImmuneEntities.Contains(entity) &&
-                   entity.HasComponent<TeleportableComponent>();
+                   entity.HasTag("Teleportable");
         }
 
         public void StartCooldown()
@@ -138,7 +134,7 @@ namespace Content.Server.GameObjects.Components.Portal
 
             otherPortal.TryChangeState(PortalState.RecentlyTeleported);
 
-            Timer.Spawn(TimeSpan.FromSeconds(_overallPortalCooldown), () =>
+            Owner.SpawnTimer(TimeSpan.FromSeconds(_overallPortalCooldown), () =>
             {
                 _onCooldown = false;
                 TryChangeState(PortalState.Pending);
@@ -168,7 +164,7 @@ namespace Content.Server.GameObjects.Components.Portal
             // To stop spam teleporting. Could potentially look at adding a timer to flush this from the portal
             ImmuneEntities.Add(entity);
             _connectingTeleporter.GetComponent<PortalComponent>().ImmuneEntities.Add(entity);
-            Timer.Spawn(TimeSpan.FromSeconds(_individualPortalCooldown), () => ReleaseCooldown(entity));
+            Owner.SpawnTimer(TimeSpan.FromSeconds(_individualPortalCooldown), () => ReleaseCooldown(entity));
             StartCooldown();
         }
 

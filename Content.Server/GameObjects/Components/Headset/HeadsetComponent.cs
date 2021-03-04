@@ -3,14 +3,12 @@ using Content.Server.GameObjects.EntitySystems;
 using Content.Server.Interfaces;
 using Content.Shared.Chat;
 using Content.Shared.GameObjects.EntitySystems;
-using Robust.Server.Interfaces.GameObjects;
+using Robust.Server.GameObjects;
 using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
-using Robust.Shared.GameObjects.Systems;
-using Robust.Shared.Interfaces.GameObjects;
-using Robust.Shared.Interfaces.Network;
 using Robust.Shared.IoC;
 using Robust.Shared.Localization;
+using Robust.Shared.Network;
 using Robust.Shared.Serialization;
 using Robust.Shared.Utility;
 using Robust.Shared.ViewVariables;
@@ -28,7 +26,7 @@ namespace Content.Server.GameObjects.Components.Headset
 
         private RadioSystem _radioSystem = default!;
 
-        private List<int> _channels = new List<int>();
+        private List<int> _channels = new();
 
         [ViewVariables(VVAccess.ReadWrite)]
         private int BroadcastFrequency { get; set; }
@@ -65,7 +63,7 @@ namespace Content.Server.GameObjects.Components.Headset
 
         public void Receive(string message, int channel, IEntity source)
         {
-            if (ContainerHelpers.TryGetContainer(Owner, out var container))
+            if (Owner.TryGetContainer(out var container))
             {
                 if (!container.Owner.TryGetComponent(out IActorComponent actor))
                     return;

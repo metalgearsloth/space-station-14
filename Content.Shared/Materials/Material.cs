@@ -1,4 +1,4 @@
-using Robust.Shared.Interfaces.Serialization;
+#nullable enable
 using Robust.Shared.IoC;
 using Robust.Shared.Maths;
 using Robust.Shared.Prototypes;
@@ -79,7 +79,7 @@ namespace Content.Shared.Materials
         public SpriteSpecifier Icon => _icon;
         private SpriteSpecifier _icon = SpriteSpecifier.Invalid;
 
-        public string ID
+        public string? ID
         {
             get
             {
@@ -93,7 +93,7 @@ namespace Content.Shared.Materials
             }
         }
 
-        public void ExposeData(ObjectSerializer serializer)
+        void IExposeData.ExposeData(ObjectSerializer serializer)
         {
             serializer.DataField(ref _name, "name", "unobtanium", alwaysWrite: true);
             serializer.DataField(ref _color, "color", Color.Gray, alwaysWrite: true);
@@ -113,11 +113,11 @@ namespace Content.Shared.Materials
     }
 
     [Prototype("material")]
-    public class MaterialPrototype : IPrototype, IIndexedPrototype
+    public class MaterialPrototype : IPrototype
     {
-        public string ID { get; private set; }
+        public string ID { get; private set; } = string.Empty;
 
-        public Material Material { get; private set; }
+        public Material Material { get; private set; } = new();
 
         public void LoadFrom(YamlMappingNode mapping)
         {
@@ -125,7 +125,7 @@ namespace Content.Shared.Materials
 
             var ser = YamlObjectSerializer.NewReader(mapping);
             Material = new Material();
-            Material.ExposeData(ser);
+            ((IExposeData) Material).ExposeData(ser);
         }
     }
 }

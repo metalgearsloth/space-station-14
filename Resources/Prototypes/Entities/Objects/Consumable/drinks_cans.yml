@@ -8,12 +8,12 @@
     pressurized: true
   - type: SolutionContainer
     maxVol: 20
-    caps: AddTo, RemoveFrom
+    caps: None
     contents:
       reagents:
       - ReagentId: chem.Cola
         Quantity: 20
-  - type: Pourable
+  - type: SolutionTransfer
     transferAmount: 5
   - type: Sprite
     state: icon
@@ -134,7 +134,7 @@
   parent: DrinkCanBaseFull
   id: DrinkDrGibb
   name: Dr. Gibb
-  description: A delicious blend of 42 different flavours
+  description: A delicious blend of 42 different flavours.
   components:
   - type: Drink
   - type: Sprite

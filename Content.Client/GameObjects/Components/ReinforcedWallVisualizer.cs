@@ -1,7 +1,6 @@
 ﻿using Content.Shared.GameObjects.Components;
 using JetBrains.Annotations;
 using Robust.Client.GameObjects;
-using Robust.Client.Interfaces.GameObjects.Components;
 
 namespace Content.Client.GameObjects.Components
 {
@@ -35,7 +34,7 @@ namespace Content.Client.GameObjects.Components
         }
     }
 
-    public enum ReinforcedWallVisualLayers
+    public enum ReinforcedWallVisualLayers : byte
     {
         Deconstruction,
     }

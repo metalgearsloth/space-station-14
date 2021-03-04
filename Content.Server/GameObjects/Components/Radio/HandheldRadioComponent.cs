@@ -6,8 +6,6 @@ using Content.Shared.GameObjects.EntitySystems;
 using Content.Shared.Interfaces;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Robust.Shared.GameObjects;
-using Robust.Shared.GameObjects.Systems;
-using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.IoC;
 using Robust.Shared.Localization;
 using Robust.Shared.Serialization;
@@ -22,14 +20,12 @@ namespace Content.Server.GameObjects.Components.Radio
     public class HandheldRadioComponent : Component, IUse, IListen, IRadio, IActivate, IExamine
     {
         [Dependency] private readonly IChatManager _chatManager = default!;
-        [Dependency] private readonly IEntityManager _entityManager = default!;
-
         public override string Name => "Radio";
 
         private RadioSystem _radioSystem = default!;
 
         private bool _radioOn;
-        private List<int> _channels = new List<int>();
+        private List<int> _channels = new();
 
         [ViewVariables(VVAccess.ReadWrite)]
         private int BroadcastFrequency { get; set; }
@@ -83,7 +79,7 @@ namespace Content.Server.GameObjects.Components.Radio
             return true;
         }
 
-        public bool UseEntity(UseEntityEventArgs eventArgs)
+        bool IUse.UseEntity(UseEntityEventArgs eventArgs)
         {
             return Use(eventArgs.User);
         }
@@ -91,7 +87,7 @@ namespace Content.Server.GameObjects.Components.Radio
         public bool CanListen(string message, IEntity source)
         {
             return RadioOn &&
-                   Owner.Transform.Coordinates.TryDistance(_entityManager, source.Transform.Coordinates, out var distance) &&
+                   Owner.Transform.Coordinates.TryDistance(Owner.EntityManager, source.Transform.Coordinates, out var distance) &&
                    distance <= ListenRange;
         }
 
@@ -113,7 +109,7 @@ namespace Content.Server.GameObjects.Components.Radio
             _radioSystem.SpreadMessage(this, speaker, message, BroadcastFrequency);
         }
 
-        public void Activate(ActivateEventArgs eventArgs)
+        void IActivate.Activate(ActivateEventArgs eventArgs)
         {
             Use(eventArgs.User);
         }

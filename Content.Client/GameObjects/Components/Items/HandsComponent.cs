@@ -1,28 +1,29 @@
-﻿#nullable enable
+#nullable enable
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using Content.Client.Animations;
 using Content.Client.UserInterface;
 using Content.Shared.GameObjects.Components.Items;
 using Robust.Client.GameObjects;
-using Robust.Client.Interfaces.GameObjects.Components;
 using Robust.Shared.GameObjects;
-using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.IoC;
+using Robust.Shared.Network;
+using Robust.Shared.Players;
 using Robust.Shared.ViewVariables;
 
 namespace Content.Client.GameObjects.Components.Items
 {
     [RegisterComponent]
     [ComponentReference(typeof(ISharedHandsComponent))]
+    [ComponentReference(typeof(SharedHandsComponent))]
     public class HandsComponent : SharedHandsComponent
     {
         [Dependency] private readonly IGameHud _gameHud = default!;
 
         private HandsGui? _gui;
 
-        /// <inheritdoc />
-        private readonly List<Hand> _hands = new List<Hand>();
+        private readonly List<Hand> _hands = new();
 
         [ViewVariables] public IReadOnlyList<Hand> Hands => _hands;
 
@@ -32,8 +33,21 @@ namespace Content.Client.GameObjects.Components.Items
 
         [ViewVariables] public IEntity? ActiveHand => GetEntity(ActiveIndex);
 
+        public override bool IsHolding(IEntity entity)
+        {
+            foreach (var hand in _hands)
+            {
+                if (hand.Entity == entity)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         private void AddHand(Hand hand)
         {
+            _sprite?.LayerMapReserveBlank($"hand-{hand.Name}");
             _hands.Insert(hand.Index, hand);
         }
 
@@ -42,7 +56,7 @@ namespace Content.Client.GameObjects.Components.Items
             return Hands.FirstOrDefault(hand => hand.Name == name);
         }
 
-        private bool TryHand(string name, [MaybeNullWhen(false)] out Hand hand)
+        private bool TryHand(string name, [NotNullWhen(true)] out Hand? hand)
         {
             return (hand = GetHand(name)) != null;
         }
@@ -90,7 +104,7 @@ namespace Content.Client.GameObjects.Components.Items
             {
                 if (!TryHand(sharedHand.Name, out var hand))
                 {
-                    hand = new Hand(sharedHand, Owner.EntityManager);
+                    hand = new Hand(this, sharedHand, Owner.EntityManager);
                     AddHand(hand);
                 }
                 else
@@ -101,6 +115,8 @@ namespace Content.Client.GameObjects.Components.Items
                         ? Owner.EntityManager.GetEntity(sharedHand.EntityUid.Value)
                         : null;
                 }
+
+                hand.Enabled = sharedHand.Enabled;
 
                 UpdateHandSprites(hand);
             }
@@ -197,10 +213,52 @@ namespace Content.Client.GameObjects.Components.Items
                     _gameHud.HandsContainer.AddChild(_gui);
                     _gui.UpdateHandIcons();
                     break;
-
                 case PlayerDetachedMsg _:
                     _gui?.Parent?.RemoveChild(_gui);
                     break;
+                case HandEnabledMsg msg:
+                {
+                    var hand = GetHand(msg.Name);
+
+                    if (hand?.Button == null)
+                    {
+                        break;
+                    }
+
+                    hand.Button.Blocked.Visible = false;
+
+                    break;
+                }
+                case HandDisabledMsg msg:
+                {
+                    var hand = GetHand(msg.Name);
+
+                    if (hand?.Button == null)
+                    {
+                        break;
+                    }
+
+                    hand.Button.Blocked.Visible = true;
+
+                    break;
+                }
+            }
+        }
+
+        public override void HandleNetworkMessage(ComponentMessage message, INetChannel netChannel, ICommonSession? session = null)
+        {
+            base.HandleNetworkMessage(message, netChannel, session);
+
+            switch (message)
+            {
+                case AnimatePickupEntityMessage msg:
+                {
+                    if (Owner.EntityManager.TryGetEntity(msg.EntityId, out var entity))
+                    {
+                        ReusableAnimations.AnimateEntityPickup(entity, msg.EntityPosition, Owner.Transform.WorldPosition);
+                    }
+                    break;
+                }
             }
         }
 
@@ -235,9 +293,11 @@ namespace Content.Client.GameObjects.Components.Items
 
     public class Hand
     {
-        // TODO: Separate into server hand and client hand
-        public Hand(SharedHand hand, IEntityManager manager, HandButton? button = null)
+        private bool _enabled = true;
+
+        public Hand(HandsComponent parent, SharedHand hand, IEntityManager manager, HandButton? button = null)
         {
+            Parent = parent;
             Index = hand.Index;
             Name = hand.Name;
             Location = hand.Location;
@@ -252,10 +312,33 @@ namespace Content.Client.GameObjects.Components.Items
             Entity = entity;
         }
 
+        private HandsComponent Parent { get; }
         public int Index { get; }
         public string Name { get; }
         public HandLocation Location { get; set; }
         public IEntity? Entity { get; set; }
         public HandButton? Button { get; set; }
+
+        public bool Enabled
+        {
+            get => _enabled;
+            set
+            {
+                if (_enabled == value)
+                {
+                    return;
+                }
+
+                _enabled = value;
+                Parent.Dirty();
+
+                var message = value
+                    ? (ComponentMessage) new HandEnabledMsg(Name)
+                    : new HandDisabledMsg(Name);
+
+                Parent.HandleMessage(message, Parent);
+                Parent.Owner.SendMessage(Parent, message);
+            }
+        }
     }
 }

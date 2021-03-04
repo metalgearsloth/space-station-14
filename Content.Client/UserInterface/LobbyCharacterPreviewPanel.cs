@@ -2,14 +2,14 @@
 using Content.Client.GameObjects.Components.HUD.Inventory;
 using Content.Client.GameObjects.Components.Mobs;
 using Content.Client.Interfaces;
-using Content.Shared;
 using Content.Shared.GameTicking;
 using Content.Shared.Preferences;
 using Content.Shared.Roles;
-using Robust.Client.Interfaces.GameObjects.Components;
+using Robust.Client.GameObjects;
+using static Content.Shared.GameObjects.Components.Inventory.EquipmentSlotDefines;
 using Robust.Client.UserInterface;
 using Robust.Client.UserInterface.Controls;
-using Robust.Shared.Interfaces.GameObjects;
+using Robust.Shared.GameObjects;
 using Robust.Shared.IoC;
 using Robust.Shared.Localization;
 using Robust.Shared.Map;
@@ -23,8 +23,8 @@ namespace Content.Client.UserInterface
         private readonly IClientPreferencesManager _preferencesManager;
         private IEntity _previewDummy;
         private readonly Label _summaryLabel;
-        private VBoxContainer _loaded;
-        private Label _unloaded;
+        private readonly VBoxContainer _loaded;
+        private readonly Label _unloaded;
 
         public LobbyCharacterPreviewPanel(IEntityManager entityManager,
             IClientPreferencesManager preferencesManager)
@@ -34,13 +34,13 @@ namespace Content.Client.UserInterface
 
             var header = new NanoHeading
             {
-                Text = Loc.GetString("Character setup")
+                Text = Loc.GetString("Character")
             };
 
             CharacterSetupButton = new Button
             {
                 Text = Loc.GetString("Customize"),
-                SizeFlagsHorizontal = SizeFlags.None
+                HorizontalAlignment = HAlignment.Left
             };
 
             _summaryLabel = new Label();
@@ -92,7 +92,7 @@ namespace Content.Client.UserInterface
 
         private static SpriteView MakeSpriteView(IEntity entity, Direction direction)
         {
-            return new SpriteView
+            return new()
             {
                 Sprite = entity.GetComponent<ISpriteComponent>(),
                 OverrideDirection = direction,
@@ -111,7 +111,7 @@ namespace Content.Client.UserInterface
             {
                 _loaded.Visible = true;
                 _unloaded.Visible = false;
-                if (!(_preferencesManager.Preferences.SelectedCharacter is HumanoidCharacterProfile selectedCharacter))
+                if (_preferencesManager.Preferences.SelectedCharacter is not HumanoidCharacterProfile selectedCharacter)
                 {
                     _summaryLabel.Text = string.Empty;
                 }
@@ -133,20 +133,22 @@ namespace Content.Client.UserInterface
 
             var inventory = dummy.GetComponent<ClientInventoryComponent>();
 
-            var highPriorityJob = profile.JobPriorities.SingleOrDefault(p => p.Value == JobPriority.High).Key;
+            var highPriorityJob = profile.JobPriorities.FirstOrDefault(p => p.Value == JobPriority.High).Key;
 
             var job = protoMan.Index<JobPrototype>(highPriorityJob ?? SharedGameTicker.OverflowJob);
             var gear = protoMan.Index<StartingGearPrototype>(job.StartingGear);
 
             inventory.ClearAllSlotVisuals();
 
-            foreach (var (slot, itemType) in gear.Equipment)
+            foreach (var slot in AllSlots)
             {
-                var item = entityMan.SpawnEntity(itemType, MapCoordinates.Nullspace);
-
-                inventory.SetSlotVisuals(slot, item);
-
-                item.Delete();
+                var itemType = gear.GetGear(slot, profile);
+                if (itemType != "")
+                {
+                    var item = entityMan.SpawnEntity(itemType, MapCoordinates.Nullspace);
+                    inventory.SetSlotVisuals(slot, item);
+                    item.Delete();
+                }
             }
         }
     }

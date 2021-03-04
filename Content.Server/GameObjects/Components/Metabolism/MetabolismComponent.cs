@@ -5,22 +5,19 @@ using System.Linq;
 using Content.Server.Atmos;
 using Content.Server.GameObjects.Components.Body.Behavior;
 using Content.Server.GameObjects.Components.Body.Circulatory;
+using Content.Server.GameObjects.Components.Mobs;
 using Content.Server.GameObjects.Components.Temperature;
+using Content.Shared.Alert;
 using Content.Shared.Atmos;
-using Content.Shared.Chemistry;
 using Content.Shared.Damage;
 using Content.Shared.GameObjects.Components.Body;
-using Content.Shared.GameObjects.Components.Body.Mechanism;
 using Content.Shared.GameObjects.Components.Damage;
-using Content.Shared.GameObjects.EntitySystems;
+using Content.Shared.GameObjects.Components.Mobs.State;
+using Content.Shared.GameObjects.EntitySystems.ActionBlocker;
 using Content.Shared.Interfaces;
-using Content.Shared.Interfaces.Chemistry;
 using Robust.Shared.GameObjects;
-using Robust.Shared.GameObjects.ComponentDependencies;
-using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.IoC;
 using Robust.Shared.Localization;
-using Robust.Shared.Log;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization;
 using Robust.Shared.ViewVariables;
@@ -31,7 +28,6 @@ namespace Content.Server.GameObjects.Components.Metabolism
     public class MetabolismComponent : Component
     {
         [Dependency] private readonly IPrototypeManager _prototypeManager = default!;
-        [Dependency] private readonly IEntityManager _entityManager = default!;
 
         [ComponentDependency] private readonly IBody? _body = default!;
 
@@ -44,11 +40,13 @@ namespace Content.Server.GameObjects.Components.Metabolism
 
         [ViewVariables(VVAccess.ReadWrite)] private int _suffocationDamage;
 
-        [ViewVariables] public Dictionary<Gas, float> NeedsGases { get; set; } = new Dictionary<Gas, float>();
+        [ViewVariables(VVAccess.ReadWrite)] private int _suffocationDamageRecovery;
 
-        [ViewVariables] public Dictionary<Gas, float> ProducesGases { get; set; } = new Dictionary<Gas, float>();
+        [ViewVariables] public Dictionary<Gas, float> NeedsGases { get; set; } = new();
 
-        [ViewVariables] public Dictionary<Gas, float> DeficitGases { get; set; } = new Dictionary<Gas, float>();
+        [ViewVariables] public Dictionary<Gas, float> ProducesGases { get; set; } = new();
+
+        [ViewVariables] public Dictionary<Gas, float> DeficitGases { get; set; } = new();
 
         /// <summary>
         /// Heat generated due to metabolism. It's generated via metabolism
@@ -109,6 +107,7 @@ namespace Content.Server.GameObjects.Components.Metabolism
             serializer.DataField(this, b => b.ThermalRegulationTemperatureThreshold,
                 "thermalRegulationTemperatureThreshold", 0);
             serializer.DataField(ref _suffocationDamage, "suffocationDamage", 1);
+            serializer.DataField(ref _suffocationDamageRecovery, "suffocationDamageRecovery", 1);
         }
 
         private Dictionary<Gas, float> NeedsAndDeficit(float frameTime)
@@ -144,20 +143,20 @@ namespace Content.Server.GameObjects.Components.Metabolism
 
         private float SuffocatingPercentage()
         {
-            var percentages = new float[Atmospherics.TotalNumberOfGases];
+            var total = 0f;
 
             foreach (var (gas, deficit) in DeficitGases)
             {
-                if (!NeedsGases.TryGetValue(gas, out var needed))
+                var lack = 1f;
+                if (NeedsGases.TryGetValue(gas, out var needed))
                 {
-                    percentages[(int) gas] = 1;
-                    continue;
+                    lack = deficit / needed;
                 }
 
-                percentages[(int) gas] = deficit / needed;
+                total += lack / Atmospherics.TotalNumberOfGases;
             }
 
-            return percentages.Average();
+            return total;
         }
 
         private float GasProducedMultiplier(Gas gas, float usedAverage)
@@ -192,7 +191,7 @@ namespace Content.Server.GameObjects.Components.Metabolism
                 return;
             }
 
-            var lungs = _body.GetMechanismBehaviors<LungBehaviorComponent>().ToArray();
+            var lungs = _body.GetMechanismBehaviors<LungBehavior>().ToArray();
 
             var needs = NeedsAndDeficit(frameTime);
             var used = 0f;
@@ -203,10 +202,13 @@ namespace Content.Server.GameObjects.Components.Metabolism
 
                 if (bloodstreamAmount < amountNeeded)
                 {
-                    // Panic inhale
-                    foreach (var lung in lungs)
+                    if (!Owner.GetComponent<IMobStateComponent>().IsCritical())
                     {
-                        lung.Gasp();
+                        // Panic inhale
+                        foreach (var lung in lungs)
+                        {
+                            lung.Gasp();
+                        }
                     }
 
                     bloodstreamAmount = bloodstream.Air.GetMoles(gas);
@@ -294,7 +296,7 @@ namespace Content.Server.GameObjects.Components.Metabolism
                 }
 
                 // creadth: sweating does not help in airless environment
-                if (Owner.Transform.Coordinates.TryGetTileAir(out _, _entityManager))
+                if (Owner.Transform.Coordinates.TryGetTileAir(out _, Owner.EntityManager))
                 {
                     temperatureComponent.RemoveHeat(Math.Min(targetHeat, SweatHeatRegulation));
                 }
@@ -313,51 +315,15 @@ namespace Content.Server.GameObjects.Components.Metabolism
         }
 
         /// <summary>
-        ///     Loops through each reagent in _internalSolution,
-        ///     and calls <see cref="IMetabolizable.Metabolize"/> for each of them.
-        /// </summary>
-        /// <param name="frameTime">The time since the last metabolism tick in seconds.</param>
-        private void ProcessNutrients(float frameTime)
-        {
-            if (!Owner.TryGetComponent(out BloodstreamComponent? bloodstream))
-            {
-                return;
-            }
-
-            if (bloodstream.Solution.CurrentVolume == 0)
-            {
-                return;
-            }
-
-            // Run metabolism for each reagent, remove metabolized reagents
-            // Using ToList here lets us edit reagents while iterating
-            foreach (var reagent in bloodstream.Solution.ReagentList.ToList())
-            {
-                if (!_prototypeManager.TryIndex(reagent.ReagentId, out ReagentPrototype prototype))
-                {
-                    continue;
-                }
-
-                // Run metabolism code for each reagent
-                foreach (var metabolizable in prototype.Metabolism)
-                {
-                    var reagentDelta = metabolizable.Metabolize(Owner, reagent.ReagentId, frameTime);
-                    bloodstream.Solution.TryRemoveReagent(reagent.ReagentId, reagentDelta);
-                }
-            }
-        }
-
-        /// <summary>
-        ///     Processes gases in the bloodstream and triggers metabolism of the
-        ///     reagents inside of it.
+        ///     Processes gases in the bloodstream.
         /// </summary>
         /// <param name="frameTime">
         ///     The time since the last metabolism tick in seconds.
         /// </param>
         public void Update(float frameTime)
         {
-            if (!Owner.TryGetComponent<IDamageableComponent>(out var damageable) ||
-                damageable.CurrentState == DamageState.Dead)
+            if (!Owner.TryGetComponent<IMobStateComponent>(out var state) ||
+                state.IsDead())
             {
                 return;
             }
@@ -370,7 +336,6 @@ namespace Content.Server.GameObjects.Components.Metabolism
             }
 
             ProcessGases(_accumulatedFrameTime);
-            ProcessNutrients(_accumulatedFrameTime);
             ProcessThermalRegulation(_accumulatedFrameTime);
 
             _accumulatedFrameTime -= 1;
@@ -388,17 +353,32 @@ namespace Content.Server.GameObjects.Components.Metabolism
         {
             Suffocating = true;
 
+            if (Owner.TryGetComponent(out ServerAlertsComponent? alertsComponent))
+            {
+                alertsComponent.ShowAlert(AlertType.LowOxygen);
+            }
+
             if (!Owner.TryGetComponent(out IDamageableComponent? damageable))
             {
                 return;
             }
 
-            damageable.ChangeDamage(DamageClass.Airloss, _suffocationDamage, false);
+            damageable.ChangeDamage(DamageType.Asphyxiation, _suffocationDamage, false);
         }
 
         private void StopSuffocation()
         {
             Suffocating = false;
+
+            if (Owner.TryGetComponent(out IDamageableComponent? damageable))
+            {
+                damageable.ChangeDamage(DamageType.Asphyxiation, -_suffocationDamageRecovery, false);
+            }
+
+            if (Owner.TryGetComponent(out ServerAlertsComponent? alertsComponent))
+            {
+                alertsComponent.ClearAlert(AlertType.LowOxygen);
+            }
         }
 
         public GasMixture Clean(BloodstreamComponent bloodstream)

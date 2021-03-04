@@ -5,8 +5,6 @@ using System.Linq;
 using Content.Shared.Physics;
 using Content.Shared.Utility;
 using Robust.Shared.GameObjects;
-using Robust.Shared.GameObjects.Systems;
-using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Map;
 using Robust.Shared.Maths;
 
@@ -22,7 +20,7 @@ namespace Content.Shared.GameObjects.Verbs
         /// <param name="contextEntities"></param>
         /// <param name="buffer">Whether we should slightly extend out the ignored range for the ray predicated</param>
         /// <returns></returns>
-        protected bool TryGetContextEntities(IEntity player, MapCoordinates targetPos, [NotNullWhen(true)] out List<IEntity>? contextEntities, bool buffer = false)
+        public bool TryGetContextEntities(IEntity player, MapCoordinates targetPos, [NotNullWhen(true)] out List<IEntity>? contextEntities, bool buffer = false)
         {
             contextEntities = null;
             var length = buffer ? 1.0f: 0.5f;
@@ -46,7 +44,11 @@ namespace Content.Shared.GameObjects.Verbs
                        !occluder.Enabled;
             }
 
-            var result = player.InRangeUnobstructed(targetPos, distance, CollisionGroup.Opaque, Ignored);
+            var mask = player.TryGetComponent(out SharedEyeComponent? eye) && eye.DrawFov
+                ? CollisionGroup.Opaque
+                : CollisionGroup.None;
+
+            var result = player.InRangeUnobstructed(targetPos, distance, mask, Ignored);
 
             if (!result)
             {

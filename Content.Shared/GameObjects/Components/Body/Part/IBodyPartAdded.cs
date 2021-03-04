@@ -1,4 +1,6 @@
-﻿using System;
+﻿#nullable enable
+using System;
+using Robust.Shared.GameObjects;
 
 namespace Content.Shared.GameObjects.Components.Body.Part
 {
@@ -6,8 +8,13 @@ namespace Content.Shared.GameObjects.Components.Body.Part
     ///     This interface gives components behavior when a body part
     ///     is added to their owning entity.
     /// </summary>
-    public interface IBodyPartAdded
+    public interface IBodyPartAdded : IComponent
     {
+        /// <summary>
+        ///     Called when a <see cref="IBodyPart"/> is added to the
+        ///     entity owning this component.
+        /// </summary>
+        /// <param name="args">Information about the part that was added.</param>
         void BodyPartAdded(BodyPartAddedEventArgs args);
     }
 
@@ -19,8 +26,14 @@ namespace Content.Shared.GameObjects.Components.Body.Part
             Slot = slot;
         }
 
+        /// <summary>
+        ///     The part that was added.
+        /// </summary>
         public IBodyPart Part { get; }
 
+        /// <summary>
+        ///     The slot that <see cref="Part"/> was added to.
+        /// </summary>
         public string Slot { get; }
     }
 }

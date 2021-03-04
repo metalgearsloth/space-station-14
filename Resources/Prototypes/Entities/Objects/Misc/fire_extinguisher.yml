@@ -2,7 +2,7 @@
   name: fire extinguisher
   parent: BaseItem
   id: FireExtinguisher
-  description: Extinguishes fires.
+  description: It extinguishes fires.
   components:
     - type: Sprite
       sprite: Objects/Misc/fire_extinguisher.rsi
@@ -14,10 +14,10 @@
       size: 10
     - type: SolutionContainer
       maxVol: 100
-      caps: AddTo, RemoveFrom, NoExamine
+      caps: Refillable, Drainable
       contents:
         reagents:
-          - ReagentId: chem.H2O
+          - ReagentId: chem.Water
             Quantity: 100
     - type: ItemCooldown
     - type: Spray

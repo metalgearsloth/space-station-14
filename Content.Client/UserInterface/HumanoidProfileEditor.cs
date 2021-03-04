@@ -2,27 +2,32 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Content.Client.GameObjects.Components;
+using Content.Client.GameObjects.Components.Mobs;
 using Content.Client.Interfaces;
-using Content.Shared;
+using Content.Client.UserInterface.Stylesheets;
 using Content.Shared.GameTicking;
 using Content.Shared.Preferences;
 using Content.Shared.Roles;
-using Robust.Client.Graphics.Drawing;
+using Robust.Client.GameObjects;
+using Robust.Client.Graphics;
 using Robust.Client.UserInterface;
 using Robust.Client.UserInterface.Controls;
 using Robust.Client.Utility;
-using Robust.Shared.Interfaces.Random;
+using Robust.Shared.GameObjects;
 using Robust.Shared.IoC;
+using Robust.Shared.Enums;
 using Robust.Shared.Localization;
+using Robust.Shared.Map;
 using Robust.Shared.Maths;
 using Robust.Shared.Prototypes;
+using Robust.Shared.Random;
 using Robust.Shared.Utility;
 
 namespace Content.Client.UserInterface
 {
     public partial class HumanoidProfileEditor : Control
     {
-        private static readonly StyleBoxFlat HighlightedStyle = new StyleBoxFlat
+        private static readonly StyleBoxFlat HighlightedStyle = new()
         {
             BackgroundColor = new Color(47, 47, 53),
             ContentMarginTopOverride = 10,
@@ -37,34 +42,42 @@ namespace Content.Client.UserInterface
         private readonly Button _saveButton;
         private readonly Button _sexFemaleButton;
         private readonly Button _sexMaleButton;
+        private readonly OptionButton _genderButton;
+        private readonly OptionButton _clothingButton;
+        private readonly OptionButton _backpackButton;
         private readonly HairStylePicker _hairPicker;
         private readonly FacialHairStylePicker _facialHairPicker;
+
         private readonly List<JobPrioritySelector> _jobPriorities;
         private readonly OptionButton _preferenceUnavailableButton;
+        private readonly Dictionary<string, VBoxContainer> _jobCategories;
+
         private readonly List<AntagPreferenceSelector> _antagPreferences;
+
+        private readonly IEntity _previewDummy;
+        private readonly SpriteView _previewSprite;
+        private readonly SpriteView _previewSpriteSide;
 
         private bool _isDirty;
         public int CharacterSlot;
         public HumanoidCharacterProfile Profile;
         public event Action<HumanoidCharacterProfile> OnProfileChanged;
 
-        public HumanoidProfileEditor(IClientPreferencesManager preferencesManager, IPrototypeManager prototypeManager)
+        public HumanoidProfileEditor(IClientPreferencesManager preferencesManager, IPrototypeManager prototypeManager,
+            IEntityManager entityManager)
         {
             _random = IoCManager.Resolve<IRobustRandom>();
+            _prototypeManager = prototypeManager;
 
             _preferencesManager = preferencesManager;
 
-            var margin = new MarginContainer
-            {
-                MarginTopOverride = 10,
-                MarginBottomOverride = 10,
-                MarginLeftOverride = 10,
-                MarginRightOverride = 10
-            };
-            AddChild(margin);
+            var hbox = new HBoxContainer();
+            AddChild(hbox);
 
-            var vBox = new VBoxContainer();
-            margin.AddChild(vBox);
+            #region Left
+
+            var vBox = new VBoxContainer {Margin = new Thickness(10)};
+            hbox.AddChild(vBox);
 
             var middleContainer = new HBoxContainer
             {
@@ -96,20 +109,20 @@ namespace Content.Client.UserInterface
                 var panel = HighlightedContainer();
                 var hBox = new HBoxContainer
                 {
-                    SizeFlagsVertical = SizeFlags.FillExpand
+                    VerticalExpand = true
                 };
                 var nameLabel = new Label {Text = Loc.GetString("Name:")};
                 _nameEdit = new LineEdit
                 {
-                    CustomMinimumSize = (270, 0),
-                    SizeFlagsVertical = SizeFlags.ShrinkCenter
+                    MinSize = (270, 0),
+                    VerticalAlignment = VAlignment.Center
                 };
                 _nameEdit.OnTextChanged += args => { SetName(args.Text); };
                 var nameRandomButton = new Button
                 {
                     Text = Loc.GetString("Randomize"),
                 };
-                nameRandomButton.OnPressed += args => RandomizeName();
+                nameRandomButton.OnPressed += _ => RandomizeName();
                 hBox.AddChild(nameLabel);
                 hBox.AddChild(_nameEdit);
                 hBox.AddChild(nameRandomButton);
@@ -119,7 +132,7 @@ namespace Content.Client.UserInterface
 
             #endregion Name
 
-            var tabContainer = new TabContainer {SizeFlagsVertical = SizeFlags.FillExpand};
+            var tabContainer = new TabContainer {VerticalExpand = true};
             vBox.AddChild(tabContainer);
 
             #region Appearance
@@ -150,13 +163,31 @@ namespace Content.Client.UserInterface
                         Text = Loc.GetString("Male"),
                         Group = sexButtonGroup
                     };
-                    _sexMaleButton.OnPressed += args => { SetSex(Sex.Male); };
+                    _sexMaleButton.OnPressed += args =>
+                    {
+                        SetSex(Sex.Male);
+                        if (Profile.Gender == Gender.Female)
+                        {
+                            SetGender(Gender.Male);
+                            UpdateGenderControls();
+                        }
+                    };
+
                     _sexFemaleButton = new Button
                     {
                         Text = Loc.GetString("Female"),
                         Group = sexButtonGroup
                     };
-                    _sexFemaleButton.OnPressed += args => { SetSex(Sex.Female); };
+                    _sexFemaleButton.OnPressed += args =>
+                    {
+                        SetSex(Sex.Female);
+                        if (Profile.Gender == Gender.Male)
+                        {
+                            SetGender(Gender.Female);
+                            UpdateGenderControls();
+                        }
+                    };
+
                     hBox.AddChild(sexLabel);
                     hBox.AddChild(_sexMaleButton);
                     hBox.AddChild(_sexFemaleButton);
@@ -172,7 +203,7 @@ namespace Content.Client.UserInterface
                     var panel = HighlightedContainer();
                     var hBox = new HBoxContainer();
                     var ageLabel = new Label {Text = Loc.GetString("Age:")};
-                    _ageEdit = new LineEdit {CustomMinimumSize = (40, 0)};
+                    _ageEdit = new LineEdit {MinSize = (40, 0)};
                     _ageEdit.OnTextChanged += args =>
                     {
                         if (!int.TryParse(args.Text, out var newAge))
@@ -187,11 +218,39 @@ namespace Content.Client.UserInterface
 
                 #endregion Age
 
+                #region Gender
+
+                {
+                    var panel = HighlightedContainer();
+                    var hBox = new HBoxContainer();
+                    var genderLabel = new Label {Text = Loc.GetString("Pronouns:")};
+
+                    _genderButton = new OptionButton();
+
+                    _genderButton.AddItem(Loc.GetString("He / Him"), (int) Gender.Male);
+                    _genderButton.AddItem(Loc.GetString("She / Her"), (int) Gender.Female);
+                    _genderButton.AddItem(Loc.GetString("They / Them"), (int) Gender.Epicene);
+                    _genderButton.AddItem(Loc.GetString("It / It"), (int) Gender.Neuter);
+
+                    _genderButton.OnItemSelected += args =>
+                    {
+                        _genderButton.SelectId(args.Id);
+                        SetGender((Gender) args.Id);
+                    };
+
+                    hBox.AddChild(genderLabel);
+                    hBox.AddChild(_genderButton);
+                    panel.AddChild(hBox);
+                    sexAndAgeRow.AddChild(panel);
+                }
+
+                #endregion Gender
+
                 #region Hair
 
                 {
                     var panel = HighlightedContainer();
-                    panel.SizeFlagsHorizontal = SizeFlags.None;
+                    panel.HorizontalAlignment = HAlignment.Left;
                     var hairHBox = new HBoxContainer();
 
                     _hairPicker = new HairStylePicker();
@@ -244,6 +303,59 @@ namespace Content.Client.UserInterface
                 }
 
                 #endregion Hair
+
+                #region Clothing
+
+                {
+                    var panel = HighlightedContainer();
+                    var hBox = new HBoxContainer();
+                    var clothingLabel = new Label {Text = Loc.GetString("Clothing:")};
+
+                    _clothingButton = new OptionButton();
+
+                    _clothingButton.AddItem(Loc.GetString("Jumpsuit"), (int) ClothingPreference.Jumpsuit);
+                    _clothingButton.AddItem(Loc.GetString("Jumpskirt"), (int) ClothingPreference.Jumpskirt);
+
+                    _clothingButton.OnItemSelected += args =>
+                    {
+                        _clothingButton.SelectId(args.Id);
+                        SetClothing((ClothingPreference) args.Id);
+                    };
+
+                    hBox.AddChild(clothingLabel);
+                    hBox.AddChild(_clothingButton);
+                    panel.AddChild(hBox);
+                    appearanceVBox.AddChild(panel);
+                }
+
+                #endregion Clothing
+
+                #region Backpack
+
+                {
+                    var panel = HighlightedContainer();
+                    var hBox = new HBoxContainer();
+                    var backpackLabel = new Label {Text = Loc.GetString("Backpack:")};
+
+                    _backpackButton = new OptionButton();
+
+                    _backpackButton.AddItem(Loc.GetString("Backpack"), (int) BackpackPreference.Backpack);
+                    _backpackButton.AddItem(Loc.GetString("Satchel"), (int) BackpackPreference.Satchel);
+                    _backpackButton.AddItem(Loc.GetString("Duffelbag"), (int) BackpackPreference.Duffelbag);
+
+                    _backpackButton.OnItemSelected += args =>
+                    {
+                        _backpackButton.SelectId(args.Id);
+                        SetBackpack((BackpackPreference) args.Id);
+                    };
+
+                    hBox.AddChild(backpackLabel);
+                    hBox.AddChild(_backpackButton);
+                    panel.AddChild(hBox);
+                    appearanceVBox.AddChild(panel);
+                }
+
+                #endregion Clothing
             }
 
             #endregion
@@ -260,7 +372,7 @@ namespace Content.Client.UserInterface
                         (_preferenceUnavailableButton = new OptionButton()),
                         new ScrollContainer
                         {
-                            SizeFlagsVertical = SizeFlags.FillExpand,
+                            VerticalExpand = true,
                             Children =
                             {
                                 jobList
@@ -290,31 +402,79 @@ namespace Content.Client.UserInterface
                 };
 
                 _jobPriorities = new List<JobPrioritySelector>();
+                _jobCategories = new Dictionary<string, VBoxContainer>();
+
+                var firstCategory = true;
 
                 foreach (var job in prototypeManager.EnumeratePrototypes<JobPrototype>().OrderBy(j => j.Name))
                 {
-                    var selector = new JobPrioritySelector(job);
-                    jobList.AddChild(selector);
-                    _jobPriorities.Add(selector);
-
-                    selector.PriorityChanged += priority =>
+                    foreach (var department in job.Departments)
                     {
-                        Profile = Profile.WithJobPriority(job.ID, priority);
-                        IsDirty = true;
-
-                        if (priority == JobPriority.High)
+                        if (!_jobCategories.TryGetValue(department, out var category))
                         {
-                            // Lower any other high priorities to medium.
+                            category = new VBoxContainer
+                            {
+                                Name = department,
+                                ToolTip = Loc.GetString("Jobs in the {0} department", department)
+                            };
+
+                            if (firstCategory)
+                            {
+                                firstCategory = false;
+                            }
+                            else
+                            {
+                                category.AddChild(new Control
+                                {
+                                    MinSize = new Vector2(0, 23),
+                                });
+                            }
+
+                            category.AddChild(new PanelContainer
+                            {
+                                PanelOverride = new StyleBoxFlat {BackgroundColor = Color.FromHex("#464966")},
+                                Children =
+                                {
+                                    new Label
+                                    {
+                                        Text = Loc.GetString("{0} jobs", department)
+                                    }
+                                }
+                            });
+
+                            _jobCategories[department] = category;
+                            jobList.AddChild(category);
+                        }
+
+                        var selector = new JobPrioritySelector(job);
+                        category.AddChild(selector);
+                        _jobPriorities.Add(selector);
+
+                        selector.PriorityChanged += priority =>
+                        {
+                            Profile = Profile.WithJobPriority(job.ID, priority);
+                            IsDirty = true;
+
                             foreach (var jobSelector in _jobPriorities)
                             {
-                                if (jobSelector != selector && jobSelector.Priority == JobPriority.High)
+                                // Sync other selectors with the same job in case of multiple department jobs
+                                if (jobSelector.Job == selector.Job)
                                 {
-                                    jobSelector.Priority = JobPriority.Medium;
-                                    Profile = Profile.WithJobPriority(jobSelector.Job.ID, JobPriority.Medium);
+                                    jobSelector.Priority = priority;
+                                }
+
+                                // Lower any other high priorities to medium.
+                                if (priority == JobPriority.High)
+                                {
+                                    if (jobSelector.Job != selector.Job && jobSelector.Priority == JobPriority.High)
+                                    {
+                                        jobSelector.Priority = JobPriority.Medium;
+                                        Profile = Profile.WithJobPriority(jobSelector.Job.ID, JobPriority.Medium);
+                                    }
                                 }
                             }
-                        }
-                    };
+                        };
+                    }
                 }
             }
 
@@ -331,7 +491,7 @@ namespace Content.Client.UserInterface
                     {
                         new ScrollContainer
                         {
-                            SizeFlagsVertical = SizeFlags.FillExpand,
+                            VerticalExpand = true,
                             Children =
                             {
                                 antagList
@@ -348,10 +508,11 @@ namespace Content.Client.UserInterface
 
                 foreach (var antag in prototypeManager.EnumeratePrototypes<AntagPrototype>().OrderBy(a => a.Name))
                 {
-                    if(!antag.SetPreference)
+                    if (!antag.SetPreference)
                     {
                         continue;
                     }
+
                     var selector = new AntagPreferenceSelector(antag);
                     antagList.AddChild(selector);
                     _antagPreferences.Add(selector);
@@ -401,7 +562,7 @@ namespace Content.Client.UserInterface
                 _saveButton = new Button
                 {
                     Text = Loc.GetString("Save"),
-                    SizeFlagsHorizontal = SizeFlags.ShrinkCenter
+                    HorizontalAlignment = HAlignment.Center
                 };
                 _saveButton.OnPressed += args => { Save(); };
                 panel.AddChild(_saveButton);
@@ -409,6 +570,60 @@ namespace Content.Client.UserInterface
             }
 
             #endregion Save
+
+            #endregion
+
+            #region Right
+
+            vBox = new VBoxContainer()
+            {
+                VerticalExpand = true,
+                HorizontalExpand = true,
+            };
+            hbox.AddChild(vBox);
+
+            #region Preview
+
+            _previewDummy = entityManager.SpawnEntity("HumanMob_Dummy", MapCoordinates.Nullspace);
+            var sprite = _previewDummy.GetComponent<SpriteComponent>();
+
+            // Front
+            var box = new Control()
+            {
+                VerticalExpand = true,
+                SizeFlagsStretchRatio = 1f,
+            };
+            vBox.AddChild(box);
+            _previewSprite = new SpriteView
+            {
+                Sprite = sprite,
+                Scale = (6, 6),
+                OverrideDirection = Direction.South,
+                VerticalAlignment = VAlignment.Center,
+                SizeFlagsStretchRatio = 1
+            };
+            box.AddChild(_previewSprite);
+
+            // Side
+            box = new Control()
+            {
+                VerticalExpand = true,
+                SizeFlagsStretchRatio = 1f,
+            };
+            vBox.AddChild(box);
+            _previewSpriteSide = new SpriteView
+            {
+                Sprite = sprite,
+                Scale = (6, 6),
+                OverrideDirection = Direction.East,
+                VerticalAlignment = VAlignment.Center,
+                SizeFlagsStretchRatio = 1
+            };
+            box.AddChild(_previewSpriteSide);
+
+            #endregion
+
+            #endregion
 
             if (preferencesManager.ServerDataLoaded)
             {
@@ -418,6 +633,16 @@ namespace Content.Client.UserInterface
             preferencesManager.OnServerDataLoaded += LoadServerData;
 
             IsDirty = false;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            base.Dispose(disposing);
+            if (!disposing)
+                return;
+
+            _previewDummy.Delete();
+            _preferencesManager.OnServerDataLoaded -= LoadServerData;
         }
 
         private void LoadServerData()
@@ -439,9 +664,27 @@ namespace Content.Client.UserInterface
             IsDirty = true;
         }
 
+        private void SetGender(Gender newGender)
+        {
+            Profile = Profile?.WithGender(newGender);
+            IsDirty = true;
+        }
+
         private void SetName(string newName)
         {
             Profile = Profile?.WithName(newName);
+            IsDirty = true;
+        }
+
+        private void SetClothing(ClothingPreference newClothing)
+        {
+            Profile = Profile?.WithClothingPreference(newClothing);
+            IsDirty = true;
+        }
+
+        private void SetBackpack(BackpackPreference newBackpack)
+        {
+            Profile = Profile?.WithBackpackPreference(newBackpack);
             IsDirty = true;
         }
 
@@ -458,6 +701,7 @@ namespace Content.Client.UserInterface
             set
             {
                 _isDirty = value;
+                UpdatePreview();
                 UpdateSaveButton();
             }
         }
@@ -488,6 +732,21 @@ namespace Content.Client.UserInterface
                 _sexFemaleButton.Pressed = true;
         }
 
+        private void UpdateGenderControls()
+        {
+            _genderButton.SelectId((int) Profile.Gender);
+        }
+
+        private void UpdateClothingControls()
+        {
+            _clothingButton.SelectId((int) Profile.Clothing);
+        }
+
+        private void UpdateBackpackControls()
+        {
+            _backpackButton.SelectId((int) Profile.Backpack);
+        }
+
         private void UpdateHairPickers()
         {
             _hairPicker.SetData(
@@ -503,16 +762,30 @@ namespace Content.Client.UserInterface
             _saveButton.Disabled = Profile is null || !IsDirty;
         }
 
+        private void UpdatePreview()
+        {
+            if (Profile is null)
+                return;
+
+            _previewDummy.GetComponent<HumanoidAppearanceComponent>().UpdateFromProfile(Profile);
+            LobbyCharacterPreviewPanel.GiveDummyJobClothes(_previewDummy, Profile);
+        }
+
         public void UpdateControls()
         {
             if (Profile is null) return;
             UpdateNameEdit();
             UpdateSexControls();
+            UpdateGenderControls();
+            UpdateClothingControls();
+            UpdateBackpackControls();
             UpdateAgeEdit();
             UpdateHairPickers();
             UpdateSaveButton();
             UpdateJobPriorities();
             UpdateAntagPreferences();
+
+            UpdatePreview();
 
             _preferenceUnavailableButton.SelectId((int) Profile.PreferenceUnavailable);
         }
@@ -532,12 +805,12 @@ namespace Content.Client.UserInterface
         private class JobPrioritySelector : Control
         {
             public JobPrototype Job { get; }
-            private readonly OptionButton _optionButton;
+            private readonly RadioOptions<int> _optionButton;
 
             public JobPriority Priority
             {
-                get => (JobPriority) _optionButton.SelectedId;
-                set => _optionButton.SelectId((int) value);
+                get => (JobPriority) _optionButton.SelectedValue;
+                set => _optionButton.SelectByValue((int) value);
             }
 
             public event Action<JobPriority> PriorityChanged;
@@ -545,7 +818,14 @@ namespace Content.Client.UserInterface
             public JobPrioritySelector(JobPrototype job)
             {
                 Job = job;
-                _optionButton = new OptionButton();
+                _optionButton = new RadioOptions<int>(RadioOptionsLayout.Horizontal);
+
+                _optionButton.FirstButtonStyle = StyleBase.ButtonOpenRight;
+                _optionButton.ButtonStyle = StyleBase.ButtonOpenBoth;
+                _optionButton.LastButtonStyle = StyleBase.ButtonOpenLeft;
+
+
+                // Text, Value
                 _optionButton.AddItem(Loc.GetString("High"), (int) JobPriority.High);
                 _optionButton.AddItem(Loc.GetString("Medium"), (int) JobPriority.Medium);
                 _optionButton.AddItem(Loc.GetString("Low"), (int) JobPriority.Low);
@@ -553,7 +833,7 @@ namespace Content.Client.UserInterface
 
                 _optionButton.OnItemSelected += args =>
                 {
-                    _optionButton.SelectId(args.Id);
+                    _optionButton.Select(args.Id);
                     PriorityChanged?.Invoke(Priority);
                 };
 
@@ -565,7 +845,8 @@ namespace Content.Client.UserInterface
 
                 if (job.Icon != null)
                 {
-                    var specifier = new SpriteSpecifier.Rsi(new ResourcePath("/Textures/Interface/Misc/job_icons.rsi"), job.Icon);
+                    var specifier = new SpriteSpecifier.Rsi(new ResourcePath("/Textures/Interface/Misc/job_icons.rsi"),
+                        job.Icon);
                     icon.Texture = specifier.Frame0();
                 }
 
@@ -574,7 +855,7 @@ namespace Content.Client.UserInterface
                     Children =
                     {
                         icon,
-                        new Label {Text = job.Name, CustomMinimumSize = (175, 0)},
+                        new Label {Text = job.Name, MinSize = (175, 0)},
                         _optionButton
                     }
                 });
@@ -621,6 +902,7 @@ namespace Content.Client.UserInterface
                     }
                 });
             }
+
             private void OnCheckBoxToggled(BaseButton.ButtonToggledEventArgs args)
             {
                 PreferenceChanged?.Invoke(Preference);

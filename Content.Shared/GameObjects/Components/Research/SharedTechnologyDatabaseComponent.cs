@@ -1,3 +1,4 @@
+#nullable enable
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -14,7 +15,7 @@ namespace Content.Shared.GameObjects.Components.Research
         public override string Name => "TechnologyDatabase";
         public override uint? NetID => ContentNetIDs.TECHNOLOGY_DATABASE;
 
-        protected List<TechnologyPrototype> _technologies = new List<TechnologyPrototype>();
+        protected List<TechnologyPrototype> _technologies = new();
 
         /// <summary>
         ///     A read-only list of unlocked technologies.
@@ -69,7 +70,7 @@ namespace Content.Shared.GameObjects.Components.Research
             var protoMan = IoCManager.Resolve<IPrototypeManager>();
             foreach (var technologyId in technology.RequiredTechnologies)
             {
-                protoMan.TryIndex(technologyId, out TechnologyPrototype requiredTechnology);
+                protoMan.TryIndex(technologyId, out TechnologyPrototype? requiredTechnology);
                 if (requiredTechnology == null)
                     return false;
 
@@ -92,7 +93,7 @@ namespace Content.Shared.GameObjects.Components.Research
 
                     foreach (var id in techs)
                     {
-                        if (prototypeManager.TryIndex(id, out TechnologyPrototype tech))
+                        if (prototypeManager.TryIndex(id, out TechnologyPrototype? tech))
                         {
                             _technologies.Add(tech);
                         }

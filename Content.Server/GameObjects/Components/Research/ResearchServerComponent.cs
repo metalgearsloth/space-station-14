@@ -3,7 +3,6 @@ using Content.Server.GameObjects.Components.Power.ApcNetComponents;
 using Content.Server.GameObjects.EntitySystems;
 using Content.Shared.Research;
 using Robust.Shared.GameObjects;
-using Robust.Shared.GameObjects.Systems;
 using Robust.Shared.Serialization;
 using Robust.Shared.ViewVariables;
 
@@ -31,10 +30,10 @@ namespace Content.Server.GameObjects.Components.Research
         public IReadOnlyList<TechnologyPrototype> UnlockedTechnologies => Database.Technologies;
 
         [ViewVariables(VVAccess.ReadOnly)]
-        public List<ResearchPointSourceComponent> PointSources { get; } = new List<ResearchPointSourceComponent>();
+        public List<ResearchPointSourceComponent> PointSources { get; } = new();
 
         [ViewVariables(VVAccess.ReadOnly)]
-        public List<ResearchClientComponent> Clients { get; } = new List<ResearchClientComponent>();
+        public List<ResearchClientComponent> Clients { get; } = new();
 
         public int Point => _points;
 
