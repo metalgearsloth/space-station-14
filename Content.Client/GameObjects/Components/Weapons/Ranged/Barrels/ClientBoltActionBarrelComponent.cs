@@ -13,12 +13,10 @@ using Content.Client.GameObjects.Components.Mobs;
 using Content.Shared.Audio;
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using Content.Shared.GameObjects.EntitySystems;
+using Content.Shared.GameObjects.EntitySystems.ActionBlocker;
 using Content.Shared.GameObjects.Verbs;
 using Content.Shared.Interfaces;
 using Robust.Client.GameObjects;
-using Robust.Client.GameObjects.EntitySystems;
-using Robust.Shared.GameObjects.Systems;
-using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Localization;
 using Robust.Shared.Utility;
 
@@ -34,7 +32,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         private Stack<bool?> _ammo = new Stack<bool?>();
 
         private StatusControl? _statusControl;
-        
+
         /// <summary>
         ///     Not including chamber
         /// </summary>
@@ -52,7 +50,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 
            if (curState is not BoltActionBarrelComponentState cast)
                 return;
-           
+
            _chamber = cast.Chamber;
            _ammo = cast.Bullets;
            SetBolt(cast.BoltOpen);
@@ -93,7 +91,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             {
                 return;
             }
-            
+
             appearanceComponent.SetData(BarrelBoltVisuals.BoltOpen, BoltOpen);
             appearanceComponent.SetData(AmmoVisuals.AmmoCount, ShotsLeft + (_chamber != null ? 1 : 0));
             appearanceComponent.SetData(AmmoVisuals.AmmoMax, (int) Capacity);
@@ -105,17 +103,17 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                 return false;
 
             var chamber = _chamber;
-            
+
             if (AutoCycle)
                 Cycle();
 
             if (chamber == null)
                 return true;
-            
+
             var shooter = Shooter();
             CameraRecoilComponent? cameraRecoilComponent = null;
             shooter?.TryGetComponent(out cameraRecoilComponent);
-            
+
             string? sound;
             float variation;
             float volume;
@@ -129,7 +127,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                 EntitySystem.Get<SharedRangedWeaponSystem>().MuzzleFlash(shooter, this, angle);
                 if (!AutoCycle)
                     _chamber = false;
-                
+
             }
             else
             {
@@ -183,7 +181,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                 {
                     EntitySystem.Get<AudioSystem>().Play(SoundRack, Owner, AudioHelpers.WithVariation(CycleVariation).WithVolume(CycleVolume));
                 }
-                
+
                 return;
             }
 
@@ -194,7 +192,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                 {
                     EntitySystem.Get<AudioSystem>().Play(SoundRack, Owner, AudioHelpers.WithVariation(CycleVariation).WithVolume(CycleVolume));
                 }
-                
+
                 UnspawnedCount--;
             }
         }

@@ -1,18 +1,18 @@
 #nullable enable
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
-using Robust.Server.GameObjects.Components.Container;
 using Robust.Shared.GameObjects;
-using Robust.Shared.Interfaces.GameObjects;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Threading.Tasks;
 using Content.Server.GameObjects.Components.GUI;
 using Content.Server.GameObjects.Components.Items.Storage;
 using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
 using Content.Shared.GameObjects.EntitySystems;
 using Content.Shared.Interfaces;
 using Content.Shared.Interfaces.GameObjects.Components;
-using Robust.Shared.GameObjects.Systems;
+using Robust.Shared.Containers;
 using Robust.Shared.Localization;
+using Robust.Shared.Players;
 
 namespace Content.Server.GameObjects.Components.Weapon.Ranged
 {
@@ -29,7 +29,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
         public override void Initialize()
         {
             base.Initialize();
-            _ammoContainer = ContainerManagerComponent.Ensure<Container>($"{Name}-container", Owner, out var existing);
+            _ammoContainer = Owner.EnsureContainer<Container>($"{Name}-container", out var existing);
 
             if (existing)
             {
@@ -39,11 +39,11 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                     _spawnedAmmo.Push(ammo);
                 }
             }
-            
+
             Dirty();
         }
 
-        public override ComponentState GetComponentState()
+        public override ComponentState GetComponentState(ICommonSession session)
         {
             var ammo = new Stack<bool>();
 
@@ -117,10 +117,10 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             return true;
         }
 
-        protected override void AfterInteract(AfterInteractEventArgs eventArgs)
+        protected override async Task<bool> AfterInteract(AfterInteractEventArgs eventArgs)
         {
             if (eventArgs.Target == null)
-                return;
+                return false;
 
             // This area is dirty but not sure of an easier way to do it besides add an interface or somethin
             bool changed = false;
@@ -128,8 +128,8 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             if (eventArgs.Target.TryGetComponent(out SharedRevolverBarrelComponent? revolverBarrel))
             {
                 if (Caliber != revolverBarrel.Caliber)
-                    return;
-                
+                    return false;
+
                 for (var i = 0; i < Capacity; i++)
                 {
                     if (!TryPop(out var ammo))
@@ -146,17 +146,17 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                     TryInsertAmmo(eventArgs.User, ammoComponent);
                     break;
                 }
-            } 
+            }
             else if (eventArgs.Target.TryGetComponent(out SharedBoltActionBarrelComponent? boltActionBarrel))
             {
                 if (Caliber != boltActionBarrel.Caliber)
-                    return;
-                
+                    return true;
+
                 for (var i = 0; i < Capacity; i++)
                 {
                     if (!TryPop(out var ammo))
                         break;
-                    
+
                     var ammoComponent = ammo.GetComponent<SharedAmmoComponent>();
                     if (boltActionBarrel.TryInsertBullet(eventArgs.User, ammoComponent))
                     {
@@ -175,6 +175,8 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             {
                 Dirty();
             }
+
+            return true;
         }
     }
 }

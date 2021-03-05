@@ -14,8 +14,6 @@ using Content.Shared.Audio;
 using Content.Shared.GameObjects.EntitySystems;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Robust.Client.GameObjects;
-using Robust.Client.GameObjects.EntitySystems;
-using Robust.Shared.GameObjects.Systems;
 
 namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 {
@@ -46,7 +44,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             _statusControl?.Update();
             UpdateAppearance();
         }
-        
+
         public override void UpdateAppearance()
         {
             if (!Owner.TryGetComponent(out AppearanceComponent? appearanceComponent))
@@ -54,7 +52,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 
             var count = (int) MathF.Ceiling(PowerCell?.CurrentCharge / BaseFireCost ?? 0);
             var max = (int) MathF.Ceiling(PowerCell?.MaxCharge / BaseFireCost ?? 0);
-            
+
             appearanceComponent.SetData(MagazineBarrelVisuals.MagLoaded, PowerCell != null);
             appearanceComponent.SetData(AmmoVisuals.AmmoCount, count);
             appearanceComponent.SetData(AmmoVisuals.AmmoMax, max);
@@ -64,7 +62,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         {
             if (!base.TryShoot(angle))
                 return false;
-            
+
             if (PowerCell == null)
                 return false;
 
@@ -73,27 +71,27 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             {
                 if (SoundEmpty != null)
                     EntitySystem.Get<AudioSystem>().Play(SoundEmpty, Owner, AudioHelpers.WithVariation(EmptyVariation).WithVolume(EmptyVolume));
-                
+
                 return false;
             }
-            
+
             var chargeChange = Math.Min(currentCharge, BaseFireCost);
             PowerCell = (currentCharge - chargeChange, maxCharge);
-            
+
             var shooter = Shooter();
             CameraRecoilComponent? cameraRecoilComponent = null;
             shooter?.TryGetComponent(out cameraRecoilComponent);
 
             cameraRecoilComponent?.Kick(-angle.ToVec().Normalized * RecoilMultiplier * chargeChange / BaseFireCost);
-            
+
             if (!AmmoIsHitscan)
                 EntitySystem.Get<SharedRangedWeaponSystem>().MuzzleFlash(shooter, this, angle);
 
             if (SoundGunshot != null)
                 EntitySystem.Get<AudioSystem>().Play(SoundGunshot, Owner, AudioHelpers.WithVariation(GunshotVariation).WithVolume(GunshotVolume));
-            
+
             // TODO: Show effect here once we can get the full hitscan predicted
-            
+
             UpdateAppearance();
             _statusControl?.Update();
             return true;

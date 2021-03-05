@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Robust.Shared.GameObjects;
-using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Serialization;
 using Robust.Shared.ViewVariables;
 
@@ -29,7 +28,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         public string? FillPrototype;
         [ViewVariables]
         protected int UnspawnedCount;
-        
+
         /// <summary>
         ///     Excluding chamber
         /// </summary>
@@ -40,9 +39,9 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         // Sounds
         public string? SoundRack { get; private set; }
         public string? SoundInsert { get; private set; }
-        
+
         protected const float RackVariation = 0.1f;
-        
+
         protected const float RackVolume = 0.0f;
 
         public override void ExposeData(ObjectSerializer serializer)
@@ -73,15 +72,15 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
             return TryInsertBullet(eventArgs.User, eventArgs.Using);
         }
     }
-    
+
     [Serializable, NetSerializable]
     public class PumpBarrelComponentState : ComponentState
     {
         public bool? Chamber { get; }
         public FireRateSelector FireRateSelector { get; }
-        
+
         public int Capacity { get; }
-        
+
         public Stack<bool> Ammo { get; }
 
         public PumpBarrelComponentState(

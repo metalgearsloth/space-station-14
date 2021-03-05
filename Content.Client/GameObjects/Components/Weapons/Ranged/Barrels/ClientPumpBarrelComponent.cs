@@ -13,9 +13,6 @@ using Content.Shared.Audio;
 using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
 using Content.Shared.GameObjects.EntitySystems;
 using Robust.Client.GameObjects;
-using Robust.Client.GameObjects.EntitySystems;
-using Robust.Shared.GameObjects.Systems;
-using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Localization;
 using Robust.Shared.Utility;
 
@@ -39,14 +36,14 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             UnspawnedCount = 0;
             UpdateAppearance();
         }
-        
+
         public override void HandleComponentState(ComponentState? curState, ComponentState? nextState)
         {
             base.HandleComponentState(curState, nextState);
 
             if (curState is not PumpBarrelComponentState cast)
                 return;
-            
+
             _chamber = cast.Chamber;
             _ammoContainer = cast.Ammo;
             Capacity = cast.Capacity;
@@ -72,11 +69,11 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 
             if (chamber == null)
                 return true;
-            
+
             var shooter = Shooter();
             CameraRecoilComponent? cameraRecoilComponent = null;
             shooter?.TryGetComponent(out cameraRecoilComponent);
-            
+
             string? sound;
             float variation;
             float volume;
@@ -113,7 +110,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         }
 
         // TODO: Need interaction prediction AHHHHHHHHHHHHHHHHHHHH
-        
+
         // I know I know no deadcode but I need interaction predictions
         public override bool TryInsertBullet(IEntity user, IEntity ammo)
         {
@@ -208,7 +205,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                     _noMagazineLabel.Visible = true;
                     return;
                 }
-                
+
                 var count = _parent.ShotsLeft;
                 _noMagazineLabel.Visible = false;
 

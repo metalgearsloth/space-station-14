@@ -5,20 +5,16 @@ using Content.Shared.Audio;
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
 using Content.Shared.GameObjects.EntitySystems;
-using Robust.Server.GameObjects.Components.Container;
-using Robust.Server.GameObjects.EntitySystems;
-using Robust.Server.Interfaces.GameObjects;
+using Robust.Server.GameObjects;
 using Robust.Server.Player;
+using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
-using Robust.Shared.GameObjects.Systems;
-using Robust.Shared.Interfaces.GameObjects;
-using Robust.Shared.Interfaces.GameObjects.Components;
-using Robust.Shared.Interfaces.Network;
-using Robust.Shared.Interfaces.Timing;
 using Robust.Shared.IoC;
 using Robust.Shared.Maths;
+using Robust.Shared.Network;
 using Robust.Shared.Players;
 using Robust.Shared.Serialization;
+using Robust.Shared.Timing;
 using Robust.Shared.Utility;
 
 namespace Content.Server.GameObjects.Components.Weapon.Ranged
@@ -58,16 +54,16 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                     CurrentSlot = msg.Slot;
                     if (SoundSpin != null)
                         EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundSpin, Owner, AudioHelpers.WithVariation(SpinVariation).WithVolume(SpinVolume), excludedSession: Shooter().PlayerSession());
-                    
+
                     break;
             }
         }
 
-        public override ComponentState GetComponentState()
+        public override ComponentState GetComponentState(ICommonSession session)
         {
             var bullets = new bool?[_ammoSlots.Length];
             var unspawned = UnspawnedCount;
-            
+
             for (var i = 0; i < _ammoSlots.Length; i++)
             {
                 bullets[i] = !_ammoSlots[i]?.GetComponent<SharedAmmoComponent>().Spent;
@@ -80,7 +76,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
 
                 bullets[i] = bullet;
             }
-            
+
             return new RevolverBarrelComponentState(CurrentSlot, Selector, bullets, SoundGunshot);
         }
 
@@ -89,12 +85,12 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             base.Initialize();
 
             _ammoSlots = new IEntity?[Capacity];
-            AmmoContainer = ContainerManagerComponent.Ensure<Container>("weapon-ammo", Owner, out var existing);
+            AmmoContainer = Owner.EnsureContainer<Container>("weapon-ammo", out var existing);
 
             if (existing)
             {
                 DebugTools.Assert(AmmoContainer.ContainedEntities.Count <= _ammoSlots.Length);
-                
+
                 foreach (var entity in AmmoContainer.ContainedEntities)
                 {
                     _ammoSlots[CurrentSlot] = entity;
@@ -132,7 +128,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                     Cycle();
                     return false;
                 }
-            } 
+            }
             else
             {
                 if (currentAmmo.GetComponent<AmmoComponent>().Spent)
@@ -146,7 +142,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             var shooter = Shooter();
             var ammoComp = currentAmmo.GetComponent<AmmoComponent>();
             var sound = ammoComp.Spent ? SoundEmpty : SoundGunshot;
-            
+
             if (sound != null)
                 EntitySystem.Get<AudioSystem>().PlayFromEntity(sound, Owner, AudioHelpers.WithVariation(GunshotVariation).WithVolume(GunshotVolume), excludedSession: shooter.PlayerSession());
 
@@ -166,7 +162,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             // How many times we can play the sound
             const byte soundCap = 3;
             byte soundCount = 0;
-            
+
             for (var i = 0; i < Capacity; i++)
             {
                 var entity = _ammoSlots[i];
@@ -186,7 +182,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                 {
                     AmmoContainer.Remove(entity);
                 }
-                
+
                 // TODO: Set to user when prediction is in
                 _ammoSlots[i] = null;
 
@@ -224,7 +220,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                     return true;
                 }
             }
-            
+
             return false;
         }
     }

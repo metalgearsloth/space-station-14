@@ -7,13 +7,10 @@ using Content.Server.GameObjects.Components.Items.Storage;
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using Content.Shared.GameObjects.EntitySystems;
 using Content.Shared.Interfaces;
-using Robust.Server.GameObjects.Components.Container;
 using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
-using Robust.Shared.GameObjects.Systems;
-using Robust.Shared.Interfaces.GameObjects;
-using Robust.Shared.Interfaces.Network;
 using Robust.Shared.Localization;
+using Robust.Shared.Network;
 using Robust.Shared.Players;
 
 namespace Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition
@@ -26,14 +23,14 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition
 
         public IReadOnlyCollection<IEntity> SpawnedAmmo => _spawnedAmmo;
         private Stack<IEntity> _spawnedAmmo = new Stack<IEntity>();
-        
+
         public override int ShotsLeft => _spawnedAmmo.Count + UnspawnedCount;
 
         public override void Initialize()
         {
             base.Initialize();
-            
-            _ammoContainer = ContainerManagerComponent.Ensure<Container>($"{Name}-magazine", Owner, out var existing);
+
+            _ammoContainer = Owner.EnsureContainer<Container>($"{Name}-magazine", out var existing);
 
             if (FillPrototype != null)
             {
@@ -52,14 +49,14 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition
                     UnspawnedCount--;
                 }
             }
-            
+
             Dirty();
         }
 
         public override void HandleNetworkMessage(ComponentMessage message, INetChannel netChannel, ICommonSession? session = null)
         {
             base.HandleNetworkMessage(message, netChannel, session);
-            
+
             // If it's not on the ground / in our inventory then block it
             if (ContainerHelpers.TryGetContainer(Owner, out var container) && container.Owner != session?.AttachedEntity)
                 return;
@@ -72,7 +69,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition
             }
         }
 
-        public override ComponentState GetComponentState()
+        public override ComponentState GetComponentState(ICommonSession session)
         {
             var ammo = new Stack<bool>();
 
@@ -80,12 +77,12 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition
             {
                 ammo.Push(!entity.GetComponent<SharedAmmoComponent>().Spent);
             }
-            
+
             for (var i = 0; i < UnspawnedCount; i++)
             {
                 ammo.Push(true);
             }
-                
+
             return new RangedMagazineComponentState(ammo);
         }
 
@@ -99,7 +96,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition
             {
                 if (!TryPop(out var entity))
                     break;
-                
+
                 EntitySystem.Get<SharedRangedWeaponSystem>().EjectCasing(user, entity, soundsPlayed < maxSounds);
                 soundsPlayed++;
             }

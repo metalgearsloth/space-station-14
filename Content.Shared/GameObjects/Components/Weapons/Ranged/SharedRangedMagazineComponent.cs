@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Robust.Shared.GameObjects;
-using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Serialization;
 using Robust.Shared.ViewVariables;
 using Component = Robust.Shared.GameObjects.Component;
@@ -19,11 +18,11 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         public override uint? NetID => ContentNetIDs.RANGED_MAGAZINE;
 
         public abstract int ShotsLeft { get; }
-        
+
         [ViewVariables] public int Capacity { get; private set; }
 
         [ViewVariables] public MagazineType MagazineType { get; private set; }
-        
+
         [ViewVariables] public BallisticCaliber Caliber { get; private set; }
 
         // If there's anything already in the magazine
@@ -60,7 +59,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
     public sealed class RangedMagazineComponentState : ComponentState
     {
         public Stack<bool> SpawnedAmmo { get; }
-        
+
         public RangedMagazineComponentState(Stack<bool> spawnedAmmo) : base(ContentNetIDs.RANGED_MAGAZINE)
         {
             SpawnedAmmo = spawnedAmmo;

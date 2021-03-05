@@ -1,24 +1,21 @@
 ﻿#nullable enable
 using System;
 using System.Collections.Generic;
-using Content.Client.Animations;
 using Content.Client.GameObjects.Components.Mobs;
 using Content.Client.UserInterface.Stylesheets;
 using Content.Client.Utility;
 using Content.Shared.Audio;
 using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
 using Content.Shared.GameObjects.EntitySystems;
+using Content.Shared.GameObjects.EntitySystems.ActionBlocker;
 using Content.Shared.GameObjects.Verbs;
 using Robust.Client.Animations;
 using Robust.Client.GameObjects;
-using Robust.Client.GameObjects.EntitySystems;
 using Robust.Client.Graphics;
 using Robust.Client.UserInterface;
 using Robust.Client.UserInterface.Controls;
 using Robust.Shared.Animations;
 using Robust.Shared.GameObjects;
-using Robust.Shared.GameObjects.Systems;
-using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Localization;
 using Robust.Shared.Maths;
 using Robust.Shared.Serialization;
@@ -75,15 +72,15 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                 }
             }
         };
-        
+
         private StatusControl? _statusControl;
 
         private bool _isLmgAlarmAnimation;
-        
+
         private bool? _chamber;
 
         private bool HasMagazine => _magazine != null;
-        
+
         private Stack<bool>? _magazine;
 
         private int ShotsLeft => _magazine?.Count ?? 0;
@@ -98,7 +95,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         {
             if (!Owner.TryGetComponent(out AppearanceComponent? appearanceComponent))
                 return;
-            
+
             appearanceComponent.SetData(BarrelBoltVisuals.BoltOpen, BoltOpen);
             appearanceComponent.SetData(MagazineBarrelVisuals.MagLoaded, _magazine != null);
             appearanceComponent.SetData(AmmoVisuals.AmmoCount, ShotsLeft);
@@ -111,7 +108,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 
             if (!(curState is MagazineBarrelComponentState cast))
                 return;
-            
+
             // Don't want to use TrySetBolt in case it gets re-predicted... I think
             BoltOpen = cast.BoltOpen;
             _chamber = cast.Chambered;
@@ -130,7 +127,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                 if (SoundRack != null)
                     EntitySystem.Get<AudioSystem>().Play(SoundRack, Owner, AudioHelpers.WithVariation(RackVariation).WithVolume(RackVolume));
             }
-            
+
             UpdateAppearance();
             _statusControl?.Update();
         }
@@ -176,7 +173,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             {
                 if (SoundAutoEject != null)
                     EntitySystem.Get<AudioSystem>().Play(SoundAutoEject, Owner, AudioHelpers.WithVariation(AutoEjectVariation));
-                
+
                 _statusControl?.PlayAlarmAnimation();
             }
         }
@@ -218,7 +215,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             {
                 if (SoundEmpty != null)
                     EntitySystem.Get<AudioSystem>().Play(SoundEmpty, Owner, AudioHelpers.WithVariation(EmptyVariation));
-                
+
                 if (!BoltOpen && (_magazine == null || _magazine.Count == 0))
                     TrySetBolt(true);
 
@@ -228,7 +225,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             var shooter = Shooter();
             CameraRecoilComponent? cameraRecoilComponent = null;
             shooter?.TryGetComponent(out cameraRecoilComponent);
-            
+
             string? sound;
             float variation;
 
@@ -247,7 +244,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 
             if (sound != null)
                 EntitySystem.Get<AudioSystem>().Play(sound, Owner, AudioHelpers.WithVariation(variation));
-            
+
             UpdateAppearance();
             _statusControl?.Update();
             return true;
@@ -262,7 +259,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                 message.AddMarkup(Loc.GetString("\nIt accepts [color=white]{0}[/color] magazines.", magazineType));
             }
         }
-        
+
         public Control MakeControl()
         {
             _statusControl = new StatusControl(this);
@@ -411,7 +408,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                 _noMagazineLabel.PlayAnimation(animation, "alarm");
             }
         }
-        
+
         [Verb]
         private sealed class EjectMagazineVerb : Verb<ClientMagazineBarrelComponent>
         {

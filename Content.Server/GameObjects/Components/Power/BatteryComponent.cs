@@ -52,7 +52,7 @@ namespace Content.Server.GameObjects.Components.Power
         }
 
         /// <summary>
-        ///     If sufficient charge is avaiable on the battery, use it. Otherwise, don't.
+        ///     If sufficient charge is available on the battery, use it. Otherwise, don't.
         /// </summary>
         public virtual bool TryUseCharge(float chargeToUse)
         {

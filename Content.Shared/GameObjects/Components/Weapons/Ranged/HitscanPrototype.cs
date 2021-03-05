@@ -10,10 +10,10 @@ using YamlDotNet.RepresentationModel;
 namespace Content.Shared.GameObjects.Components.Weapons.Ranged
 {
     [Prototype("hitscan")]
-    public sealed class HitscanPrototype : IPrototype, IIndexedPrototype
+    public sealed class HitscanPrototype : IPrototype
     {
         public string ID { get; private set; } = default!;
-        
+
         // Muzzle -> Travel -> Impact for hitscans forms the full laser.
         // Muzzle is declared elsewhere
 
@@ -31,7 +31,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         public DamageType DamageType { get; private set; } = DamageType.Heat;
 
         public float MaxLength { get; private set; } = 20.0f;
-        
+
         // Sounds
         public string? SoundHitWall { get; private set; } = "/Audio/Weapons/Guns/Hits/laser_sear_wall.ogg";
 
@@ -44,8 +44,8 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
             serializer.DataReadWriteFunction("travelEffect", TravelEffect, value => TravelEffect = value, () => TravelEffect);
             serializer.DataReadWriteFunction("impactEffect", ImpactEffect, value => ImpactEffect = value, () => ImpactEffect);
             serializer.DataReadWriteFunction(
-                "collisionMask", 
-                new List<CollisionGroup> {CollisionGroup.Opaque}, 
+                "collisionMask",
+                new List<CollisionGroup> {CollisionGroup.Opaque},
                 value => value.ForEach(mask => CollisionMask |= mask),
                 () =>
                 {
@@ -54,7 +54,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
                     {
                         if ((value & CollisionMask) == 0)
                             continue;
-                        
+
                         result.Add(value);
                     }
 
@@ -63,7 +63,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
             serializer.DataReadWriteFunction("damage", Damage, value => Damage = value, () => Damage);
             serializer.DataReadWriteFunction("damageType", DamageType, value => DamageType = value, () => DamageType);
             serializer.DataReadWriteFunction("maxLength", MaxLength, value => MaxLength = value, () => MaxLength);
-            
+
             serializer.DataReadWriteFunction("soundHitWall", SoundHitWall, value => SoundHitWall = value, () => SoundHitWall);
         }
     }

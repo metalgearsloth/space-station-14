@@ -6,7 +6,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Content.Shared.Interfaces;
 using Content.Shared.Interfaces.GameObjects.Components;
-using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Localization;
 using Robust.Shared.Maths;
 using Robust.Shared.ViewVariables;
@@ -76,7 +75,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         {
             if (!eventArgs.Using.TryGetComponent(out SharedAmmoComponent? ammoComponent))
                 return false;
-            
+
             return TryInsertBullet(eventArgs.User, ammoComponent);
         }
 

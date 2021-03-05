@@ -1,12 +1,11 @@
 #nullable enable
-using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Robust.Client.GameObjects;
 using Robust.Shared.GameObjects;
-using Robust.Shared.Interfaces.GameObjects;
 
 namespace Content.Client.GameObjects.Components.Weapons.Ranged
 {
@@ -30,7 +29,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged
             {
                 UnspawnedCount += Capacity;
             }
-            
+
             UpdateAppearance();
         }
 
@@ -46,10 +45,10 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged
             return true;
         }
 
-        protected override void AfterInteract(AfterInteractEventArgs eventArgs)
+        protected override async Task<bool> AfterInteract(AfterInteractEventArgs eventArgs)
         {
             // TODO
-            return;
+            return true;
         }
 
         public override void HandleComponentState(ComponentState? curState, ComponentState? nextState)
@@ -72,7 +71,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged
             {
                 return;
             }
-            
+
             appearanceComponent?.SetData(MagazineBarrelVisuals.MagLoaded, true);
             appearanceComponent?.SetData(AmmoVisuals.AmmoCount, ShotsLeft);
             appearanceComponent?.SetData(AmmoVisuals.AmmoMax, Capacity);

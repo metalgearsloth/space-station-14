@@ -3,10 +3,7 @@ using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
 using Content.Shared.GameObjects.EntitySystems;
 using Content.Shared.Interfaces;
-using Robust.Server.GameObjects.Components.Container;
 using Robust.Shared.GameObjects;
-using Robust.Shared.GameObjects.Systems;
-using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Localization;
 using System.Collections.Generic;
 using Content.Server.GameObjects.Components.GUI;
@@ -14,11 +11,11 @@ using Content.Server.GameObjects.Components.Items.Storage;
 using Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition;
 using Content.Server.GameObjects.EntitySystems;
 using Content.Shared.Audio;
-using Robust.Server.GameObjects.EntitySystems;
+using Robust.Server.GameObjects;
 using Robust.Server.Player;
-using Robust.Shared.Audio;
-using Robust.Shared.Interfaces.Network;
+using Robust.Shared.Containers;
 using Robust.Shared.Maths;
+using Robust.Shared.Network;
 using Robust.Shared.Players;
 
 namespace Content.Server.GameObjects.Components.Weapon.Ranged
@@ -36,7 +33,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             var user = session?.AttachedEntity;
             if (user != Shooter() || user == null)
                 return;
-            
+
             switch (message)
             {
                 case BoltChangedComponentMessage msg:
@@ -52,9 +49,8 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
         {
             base.Initialize();
 
-            _chamberContainer = ContainerManagerComponent.Ensure<ContainerSlot>("magazine-chamber", Owner, out var existingChamber);
-            _magazineContainer =
-                ContainerManagerComponent.Ensure<ContainerSlot>("magazine-mag", Owner, out var existingMag);
+            _chamberContainer = Owner.EnsureContainer<ContainerSlot>("magazine-chamber", out var existingChamber);
+            _magazineContainer = Owner.EnsureContainer<ContainerSlot>("magazine-mag", out var existingMag);
 
             if (!existingMag && MagFillPrototype != null)
             {
@@ -64,7 +60,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             }
         }
 
-        public override ComponentState GetComponentState()
+        public override ComponentState GetComponentState(ICommonSession session)
         {
             var chamber = !_chamberContainer.ContainedEntity?.GetComponent<SharedAmmoComponent>().Spent;
             var ammo = new Stack<bool>();
@@ -100,7 +96,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                 return false;
 
             var shooter = Shooter();
-            
+
             if (value)
             {
                 TryEjectChamber();
@@ -133,7 +129,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             {
                 if (SoundRack != null)
                     EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundRack, Owner, AudioHelpers.WithVariation(RackVariation).WithVolume(RackVolume));
-                
+
             }
         }
 
@@ -191,7 +187,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             }
 
             _magazineContainer?.Remove(mag);
-            
+
             if (SoundMagEject != null)
                 EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundMagEject, Owner, AudioHelpers.WithVariation(MagVariation).WithVolume(MagVolume));
 
@@ -204,11 +200,11 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
         protected override bool TryInsertMag(IEntity user, IEntity mag)
         {
             // TODO: Popups temporary until prediction
-            
+
             // Insert magazine
             if (!mag.TryGetComponent(out SharedRangedMagazineComponent? magazineComponent))
                 return false;
-            
+
             if ((MagazineTypes & magazineComponent.MagazineType) == 0)
             {
                 Owner.PopupMessage(user, Loc.GetString("Wrong magazine type"));
@@ -235,7 +231,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
 
             if (SoundMagInsert != null)
                 EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundMagInsert, Owner, AudioHelpers.WithVariation(MagVariation).WithVolume(MagVolume));
-            
+
             Owner.PopupMessage(user, Loc.GetString("Magazine inserted"));
             _magazineContainer?.Insert(mag);
             Dirty();
@@ -247,7 +243,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             // Insert 1 ammo
             if (!ammo.TryGetComponent(out SharedAmmoComponent? ammoComponent))
                 return false;
-            
+
             if (!BoltOpen)
             {
                 Owner.PopupMessage(user, Loc.GetString("Cannot insert ammo while bolt is closed"));
@@ -266,7 +262,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                 Owner.PopupMessage(user, Loc.GetString("Chamber full"));
                 return false;
             }
-            
+
             Owner.PopupMessage(user, Loc.GetString("Ammo inserted"));
             _chamberContainer?.Insert(ammo);
             Dirty();
@@ -291,44 +287,6 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
 
             if (TrySetBolt(!BoltOpen))
                 Dirty();
-
-            return true;
-        }
-
-        protected override bool TryShoot(Angle angle)
-        {
-            if (!base.TryShoot(angle))
-                return false;
-            
-            var chamberEntity = _chamberContainer?.ContainedEntity;
-            Cycle();
-            var shooter = Shooter();
-
-            if (chamberEntity == null)
-            {
-                if (SoundEmpty != null)
-                    EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundEmpty, Owner, AudioHelpers.WithVariation(EmptyVariation).WithVolume(EmptyVolume), excludedSession: shooter.PlayerSession());
-
-                var mag = _magazineContainer.ContainedEntity;
-                
-                if (!BoltOpen && (mag == null || mag.GetComponent<SharedRangedMagazineComponent>().ShotsLeft == 0))
-                    TrySetBolt(true);
-                
-                return true;
-            }
-
-            var ammoComp = chamberEntity.GetComponent<AmmoComponent>();
-            var sound = ammoComp.Spent ? SoundEmpty : SoundGunshot;
-            
-            if (sound != null)
-                EntitySystem.Get<AudioSystem>().PlayFromEntity(sound, Owner, AudioHelpers.WithVariation(GunshotVariation).WithVolume(GunshotVolume), excludedSession: shooter.PlayerSession());
-
-            if (!ammoComp.Spent)
-            {
-                EntitySystem.Get<RangedWeaponSystem>().ShootAmmo(shooter, this, angle, ammoComp);
-                EntitySystem.Get<SharedRangedWeaponSystem>().MuzzleFlash(shooter, this, angle);
-                ammoComp.Spent = true;
-            }
 
             return true;
         }

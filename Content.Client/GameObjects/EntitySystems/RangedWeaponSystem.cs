@@ -6,16 +6,15 @@ using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
 using Content.Shared.GameObjects.EntitySystems;
 using JetBrains.Annotations;
-using Robust.Client.GameObjects.EntitySystems;
-using Robust.Client.Interfaces.Graphics.ClientEye;
-using Robust.Client.Interfaces.Input;
+using Robust.Client.GameObjects;
+using Robust.Client.Graphics;
+using Robust.Client.Input;
 using Robust.Client.Player;
-using Robust.Shared.GameObjects.EntitySystemMessages;
+using Robust.Shared.GameObjects;
 using Robust.Shared.Input;
-using Robust.Shared.Interfaces.GameObjects;
-using Robust.Shared.Interfaces.Timing;
 using Robust.Shared.IoC;
 using Robust.Shared.Maths;
+using Robust.Shared.Timing;
 
 namespace Content.Client.GameObjects.EntitySystems
 {
@@ -30,7 +29,7 @@ namespace Content.Client.GameObjects.EntitySystems
         private InputSystem _inputSystem = default!;
         private CombatModeSystem _combatModeSystem = default!;
         private SharedRangedWeaponComponent? _firingWeapon;
-        
+
         private bool _lastFireResult = true;
 
         public override void Initialize()
@@ -46,7 +45,7 @@ namespace Content.Client.GameObjects.EntitySystems
         {
             if (!entity.TryGetComponent(out HandsComponent? hands))
                 return null;
-            
+
 
             var held = hands.ActiveHand;
             if (held == null || !held.TryGetComponent(out SharedRangedWeaponComponent? weapon))
@@ -68,14 +67,14 @@ namespace Content.Client.GameObjects.EntitySystems
             {
                 // Result this so we can queue up more firing.
                 _lastFireResult = false;
-                
+
                 if (_firingWeapon != null)
                 {
                     StopFiring(_firingWeapon);
                     _firingWeapon.ShotCounter = 0;
                     _firingWeapon = null;
                 }
-                
+
                 return;
             }
 
@@ -91,7 +90,7 @@ namespace Content.Client.GameObjects.EntitySystems
 
             if (_firingWeapon == null)
                 return;
-            
+
             var mouseCoordinates = _eyeManager.ScreenToMap(_inputManager.MouseScreenPosition);
 
             if (_firingWeapon.TryFire(currentTime, player, mouseCoordinates, out var shots))
@@ -101,7 +100,7 @@ namespace Content.Client.GameObjects.EntitySystems
                 {
                     _firingWeapon.Firing = true;
                     RaiseNetworkEvent(new StartFiringMessage(_firingWeapon.Owner.Uid, mouseCoordinates));
-                } 
+                }
                 else if (shots > 0)
                 {
                     RaiseNetworkEvent(new RangedFireMessage(_firingWeapon.Owner.Uid, mouseCoordinates));
@@ -112,7 +111,7 @@ namespace Content.Client.GameObjects.EntitySystems
                 StopFiring(_firingWeapon);
             }
         }
-        
+
         private void StopFiring(SharedRangedWeaponComponent weaponComponent)
         {
             if (weaponComponent.Firing)
@@ -120,13 +119,13 @@ namespace Content.Client.GameObjects.EntitySystems
 
             weaponComponent.Firing = false;
         }
-        
+
         public override void MuzzleFlash(IEntity? user, SharedRangedWeaponComponent weapon, Angle angle, TimeSpan? currentTime = null, bool predicted = true, float alphaRatio = 1)
         {
             var texture = weapon.MuzzleFlash;
             if (texture == null || !predicted)
                 return;
-            
+
             var offset = angle.ToVec().Normalized / 2;
 
             var message = new EffectSystemMessage

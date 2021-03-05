@@ -1,5 +1,6 @@
 ﻿using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using Robust.Shared.GameObjects;
+using Robust.Shared.Players;
 
 namespace Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition
 {
@@ -27,13 +28,13 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition
                         return;
                     }
                 }
-                
+
                 Dirty();
             }
         }
         private bool _spent;
 
-        public override ComponentState GetComponentState()
+        public override ComponentState GetComponentState(ICommonSession session)
         {
             return new AmmoComponentState(Spent);
         }

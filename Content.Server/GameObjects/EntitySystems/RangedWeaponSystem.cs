@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition;
 using Content.Shared.Audio;
 using Content.Shared.GameObjects.Components.Damage;
 using Content.Shared.GameObjects.Components.Projectiles;
@@ -10,20 +11,17 @@ using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
 using Content.Shared.GameObjects.EntitySystems;
 using Content.Shared.Physics;
 using JetBrains.Annotations;
-using Robust.Server.GameObjects.EntitySystems;
+using Robust.Server.GameObjects;
 using Robust.Server.Player;
 using Robust.Shared.GameObjects;
-using Robust.Shared.GameObjects.Components;
-using Robust.Shared.GameObjects.EntitySystemMessages;
-using Robust.Shared.Interfaces.GameObjects;
-using Robust.Shared.Interfaces.Physics;
-using Robust.Shared.Interfaces.Random;
-using Robust.Shared.Interfaces.Timing;
 using Robust.Shared.IoC;
 using Robust.Shared.Log;
 using Robust.Shared.Maths;
+using Robust.Shared.Physics;
+using Robust.Shared.Player;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Random;
+using Robust.Shared.Timing;
 
 namespace Content.Server.GameObjects.EntitySystems
 {
@@ -49,7 +47,7 @@ namespace Content.Server.GameObjects.EntitySystems
 
         private EffectSystem _effectSystem = default!;
 
-        private List<SharedRangedWeaponComponent> _activeRangedWeapons = new List<SharedRangedWeaponComponent>();
+        private List<SharedRangedWeaponComponent> _activeRangedWeapons = new();
 
         public override void Initialize()
         {
@@ -175,6 +173,7 @@ namespace Content.Server.GameObjects.EntitySystems
             return true;
         }
 
+        #region Shoot
         public override void ShootHitscan(IEntity? user, SharedRangedWeaponComponent weapon, HitscanPrototype hitscan, Angle angle, float damageRatio = 1, float alphaRatio = 1)
         {
             var currentTime = _gameTiming.CurTime;
@@ -239,7 +238,7 @@ namespace Content.Server.GameObjects.EntitySystems
                     projectileAngle = angle;
                 }
 
-                if (_prototypeManager.TryIndex(ammoComponent.ProjectileId, out HitscanPrototype hitscan))
+                if (_prototypeManager.TryIndex(ammoComponent.ProjectileId, out HitscanPrototype? hitscan))
                 {
                     ShootHitscan(user, weapon, hitscan, angle);
                 }
@@ -265,6 +264,101 @@ namespace Content.Server.GameObjects.EntitySystems
             projectileComponent.Owner.Transform.LocalRotation = angle.Theta;
         }
 
+        protected override bool TryShootBallistic(IBallisticGun weapon, Angle angle)
+        {
+            var chamberEntity = weapon.Chambered;
+
+            if (weapon.AutoCycle)
+                weapon.Cycle();
+
+            var shooter = weapon.Shooter;
+
+            if (chamberEntity == null)
+            {
+                // TODO: Bolt / pump do nothing?
+                if (weapon.SoundEmpty != null)
+                    Get<AudioSystem>().Play(
+                        Filter.Excluding(shooter.PlayerSession()),
+                        weapon.SoundEmpty,
+                        weapon.Owner,
+                        AudioHelpers.WithVariation(weapon.EmptyVariation).WithVolume(weapon.EmptyVolume));
+
+                var mag = weapon.Magazine;
+
+                if (!weapon.BoltOpen && (mag == null || mag.GetComponent<SharedRangedMagazineComponent>().ShotsLeft == 0))
+                    weapon.TrySetBolt(true);
+
+                return true;
+            }
+
+            var ammoComp = chamberEntity.GetComponent<AmmoComponent>();
+            var sound = ammoComp.Spent ? weapon.SoundEmpty : weapon.SoundGunshot;
+
+            if (sound != null)
+                Get<AudioSystem>().Play(
+                    Filter.Excluding(shooter.PlayerSession()),
+                    sound,
+                    weapon.Owner,
+                    AudioHelpers.WithVariation(weapon.GunshotVariation).WithVolume(weapon.GunshotVolume))
+
+            if (!ammoComp.Spent)
+            {
+                ShootAmmo(shooter, weapon, angle, ammoComp);
+                MuzzleFlash(shooter, weapon, angle);
+                ammoComp.Spent = true;
+            }
+
+            return true;
+        }
+
+        protected override bool TryShootBattery(IBatteryGun weapon, Angle angle)
+        {
+            // TODO: Shared PowerCell
+            var battery = weapon.PowerCell;
+            if (battery == null)
+                return false;
+
+            if (battery.CurrentCharge < LowerChargeLimit)
+                return false;
+
+            // Can fire confirmed
+            // Multiply the entity's damage / whatever by the percentage of charge the shot has.
+            var chargeChange = Math.Min(battery.CurrentCharge, BaseFireCost);
+            battery.UseCharge(chargeChange);
+
+            var shooter = Shooter();
+            var energyRatio = chargeChange / BaseFireCost;
+
+            if (AmmoIsHitscan)
+            {
+                var prototype = IoCManager.Resolve<IPrototypeManager>().Index<HitscanPrototype>(AmmoPrototype);
+                EntitySystem.Get<SharedRangedWeaponSystem>().ShootHitscan(Shooter(), this, prototype, angle, energyRatio, energyRatio);
+            }
+            else
+            {
+                var entity = Owner.EntityManager.SpawnEntity(AmmoPrototype, Owner.Transform.MapPosition);
+                var ammoComponent = entity.GetComponent<SharedAmmoComponent>();
+                var projectileComponent = entity.GetComponent<ProjectileComponent>();
+
+                if (energyRatio < 1.0)
+                {
+                    var newDamages = new Dictionary<DamageType, int>(projectileComponent.Damages.Count);
+                    foreach (var (damageType, damage) in projectileComponent.Damages)
+                    {
+                        newDamages.Add(damageType, (int) (damage * energyRatio));
+                    }
+
+                    projectileComponent.Damages = newDamages;
+                }
+
+                EntitySystem.Get<SharedRangedWeaponSystem>().ShootAmmo(shooter, this, angle, ammoComponent);
+                EntitySystem.Get<SharedRangedWeaponSystem>().MuzzleFlash(shooter, this, angle, alphaRatio: energyRatio);
+            }
+
+            return true;
+        }
+        #endregion
+
         private List<Angle> Linspace(double start, double end, int intervals)
         {
             var linspace = new List<Angle>(intervals);
@@ -276,6 +370,7 @@ namespace Content.Server.GameObjects.EntitySystems
             return linspace;
         }
 
+        #region Effects
         public override void MuzzleFlash(IEntity? user, SharedRangedWeaponComponent weapon, Angle angle, TimeSpan? currentTime = null, bool predicted = true, float alphaRatio = 1.0f)
         {
             var texture = weapon.MuzzleFlash;
@@ -374,6 +469,7 @@ namespace Content.Server.GameObjects.EntitySystems
 
             _effectSystem.CreateParticle(message);
         }
+        #endregion
 
         public override void EjectCasing(IEntity? user, IEntity casing, bool playSound = true, Direction[]? ejectDirections = null)
         {

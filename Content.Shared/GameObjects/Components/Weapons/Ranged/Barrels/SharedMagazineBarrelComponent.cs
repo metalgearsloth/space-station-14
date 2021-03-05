@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Robust.Shared.GameObjects;
-using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Maths;
 using Robust.Shared.Serialization;
 using Robust.Shared.ViewVariables;
@@ -16,9 +15,9 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         public override string Name => "MagazineBarrel";
 
         public override uint? NetID => ContentNetIDs.MAGAZINE_BARREL;
-        
+
         [ViewVariables] public MagazineType MagazineTypes { get; private set; }
-        
+
         [ViewVariables] public BallisticCaliber Caliber { get; private set; }
 
         public int Capacity { get; set; }
@@ -58,7 +57,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
 
             serializer.DataReadWriteFunction("magNeedsOpenBolt", false, value => MagNeedsOpenBolt = value,
                 () => MagNeedsOpenBolt);
-            
+
             serializer.DataReadWriteFunction("caliber", BallisticCaliber.Unspecified, value => Caliber = value, () => Caliber);
             serializer.DataReadWriteFunction("magFillPrototype", null, value => MagFillPrototype = value, () => MagFillPrototype);
             serializer.DataField(ref AutoEjectMag, "autoEjectMag", false);
@@ -85,7 +84,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
 
             return types;
         }
-        
+
         protected abstract bool TrySetBolt(bool value);
 
         protected abstract void Cycle(bool manual = false);
@@ -130,7 +129,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
             return false;
         }
     }
-    
+
     [Serializable, NetSerializable]
     public sealed class RemoveMagazineComponentMessage : ComponentMessage
     {
@@ -157,7 +156,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         Dart = 1 << 9, // Placeholder
         CalicoTopMounted = 1 << 10,
     }
-    
+
     [Serializable, NetSerializable]
     public enum AmmoVisuals
     {
@@ -188,9 +187,9 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
 
         public MagazineBarrelComponentState(
             bool boltOpen,
-            bool? chambered, 
-            FireRateSelector fireRateSelector, 
-            Stack<bool>? magazine) : 
+            bool? chambered,
+            FireRateSelector fireRateSelector,
+            Stack<bool>? magazine) :
             base(ContentNetIDs.MAGAZINE_BARREL)
         {
             BoltOpen = boltOpen;

@@ -12,7 +12,7 @@ namespace Content.Shared.Audio
         /// <summary>
         ///     Returns a random pitch.
         /// </summary>
-        public static AudioParams WithVariation(float amplitude, IRobustRandom robustRandom = null)
+        public static AudioParams WithVariation(float amplitude, IRobustRandom? robustRandom = null)
         {
             robustRandom ??= IoCManager.Resolve<IRobustRandom>();
             var scale = (float) robustRandom.NextGaussian(1, amplitude);

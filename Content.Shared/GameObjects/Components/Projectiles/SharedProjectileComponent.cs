@@ -1,8 +1,6 @@
 #nullable enable
 using System;
 using Robust.Shared.GameObjects;
-using Robust.Shared.GameObjects.Components;
-using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Physics;
 using Robust.Shared.Serialization;
 

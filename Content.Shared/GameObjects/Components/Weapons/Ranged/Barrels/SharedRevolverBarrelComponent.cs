@@ -3,7 +3,6 @@ using System;
 using System.Threading.Tasks;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Robust.Shared.GameObjects;
-using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Serialization;
 
 namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
@@ -14,7 +13,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         public override uint? NetID => ContentNetIDs.REVOLVER_BARREL;
 
         public BallisticCaliber Caliber;
-        
+
         /// <summary>
         ///     What slot will be used for the next bullet.
         /// </summary>
@@ -23,7 +22,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         protected int Capacity { get; set; }
 
         public string? FillPrototype;
-        
+
         /// <summary>
         ///     To avoid spawning entities in until necessary we'll just keep a counter for the unspawned default ammo.
         /// </summary>
@@ -47,7 +46,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
                 6,
                 cap => Capacity = cap,
                 () => Capacity);
-            
+
             serializer.DataField(ref Caliber, "caliber", BallisticCaliber.Unspecified);
             serializer.DataField(ref FillPrototype, "fillPrototype", null);
 
@@ -75,7 +74,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
 
             return true;
         }
-        
+
         public override async Task<bool> InteractUsing(InteractUsingEventArgs eventArgs)
         {
             if (!eventArgs.Using.TryGetComponent(out SharedAmmoComponent? ammoComponent))
@@ -92,7 +91,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
             return true;
         }
     }
-    
+
     [Serializable, NetSerializable]
     public class RevolverBarrelComponentState : ComponentState
     {
@@ -114,12 +113,12 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
             SoundGunshot = soundGunshot;
         }
     }
-    
+
     [Serializable, NetSerializable]
     public class ChangeSlotMessage : ComponentMessage
     {
         public int Slot { get; }
-        
+
         public ChangeSlotMessage(int slot)
         {
             Slot = slot;
@@ -132,7 +131,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
     {
         public RevolverSpinMessage(int slot) : base(slot)
         {
-            
+
         }
     }
 }

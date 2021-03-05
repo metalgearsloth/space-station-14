@@ -12,13 +12,12 @@ using Content.Client.GameObjects.Components.Mobs;
 using Content.Shared.Audio;
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using Content.Shared.GameObjects.EntitySystems;
+using Content.Shared.GameObjects.EntitySystems.ActionBlocker;
 using Content.Shared.GameObjects.Verbs;
-using Robust.Client.GameObjects.EntitySystems;
-using Robust.Shared.GameObjects.Systems;
-using Robust.Shared.Interfaces.GameObjects;
-using Robust.Shared.Interfaces.Random;
+using Robust.Client.GameObjects;
 using Robust.Shared.IoC;
 using Robust.Shared.Localization;
+using Robust.Shared.Random;
 
 namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 {
@@ -42,7 +41,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         {
             base.Initialize();
             Ammo = new bool?[Capacity];
-            
+
             // Mark every bullet as unspent
             if (FillPrototype != null)
             {
@@ -64,18 +63,18 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             {
                 if (SoundEmpty != null)
                     EntitySystem.Get<AudioSystem>().Play(SoundEmpty, Owner, AudioHelpers.WithVariation(EmptyVariation).WithVolume(EmptyVolume));
-            
+
                 return true;
             }
 
             var shooter = Shooter();
             CameraRecoilComponent? cameraRecoilComponent = null;
             shooter?.TryGetComponent(out cameraRecoilComponent);
-            
+
             string? sound;
             float variation;
             float volume;
-            
+
             if (currentAmmo.Value)
             {
                 sound = SoundGunshot;
@@ -94,7 +93,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 
             if (sound != null)
                 EntitySystem.Get<AudioSystem>().Play(sound, Owner, AudioHelpers.WithVariation(variation).WithVolume(volume));
-            
+
             Cycle();
             _statusControl?.Update();
             return true;
@@ -104,7 +103,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
         {
             return angle;
         }
-        
+
         protected override void EjectAllSlots()
         {
             for (var i = 0; i < Ammo.Length; i++)
@@ -128,16 +127,16 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             // TODO
             return true;
         }
-        
+
         private void Spin()
         {
             CurrentSlot = IoCManager.Resolve<IRobustRandom>().Next(Ammo.Length - 1);
             _statusControl?.Update(true);
             SendNetworkMessage(new RevolverSpinMessage(CurrentSlot));
-            
+
             if (SoundSpin != null)
                 EntitySystem.Get<AudioSystem>().Play(SoundSpin, Owner, AudioHelpers.WithVariation(SpinVariation).WithVolume(SpinVolume));
-            
+
         }
 
         // Item status etc.
@@ -150,7 +149,9 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
 
             CurrentSlot = cast.CurrentSlot;
             Ammo = cast.Bullets;
-            _statusControl?.Update();
+
+            if (nextState == null)
+                _statusControl?.Update();
         }
 
         public Control MakeControl()
@@ -273,7 +274,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
                 }
             }
         }
-        
+
         [Verb]
         private sealed class SpinRevolverVerb : Verb<ClientRevolverBarrelComponent>
         {

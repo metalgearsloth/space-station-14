@@ -6,7 +6,6 @@ using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
 using Content.Shared.Interfaces;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Robust.Shared.GameObjects;
-using Robust.Shared.Interfaces.GameObjects;
 using Robust.Shared.Localization;
 using Robust.Shared.Serialization;
 using Robust.Shared.ViewVariables;
@@ -19,7 +18,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         public override uint? NetID => ContentNetIDs.SPEED_LOADER;
 
         [ViewVariables] protected BallisticCaliber Caliber { get; private set; }
-        
+
         [ViewVariables] public int Capacity { get; protected set; }
 
         protected int UnspawnedCount;
@@ -55,7 +54,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
             if (ammoComponent.Caliber != Caliber)
             {
                 Owner.PopupMessage(user, Loc.GetString("Wrong caliber"));
-                return false;   
+                return false;
             }
 
             return true;
@@ -63,12 +62,12 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
 
         protected abstract bool UseEntity(IEntity user);
 
-        void IAfterInteract.AfterInteract(AfterInteractEventArgs eventArgs)
+        async Task<bool> IAfterInteract.AfterInteract(AfterInteractEventArgs eventArgs)
         {
-            AfterInteract(eventArgs);
+            return await AfterInteract(eventArgs);
         }
 
-        protected abstract void AfterInteract(AfterInteractEventArgs eventArgs);
+        protected abstract Task<bool> AfterInteract(AfterInteractEventArgs eventArgs);
 
         async Task<bool> IInteractUsing.InteractUsing(InteractUsingEventArgs eventArgs)
         {
@@ -85,14 +84,14 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
             return UseEntity(eventArgs.User);
         }
     }
-    
+
     [Serializable, NetSerializable]
     public sealed class SpeedLoaderComponentState : ComponentState
     {
         public int Capacity { get; }
-        
+
         public Stack<bool> Ammo { get; }
-        
+
         public SpeedLoaderComponentState(int capacity, Stack<bool> ammo) : base(ContentNetIDs.SPEED_LOADER)
         {
             Capacity = capacity;
