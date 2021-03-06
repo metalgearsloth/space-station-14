@@ -1,22 +1,14 @@
 using System;
+using System.Collections.Generic;
 using Content.Client.Interfaces.Parallax;
+using Content.Client.Parallax;
 using Robust.Client.Graphics;
 
 namespace Content.IntegrationTests
 {
     public sealed class DummyParallaxManager : IParallaxManager
     {
-        public event Action<Texture> OnTextureLoaded
-        {
-            add
-            {
-            }
-            remove
-            {
-            }
-        }
-
-        public Texture ParallaxTexture => null;
+        public IReadOnlyList<ParallaxLayer> ParallaxLayers { get; }
 
         public void LoadParallax()
         {

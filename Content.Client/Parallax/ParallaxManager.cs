@@ -17,6 +17,23 @@ using SixLabors.ImageSharp.PixelFormats;
 
 namespace Content.Client.Parallax
 {
+    /// <summary>
+    ///     Texture and wrapper information for how fast the parallax moves in relation to the eye.
+    /// </summary>
+    public sealed class ParallaxLayer
+    {
+        /// <summary>
+        ///     Set to 0 to make it static.
+        /// </summary>
+        public float Speed { get; set; } = 0.05f;
+
+        public Texture ParallaxTexture { get; set; }
+
+        public string Name { get; set; }
+
+        // TODO: Offset
+    }
+
     internal sealed class ParallaxManager : IParallaxManager
     {
         [Dependency] private readonly IResourceCache _resourceCache = default!;
@@ -25,29 +42,26 @@ namespace Content.Client.Parallax
 
         private static readonly ResourcePath ParallaxConfigPath = new("/parallax_config.toml");
 
-        // Both of these below are in the user directory.
-        private static readonly ResourcePath ParallaxPath = new("/parallax_cache.png");
-        private static readonly ResourcePath ParallaxConfigOld = new("/parallax_config_old");
+        public IReadOnlyList<ParallaxLayer> ParallaxLayers => _parallaxLayers;
 
-        public event Action<Texture> OnTextureLoaded;
-        public Texture ParallaxTexture { get; private set; }
+        private List<ParallaxLayer> _parallaxLayers = new();
 
+        // TODO: Servers should be able to send config for someone loading in.
         public async void LoadParallax()
         {
-            if (!_configurationManager.GetCVar(CCVars.ParallaxEnabled))
-            {
-                return;
-            }
+            // TODO: Need to handle this; for now just log warning.
+            if (!_configurationManager.GetCVar(CCVars.ParallaxEnabled)) return;
 
             var debugParallax = _configurationManager.GetCVar(CCVars.ParallaxDebug);
-            string contents;
-            TomlTable table;
             // Load normal config into memory
             if (!_resourceCache.TryContentFileRead(ParallaxConfigPath, out var configStream))
             {
                 Logger.ErrorS("parallax", "Parallax config not found.");
                 return;
             }
+
+            string contents;
+            TomlTable config;
 
             using (configStream)
             {
@@ -56,67 +70,77 @@ namespace Content.Client.Parallax
                     contents = reader.ReadToEnd().Replace(Environment.NewLine, "\n");
                 }
 
-                if (!debugParallax && _resourceCache.UserData.Exists(ParallaxConfigOld))
-                {
-                    var match = _resourceCache.UserData.ReadAllText(ParallaxConfigOld) == contents;
-
-                    if (match)
-                    {
-                        using (var stream = _resourceCache.UserData.OpenRead(ParallaxPath))
-                        {
-                            ParallaxTexture = Texture.LoadFromPNGStream(stream, "Parallax");
-                        }
-
-                        OnTextureLoaded?.Invoke(ParallaxTexture);
-                        return;
-                    }
-                }
-
-                table = Toml.ReadString(contents);
-            }
-
-            List<Image<Rgba32>> debugImages = null;
-            if (debugParallax)
-            {
-                debugImages = new List<Image<Rgba32>>();
+                config = Toml.ReadString(contents);
             }
 
             var sawmill = _logManager.GetSawmill("parallax");
-            // Generate the parallax in the thread pool.
-            var image = await Task.Run(() =>
-                ParallaxGenerator.GenerateParallax(table, new Size(1920, 1080), sawmill, debugImages));
-            // And load it in the main thread for safety reasons.
-            ParallaxTexture = Texture.LoadFromImage(image, "Parallax");
 
-            // Store it and CRC so further game starts don't need to regenerate it.
-            using (var stream = _resourceCache.UserData.Create(ParallaxPath))
+            foreach (var layerConfig in ((TomlTableArray) config.Get("layers")).Items)
             {
-                image.SaveAsPng(stream);
+                var layer = await LoadLayer(layerConfig, sawmill);
+                _parallaxLayers.Add(layer);
             }
+        }
 
-            if (debugParallax)
+        // TODO: GenerateParallax also needs to support the thingy.
+        // TODO: Can Parallel these and then load into List sequentially.
+        private async Task<ParallaxLayer?> LoadLayer(TomlTable config, ISawmill sawmill)
+        {
+            var name = "";
+            var path = new ResourcePath($"parallax_{name}");
+            Image image;
+            Texture texture;
+
+            if (_resourceCache.UserData.Exists(path))
             {
-                var i = 0;
-                foreach (var debugImage in debugImages)
+                await using var stream = _resourceCache.UserData.Open(path, FileMode.Open);
+                image = await Image.LoadAsync(Configuration.Default, stream);
+                texture = Texture.LoadFromImage(image, $"parallax_{name}");
+                image.Dispose();
+            }
+            else
+            {
+                // TODO: Variable resolution.
+                if (config.TryGetValue("texture", out var texturePath))
                 {
-                    using (var stream = _resourceCache.UserData.Create(new ResourcePath($"/parallax_debug_{i}.png")))
+                    if (!_resourceCache.TryGetResource(texturePath.ToString(), out TextureResource? resource))
                     {
-                        debugImage.SaveAsPng(stream);
+                        sawmill.Error($"Unable to find {texturePath} path for parallax {name}");
+                        return null;
                     }
 
-                    i += 1;
+                    texture = resource.Texture;
+                }
+                else if (config.TryGetValue("generated", out var generator))
+                {
+                    image = await Task.Run(() =>
+                        ParallaxGenerator.GenerateParallax(config, new Size(1920, 1080), sawmill));
+
+                    // Store cache
+                    if (!_resourceCache.UserData.Exists(path))
+                    {
+                        // Store it and CRC so further game starts don't need to regenerate it.
+                        await using var stream = _resourceCache.UserData.Create(path);
+                        await image.SaveAsPngAsync(stream);
+                    }
+
+                    texture = Texture.LoadFromImage(image, $"parallax_{name}");
+                    image.Dispose();
+                }
+                else
+                {
+                    sawmill.Error("Unable to generate parallax for {name}");
+                    return null;
                 }
             }
 
-            image.Dispose();
-
-            using (var stream = _resourceCache.UserData.Create(ParallaxConfigOld))
-            using (var writer = new StreamWriter(stream, EncodingHelpers.UTF8))
+            var layer = new ParallaxLayer
             {
-                writer.Write(contents);
-            }
+                Name = name,
+                ParallaxTexture = texture,
+            };
 
-            OnTextureLoaded?.Invoke(ParallaxTexture);
+            return layer;
         }
     }
 }
