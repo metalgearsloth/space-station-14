@@ -3,6 +3,7 @@ using Content.Shared.GameObjects.Components.Mobs.State;
 using Content.Shared.GameObjects.Components.Movement;
 using Content.Shared.GameObjects.Components.Pulling;
 using Content.Shared.GameObjects.EntitySystems.ActionBlocker;
+using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
 using Robust.Shared.IoC;
 using Robust.Shared.Maths;
@@ -105,6 +106,7 @@ namespace Content.Shared.Physics.Controllers
             return (body.BodyStatus == BodyStatus.OnGround) &
                    body.Owner.HasComponent<IMobStateComponent>() &&
                    ActionBlockerSystem.CanMove(body.Owner) &&
+                   !body.Owner.IsInContainer() &&
                    (!body.Owner.IsWeightless(physicsManager) ||
                     body.Owner.TryGetComponent(out SharedPlayerMobMoverComponent? mover) &&
                     IsAroundCollider(broadPhaseSystem, body.Owner.Transform, mover, body));
