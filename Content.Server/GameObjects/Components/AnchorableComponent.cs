@@ -1,4 +1,5 @@
 ﻿#nullable enable
+using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 using Content.Server.GameObjects.Components.Interactable;
@@ -8,6 +9,8 @@ using Content.Shared.GameObjects.Components.Interactable;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Serialization.Manager.Attributes;
+using Robust.Shared.Physics;
+using Robust.Shared.Serialization;
 using Robust.Shared.ViewVariables;
 
 namespace Content.Server.GameObjects.Components
@@ -37,7 +40,7 @@ namespace Content.Server.GameObjects.Components
         /// <returns>true if it is valid, false otherwise</returns>
         private async Task<bool> Valid(IEntity user, IEntity? utilizing, [NotNullWhen(true)] bool force = false)
         {
-            if (!Owner.HasComponent<IPhysicsComponent>())
+            if (!Owner.HasComponent<IPhysBody>())
             {
                 return false;
             }
@@ -69,8 +72,12 @@ namespace Content.Server.GameObjects.Components
                 return false;
             }
 
-            var physics = Owner.GetComponent<IPhysicsComponent>();
-            physics.Anchored = true;
+            var physics = Owner.GetComponent<IPhysBody>();
+            physics.BodyType = BodyType.Static;
+
+            // Snap rotation to cardinal (multiple of 90)
+            var rot = Owner.Transform.LocalRotation;
+            Owner.Transform.LocalRotation = Math.Round(rot / (Math.PI / 2)) * (Math.PI / 2);
 
             if (Owner.TryGetComponent(out PullableComponent? pullableComponent))
             {
@@ -100,8 +107,8 @@ namespace Content.Server.GameObjects.Components
                 return false;
             }
 
-            var physics = Owner.GetComponent<IPhysicsComponent>();
-            physics.Anchored = false;
+            var physics = Owner.GetComponent<IPhysBody>();
+            physics.BodyType = BodyType.Dynamic;
 
             return true;
         }
@@ -115,12 +122,12 @@ namespace Content.Server.GameObjects.Components
         /// <returns>true if toggled, false otherwise</returns>
         private async Task<bool> TryToggleAnchor(IEntity user, IEntity? utilizing = null, bool force = false)
         {
-            if (!Owner.TryGetComponent(out IPhysicsComponent? physics))
+            if (!Owner.TryGetComponent(out IPhysBody? physics))
             {
                 return false;
             }
 
-            return physics.Anchored ?
+            return physics.BodyType == BodyType.Static ?
                 await TryUnAnchor(user, utilizing, force) :
                 await TryAnchor(user, utilizing, force);
         }

@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -16,6 +16,7 @@ using Robust.Shared.GameObjects;
 using Robust.Shared.IoC;
 using Robust.Shared.Localization;
 using Robust.Shared.Log;
+using Robust.Shared.Physics;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization;
 using Robust.Shared.Serialization.Manager.Attributes;
@@ -280,7 +281,7 @@ namespace Content.Server.GameObjects.Components.Construction
                     else
                     {
                         _containers.Add(insertStep.Store);
-                        var container = ContainerHelpers.EnsureContainer<Container>(Owner, insertStep.Store);
+                        var container = Owner.EnsureContainer<Container>(insertStep.Store);
                         container.Insert(entityUsing);
                     }
 
@@ -356,6 +357,12 @@ namespace Content.Server.GameObjects.Components.Construction
             Edge = null;
             Node = GraphPrototype.Nodes[edge.Target];
 
+            foreach (var completed in edge.Completed)
+            {
+                await completed.PerformAction(Owner, user);
+                if (Owner.Deleted) return true;
+            }
+
             // Perform node actions!
             foreach (var action in Node.Actions)
             {
@@ -367,12 +374,6 @@ namespace Content.Server.GameObjects.Components.Construction
 
             if (Target == Node)
                 ClearTarget();
-
-            foreach (var completed in edge.Completed)
-            {
-                await completed.PerformAction(Owner, user);
-                if (Owner.Deleted) return true;
-            }
 
             await HandleEntityChange(Node, user);
 
@@ -419,7 +420,7 @@ namespace Content.Server.GameObjects.Components.Construction
             {
                 foreach (var container in _containers)
                 {
-                    var otherContainer = ContainerHelpers.EnsureContainer<Container>(entity, container);
+                    var otherContainer = entity.EnsureContainer<Container>(container);
                     var ourContainer = containerComp.GetContainer(container);
 
                     foreach (var ent in ourContainer.ContainedEntities.ToArray())
@@ -430,10 +431,10 @@ namespace Content.Server.GameObjects.Components.Construction
                 }
             }
 
-            if (Owner.TryGetComponent(out IPhysicsComponent? physics) &&
-                entity.TryGetComponent(out IPhysicsComponent? otherPhysics))
+            if (Owner.TryGetComponent(out IPhysBody? physics) &&
+                entity.TryGetComponent(out IPhysBody? otherPhysics))
             {
-                otherPhysics.Anchored = physics.Anchored;
+                otherPhysics.BodyType = physics.BodyType;
             }
 
             Owner.Delete();

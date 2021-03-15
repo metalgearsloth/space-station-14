@@ -1,7 +1,8 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
@@ -23,6 +24,7 @@ using Content.Server.Mobs;
 using Content.Server.Mobs.Roles;
 using Content.Server.Players;
 using Content.Shared;
+using Content.Shared.Audio;
 using Content.Shared.Chat;
 using Content.Shared.GameTicking;
 using Content.Shared.Network.NetMessages;
@@ -132,6 +134,9 @@ namespace Content.Server.GameTicking
         private TimeSpan LobbyDuration =>
             TimeSpan.FromSeconds(_configurationManager.GetCVar(CCVars.GameLobbyDuration));
 
+        private SoundCollectionPrototype _lobbyCollection = default!;
+        [ViewVariables] public string LobbySong { get; private set; }
+
         public override void Initialize()
         {
             base.Initialize();
@@ -153,6 +158,9 @@ namespace Content.Server.GameTicking
             }
 
             Presets = presets.ToImmutableDictionary();
+
+            _lobbyCollection = _prototypeManager.Index<SoundCollectionPrototype>("LobbyMusic");
+            LobbySong = _robustRandom.Pick(_lobbyCollection.PickFiles);
 
             _netManager.RegisterNetMessage<MsgTickerJoinLobby>(nameof(MsgTickerJoinLobby));
             _netManager.RegisterNetMessage<MsgTickerJoinGame>(nameof(MsgTickerJoinGame));
@@ -218,6 +226,7 @@ namespace Content.Server.GameTicking
             RoundNumberMetric.Inc();
 
             RunLevel = GameRunLevel.PreRoundLobby;
+            LobbySong = _robustRandom.Pick(_lobbyCollection.PickFiles);
             _resettingCleanup();
             _preRoundSetup();
 
@@ -408,7 +417,10 @@ namespace Content.Server.GameTicking
 
         public void Respawn(IPlayerSession targetPlayer)
         {
+            targetPlayer.AttachedEntity.TryGetComponent<GhostComponent>(out var ghost);
             targetPlayer.ContentData()?.WipeMind();
+            if (ghost?.Deleted == false)
+                ghost.Owner.Delete();
 
             if (LobbyEnabled)
                 _playerJoinLobby(targetPlayer);
@@ -766,7 +778,7 @@ namespace Content.Server.GameTicking
 
                 case SessionStatus.Connected:
                 {
-                    _chatManager.DispatchServerAnnouncement($"Player {args.Session.Name} joined server!");
+                    _chatManager.SendAdminAnnouncement(Loc.GetString("player-join-message", ("name", args.Session.Name)));
 
                     if (LobbyEnabled && _roundStartCountdownHasNotStartedYetDueToNoPlayers)
                     {
@@ -813,7 +825,8 @@ namespace Content.Server.GameTicking
                 {
                     if (_playersInLobby.ContainsKey(session)) _playersInLobby.Remove(session);
 
-                    _chatManager.DispatchServerAnnouncement($"Player {args.Session} left server!");
+                    _chatManager.SendAdminAnnouncement(Loc.GetString("player-leave-message", ("name", args.Session.Name)));
+
                     ServerEmptyUpdateRestartCheck();
                     _prefsManager.OnClientDisconnected(session);
                     break;
@@ -895,6 +908,15 @@ namespace Content.Server.GameTicking
             var jobPrototype = _prototypeManager.Index<JobPrototype>(jobId);
             var job = new Job(data.Mind, jobPrototype);
             data.Mind.AddRole(job);
+
+            if (lateJoin)
+            {
+                _chatManager.DispatchStationAnnouncement(Loc.GetString(
+                    "latejoin-arrival-announcement",
+                    ("character", character.Name),
+                    ("job", CultureInfo.CurrentCulture.TextInfo.ToTitleCase(job.Name))
+                    ));
+            }
 
             var mob = _spawnPlayerMob(job, character, lateJoin);
             data.Mind.TransferTo(mob);
@@ -1028,6 +1050,7 @@ namespace Content.Server.GameTicking
             msg.StartTime = _roundStartTime;
             msg.YouAreReady = status == PlayerStatus.Ready;
             msg.Paused = Paused;
+            msg.LobbySong = LobbySong;
             return msg;
         }
 
