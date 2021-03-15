@@ -5,7 +5,7 @@ using Robust.Shared.GameObjects;
 namespace Content.Server.GameObjects.EntitySystems
 {
     [UsedImplicitly]
-    public class ListeningSystem : EntitySystem
+    public class List : EntitySystem
     {
         public void PingListeners(IEntity source, string message)
         {

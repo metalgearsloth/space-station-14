@@ -1,0 +1,68 @@
+- type: Parallax
+  id: Bee
+  layers:
+  - sprite: "/Textures/Effects/bee_parallax.rsi"
+    state: layer1
+    speed: 0.6
+  - sprite: "/Textures/Effects/bee_parallax.rsi"
+    state: layer2
+    speed: 1
+  - sprite: "/Textures/Effects/bee_parallax.rsi"
+    state: layer3
+    speed: 3
+  - sprite: "/Textures/Effects/bee_parallax.rsi"
+    state: space_gas
+    chance: 0.0
+    key: random
+    randomColor: true
+  - sprite: "/Textures/Effects/bee_parallax.rsi"
+    state: asteroids
+    chance: 0.0
+    key: random
+  - sprite: "/Textures/Effects/bee_parallax.rsi"
+    state: planet
+    speed: 0.0
+    randomXOffset: "100, 160"
+    randomYOffset: "100, 160"
+
+- type: Parallax
+  id: Eris0
+  layers:
+  - sprite: "/Textures/Effects/eris_parallax.rsi"
+    state: space0
+
+- type: Parallax
+  id: Eris1
+  layers:
+  - sprite: "/Textures/Effects/eris_parallax.rsi"
+    state: space1
+
+- type: Parallax
+  id: Eris2
+  layers:
+  - sprite: "/Textures/Effects/eris_parallax.rsi"
+    state: space2
+
+- type: Parallax
+  id: Eris3
+  layers:
+  - sprite: "/Textures/Effects/eris_parallax.rsi"
+    state: space3
+
+- type: Parallax
+  id: Eris4
+  layers:
+  - sprite: "/Textures/Effects/eris_parallax.rsi"
+    state: space4
+
+- type: Parallax
+  id: Eris5
+  layers:
+  - sprite: "/Textures/Effects/eris_parallax.rsi"
+    state: space5
+
+- type: Parallax
+  id: Eris6
+  layers:
+  - sprite: "/Textures/Effects/eris_parallax.rsi"
+    state: space6

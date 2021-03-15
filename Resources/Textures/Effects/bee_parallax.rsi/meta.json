@@ -1,0 +1,29 @@
+{
+    "version": 1,
+    "size": {
+        "x": 480,
+        "y": 480
+    },
+    "license": "CC-BY-SA-3.0",
+    "copyright": "Taken from https://github.com/BeeStation/BeeStation-Hornet at ec5160c6fbb6a06821ac4981a14768215a968af8",
+    "states": [
+        {
+            "name": "layer1"
+        },
+        {
+            "name": "layer2"
+        },
+        {
+            "name": "layer3"
+        },
+        {
+            "name": "planet"
+        },
+        {
+            "name": "space_gas"
+        },
+        {
+            "name": "asteroids"
+        }
+    ]
+}

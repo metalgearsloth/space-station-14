@@ -1,0 +1,32 @@
+{
+    "version": 1,
+    "size": {
+        "x": 736,
+        "y": 736
+    },
+    "license": "CC-BY-SA-3.0",
+    "copyright": "Taken from https://github.com/discordia-space/CEV-Eris at d9b4795d1beb173c8a9f636c3b00139d863aa684",
+    "states": [
+        {
+            "name": "space0"
+        },
+        {
+            "name": "space1"
+        },
+        {
+            "name": "space2"
+        },
+        {
+            "name": "space3"
+        },
+        {
+            "name": "space4"
+        },
+        {
+            "name": "space5"
+        },
+        {
+            "name": "space6"
+        }
+    ]
+}

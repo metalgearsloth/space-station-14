@@ -1,3 +1,4 @@
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -17,23 +18,6 @@ using SixLabors.ImageSharp.PixelFormats;
 
 namespace Content.Client.Parallax
 {
-    /// <summary>
-    ///     Texture and wrapper information for how fast the parallax moves in relation to the eye.
-    /// </summary>
-    public sealed class ParallaxLayer
-    {
-        /// <summary>
-        ///     Set to 0 to make it static.
-        /// </summary>
-        public float Speed { get; set; } = 0.05f;
-
-        public Texture ParallaxTexture { get; set; }
-
-        public string Name { get; set; }
-
-        // TODO: Offset
-    }
-
     internal sealed class ParallaxManager : IParallaxManager
     {
         [Dependency] private readonly IResourceCache _resourceCache = default!;
@@ -49,11 +33,10 @@ namespace Content.Client.Parallax
         // TODO: Servers should be able to send config for someone loading in.
         public async void LoadParallax()
         {
+            return;
             // TODO: Need to handle this; for now just log warning.
             if (!_configurationManager.GetCVar(CCVars.ParallaxEnabled)) return;
 
-            var debugParallax = _configurationManager.GetCVar(CCVars.ParallaxDebug);
-            // Load normal config into memory
             if (!_resourceCache.TryContentFileRead(ParallaxConfigPath, out var configStream))
             {
                 Logger.ErrorS("parallax", "Parallax config not found.");
@@ -80,6 +63,8 @@ namespace Content.Client.Parallax
                 var layer = await LoadLayer(layerConfig, sawmill);
                 _parallaxLayers.Add(layer);
             }
+
+            sawmill.Info($"Loaded {_parallaxLayers.Count} parallax layers.");
         }
 
         // TODO: GenerateParallax also needs to support the thingy.
@@ -95,7 +80,7 @@ namespace Content.Client.Parallax
             {
                 await using var stream = _resourceCache.UserData.Open(path, FileMode.Open);
                 image = await Image.LoadAsync(Configuration.Default, stream);
-                texture = Texture.LoadFromImage(image, $"parallax_{name}");
+                texture = Texture.LoadFromImage((Image<Rgba32>) image, $"parallax_{name}");
                 image.Dispose();
             }
             else
@@ -124,7 +109,7 @@ namespace Content.Client.Parallax
                         await image.SaveAsPngAsync(stream);
                     }
 
-                    texture = Texture.LoadFromImage(image, $"parallax_{name}");
+                    texture = Texture.LoadFromImage((Image<Rgba32>) image, $"parallax_{name}");
                     image.Dispose();
                 }
                 else

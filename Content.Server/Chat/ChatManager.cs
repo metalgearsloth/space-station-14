@@ -176,7 +176,7 @@ namespace Content.Server.Chat
                           message.Remove(0, 1);
             }
 
-            var listeners = EntitySystem.Get<ListeningSystem>();
+            var listeners = EntitySystem.Get<List>();
             listeners.PingListeners(source, message);
 
             message = FormattedMessage.EscapeText(message);
