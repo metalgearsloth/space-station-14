@@ -1,9 +1,9 @@
 #nullable enable
 using Content.Shared.GameTicking;
 using Content.Shared.Parallax;
-using Robust.Server.Player;
 using Robust.Shared.GameObjects;
 using Robust.Shared.IoC;
+using Robust.Shared.Log;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Random;
 using System.Collections.Generic;
@@ -12,9 +12,9 @@ namespace Content.Server.GameObjects.EntitySystems
 {
     internal sealed class ParallaxSystem : EntitySystem, IResettingEntitySystem
     {
-        [Dependency] private readonly IPlayerManager _playerManager = default!;
-
-        public string RoundParallax { get; private set; }
+        // So parallax is R O B U S t so client can get it in multiple ways
+        // One way is that the server has a specific parallax that's in use so client can just request that.
+        public string RoundParallax { get; private set; } = default!;
 
         private List<string> _parallax = new();
 
@@ -29,27 +29,12 @@ namespace Content.Server.GameObjects.EntitySystems
             }
 
             ChooseParallax();
-
-            _playerManager.PlayerStatusChanged += HandlePlayer;
+            SubscribeNetworkEvent<RequestParallaxMessage>(HandleRequest);
         }
 
-        public override void Shutdown()
+        private void HandleRequest(RequestParallaxMessage message, EntitySessionEventArgs eventArgs)
         {
-            base.Shutdown();
-            _playerManager.PlayerStatusChanged -= HandlePlayer;
-        }
-
-        // TODO: Look at how gastileoverlays do this probably?
-        private void HandlePlayer(object? sender, SessionStatusEventArgs eventArgs)
-        {
-            switch (eventArgs.NewStatus)
-            {
-                case Robust.Shared.Enums.SessionStatus.Connected:
-                    RaiseNetworkEvent(new ParallaxSystemMessage(RoundParallax), eventArgs.Session.ConnectedClient);
-                    break;
-                default:
-                    break;
-            }
+            RaiseNetworkEvent(new ParallaxSystemMessage(RoundParallax), eventArgs.SenderSession.ConnectedClient);
         }
 
         private void ChooseParallax()
@@ -57,12 +42,12 @@ namespace Content.Server.GameObjects.EntitySystems
             var robustRandom = IoCManager.Resolve<IRobustRandom>();
 
             RoundParallax = robustRandom.Pick(_parallax);
+            Logger.InfoS("parallax", $"Set round parallax to {_parallax}");
         }
 
         public void Reset()
         {
             ChooseParallax();
-            RaiseNetworkEvent(new ParallaxSystemMessage(RoundParallax));
         }
     }
 }

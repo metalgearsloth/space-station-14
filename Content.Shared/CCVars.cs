@@ -160,8 +160,8 @@ namespace Content.Shared
          * Parallax
          */
 
-        public static readonly CVarDef<bool> ParallaxEnabled =
-            CVarDef.Create("parallax.enabled", true, CVar.CLIENTONLY);
+        public static readonly CVarDef<string> ParallaxMode =
+            CVarDef.Create("parallax.mode", "None", CVar.CLIENTONLY);
 
         public static readonly CVarDef<bool> ParallaxDebug =
             CVarDef.Create("parallax.debug", false, CVar.CLIENTONLY);

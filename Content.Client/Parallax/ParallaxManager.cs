@@ -35,7 +35,7 @@ namespace Content.Client.Parallax
         {
             return;
             // TODO: Need to handle this; for now just log warning.
-            if (!_configurationManager.GetCVar(CCVars.ParallaxEnabled)) return;
+            if (!_configurationManager.GetCVar(CCVars.ParallaxMode)) return;
 
             if (!_resourceCache.TryContentFileRead(ParallaxConfigPath, out var configStream))
             {

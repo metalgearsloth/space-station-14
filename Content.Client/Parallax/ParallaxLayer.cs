@@ -19,5 +19,7 @@ namespace Content.Client.Parallax
         public string Name { get; set; }
 
         public Vector2 Offset { get; set; }
+
+        public ParallaxFillMode Mode { get; set; } = ParallaxFillMode.Stretch;
     }
 }

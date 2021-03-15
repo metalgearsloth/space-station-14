@@ -1,3 +1,4 @@
+# Presets
 - type: Parallax
   id: Bee
   layers:
@@ -12,12 +13,12 @@
     speed: 3
   - sprite: "/Textures/Effects/bee_parallax.rsi"
     state: space_gas
-    chance: 0.0
+    chance: 0.7
     key: random
     randomColor: true
   - sprite: "/Textures/Effects/bee_parallax.rsi"
     state: asteroids
-    chance: 0.0
+    chance: 0.7
     key: random
   - sprite: "/Textures/Effects/bee_parallax.rsi"
     state: planet
@@ -66,3 +67,8 @@
   layers:
   - sprite: "/Textures/Effects/eris_parallax.rsi"
     state: space6
+
+# Generated layers
+- type: ParallaxGenerator
+  id: blah
+  # Copy from toml
