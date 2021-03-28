@@ -90,7 +90,7 @@ namespace Content.Server.GameObjects.Components.Power
 
         private byte GetLevel(float fraction)
         {
-            return (byte) ContentHelpers.RoundToNearestLevels(fraction, 1, SharedPowerCell.PowerCellVisualsLevels);
+            return (byte) ContentHelpers.RoundToNearestLevels(fraction, 1, SharedPowerCellVisuals.PowerCellVisualsLevels);
         }
 
         void IExamine.Examine(FormattedMessage message, bool inDetailsRange)

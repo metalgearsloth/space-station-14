@@ -168,6 +168,8 @@ namespace Content.Shared.GameObjects.EntitySystems
     /// </summary>
     public interface IBallisticGun : IGun
     {
+        // TODO: Magazine Caliber
+
         /// <summary>
         ///     Not every ballistic weapon has a magazine, and it also may not be in the gun.
         /// </summary>
@@ -200,15 +202,12 @@ namespace Content.Shared.GameObjects.EntitySystems
     {
         IEntity? Battery { get; }
 
-        SharedPowerCell? PowerCell { get; }
+        SharedPowerCellComponent? PowerCell { get; }
     }
 
-    // TODO: Dis
-    public abstract class SharedPowerCellComponent
-    {
-
-    }
-
+    /// <summary>
+    ///     Universal gun traits that htey all must have.
+    /// </summary>
     public interface IGun
     {
         string? SoundGunshot { get; }
