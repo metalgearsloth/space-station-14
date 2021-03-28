@@ -2,8 +2,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Content.Server.GameObjects.Components.Projectiles;
 using Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition;
 using Content.Shared.Audio;
+using Content.Shared.Damage;
 using Content.Shared.GameObjects.Components.Damage;
 using Content.Shared.GameObjects.Components.Projectiles;
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
@@ -13,6 +15,7 @@ using Content.Shared.Physics;
 using JetBrains.Annotations;
 using Robust.Server.GameObjects;
 using Robust.Server.Player;
+using Robust.Shared.Audio;
 using Robust.Shared.GameObjects;
 using Robust.Shared.IoC;
 using Robust.Shared.Log;
@@ -52,14 +55,14 @@ namespace Content.Server.GameObjects.EntitySystems
         public override void Initialize()
         {
             base.Initialize();
-            SubscribeNetworkEvent<StartFiringMessage>(HandleStartMessage);
+            SubscribeNetworkEvent<ShootMessage>(HandleStartMessage);
             SubscribeNetworkEvent<StopFiringMessage>(HandleStopMessage);
             SubscribeNetworkEvent<RangedFireMessage>(HandleRangedFireMessage);
 
             _effectSystem = Get<EffectSystem>();
         }
 
-        private void HandleStartMessage(StartFiringMessage message, EntitySessionEventArgs args)
+        private void HandleStartMessage(ShootMessage message, EntitySessionEventArgs args)
         {
             var entity = _entityManager.GetEntity(message.Uid);
             var weapon = entity.GetComponent<SharedRangedWeaponComponent>();
@@ -314,20 +317,20 @@ namespace Content.Server.GameObjects.EntitySystems
         protected override bool TryShootBattery(IBatteryGun weapon, Angle angle)
         {
             // TODO: Shared PowerCell
-            var battery = weapon.PowerCell;
+            var battery = weapon.Battery;
             if (battery == null)
                 return false;
 
-            if (battery.CurrentCharge < LowerChargeLimit)
+            if (battery.CurrentCharge < weapon.LowerChargeLimit)
                 return false;
 
             // Can fire confirmed
             // Multiply the entity's damage / whatever by the percentage of charge the shot has.
-            var chargeChange = Math.Min(battery.CurrentCharge, BaseFireCost);
+            var chargeChange = Math.Min(battery.CurrentCharge, weapon.BaseFireCost);
             battery.UseCharge(chargeChange);
 
-            var shooter = Shooter();
-            var energyRatio = chargeChange / BaseFireCost;
+            var shooter = weapon.Shooter();
+            var energyRatio = chargeChange / weapon.BaseFireCost;
 
             if (AmmoIsHitscan)
             {
@@ -473,6 +476,7 @@ namespace Content.Server.GameObjects.EntitySystems
 
         public override void EjectCasing(IEntity? user, IEntity casing, bool playSound = true, Direction[]? ejectDirections = null)
         {
+            // TODO: Copy latest from master
             ejectDirections ??= new[] {Direction.East, Direction.North, Direction.South, Direction.West};
 
             const float ejectOffset = 0.2f;
@@ -499,7 +503,7 @@ namespace Content.Server.GameObjects.EntitySystems
             var randomFile = _robustRandom.Pick(soundCollection.PickFiles);
             // Don't use excluded til cartridges predicted
 
-            Get<AudioSystem>().PlayFromEntity(randomFile, casing, AudioHelpers.WithVariation(0.2f, _robustRandom).WithVolume(-1));
+            SoundSystem.Play(Filter.Pvs(casing.Transform.WorldPosition), randomFile, casing, AudioHelpers.WithVariation(0.2f, _robustRandom).WithVolume(-1));
         }
     }
 }

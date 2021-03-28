@@ -1,14 +1,17 @@
 #nullable enable
 using System;
+using Content.Shared.Audio;
 using Content.Shared.GameObjects.Components.Power;
 using Content.Shared.GameObjects.Components.Projectiles;
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
+using Robust.Shared.Audio;
 using Robust.Shared.GameObjects;
 using Robust.Shared.IoC;
 using Robust.Shared.Log;
 using Robust.Shared.Map;
 using Robust.Shared.Maths;
+using Robust.Shared.Player;
 using Robust.Shared.Random;
 using Robust.Shared.Timing;
 
@@ -83,9 +86,89 @@ namespace Content.Shared.GameObjects.EntitySystems
             return false;
         }
 
-        protected abstract bool TryShootBallistic(IBallisticGun weapon, Angle angle);
+        /// <summary>
+        ///     Get the Sound filter.
+        /// </summary>
+        /// <param name="gun"></param>
+        /// <returns></returns>
+        protected abstract Filter GetFilter(IGun gun);
 
-        protected abstract bool TryShootBattery(IBatteryGun weapon, Angle angle);
+        /// <summary>
+        ///     Try to shoot a ballistic weapon.
+        ///     Can fire a projectile or hitscan.
+        /// </summary>
+        protected virtual bool TryShootBallistic(IBallisticGun weapon, Angle angle)
+        {
+            if (weapon.Chambered == null) return false;
+            if (weapon.AutoCycle)
+                Cycle(weapon);
+
+            return true;
+        }
+
+        #region Ballistic
+        protected void Cycle(IBallisticGun weapon, bool manual = false)
+        {
+            TryEjectChamber(weapon);
+            TryFeedChamber(weapon);
+
+            if (manual)
+            {
+                if (weapon.SoundRack != null)
+                    SoundSystem.Play(GetFilter(weapon), weapon.SoundRack, AudioHelpers.WithVariation(IBallisticGun.RackVariation).WithVolume(IBallisticGun.RackVolume));
+            }
+        }
+
+        protected void TryEjectChamber(IBallisticGun weapon)
+        {
+            var chamberEntity = weapon.Chambered;
+            if (chamberEntity != null)
+            {
+                if (weapon.TryRemoveChambered())
+                    return;
+
+                if (!chamberEntity.Caseless)
+                    Get<SharedRangedWeaponSystem>().EjectCasing(weapon.Shooter(), chamberEntity.Owner);
+
+                return;
+            }
+        }
+
+        protected void TryFeedChamber(IBallisticGun weapon)
+        {
+            if (weapon.Chambered != null) return;
+
+            // Try and pull a round from the magazine to replace the chamber if possible
+            var magazine = weapon.Magazine;
+            SharedAmmoComponent? nextCartridge = null;
+            magazine?.TryPop(out nextCartridge);
+
+            if (nextCartridge == null)
+                return;
+
+            weapon.TryInsertChamber(nextCartridge);
+
+            if (weapon.AutoEjectMag && magazine != null && magazine.ShotsLeft == 0)
+            {
+                if (weapon.SoundAutoEject != null)
+                    SoundSystem.Play(GetFilter(weapon), weapon.SoundAutoEject, AudioHelpers.WithVariation(IBallisticGun.AutoEjectVariation).WithVolume(IBallisticGun.AutoEjectVolume));
+
+                weapon.TryRemoveMagazine();
+            }
+        }
+        #endregion
+        #region Battery
+
+        #endregion
+
+        /// <summary>
+        ///     Try to shoot a battery weapon.
+        ///     Can fire a projectile or hitscan.
+        /// </summary>
+        protected virtual bool TryShootBattery(IBatteryGun weapon, Angle angle)
+        {
+            return true;
+        }
 
         /// <summary>
         ///     General shooting code.
@@ -154,7 +237,7 @@ namespace Content.Shared.GameObjects.EntitySystems
             var newTheta = MathHelper.Clamp(
                 weapon._currentAngle.Theta + weapon._angleIncrease - weapon._angleDecay * (currentTime.Value - lastFire).TotalSeconds,
                 weapon._minAngle.Theta,
-                weapon._maxAngle.Theta);
+                weapon.MaxAngle.Theta);
 
             weapon._currentAngle = new Angle(newTheta);
 
@@ -168,19 +251,56 @@ namespace Content.Shared.GameObjects.EntitySystems
     /// </summary>
     public interface IBallisticGun : IGun
     {
-        // TODO: Magazine Caliber
+        // Sounds
+        /// <summary>
+        ///     Played when the mag is auto ejected.
+        /// </summary>
+        string? SoundAutoEject { get; }
+
+        /// <summary>
+        ///     Played if the ballistic gun is manually cycled.
+        /// </summary>
+        string? SoundRack { get; }
+
+        // TODO
+        const float AutoEjectVariation = 0.0f;
+        const float AutoEjectVolume = 0.0f;
+        const float RackVariation = 0.0f;
+        const float RackVolume = 0.0f;
+
+        /// <summary>
+        ///     Whether the magazine is detachable or its internal (e.g. smg vs bolt-action rifle)
+        /// </summary>
+        bool InbuiltMagazine { get; }
+
+        /// <summary>
+        ///     Does the magazine automatically eject on the gun being empty.
+        /// </summary>
+        bool AutoEjectMag { get; }
 
         /// <summary>
         ///     Not every ballistic weapon has a magazine, and it also may not be in the gun.
         /// </summary>
-        IEntity? Magazine { get; }
+        SharedRangedMagazineComponent? Magazine { get; }
 
         bool BoltOpen { get; }
 
         /// <summary>
         ///     If we have an entity chambered.
         /// </summary>
-        IEntity? Chambered { get; }
+        SharedAmmoComponent? Chambered { get; }
+
+        /// <summary>
+        ///     Tries to remove the entity from the chamber slot.
+        /// </summary>
+        /// <returns></returns>
+        bool TryRemoveChambered();
+
+        bool TryInsertChamber(SharedAmmoComponent ammo);
+
+        bool TryRemoveMagazine();
+
+        bool TryInsertMagazine(SharedRangedMagazineComponent magazine);
 
         /// <summary>
         ///     Whether the weapon should cycle automatically weapon fired.
@@ -200,9 +320,17 @@ namespace Content.Shared.GameObjects.EntitySystems
     /// </summary>
     public interface IBatteryGun : IGun
     {
-        IEntity? Battery { get; }
+        bool PowerCellRemovable { get; }
 
-        SharedPowerCellComponent? PowerCell { get; }
+        SharedBatteryComponent? Battery { get; }
+
+        float LowerChargeLimit { get; }
+
+        /// <summary>
+        ///     How much energy it costs to fire a full shot.
+        ///     We can also fire partial shots if LowerChargeLimit is met.
+        /// </summary>
+        float BaseFireCost { get; }
     }
 
     /// <summary>
@@ -210,22 +338,29 @@ namespace Content.Shared.GameObjects.EntitySystems
     /// </summary>
     public interface IGun
     {
+        // Sounds
         string? SoundGunshot { get; }
 
         float SoundRange { get; }
 
         string? SoundEmpty { get; }
 
-        float EmptyVariation { get; }
+        const float GunshotVariation = 0.1f;
+        const float EmptyVariation = 0.1f;
+        const float CycleVariation = 0.1f;
+        const float BoltToggleVariation = 0.1f;
+        const float InsertVariation = 0.1f;
 
-        float EmptyVolume { get; }
+        const float GunshotVolume = 0.0f;
+        const float EmptyVolume = 0.0f;
+        const float CycleVolume = 0.0f;
+        const float BoltToggleVolume = 0.0f;
+        const float InsertVolume = 0.0f;
 
-        float GunshotVariation { get; }
-
-        float GunshotVolume { get;}
+        FireRateSelector Selector { get; set; }
 
         IEntity Owner { get; }
 
-        IEntity Shooter { get; }
+        IEntity Shooter();
     }
 }

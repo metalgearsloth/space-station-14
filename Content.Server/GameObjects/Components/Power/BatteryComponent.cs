@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using Content.Shared.GameObjects.Components.Power;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Maths;
 using Robust.Shared.Serialization;
@@ -8,10 +9,8 @@ using Robust.Shared.ViewVariables;
 namespace Content.Server.GameObjects.Components.Power
 {
     [RegisterComponent]
-    public class BatteryComponent : Component
+    public class BatteryComponent : SharedBatteryComponent
     {
-        public override string Name => "Battery";
-
         /// <summary>
         /// Maximum charge of the battery in joules (ie. watt seconds)
         /// </summary>
@@ -22,7 +21,7 @@ namespace Content.Server.GameObjects.Components.Power
         /// Current charge of the battery in joules (ie. watt seconds)
         /// </summary>
         [ViewVariables(VVAccess.ReadWrite)]
-        public float CurrentCharge { get => _currentCharge; set => SetCurrentCharge(value); }
+        public override float CurrentCharge { get => _currentCharge; set => SetCurrentCharge(value); }
         private float _currentCharge;
 
         /// <summary>
@@ -129,7 +128,7 @@ namespace Content.Server.GameObjects.Components.Power
         }
     }
 
-    public enum BatteryState
+    public enum BatteryState : byte
     {
         Full,
         PartlyFull,

@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Content.Shared.GameObjects.EntitySystems;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Maths;
@@ -10,7 +11,7 @@ using Robust.Shared.ViewVariables;
 
 namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
 {
-    public abstract class SharedMagazineBarrelComponent : SharedRangedWeaponComponent
+    public abstract class SharedMagazineBarrelComponent : SharedRangedWeaponComponent, IBallisticGun
     {
         public override string Name => "MagazineBarrel";
 

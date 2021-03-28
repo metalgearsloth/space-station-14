@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Threading.Tasks;
 using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
 using Content.Shared.Interfaces.GameObjects.Components;
@@ -41,6 +42,8 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         }
 
         protected abstract bool TryInsertAmmo(IEntity user, IEntity ammo);
+
+        public abstract bool TryPop([NotNullWhen(true)] out SharedAmmoComponent ammo);
 
         async Task<bool> IInteractUsing.InteractUsing(InteractUsingEventArgs eventArgs)
         {

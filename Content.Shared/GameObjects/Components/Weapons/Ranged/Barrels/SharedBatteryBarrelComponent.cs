@@ -2,38 +2,39 @@
 using Robust.Shared.GameObjects;
 using Robust.Shared.Serialization;
 using System;
+using Content.Shared.GameObjects.EntitySystems;
 using Robust.Shared.IoC;
 using Robust.Shared.Prototypes;
 using Robust.Shared.ViewVariables;
 
 namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
 {
-    public abstract class SharedBatteryBarrelComponent : SharedRangedWeaponComponent
+    public abstract class SharedBatteryBarrelComponent : SharedRangedWeaponComponent, IBatteryGun
     {
         public override string Name => "BatteryBarrel";
         public override uint? NetID => ContentNetIDs.BATTERY_BARREL;
-        
+
         /// <summary>
         ///     The minimum change we need before we can fire
         /// </summary>
         [ViewVariables] protected float LowerChargeLimit;
-        
+
         /// <summary>
         ///     How much energy it costs to fire a full shot.
         ///     We can also fire partial shots if LowerChargeLimit is met.
         /// </summary>
         [ViewVariables] protected float BaseFireCost;
-        
+
         // What gets fired
         [ViewVariables] public string AmmoPrototype { get; private set; } = default!;
-        
+
         // Could use an interface instead but eh, if there's more than hitscan / projectiles in the future you can change it.
         protected bool AmmoIsHitscan;
 
         // Sounds
         public string? SoundPowerCellInsert { get; private set; }
         public string? SoundPowerCellEject { get; private set; }
-        
+
         // Audio profile
         protected const float CellInsertVariation = 0.1f;
         protected const float CellEjectVariation = 0.1f;
@@ -47,7 +48,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
             serializer.DataReadWriteFunction("ammoPrototype", string.Empty, value => AmmoPrototype = value, () => AmmoPrototype);
             serializer.DataField(ref LowerChargeLimit, "lowerChargeLimit", 10);
             serializer.DataField(ref BaseFireCost, "baseFireCost", 300.0f);
-            
+
             serializer.DataReadWriteFunction("soundPowerCellInsert", null, value => SoundPowerCellInsert = value, () => SoundPowerCellInsert);
             serializer.DataReadWriteFunction("soundPowerCellEject", null, value => SoundPowerCellEject = value, () => SoundPowerCellEject);
         }
@@ -60,7 +61,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
 
         public abstract void UpdateAppearance();
     }
-    
+
     [Serializable, NetSerializable]
     public sealed class BatteryBarrelComponentState : ComponentState
     {

@@ -25,31 +25,15 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
     public sealed class ServerMagazineBarrelComponent : SharedMagazineBarrelComponent
     {
         private ContainerSlot _chamberContainer = default!;
-        private ContainerSlot _magazineContainer = default!;
-
-        public override void HandleNetworkMessage(ComponentMessage message, INetChannel netChannel, ICommonSession? session = null)
-        {
-            base.HandleNetworkMessage(message, netChannel, session);
-            var user = session?.AttachedEntity;
-            if (user != Shooter() || user == null)
-                return;
-
-            switch (message)
-            {
-                case BoltChangedComponentMessage msg:
-                    TrySetBolt(msg.BoltOpen);
-                    break;
-                case RemoveMagazineComponentMessage msg:
-                    RemoveMagazine(user);
-                    break;
-            }
-        }
+        private ContainerSlot? _magazineContainer;
 
         public override void Initialize()
         {
             base.Initialize();
 
             _chamberContainer = Owner.EnsureContainer<ContainerSlot>("magazine-chamber", out var existingChamber);
+
+            if ()
             _magazineContainer = Owner.EnsureContainer<ContainerSlot>("magazine-mag", out var existingMag);
 
             if (!existingMag && MagFillPrototype != null)
@@ -118,60 +102,6 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
 
             BoltOpen = value;
             return true;
-        }
-
-        protected override void Cycle(bool manual = false)
-        {
-            TryEjectChamber();
-            TryFeedChamber();
-
-            if (manual)
-            {
-                if (SoundRack != null)
-                    EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundRack, Owner, AudioHelpers.WithVariation(RackVariation).WithVolume(RackVolume));
-
-            }
-        }
-
-        protected override void TryEjectChamber()
-        {
-            var chamberEntity = _chamberContainer?.ContainedEntity;
-            if (chamberEntity != null)
-            {
-                if (!_chamberContainer?.Remove(chamberEntity) == true)
-                    return;
-
-                var ammoComponent = chamberEntity.GetComponent<SharedAmmoComponent>();
-                if (!ammoComponent.Caseless)
-                    EntitySystem.Get<SharedRangedWeaponSystem>().EjectCasing(Shooter(), chamberEntity);
-
-                return;
-            }
-        }
-
-        protected override void TryFeedChamber()
-        {
-            if (_chamberContainer?.ContainedEntity != null)
-                return;
-
-            // Try and pull a round from the magazine to replace the chamber if possible
-            var magazine = _magazineContainer?.ContainedEntity?.GetComponent<ServerRangedMagazineComponent>();
-            IEntity? nextCartridge = null;
-            magazine?.TryPop(out nextCartridge);
-
-            if (nextCartridge == null)
-                return;
-
-            _chamberContainer?.Insert(nextCartridge);
-
-            if (AutoEjectMag && magazine != null && magazine.ShotsLeft == 0)
-            {
-                if (SoundAutoEject != null)
-                    EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundAutoEject, Owner, AudioHelpers.WithVariation(AutoEjectVariation).WithVolume(AutoEjectVolume), excludedSession: Shooter().PlayerSession());
-
-                _magazineContainer?.Remove(magazine.Owner);
-            }
-            return;
         }
 
         protected override void RemoveMagazine(IEntity user)

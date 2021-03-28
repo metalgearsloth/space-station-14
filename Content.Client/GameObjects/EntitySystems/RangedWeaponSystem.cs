@@ -46,7 +46,6 @@ namespace Content.Client.GameObjects.EntitySystems
             if (!entity.TryGetComponent(out HandsComponent? hands))
                 return null;
 
-
             var held = hands.ActiveHand;
             if (held == null || !held.TryGetComponent(out SharedRangedWeaponComponent? weapon))
                 return null;
@@ -93,18 +92,9 @@ namespace Content.Client.GameObjects.EntitySystems
 
             var mouseCoordinates = _eyeManager.ScreenToMap(_inputManager.MouseScreenPosition);
 
-            if (_firingWeapon.TryFire(currentTime, player, mouseCoordinates, out var shots))
+            if (TryFire(player, _firingWeapon, mouseCoordinates, out var shots, currentTime))
             {
-                // First shot we'll send timestamp
-                if (!_firingWeapon.Firing)
-                {
-                    _firingWeapon.Firing = true;
-                    RaiseNetworkEvent(new StartFiringMessage(_firingWeapon.Owner.Uid, mouseCoordinates));
-                }
-                else if (shots > 0)
-                {
-                    RaiseNetworkEvent(new RangedFireMessage(_firingWeapon.Owner.Uid, mouseCoordinates));
-                }
+                RaiseNetworkEvent(new ShootMessage(_firingWeapon.Owner.Uid, mouseCoordinates, shots, currentTime));
             }
             else
             {
@@ -114,9 +104,10 @@ namespace Content.Client.GameObjects.EntitySystems
 
         private void StopFiring(SharedRangedWeaponComponent weaponComponent)
         {
+            /*
             if (weaponComponent.Firing)
                 RaiseNetworkEvent(new StopFiringMessage(weaponComponent.Owner.Uid, weaponComponent.ShotCounter));
-
+            */
             weaponComponent.Firing = false;
         }
 
@@ -151,19 +142,40 @@ namespace Content.Client.GameObjects.EntitySystems
             throw new InvalidOperationException();
         }
 
-        public override void ShootHitscan(IEntity? user, SharedRangedWeaponComponent weapon, HitscanPrototype hitscan, Angle angle, float damageRatio = 1, float alphaRatio = 1)
+        public override void ShootHitscan(IEntity? user, SharedRangedWeaponComponent weapon, HitscanPrototype hitscan, Angle angle,
+            float damageRatio = 1, float alphaRatio = 1)
         {
-            throw new NotImplementedException();
+            // TODO: Predict
+            return;
         }
 
         public override void ShootAmmo(IEntity? user, SharedRangedWeaponComponent weapon, Angle angle, SharedAmmoComponent ammoComponent)
         {
-            throw new NotImplementedException();
+            // TODO
+            return;
         }
 
-        public override void ShootProjectile(IEntity? user, SharedRangedWeaponComponent weapon, Angle angle, SharedProjectileComponent projectileComponent, float velocity)
+        public override void ShootProjectile(IEntity? user, SharedRangedWeaponComponent weapon, Angle angle,
+            SharedProjectileComponent projectileComponent, float velocity)
         {
-            throw new NotImplementedException();
+            // TODO
+            return;
+        }
+
+        protected override bool TryShootBallistic(IBallisticGun weapon, Angle angle)
+        {
+            // TODO: Checks here
+
+            if (!base.TryShootBallistic(weapon, angle)) return false;
+            return true;
+        }
+
+        protected override bool TryShootBattery(IBatteryGun weapon, Angle angle)
+        {
+            // TODO: Checks here
+
+            if (!base.TryShootBattery(weapon, angle)) return false;
+            return true;
         }
     }
 }

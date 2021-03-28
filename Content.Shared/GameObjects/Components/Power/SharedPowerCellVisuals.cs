@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using Robust.Shared.GameObjects;
 using Robust.Shared.Serialization;
 
 namespace Content.Shared.GameObjects.Components.Power
@@ -10,9 +11,11 @@ namespace Content.Shared.GameObjects.Components.Power
     }
 
     // TODO: Dis
-    public abstract class SharedPowerCellComponent
+    public abstract class SharedBatteryComponent : Component
     {
+        public override string Name => "Battery";
 
+        public virtual float CurrentCharge { get; set; }
     }
 
     [Serializable, NetSerializable]

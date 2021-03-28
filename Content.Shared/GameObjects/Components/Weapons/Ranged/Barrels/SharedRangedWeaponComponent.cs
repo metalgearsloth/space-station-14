@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Content.Shared.GameObjects.EntitySystems;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
@@ -49,16 +50,19 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
     }
 
     [Serializable, NetSerializable]
-    public class StartFiringMessage : EntitySystemMessage
+    public class ShootMessage : EntitySystemMessage
     {
-        public EntityUid Uid { get; }
+        public EntityUid Uid;
+        public MapCoordinates FireCoordinates;
+        public int Shots;
+        public TimeSpan CurrentTime;
 
-        public MapCoordinates FireCoordinates { get; }
-
-        public StartFiringMessage(EntityUid uid, MapCoordinates fireCoordinates)
+        public ShootMessage(EntityUid uid, MapCoordinates fireCoordinates, int shots, TimeSpan currentTime)
         {
             Uid = uid;
             FireCoordinates = fireCoordinates;
+            Shots = shots;
+            CurrentTime = currentTime;
         }
     }
 
@@ -97,7 +101,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         }
     }
 
-    public abstract class SharedRangedWeaponComponent : Component, IHandSelected, IInteractUsing, IUse
+    public abstract class SharedRangedWeaponComponent : Component, IHandSelected, IInteractUsing, IUse, IGun
     {
         /// <summary>
         ///     Current fire selector.
@@ -156,7 +160,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         /// <summary>
         ///     Maximum angle that recoil can be.
         /// </summary>
-        public Angle _maxAngle { get; set; }
+        public Angle MaxAngle { get; set; }
 
         public Angle _currentAngle { get; set; } = Angle.Zero;
 
@@ -179,20 +183,8 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
 
         // Sounds
         public string? SoundGunshot { get; private set; }
+        public float SoundRange { get; }
         public string? SoundEmpty { get; private set; }
-
-        // Audio profile
-        protected const float GunshotVariation = 0.1f;
-        protected const float EmptyVariation = 0.1f;
-        protected const float CycleVariation = 0.1f;
-        protected const float BoltToggleVariation = 0.1f;
-        protected const float InsertVariation = 0.1f;
-
-        protected const float GunshotVolume = 0.0f;
-        protected const float EmptyVolume = 0.0f;
-        protected const float CycleVolume = 0.0f;
-        protected const float BoltToggleVolume = 0.0f;
-        protected const float InsertVolume = 0.0f;
 
         public override void ExposeData(ObjectSerializer serializer)
         {
@@ -244,8 +236,8 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
             serializer.DataReadWriteFunction(
                 "maxAngle",
                 45,
-                angle => _maxAngle = Angle.FromDegrees(angle / 2f),
-                () => _maxAngle.Degrees * 2);
+                angle => MaxAngle = Angle.FromDegrees(angle / 2f),
+                () => MaxAngle.Degrees * 2);
 
             serializer.DataReadWriteFunction(
                 "angleIncrease",
