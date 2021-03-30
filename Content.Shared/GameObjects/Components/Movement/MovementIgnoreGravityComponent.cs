@@ -17,8 +17,8 @@ namespace Content.Shared.GameObjects.Components.Movement
         {
             physicsManager ??= IoCManager.Resolve<IPhysicsManager>();
 
-            return !entity.HasComponent<MovementIgnoreGravityComponent>() &&
-                   physicsManager.IsWeightless(entity.Transform.Coordinates);
+            return physicsManager.IsWeightless(entity.Transform.Coordinates, entity.Transform.GridID) &&
+                   !entity.HasComponent<MovementIgnoreGravityComponent>();
         }
     }
 }

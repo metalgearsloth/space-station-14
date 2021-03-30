@@ -1,10 +1,12 @@
 #nullable enable
+using System.Diagnostics.CodeAnalysis;
 using Content.Shared.GameObjects.Components.Mobs.State;
 using Content.Shared.GameObjects.Components.Movement;
 using Content.Shared.GameObjects.Components.Pulling;
 using Content.Shared.GameObjects.EntitySystems.ActionBlocker;
 using Robust.Shared.GameObjects;
 using Robust.Shared.IoC;
+using Robust.Shared.Map;
 using Robust.Shared.Maths;
 using Robust.Shared.Physics;
 using Robust.Shared.Physics.Broadphase;
@@ -18,6 +20,7 @@ namespace Content.Shared.Physics.Controllers
     /// </summary>
     public abstract class SharedMoverController : VirtualController
     {
+        [Dependency] private readonly IMapManager _mapManager = default!;
         [Dependency] private readonly IPhysicsManager _physicsManager = default!;
 
         private SharedBroadPhaseSystem _broadPhaseSystem = default!;
@@ -55,8 +58,8 @@ namespace Content.Shared.Physics.Controllers
         /// <param name="mobMover"></param>
         protected void HandleMobMovement(IMoverComponent mover, PhysicsComponent physicsComponent, IMobMoverComponent mobMover)
         {
-            // TODO: Look at https://gameworksdocs.nvidia.com/PhysX/4.1/documentation/physxguide/Manual/CharacterControllers.html?highlight=controller as it has some adviceo n kinematic controllersx
-            if (!UseMobMovement(_broadPhaseSystem, physicsComponent, _physicsManager))
+            // TODO: Look at https://gameworksdocs.nvidia.com/PhysX/4.1/documentation/physxguide/Manual/CharacterControllers.html?highlight=controller as it has some advice on kinematic controllers?
+            if (!UseMobMovement(_broadPhaseSystem, physicsComponent, out var weightless, out var touching, _physicsManager, _mapManager))
             {
                 return;
             }
@@ -64,15 +67,11 @@ namespace Content.Shared.Physics.Controllers
             var transform = mover.Owner.Transform;
             var (walkDir, sprintDir) = mover.VelocityDir;
 
-            var weightless = transform.Owner.IsWeightless(_physicsManager);
-
             // Handle wall-pushes.
-            if (weightless)
+            if (weightless.Value)
             {
                 // No gravity: is our entity touching anything?
-                var touching = IsAroundCollider(_broadPhaseSystem, transform, mobMover, physicsComponent);
-
-                if (!touching)
+                if (!touching.Value)
                 {
                     transform.LocalRotation = physicsComponent.LinearVelocity.GetDir().ToAngle();
                     return;
@@ -81,9 +80,9 @@ namespace Content.Shared.Physics.Controllers
 
             // Regular movement.
             // Target velocity.
-            var total = (walkDir * mover.CurrentWalkSpeed + sprintDir * mover.CurrentSprintSpeed);
+            var total = walkDir * mover.CurrentWalkSpeed + sprintDir * mover.CurrentSprintSpeed;
 
-            if (weightless)
+            if (weightless.Value)
             {
                 total *= mobMover.WeightlessStrength;
             }
@@ -100,37 +99,60 @@ namespace Content.Shared.Physics.Controllers
             physicsComponent.LinearVelocity = total;
         }
 
-        public static bool UseMobMovement(SharedBroadPhaseSystem broadPhaseSystem, PhysicsComponent body, IPhysicsManager? physicsManager = null)
+        /// <summary>
+        /// Should we use the kinematic mob movement for this body?
+        /// </summary>
+        /// <param name="broadPhaseSystem"></param>
+        /// <param name="body"></param>
+        /// <param name="weightless">Cached weightlessness so this can be re-used given it's not exactly cheap to calculate.</param>
+        /// <param name="aroundCollider">Cached whether we are next to a static body we can push off of for weightlessness</param>
+        /// <param name="physicsManager"></param>
+        /// <param name="mapManager"></param>
+        /// <returns></returns>
+        public static bool UseMobMovement(SharedBroadPhaseSystem broadPhaseSystem, PhysicsComponent body, [NotNullWhen(true)] out bool? weightless, [NotNullWhen(true)] out bool? aroundCollider, IPhysicsManager? physicsManager = null, IMapManager? mapManager = null)
         {
-            return (body.BodyStatus == BodyStatus.OnGround) &
-                   body.Owner.HasComponent<IMobStateComponent>() &&
-                   ActionBlockerSystem.CanMove(body.Owner) &&
-                   (!body.Owner.IsWeightless(physicsManager) ||
-                    body.Owner.TryGetComponent(out SharedPlayerMobMoverComponent? mover) &&
-                    IsAroundCollider(broadPhaseSystem, body.Owner.Transform, mover, body));
+            var owner = body.Owner;
+
+            // If we're in control of our body use the kinematic movement, otherwise no.
+            // The most likely out is either BodyStatus.InAir or TryGet SharedPlayerMobMover
+            if (body.BodyStatus != BodyStatus.OnGround ||
+                !owner.TryGetComponent(out SharedPlayerMobMoverComponent? mover) ||
+                !owner.HasComponent<IMobStateComponent>() ||
+                !ActionBlockerSystem.CanMove(owner))
+            {
+                weightless = null;
+                aroundCollider = null;
+                return false;
+            }
+
+            // If we're not weightless or we're near a static body to push off of then use kinematic movement.
+            weightless = owner.IsWeightless(physicsManager);
+
+            if (!weightless.Value)
+            {
+                aroundCollider = true;
+                return true;
+            }
+
+            aroundCollider = IsAroundCollider(broadPhaseSystem, owner.Transform, mover, body, mapManager);
+
+            return aroundCollider.Value;
         }
 
         /// <summary>
         ///     Used for weightlessness to determine if we are near a wall.
         /// </summary>
-        /// <param name="broadPhaseSystem"></param>
-        /// <param name="transform"></param>
-        /// <param name="mover"></param>
-        /// <param name="collider"></param>
-        /// <returns></returns>
-        public static bool IsAroundCollider(SharedBroadPhaseSystem broadPhaseSystem, ITransformComponent transform, IMobMoverComponent mover, IPhysBody collider)
+        public static bool IsAroundCollider(SharedBroadPhaseSystem broadPhaseSystem, ITransformComponent transform, IMobMoverComponent mover, IPhysBody collider, IMapManager? mapManager = null)
         {
-            var enlargedAABB = collider.GetWorldAABB().Enlarged(mover.GrabRange);
+            mapManager ??= IoCManager.Resolve<IMapManager>();
 
-            foreach (var otherCollider in broadPhaseSystem.GetCollidingEntities(transform.MapID, enlargedAABB))
+            foreach (var otherCollider in broadPhaseSystem.GetCollidingEntities(transform.MapID, collider.GetWorldAABB(mapManager).Enlarged(mover.GrabRange)))
             {
                 if (otherCollider == collider) continue; // Don't try to push off of yourself!
 
                 // Only allow pushing off of anchored things that have collision.
                 if (otherCollider.BodyType != BodyType.Static ||
-                    !otherCollider.CanCollide ||
-                    ((collider.CollisionMask & otherCollider.CollisionLayer) == 0 &&
-                    (otherCollider.CollisionMask & collider.CollisionLayer) == 0) ||
+                    (collider.CollisionMask & otherCollider.CollisionLayer) == 0 && (otherCollider.CollisionMask & collider.CollisionLayer) == 0 ||
                     (otherCollider.Entity.TryGetComponent(out SharedPullableComponent? pullable) && pullable.BeingPulled))
                 {
                     continue;

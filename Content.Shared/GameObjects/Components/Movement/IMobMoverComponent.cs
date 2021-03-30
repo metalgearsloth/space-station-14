@@ -8,7 +8,7 @@ namespace Content.Shared.GameObjects.Components.Movement
     {
         const float GrabRangeDefault = 0.6f;
         const float PushStrengthDefault = 600.0f;
-        const float WeightlessStrengthDefault = 0.4f;
+        const float WeightlessStrengthDefault = 0.5f;
 
         EntityCoordinates LastPosition { get; set; }
 

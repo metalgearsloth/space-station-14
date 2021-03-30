@@ -35,18 +35,10 @@ namespace Content.Server.Physics.Controllers
         [Dependency] private readonly IMapManager _mapManager = default!;
         [Dependency] private readonly IRobustRandom _robustRandom = default!;
 
-        private AudioSystem _audioSystem = default!;
-
         private const float StepSoundMoveDistanceRunning = 2;
         private const float StepSoundMoveDistanceWalking = 1.5f;
 
         private HashSet<EntityUid> _excludedMobs = new();
-
-        public override void Initialize()
-        {
-            base.Initialize();
-            _audioSystem = EntitySystem.Get<AudioSystem>();
-        }
 
         public override void UpdateBeforeSolve(bool prediction, float frameTime)
         {

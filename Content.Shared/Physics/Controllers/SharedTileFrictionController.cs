@@ -17,6 +17,7 @@ using Robust.Shared.Physics.Dynamics;
 
 namespace Content.Shared.Physics.Controllers
 {
+    [UsedImplicitly]
     public sealed class SharedTileFrictionController : VirtualController
     {
         [Dependency] private readonly IConfigurationManager _configManager = default!;
@@ -59,7 +60,7 @@ namespace Content.Shared.Physics.Controllers
                 float control;
 
                 // Only apply friction when it's not a mob (or the mob doesn't have control).
-                if (SharedMoverController.UseMobMovement(_broadPhaseSystem, body, _physicsManager)) continue;
+                if (SharedMoverController.UseMobMovement(_broadPhaseSystem, body, out _, out _, _physicsManager, _mapManager)) continue;
 
                 var surfaceFriction = GetTileFriction(body);
                 var bodyModifier = body.Owner.GetComponentOrNull<SharedTileFrictionModifier>()?.Modifier ?? 1.0f;
