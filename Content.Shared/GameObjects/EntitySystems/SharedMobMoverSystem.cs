@@ -32,6 +32,7 @@ namespace Content.Shared.GameObjects.EntitySystems
 
             if (!ourBody.Entity.TryGetComponent(out IMobMoverComponent? mobMover) || normal == Vector2.Zero) return;
 
+            otherBody.Predict = true;
             otherBody.ApplyLinearImpulse(-normal * mobMover.PushStrength * frameTime);
         }
     }
