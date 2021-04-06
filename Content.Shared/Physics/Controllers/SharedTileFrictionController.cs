@@ -42,11 +42,11 @@ namespace Content.Shared.Physics.Controllers
             _configManager.OnValueChanged(CCVars.StopSpeed, value => _stopSpeed = value);
         }
 
-        public override void UpdateBeforeMapSolve(bool prediction, PhysicsMap map, float frameTime)
+        public override void UpdateBeforeMapSolve(bool prediction, PhysicsMapComponent mapComponent, float frameTime)
         {
-            base.UpdateBeforeMapSolve(prediction, map, frameTime);
+            base.UpdateBeforeMapSolve(prediction, mapComponent, frameTime);
 
-            foreach (var body in map.AwakeBodies)
+            foreach (var body in mapComponent.AwakeBodies)
             {
                 // Only apply friction when it's not a mob (or the mob doesn't have control)
                 if (prediction && !body.Predict ||

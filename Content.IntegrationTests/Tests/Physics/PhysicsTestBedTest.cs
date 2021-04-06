@@ -48,7 +48,6 @@ namespace Content.IntegrationTests.Tests.Physics
 
             var mapManager = server.ResolveDependency<IMapManager>();
             var entitySystemManager = server.ResolveDependency<IEntitySystemManager>();
-            var physicsSystem = entitySystemManager.GetEntitySystem<SharedPhysicsSystem>();
             MapId mapId;
 
             var columnCount = 1;
@@ -59,7 +58,7 @@ namespace Content.IntegrationTests.Tests.Physics
             await server.WaitPost(() =>
             {
                 mapId = mapManager.CreateMap();
-                physicsSystem.Maps[mapId].Gravity = new Vector2(0, -9.8f);
+                mapManager.GetMapEntity(mapId).GetComponent<PhysicsMapComponent>().Gravity = new Vector2(0, -9.8f);
 
                 var entityManager = IoCManager.Resolve<IEntityManager>();
 
@@ -164,7 +163,6 @@ namespace Content.IntegrationTests.Tests.Physics
 
             var mapManager = server.ResolveDependency<IMapManager>();
             var entitySystemManager = server.ResolveDependency<IEntitySystemManager>();
-            var physicsSystem = entitySystemManager.GetEntitySystem<SharedPhysicsSystem>();
             MapId mapId;
 
             var columnCount = 1;
@@ -175,7 +173,7 @@ namespace Content.IntegrationTests.Tests.Physics
             await server.WaitPost(() =>
             {
                 mapId = mapManager.CreateMap();
-                physicsSystem.Maps[mapId].Gravity = new Vector2(0, -9.8f);
+                mapManager.GetMapEntity(mapId).GetComponent<PhysicsMapComponent>().Gravity = new Vector2(0, -9.8f);
 
                 var entityManager = IoCManager.Resolve<IEntityManager>();
 
