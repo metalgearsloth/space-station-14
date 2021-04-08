@@ -361,6 +361,6 @@ namespace Content.Shared.GameObjects.EntitySystems
 
         IEntity Owner { get; }
 
-        IEntity Shooter();
+        IEntity? Shooter();
     }
 }

@@ -11,12 +11,15 @@ using Robust.Shared.Map;
 using Robust.Shared.Maths;
 using Robust.Shared.Random;
 using Robust.Shared.Serialization;
+using Robust.Shared.Serialization.Manager.Attributes;
 using Robust.Shared.Timing;
+using Robust.Shared.ViewVariables;
+using YamlDotNet.Serialization;
 using Component = Robust.Shared.GameObjects.Component;
 
 namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
 {
-    public enum BallisticCaliber
+    public enum BallisticCaliber : byte
     {
         Unspecified = 0,
         A357, // Placeholder?
@@ -50,7 +53,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
     }
 
     [Serializable, NetSerializable]
-    public class ShootMessage : EntitySystemMessage
+    public class ShootMessage : EntityEventArgs
     {
         public EntityUid Uid;
         public MapCoordinates FireCoordinates;
@@ -67,7 +70,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
     }
 
     [Serializable, NetSerializable]
-    public sealed class StopFiringMessage : EntitySystemMessage
+    public sealed class StopFiringMessage : EntityEventArgs
     {
         public EntityUid Uid { get; }
 
@@ -81,7 +84,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
     }
 
     [Serializable, NetSerializable]
-    public class RangedFireMessage : EntitySystemMessage
+    public class RangedFireMessage : EntityEventArgs
     {
         /// <summary>
         ///     Gun Uid
@@ -106,7 +109,8 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         /// <summary>
         ///     Current fire selector.
         /// </summary>
-        public FireRateSelector Selector { get; protected set; }
+        [DataField("currentSelector")]
+        public FireRateSelector Selector { get; set; } = FireRateSelector.Safety;
 
         /// <summary>
         ///     All available fire selectors
@@ -126,7 +130,8 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         /// <summary>
         ///     Shots fired per second.
         /// </summary>
-        public float FireRate { get; protected set; }
+        [DataField("fireRate")]
+        public float FireRate { get; protected set; } = 0.0f;
 
         /// <summary>
         ///     Keep a running track of how many shots we've fired for single-shot (etc.) weapons.
@@ -142,14 +147,17 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         /// <summary>
         ///     Filepath to MuzzleFlash texture
         /// </summary>
-        public string? MuzzleFlash { get; set; }
+        [DataField("muzzleFlash")]
+        [ViewVariables(VVAccess.ReadWrite)]
+        public string? MuzzleFlash { get; set; } = "Objects/Weapons/Guns/Projectiles/bullet_muzzle.png";
 
         public bool Firing { get; set; }
 
         /// <summary>
         ///     Multiplies the ammo spread to get the final spread of each pellet
         /// </summary>
-        public float AmmoSpreadRatio { get; set; }
+        [DataField("ammoSpreadRatio")]
+        public float AmmoSpreadRatio { get; set; } = 1.0f;
 
         // Recoil / spray control
         /// <summary>
@@ -177,30 +185,23 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         /// <summary>
         ///     How much camera recoil there is.
         /// </summary>
-        protected float RecoilMultiplier { get; set; }
+        [DataField("recoilMultiplier")]
+        protected float RecoilMultiplier { get; set; } = 1.1f;
 
         public MapCoordinates? FireCoordinates { get; set; }
 
         // Sounds
-        public string? SoundGunshot { get; private set; }
+        [DataField("soundGunshot")]
+        public string? SoundGunshot { get; private set; } = null;
+        [DataField("soundRange")]
         public float SoundRange { get; }
-        public string? SoundEmpty { get; private set; }
+
+        [DataField("soundEmpty")]
+        public string? SoundEmpty { get; private set; } = "/Audio/Weapons/Guns/Empty/empty.ogg";
 
         public override void ExposeData(ObjectSerializer serializer)
         {
             base.ExposeData(serializer);
-
-            serializer.DataReadWriteFunction(
-                "fireRate",
-                0.0f,
-                rate => FireRate = rate,
-                () => FireRate);
-
-            serializer.DataReadWriteFunction(
-                "currentSelector",
-                FireRateSelector.Safety,
-                value => Selector = value,
-                () => Selector);
 
             serializer.DataReadWriteFunction(
                 "allSelectors",
@@ -218,11 +219,6 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
 
                     return result;
                 });
-
-            serializer.DataReadWriteFunction("ammoSpreadRatio",
-                1.0f,
-                value => AmmoSpreadRatio = value,
-                () => AmmoSpreadRatio);
 
             // This hard-to-read area's dealing with recoil
             // Use degrees in yaml as it's easier to read compared to "0.0125f"
@@ -250,41 +246,11 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
                 20f,
                 angle => _angleDecay = angle * (float) Math.PI / 180f,
                 () => MathF.Round(_angleDecay / ((float) Math.PI / 180f), 2));
-
-            serializer.DataReadWriteFunction(
-                "muzzleFlash",
-                "Objects/Weapons/Guns/Projectiles/bullet_muzzle.png",
-                value => MuzzleFlash = value,
-                () => MuzzleFlash);
-
-            serializer.DataReadWriteFunction(
-                "recoilMultiplier",
-                1.1f,
-                value => RecoilMultiplier = value,
-                () => RecoilMultiplier);
-
-            // Sounds
-            serializer.DataReadWriteFunction(
-                "soundGunshot",
-                null,
-                sound => SoundGunshot = sound,
-                () => SoundGunshot
-                );
-
-            serializer.DataReadWriteFunction(
-                "soundEmpty",
-                "/Audio/Weapons/Guns/Empty/empty.ogg",
-                sound => SoundEmpty = sound,
-                () => SoundEmpty
-            );
         }
 
-        public IEntity? Shooter()
+        IEntity? IGun.Shooter()
         {
-            if (!ContainerHelpers.TryGetContainer(Owner, out var container))
-                return null;
-
-            return container.Owner;
+            return !Owner.TryGetContainer(out var container) ? null : container.Owner;
         }
 
         public virtual bool CanFire()
@@ -292,17 +258,14 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
             if (FireRate <= 0.0f)
                 return false;
 
-            switch (Selector)
+            return Selector switch
             {
-                case FireRateSelector.Safety:
-                    return false;
-                case FireRateSelector.Single:
-                    return ShotCounter < 1;
-                case FireRateSelector.Automatic:
-                    return true;
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
+                FireRateSelector.Safety => false,
+                FireRateSelector.Single => ShotCounter < 1,
+                FireRateSelector.TripleBurst => ShotCounter < 3,
+                FireRateSelector.Automatic => true,
+                _ => throw new ArgumentOutOfRangeException()
+            };
         }
 
         /// <summary>
@@ -342,10 +305,11 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
     }
 
     [Flags]
-    public enum FireRateSelector
+    public enum FireRateSelector : ushort
     {
         Safety = 0,
         Single = 1 << 0,
-        Automatic = 1 << 1,
+        TripleBurst = 1 << 1,
+        Automatic = 1 << 2,
     }
 }

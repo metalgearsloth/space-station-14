@@ -19,8 +19,10 @@ using Robust.Shared.Audio;
 using Robust.Shared.GameObjects;
 using Robust.Shared.IoC;
 using Robust.Shared.Log;
+using Robust.Shared.Map;
 using Robust.Shared.Maths;
 using Robust.Shared.Physics;
+using Robust.Shared.Physics.Broadphase;
 using Robust.Shared.Player;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Random;
@@ -49,6 +51,7 @@ namespace Content.Server.GameObjects.EntitySystems
         [Dependency] private readonly IGameTiming _gameTiming = default!;
 
         private EffectSystem _effectSystem = default!;
+        private SharedBroadPhaseSystem _broadphase = default!;
 
         private List<SharedRangedWeaponComponent> _activeRangedWeapons = new();
 
@@ -181,8 +184,8 @@ namespace Content.Server.GameObjects.EntitySystems
         {
             var currentTime = _gameTiming.CurTime;
             var ray = new CollisionRay(weapon.Owner.Transform.MapPosition.Position, angle.ToVec(), (int) hitscan.CollisionMask);
-            var rayCastResults = _physicsManager.IntersectRay(weapon.Owner.Transform.MapID, ray, hitscan.MaxLength, user, false).ToArray();
-            float distance = hitscan.MaxLength;
+            var rayCastResults = _broadphase.IntersectRay(weapon.Owner.Transform.MapID, ray, hitscan.MaxLength, user, false).ToArray();
+            var distance = hitscan.MaxLength;
 
             if (rayCastResults.Length >= 1)
             {
@@ -254,7 +257,7 @@ namespace Content.Server.GameObjects.EntitySystems
 
         public override void ShootProjectile(IEntity? user, SharedRangedWeaponComponent weapon, Angle angle, SharedProjectileComponent projectileComponent, float velocity)
         {
-            var physicsComponent = projectileComponent.Owner.GetComponent<IPhysicsComponent>();
+            var physicsComponent = projectileComponent.Owner.GetComponent<IPhysBody>();
             physicsComponent.Status = BodyStatus.InAir;
 
             if (user != null)
@@ -503,7 +506,7 @@ namespace Content.Server.GameObjects.EntitySystems
             var randomFile = _robustRandom.Pick(soundCollection.PickFiles);
             // Don't use excluded til cartridges predicted
 
-            SoundSystem.Play(Filter.Pvs(casing.Transform.WorldPosition), randomFile, casing, AudioHelpers.WithVariation(0.2f, _robustRandom).WithVolume(-1));
+            SoundSystem.Play(Filter.Pvs(new MapCoordinates(casing.Transform.WorldPosition, casing.Transform.MapID)), randomFile, casing, AudioHelpers.WithVariation(0.2f, _robustRandom).WithVolume(-1));
         }
     }
 }
