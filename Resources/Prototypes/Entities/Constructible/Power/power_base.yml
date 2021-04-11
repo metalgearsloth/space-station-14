@@ -1,6 +1,6 @@
 ﻿- type: entity
   id: BaseGenerator
-  description: A high efficiency thermoelectric generator.
+  description: "A high efficiency thermoelectric generator."
   name: Base Generator
   abstract: true
   placement:
@@ -9,11 +9,12 @@
   - type: Clickable
   - type: InteractionOutline
   - type: Physics
-    mass: 25
-    anchored: true
-    shapes:
-    - !type:PhysShapeAabb
-      bounds: "-0.5, -0.4, 0.3, 0.4"
+    bodyType: Static
+    fixtures:
+    - shape:
+        !type:PhysShapeAabb
+          bounds: "-0.5, -0.4, 0.3, 0.4"
+      mass: 25
       mask:
       - Impassable
       - MobImpassable
@@ -32,8 +33,9 @@
   - type: NodeContainer
     examinable: true
     nodes:
-    - !type:AdjacentNode
-      nodeGroupID: HVPower
+      output:
+        !type:AdjacentNode
+        nodeGroupID: HVPower
   - type: PowerSupplier
     supplyRate: 3000
   - type: Anchorable
@@ -44,7 +46,7 @@
 
 - type: entity
   id: BaseSmes
-  description: A high-capacity superconducting magnetic energy storage (SMES) unit.
+  description: "A high-capacity superconducting magnetic energy storage (SMES) unit."
   name: Base Smes
   abstract: true
   placement:
@@ -53,10 +55,11 @@
   - type: Clickable
   - type: InteractionOutline
   - type: Physics
-    mass: 25
-    anchored: true
-    shapes:
-    - !type:PhysShapeAabb
+    bodyType: Static
+    fixtures:
+    - shape:
+        !type:PhysShapeAabb {}
+      mass: 25
       mask:
       - Impassable
       - MobImpassable
@@ -86,8 +89,9 @@
   - type: NodeContainer
     examinable: true
     nodes:
-    - !type:AdjacentNode
-      nodeGroupID: HVPower
+      power:
+        !type:AdjacentNode
+        nodeGroupID: HVPower
   - type: PowerConsumer
   - type: BatteryStorage
     activeDrawRate: 1500
@@ -102,7 +106,7 @@
 
 - type: entity
   id: BaseSubstation
-  description: Reduces the voltage of electricity put into it.
+  description: "Reduces the voltage of electricity put into it."
   name: Base Substation
   abstract: true
   placement:
@@ -111,10 +115,11 @@
   - type: Clickable
   - type: InteractionOutline
   - type: Physics
-    mass: 25
-    anchored: true
-    shapes:
-    - !type:PhysShapeAabb
+    bodyType: Static
+    fixtures:
+    - shape:
+        !type:PhysShapeAabb {}
+      mass: 25
       mask:
       - Impassable
       - MobImpassable
@@ -141,10 +146,12 @@
   - type: NodeContainer
     examinable: true
     nodes:
-    - !type:AdjacentNode
-      nodeGroupID: HVPower
-    - !type:AdjacentNode
-      nodeGroupID: MVPower
+      input:
+        !type:AdjacentNode
+        nodeGroupID: HVPower
+      output:
+        !type:AdjacentNode
+        nodeGroupID: MVPower
   - type: PowerConsumer
   - type: BatteryStorage
     activeDrawRate: 1500
@@ -161,7 +168,7 @@
 
 - type: entity
   id: BaseApc
-  description: A control terminal for the area's electrical systems.
+  description: "A control terminal for the area's electrical systems."
   name: Base Apc
   abstract: true
   placement:
@@ -172,9 +179,10 @@
     access: [["Engineering"]]
   - type: InteractionOutline
   - type: Physics
-    shapes:
-      - !type:PhysShapeAabb
-        bounds: "-0.25, -0.25, 0.25, 0.3"
+    fixtures:
+      - shape:
+          !type:PhysShapeAabb
+            bounds: "-0.25, -0.25, 0.25, 0.3"
         layer: [ Passable ]
   - type: SnapGrid
     offset: Center
@@ -192,10 +200,12 @@
   - type: NodeContainer
     examinable: true
     nodes:
-    - !type:AdjacentNode
-      nodeGroupID: MVPower
-    - !type:AdjacentNode
-      nodeGroupID: Apc
+      input:
+        !type:AdjacentNode
+        nodeGroupID: MVPower
+      output:
+        !type:AdjacentNode
+        nodeGroupID: Apc
   - type: PowerConsumer
     voltage: Medium
   - type: BatteryStorage
@@ -218,18 +228,17 @@
 
 - type: entity
   id: SolarPanel
-  name: solar panel
-  description: Generates power from sunlight. Usually used to power replacements for sunlight. Fragile.
   placement:
     mode: SnapgridCenter
   components:
   - type: Clickable
   - type: InteractionOutline
   - type: Physics
-    mass: 25
-    anchored: false
-    shapes:
-    - !type:PhysShapeAabb
+    bodyType: Static
+    fixtures:
+    - shape:
+        !type:PhysShapeAabb {}
+      mass: 100
       mask:
       - Impassable
       - MobImpassable
@@ -246,8 +255,9 @@
   - type: NodeContainer
     examinable: true
     nodes:
-    - !type:AdjacentNode
-      nodeGroupID: HVPower
+      output:
+        !type:AdjacentNode
+        nodeGroupID: HVPower
   - type: PowerSupplier
   - type: SolarPanel
     supply: 1500
@@ -268,3 +278,90 @@
   - type: ClientEntitySpawner
     prototypes:
     - HVDummyWire
+  - type: Construction
+    graph: solarpanel
+    node: solarpanel
+
+- type: entity
+  id: SolarAssembly
+  name: solar assembly
+  description: "A solar assembly. Anchor to a wire to start building a solar panel."
+  placement:
+    mode: SnapgridCenter
+  components:
+  - type: Clickable
+  - type: InteractionOutline
+  - type: Physics
+    bodyType: Static
+    fixtures:
+    - shape:
+        !type:PhysShapeAabb {}
+      mass: 75
+      mask:
+      - VaultImpassable
+      layer:
+      - VaultImpassable
+  - type: Sprite
+    sprite: Constructible/Power/solar_panel.rsi
+    state: solar_assembly
+  - type: SnapGrid
+    offset: Center
+  - type: Damageable
+    resistances: metallicResistances
+  - type: Destructible
+    thresholds:
+    - trigger:
+        !type:DamageTrigger
+        damage: 100
+      behaviors:
+      - !type:DoActsBehavior
+        acts: ["Breakage"]
+  - type: Anchorable
+  - type: Pullable
+  - type: Construction
+    graph: solarpanel
+    node: solarassembly
+
+- type: entity
+  id: SolarTracker
+  placement:
+    mode: SnapgridCenter
+  components:
+  - type: Clickable
+  - type: InteractionOutline
+  - type: Physics
+    bodyType: Static
+    fixtures:
+    - shape:
+        !type:PhysShapeAabb {}
+      mass: 100
+      mask:
+      - Impassable
+      - MobImpassable
+      - VaultImpassable
+      - SmallImpassable
+      layer:
+      - Opaque
+      - MobImpassable
+      - VaultImpassable
+      - SmallImpassable
+  - type: Sprite
+    sprite: Constructible/Power/solar_panel.rsi
+    state: solar_tracker
+  - type: SnapGrid
+    offset: Center
+  - type: Damageable
+    resistances: metallicResistances
+  - type: Destructible
+    thresholds:
+    - trigger:
+        !type:DamageTrigger
+        damage: 100
+      behaviors:
+      - !type:DoActsBehavior
+        acts: ["Breakage"]
+  - type: Anchorable
+  - type: Pullable
+  - type: Construction
+    graph: solarpanel
+    node: solartracker

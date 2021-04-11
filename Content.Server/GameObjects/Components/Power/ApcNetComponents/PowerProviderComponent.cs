@@ -3,7 +3,8 @@ using System;
 using System.Collections.Generic;
 using Content.Server.GameObjects.Components.NodeContainer.NodeGroups;
 using Robust.Shared.GameObjects;
-using Robust.Shared.Serialization;
+using Robust.Shared.IoC;
+using Robust.Shared.Serialization.Manager.Attributes;
 using Robust.Shared.ViewVariables;
 
 namespace Content.Server.GameObjects.Components.Power.ApcNetComponents
@@ -39,7 +40,8 @@ namespace Content.Server.GameObjects.Components.Power.ApcNetComponents
         /// </summary>
         [ViewVariables(VVAccess.ReadWrite)]
         public int PowerTransferRange { get => _powerTransferRange; set => SetPowerTransferRange(value); }
-        private int _powerTransferRange;
+        [DataField("powerTransferRange")]
+        private int _powerTransferRange = 3;
 
         [ViewVariables]
         public IReadOnlyList<PowerReceiverComponent> LinkedReceivers => _linkedReceivers;
@@ -74,12 +76,6 @@ namespace Content.Server.GameObjects.Components.Power.ApcNetComponents
             Net.UpdatePowerProviderReceivers(this, oldLoad, newLoad);
         }
 
-        public override void ExposeData(ObjectSerializer serializer)
-        {
-            base.ExposeData(serializer);
-            serializer.DataField(ref _powerTransferRange, "powerTransferRange", 3);
-        }
-
         protected override void Startup()
         {
             base.Startup();
@@ -106,7 +102,7 @@ namespace Content.Server.GameObjects.Components.Power.ApcNetComponents
 
         private List<PowerReceiverComponent> FindAvailableReceivers()
         {
-            var nearbyEntities = Owner.EntityManager
+            var nearbyEntities = IoCManager.Resolve<IEntityLookup>()
                 .GetEntitiesInRange(Owner, PowerTransferRange);
 
             var receivers = new List<PowerReceiverComponent>();

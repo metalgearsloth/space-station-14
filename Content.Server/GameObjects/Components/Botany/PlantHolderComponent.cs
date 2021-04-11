@@ -20,13 +20,15 @@ using Content.Shared.Interfaces;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Content.Shared.Utility;
 using Robust.Server.GameObjects;
+using Robust.Shared.Audio;
 using Robust.Shared.GameObjects;
 using Robust.Shared.IoC;
 using Robust.Shared.Localization;
 using Robust.Shared.Maths;
+using Robust.Shared.Player;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Random;
-using Robust.Shared.Serialization;
+using Robust.Shared.Serialization.Manager.Attributes;
 using Robust.Shared.Timing;
 using Robust.Shared.Utility;
 using Robust.Shared.ViewVariables;
@@ -34,7 +36,7 @@ using Robust.Shared.ViewVariables;
 namespace Content.Server.GameObjects.Components.Botany
 {
     [RegisterComponent]
-    public class PlantHolderComponent : Component, IInteractUsing, IInteractHand, IActivate, IReagentReaction, IExamine
+    public class PlantHolderComponent : Component, IInteractUsing, IInteractHand, IActivate, IExamine
     {
         public const float HydroponicsSpeedMultiplier = 1f;
         public const float HydroponicsConsumptionMultiplier = 4f;
@@ -52,6 +54,7 @@ namespace Content.Server.GameObjects.Components.Botany
         [ViewVariables(VVAccess.ReadWrite)] private bool _updateSpriteAfterUpdate;
 
         [ViewVariables(VVAccess.ReadWrite)]
+        [DataField("drawWarnings")]
         public bool DrawWarnings { get; private set; } = false;
 
         [ViewVariables(VVAccess.ReadWrite)]
@@ -122,12 +125,6 @@ namespace Content.Server.GameObjects.Components.Botany
             base.Initialize();
 
             Owner.EnsureComponentWarn<SolutionContainerComponent>();
-        }
-
-        public override void ExposeData(ObjectSerializer serializer)
-        {
-            base.ExposeData(serializer);
-            serializer.DataField(this, x => x.DrawWarnings, "drawWarnings", false);
         }
 
         public void WeedInvasion()
@@ -724,7 +721,11 @@ namespace Content.Server.GameObjects.Components.Botany
                 {
                     sprayed = true;
                     amount = ReagentUnit.New(1);
-                    EntitySystem.Get<AudioSystem>().PlayFromEntity(spray.SpraySound, usingItem, AudioHelpers.WithVariation(0.125f));
+
+                    if (!string.IsNullOrEmpty(spray.SpraySound))
+                    {
+                        SoundSystem.Play(Filter.Pvs(usingItem), spray.SpraySound, usingItem, AudioHelpers.WithVariation(0.125f));
+                    }
                 }
 
                 var split = solution.Drain(amount);
@@ -804,24 +805,6 @@ namespace Content.Server.GameObjects.Components.Botany
             }
 
             return false;
-        }
-
-        ReagentUnit IReagentReaction.ReagentReactTouch(ReagentPrototype reagent, ReagentUnit volume)
-        {
-            if(_solutionContainer == null)
-                return ReagentUnit.Zero;
-
-            _solutionContainer.TryAddReagent(reagent.ID, volume, out var accepted);
-            return accepted;
-        }
-
-        ReagentUnit IReagentReaction.ReagentReactInjection(ReagentPrototype reagent, ReagentUnit volume)
-        {
-            if(_solutionContainer == null)
-                return ReagentUnit.Zero;
-
-            _solutionContainer.TryAddReagent(reagent.ID, volume, out var accepted);
-            return accepted;
         }
 
         bool IInteractHand.InteractHand(InteractHandEventArgs eventArgs)

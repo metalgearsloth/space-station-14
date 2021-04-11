@@ -12,9 +12,10 @@
   - type: Clickable
   - type: InteractionOutline
   - type: Physics
-    shapes:
-    - !type:PhysShapeAabb
-      bounds: "-0.5, -0.5, 0.5, 0.5"
+    fixtures:
+    - shape:
+        !type:PhysShapeAabb
+          bounds: "-0.5, -0.5, 0.5, 0.5"
       layer: [MobMask, Opaque]
   - type: SnapGrid
     offset: Center
@@ -23,8 +24,9 @@
     state: wiredmachine
   - type: NodeContainer
     nodes:
-    - !type:AdjacentNode
-      nodeGroupID: HVPower
+      input:
+        !type:AdjacentNode
+        nodeGroupID: HVPower
   - type: PowerConsumer
     drawRate: 50
   - type: Damageable
@@ -48,9 +50,10 @@
   - type: Clickable
   - type: InteractionOutline
   - type: Physics
-    shapes:
-    - !type:PhysShapeAabb
-      bounds: "-0.5, -0.5, 0.5, 0.5"
+    fixtures:
+    - shape:
+        !type:PhysShapeAabb
+          bounds: "-0.5, -0.5, 0.5, 0.5"
       layer: [MobMask, Opaque]
   - type: SnapGrid
     offset: Center
@@ -60,8 +63,9 @@
   - type: Battery
   - type: NodeContainer
     nodes:
-    - !type:AdjacentNode
-      nodeGroupID: HVPower
+      input:
+        !type:AdjacentNode
+        nodeGroupID: HVPower
   - type: PowerConsumer
   - type: BatteryStorage
   - type: Anchorable
@@ -75,9 +79,10 @@
   - type: Clickable
   - type: InteractionOutline
   - type: Physics
-    shapes:
-    - !type:PhysShapeAabb
-      bounds: "-0.5, -0.5, 0.5, 0.5"
+    fixtures:
+    - shape:
+        !type:PhysShapeAabb
+          bounds: "-0.5, -0.5, 0.5, 0.5"
       layer: [MobMask, Opaque]
   - type: SnapGrid
     offset: Center
@@ -87,8 +92,9 @@
   - type: Battery
   - type: NodeContainer
     nodes:
-    - !type:AdjacentNode
-      nodeGroupID: HVPower
+      input:
+        !type:AdjacentNode
+        nodeGroupID: HVPower
   - type: PowerSupplier
   - type: BatteryDischarger
   - type: Anchorable
@@ -117,9 +123,10 @@
   - type: Clickable
   - type: InteractionOutline
   - type: Physics
-    shapes:
-    - !type:PhysShapeAabb
-      bounds: "-0.5, -0.5, 0.5, 0.5"
+    fixtures:
+    - shape:
+        !type:PhysShapeAabb
+          bounds: "-0.5, -0.5, 0.5, 0.5"
       layer: [MobMask, Opaque]
   - type: SnapGrid
     offset: Center

@@ -26,7 +26,8 @@ using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
 using Robust.Shared.IoC;
 using Robust.Shared.Localization;
-using Robust.Shared.Serialization;
+using Robust.Shared.Player;
+using Robust.Shared.Serialization.Manager.Attributes;
 using Robust.Shared.ViewVariables;
 
 namespace Content.Server.GameObjects.Components.Kitchen
@@ -38,11 +39,16 @@ namespace Content.Server.GameObjects.Components.Kitchen
         [Dependency] private readonly RecipeManager _recipeManager = default!;
 
         #region YAMLSERIALIZE
-        private int _cookTimeDefault;
-        private int _cookTimeMultiplier; //For upgrades and stuff I guess?
-        private string _badRecipeName = "";
-        private string _startCookingSound = "";
-        private string _cookingCompleteSound = "";
+        [DataField("cookTime")]
+        private uint _cookTimeDefault = 5;
+        [DataField("cookTimeMultiplier")]
+        private int _cookTimeMultiplier = 1000; //For upgrades and stuff I guess?
+        [DataField("failureResult")]
+        private string _badRecipeName = "FoodBadRecipe";
+        [DataField("beginCookingSound")]
+        private string _startCookingSound = "/Audio/Machines/microwave_start_beep.ogg";
+        [DataField("foodDoneSound")]
+        private string _cookingCompleteSound = "/Audio/Machines/microwave_done_beep.ogg";
 #endregion
 
 [ViewVariables]
@@ -68,19 +74,11 @@ namespace Content.Server.GameObjects.Components.Kitchen
 
         [ViewVariables] private BoundUserInterface? UserInterface => Owner.GetUIOrNull(MicrowaveUiKey.Key);
 
-        public override void ExposeData(ObjectSerializer serializer)
-        {
-            base.ExposeData(serializer);
-            serializer.DataField(ref _badRecipeName, "failureResult", "FoodBadRecipe");
-            serializer.DataField(ref _cookTimeDefault, "cookTime", 5);
-            serializer.DataField(ref _cookTimeMultiplier, "cookTimeMultiplier", 1000);
-            serializer.DataField(ref _startCookingSound, "beginCookingSound","/Audio/Machines/microwave_start_beep.ogg" );
-            serializer.DataField(ref _cookingCompleteSound, "foodDoneSound","/Audio/Machines/microwave_done_beep.ogg" );
-        }
-
         public override void Initialize()
         {
             base.Initialize();
+
+            _currentCookTimerTime = _cookTimeDefault;
 
             Owner.EnsureComponent<SolutionContainerComponent>();
 
@@ -103,7 +101,7 @@ namespace Content.Server.GameObjects.Components.Kitchen
             switch (message.Message)
             {
                 case MicrowaveStartCookMessage msg :
-                    wzhzhzh();
+                    Wzhzhzh();
                     break;
                 case MicrowaveEjectMessage msg :
                     if (_hasContents)
@@ -255,7 +253,7 @@ namespace Content.Server.GameObjects.Components.Kitchen
 
         // ReSharper disable once InconsistentNaming
         // ReSharper disable once IdentifierTypo
-        private void wzhzhzh()
+        private void Wzhzhzh()
         {
             if (!_hasContents)
             {
@@ -302,7 +300,7 @@ namespace Content.Server.GameObjects.Components.Kitchen
             }
 
             SetAppearance(MicrowaveVisualState.Cooking);
-            _audioSystem.PlayFromEntity(_startCookingSound, Owner, AudioParams.Default);
+            SoundSystem.Play(Filter.Pvs(Owner), _startCookingSound, Owner, AudioParams.Default);
             Owner.SpawnTimer((int)(_currentCookTimerTime * _cookTimeMultiplier), (Action)(() =>
             {
                 if (_lostPower)
@@ -329,7 +327,7 @@ namespace Content.Server.GameObjects.Components.Kitchen
                         Owner.EntityManager.SpawnEntity(_badRecipeName, Owner.Transform.Coordinates);
                     }
                 }
-                _audioSystem.PlayFromEntity(_cookingCompleteSound, Owner, AudioParams.Default.WithVolume(-1f));
+                SoundSystem.Play(Filter.Pvs(Owner), _cookingCompleteSound, Owner, AudioParams.Default.WithVolume(-1f));
 
                 SetAppearance(MicrowaveVisualState.Idle);
                 _busy = false;
@@ -462,7 +460,7 @@ namespace Content.Server.GameObjects.Components.Kitchen
 
         private void ClickSound()
         {
-            _audioSystem.PlayFromEntity("/Audio/Machines/machine_switch.ogg",Owner,AudioParams.Default.WithVolume(-2f));
+            SoundSystem.Play(Filter.Pvs(Owner), "/Audio/Machines/machine_switch.ogg",Owner,AudioParams.Default.WithVolume(-2f));
         }
 
         SuicideKind ISuicideAct.Suicide(IEntity victim, IChatManager chat)
@@ -471,19 +469,26 @@ namespace Content.Server.GameObjects.Components.Kitchen
 
             if (victim.TryGetComponent<IBody>(out var body))
             {
-                var heads = body.GetPartsOfType(BodyPartType.Head);
-                foreach (var head in heads)
+                var headSlots = body.GetSlotsOfType(BodyPartType.Head);
+
+                foreach (var slot in headSlots)
                 {
-                    if (!body.TryDropPart(head, out var dropped))
+                    var part = slot.Part;
+
+                    if (part == null ||
+                        !body.TryDropPart(slot, out var dropped))
                     {
                         continue;
                     }
 
-                    var droppedHeads = dropped.Where(p => p.PartType == BodyPartType.Head);
-
-                    foreach (var droppedHead in droppedHeads)
+                    foreach (var droppedPart in dropped.Values)
                     {
-                        _storage.Insert(droppedHead.Owner);
+                        if (droppedPart.PartType != BodyPartType.Head)
+                        {
+                            continue;
+                        }
+
+                        _storage.Insert(droppedPart.Owner);
                         headCount++;
                     }
                 }
@@ -504,7 +509,7 @@ namespace Content.Server.GameObjects.Components.Kitchen
             _currentCookTimerTime = 10;
             ClickSound();
             _uiDirty = true;
-            wzhzhzh();
+            Wzhzhzh();
             return SuicideKind.Heat;
         }
     }

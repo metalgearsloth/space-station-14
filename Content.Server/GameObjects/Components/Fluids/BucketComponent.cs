@@ -1,5 +1,4 @@
-﻿#nullable enable
-using System;
+#nullable enable
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Content.Server.GameObjects.Components.Chemistry;
@@ -9,10 +8,11 @@ using Content.Shared.Interfaces;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Content.Shared.Utility;
 using Robust.Server.GameObjects;
+using Robust.Shared.Audio;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Localization;
-using Robust.Shared.Log;
-using Robust.Shared.Serialization;
+using Robust.Shared.Player;
+using Robust.Shared.Serialization.Manager.Attributes;
 
 namespace Content.Server.GameObjects.Components.Fluids
 {
@@ -42,13 +42,8 @@ namespace Content.Server.GameObjects.Components.Fluids
             ? solution.CurrentVolume
             : ReagentUnit.Zero;
 
-        private string? _sound;
-
-        /// <inheritdoc />
-        public override void ExposeData(ObjectSerializer serializer)
-        {
-            serializer.DataFieldCached(ref _sound, "sound", "/Audio/Effects/Fluids/watersplash.ogg");
-        }
+        [DataField("sound")]
+        private string? _sound = "/Audio/Effects/Fluids/watersplash.ogg";
 
         /// <inheritdoc />
         public override void Initialize()
@@ -121,7 +116,7 @@ namespace Content.Server.GameObjects.Components.Fluids
 
             if (_sound != null)
             {
-                EntitySystem.Get<AudioSystem>().PlayFromEntity(_sound, Owner);
+                SoundSystem.Play(Filter.Pvs(Owner), _sound, Owner);
             }
 
             return true;

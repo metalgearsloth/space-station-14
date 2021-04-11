@@ -13,7 +13,9 @@ using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
 using Robust.Shared.IoC;
 using Robust.Shared.Localization;
+using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization;
+using Robust.Shared.Serialization.Manager.Attributes;
 using Robust.Shared.ViewVariables;
 
 namespace Content.Server.GameObjects.Components.Power.ApcNetComponents.PowerReceiverUsers
@@ -37,17 +39,12 @@ namespace Content.Server.GameObjects.Components.Power.ApcNetComponents.PowerRece
         private AppearanceComponent _appearanceComponent;
 
         [ViewVariables]
-        private int _chargeRate;
+        [DataField("chargeRate")]
+        private int _chargeRate = 100;
 
         [ViewVariables]
-        private float _transferEfficiency;
-
-        public override void ExposeData(ObjectSerializer serializer)
-        {
-            base.ExposeData(serializer);
-            serializer.DataField(ref _chargeRate, "chargeRate", 100);
-            serializer.DataField(ref _transferEfficiency, "transferEfficiency", 0.85f);
-        }
+        [DataField("transferEfficiency")]
+        private float _transferEfficiency = 0.85f;
 
         public override void Initialize()
         {
@@ -130,12 +127,14 @@ namespace Content.Server.GameObjects.Components.Power.ApcNetComponents.PowerRece
 
                 if (component._container.ContainedEntity != null || handsComponent.GetActiveHand == null)
                 {
-                    data.Visibility = VerbVisibility.Disabled;
-                    data.Text = "Insert";
+                    data.Visibility = VerbVisibility.Invisible;
                     return;
                 }
 
-                data.Text = $"Insert {handsComponent.GetActiveHand.Owner.Name}";
+                var heldItemName = Loc.GetString(handsComponent.GetActiveHand.Owner.Name);
+
+                data.Text = Loc.GetString("Insert {0}", heldItemName);
+                data.IconTexture = "/Textures/Interface/VerbIcons/insert.svg.192dpi.png";
             }
 
             protected override void Activate(IEntity user, BaseCharger component)
@@ -167,12 +166,14 @@ namespace Content.Server.GameObjects.Components.Power.ApcNetComponents.PowerRece
                 }
                 if (component._container.ContainedEntity == null)
                 {
-                    data.Text = "Eject";
-                    data.Visibility = VerbVisibility.Disabled;
+                    data.Visibility = VerbVisibility.Invisible;
                     return;
                 }
 
-                data.Text = $"Eject {component._container.ContainedEntity.Name}";
+                var containerItemName = Loc.GetString(component._container.ContainedEntity.Name);
+
+                data.Text = Loc.GetString("Eject {0}", containerItemName);
+                data.IconTexture = "/Textures/Interface/VerbIcons/eject.svg.192dpi.png";
             }
 
             protected override void Activate(IEntity user, BaseCharger component)

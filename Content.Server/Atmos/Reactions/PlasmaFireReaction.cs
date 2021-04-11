@@ -5,11 +5,12 @@ using Content.Server.Utility;
 using Content.Shared.Atmos;
 using JetBrains.Annotations;
 using Robust.Server.GameObjects;
-using Robust.Shared.Serialization;
+using Robust.Shared.Serialization.Manager.Attributes;
 
 namespace Content.Server.Atmos.Reactions
 {
     [UsedImplicitly]
+    [DataDefinition]
     public class PlasmaFireReaction : IGasReactionEffect
     {
         public ReactionResult React(GasMixture mixture, IGasMixtureHolder? holder, GridTileLookupSystem gridTileLookup)
@@ -18,6 +19,7 @@ namespace Content.Server.Atmos.Reactions
             var oldHeatCapacity = mixture.HeatCapacity;
             var temperature = mixture.Temperature;
             var location = holder as TileAtmosphere;
+            mixture.ReactionResults[GasReaction.Fire] = 0;
 
             // More plasma released at higher temperatures
             var temperatureScale = 0f;
@@ -86,10 +88,6 @@ namespace Content.Server.Atmos.Reactions
             }
 
             return mixture.ReactionResults[GasReaction.Fire] != 0 ? ReactionResult.Reacting : ReactionResult.NoReaction;
-        }
-
-        void IExposeData.ExposeData(ObjectSerializer serializer)
-        {
         }
     }
 }

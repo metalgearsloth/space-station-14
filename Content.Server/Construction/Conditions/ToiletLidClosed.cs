@@ -5,13 +5,14 @@ using Content.Shared.Construction;
 using JetBrains.Annotations;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Localization;
-using Robust.Shared.Serialization;
+using Robust.Shared.Serialization.Manager.Attributes;
 using Robust.Shared.Utility;
 
 namespace Content.Server.Construction.Conditions
 {
     [UsedImplicitly]
-    public class ToiletLidClosed : IEdgeCondition
+    [DataDefinition]
+    public class ToiletLidClosed : IGraphCondition
     {
         public async Task<bool> Condition(IEntity entity)
         {
@@ -26,10 +27,6 @@ namespace Content.Server.Construction.Conditions
 
             message.AddMarkup(Loc.GetString("Use a [color=yellow]crowbar[/color] to close the lid.\n"));
             return true;
-        }
-
-        void IExposeData.ExposeData(ObjectSerializer serializer)
-        {
         }
     }
 }

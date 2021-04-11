@@ -12,8 +12,9 @@
     sprite: Constructible/Power/ame_shielding.rsi
     state: shield_0
   - type: Physics
-    shapes:
-    - !type:PhysShapeAabb
+    fixtures:
+    - shape:
+        !type:PhysShapeAabb {}
       layer:
       - Opaque
       - Impassable
@@ -44,8 +45,9 @@
   - type: AMEShield
   - type: NodeContainer
     nodes:
-    - !type:AdjacentNode
-      nodeGroupID: AMEngine
+      ame:
+        !type:AdjacentNode
+        nodeGroupID: AMEngine
   - type: PointLight
     enabled: false
     radius: 5

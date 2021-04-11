@@ -1,12 +1,13 @@
 #nullable enable
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using Content.Server.GameObjects.Components.NodeContainer.NodeGroups;
 using Content.Server.GameObjects.Components.NodeContainer.Nodes;
 using Content.Shared.GameObjects.EntitySystems;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Localization;
-using Robust.Shared.Serialization;
 using Robust.Shared.Utility;
+using Robust.Shared.Serialization.Manager.Attributes;
 using Robust.Shared.ViewVariables;
 
 namespace Content.Server.GameObjects.Components.NodeContainer
@@ -20,21 +21,18 @@ namespace Content.Server.GameObjects.Components.NodeContainer
         public override string Name => "NodeContainer";
 
         [ViewVariables]
-        public IReadOnlyList<Node> Nodes => _nodes;
-        private List<Node> _nodes = new();
-        private bool _examinable;
+        public IReadOnlyDictionary<string, Node> Nodes => _nodes;
 
-        public override void ExposeData(ObjectSerializer serializer)
-        {
-            base.ExposeData(serializer);
-            serializer.DataField(ref _nodes, "nodes", new List<Node>());
-            serializer.DataField(ref _examinable, "examinable", false);
-        }
+        [DataField("nodes")]
+        private readonly Dictionary<string, Node> _nodes = new();
+
+        [DataField("examinable")]
+        private bool _examinable = false;
 
         public override void Initialize()
         {
             base.Initialize();
-            foreach (var node in _nodes)
+            foreach (var node in _nodes.Values)
             {
                 node.Initialize(Owner);
             }
@@ -43,20 +41,9 @@ namespace Content.Server.GameObjects.Components.NodeContainer
         protected override void Startup()
         {
             base.Startup();
-            foreach (var node in _nodes)
+            foreach (var node in _nodes.Values)
             {
                 node.OnContainerStartup();
-            }
-        }
-
-        public override void HandleMessage(ComponentMessage message, IComponent? component)
-        {
-            base.HandleMessage(message, component);
-            switch (message)
-            {
-                case AnchoredChangedMessage:
-                    AnchorUpdate();
-                    break;
             }
         }
 
@@ -64,46 +51,59 @@ namespace Content.Server.GameObjects.Components.NodeContainer
         {
             base.Shutdown();
 
-            foreach (var node in _nodes)
+            foreach (var node in _nodes.Values)
             {
                 node.OnContainerShutdown();
             }
         }
 
-        private void AnchorUpdate()
+        public void AnchorUpdate()
         {
-            foreach (var node in Nodes)
+            foreach (var node in Nodes.Values)
             {
                 node.AnchorUpdate();
             }
+        }
+
+        public T GetNode<T>(string identifier) where T : Node
+        {
+            return (T)_nodes[identifier];
+        }
+
+        public bool TryGetNode<T>(string identifier, [NotNullWhen(true)] out T? node) where T : Node
+        {
+            if (_nodes.TryGetValue(identifier, out var n) && n is T t)
+            {
+                node = t;
+                return true;
+            }
+
+            node = null;
+            return false;
         }
 
         public void Examine(FormattedMessage message, bool inDetailsRange)
         {
             if (!_examinable || !inDetailsRange) return;
 
-            for (var i = 0; i < Nodes.Count; i++)
+            foreach (var node in Nodes.Values)
             {
-                var node = Nodes[i];
                 if (node == null) continue;
                 switch (node.NodeGroupID)
                 {
                     case NodeGroupID.HVPower:
                         message.AddMarkup(
-                            Loc.GetString("It has a connector for [color=orange]HV cables[/color]."));
+                            Loc.GetString("It has a connector for [color=orange]HV cables[/color].\n"));
                         break;
                     case NodeGroupID.MVPower:
                         message.AddMarkup(
-                            Loc.GetString("It has a connector for [color=yellow]MV cables[/color]."));
+                            Loc.GetString("It has a connector for [color=yellow]MV cables[/color].\n"));
                         break;
                     case NodeGroupID.Apc:
                         message.AddMarkup(
-                            Loc.GetString("It has a connector for [color=green]APC cables[/color]."));
+                            Loc.GetString("It has a connector for [color=green]APC cables[/color].\n"));
                         break;
                 }
-
-                if(i != Nodes.Count - 1)
-                    message.AddMarkup("\n");
             }
         }
     }

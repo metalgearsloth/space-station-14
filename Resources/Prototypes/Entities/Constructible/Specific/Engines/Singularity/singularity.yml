@@ -5,14 +5,16 @@
   components:
   - type: Clickable
   - type: Physics
-    anchored: false
-    shapes:
-    - !type:PhysShapeCircle
-      radius: 0.5
-      layer: [Impassable]
+    bodyType: Dynamic
+    fixtures:
+    - shape:
+        !type:PhysShapeCircle
+          radius: 0.5
+      mass: 5
+      layer:
+      - Impassable
       mask:
       - AllMask
-    mass: 5
   - type: Singularity
   - type: RadiationPulse
     range: 15
@@ -24,3 +26,6 @@
     sprite: Constructible/Power/Singularity/singularity_1.rsi
     state: singularity_1
     drawdepth: Items
+  - type: Appearance
+    visuals:
+    - type: SingularityVisualizer

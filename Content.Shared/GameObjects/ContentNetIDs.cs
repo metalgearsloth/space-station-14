@@ -14,9 +14,9 @@ namespace Content.Shared.GameObjects
         public const uint STORAGE = 1005;
         public const uint INVENTORY = 1006;
         public const uint POWER_DEBUG_TOOL = 1007;
-        // 1008
-        public const uint SPEED_LOADER = 1009;
-        public const uint RANGED_MAGAZINE = 1010;
+        public const uint PLAYER_MOB_MOVER = 1008;
+        public const uint TILE_FRICTION = 1009;
+        public const uint RANGED_WEAPON = 1010;
         public const uint CAMERA_RECOIL = 1011;
         public const uint SOUND = 1012;
         public const uint ITEM = 1013;
@@ -60,7 +60,7 @@ namespace Content.Shared.GameObjects
         public const uint FLASHABLE = 1051;
         public const uint BUCKLE = 1052;
         public const uint PROJECTILE = 1053;
-        public const uint THROWN_ITEM = 1054;
+        // 1054
         public const uint STRAP = 1055;
         public const uint DISPOSABLE = 1056;
         public const uint GAS_ANALYZER = 1057;
@@ -95,8 +95,10 @@ namespace Content.Shared.GameObjects
         public const uint TAG = 1086;
         // Used for clientside fake prediction of doors.
         public const uint DOOR = 1087;
-        public const uint AMMO = 1088;
-  
+        public const uint SPAWN_AFTER_INTERACT = 1088;
+        public const uint DISASSEMBLE_ON_ACTIVATE = 1089;
+        public const uint LIGHT_REPLACER = 1090;
+
         // Net IDs for integration tests.
         public const uint PREDICTION_TEST = 10001;
     }

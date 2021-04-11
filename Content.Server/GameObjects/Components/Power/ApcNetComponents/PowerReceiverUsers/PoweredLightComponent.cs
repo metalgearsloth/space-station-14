@@ -19,8 +19,8 @@ using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
 using Robust.Shared.IoC;
 using Robust.Shared.Localization;
-using Robust.Shared.Log;
-using Robust.Shared.Serialization;
+using Robust.Shared.Player;
+using Robust.Shared.Serialization.Manager.Attributes;
 using Robust.Shared.Timing;
 using Robust.Shared.ViewVariables;
 
@@ -46,18 +46,29 @@ namespace Content.Server.GameObjects.Components.Power.ApcNetComponents.PowerRece
 
         private TimeSpan _lastThunk;
         private TimeSpan? _lastGhostBlink;
-        private bool _hasLampOnSpawn;
 
-        [ViewVariables] private bool _on;
-        [ViewVariables] private bool _currentLit;
-        [ViewVariables] private bool _isBlinking;
-        [ViewVariables] private bool _ignoreGhostsBoo;
+        [DataField("hasLampOnSpawn")]
+        private bool _hasLampOnSpawn = true;
 
-        private LightBulbType BulbType = LightBulbType.Tube;
+        [ViewVariables] [DataField("on")]
+        private bool _on = true;
+
+        [ViewVariables]
+        private bool _currentLit;
+
+        [ViewVariables]
+        private bool _isBlinking;
+
+        [ViewVariables] [DataField("ignoreGhostsBoo")]
+        private bool _ignoreGhostsBoo;
+
+        [DataField("bulb")] private LightBulbType _bulbType = LightBulbType.Tube;
+        public LightBulbType BulbType => _bulbType;
+
         [ViewVariables] private ContainerSlot _lightBulbContainer = default!;
 
         [ViewVariables]
-        private LightBulbComponent? LightBulb
+        public LightBulbComponent? LightBulb
         {
             get
             {
@@ -106,8 +117,7 @@ namespace Content.Server.GameObjects.Components.Power.ApcNetComponents.PowerRece
             {
                 Owner.PopupMessage(eventArgs.User, Loc.GetString("You burn your hand!"));
                 damageableComponent.ChangeDamage(DamageType.Heat, 20, false, Owner);
-                var audioSystem = EntitySystem.Get<AudioSystem>();
-                audioSystem.PlayFromEntity("/Audio/Effects/lightburn.ogg", Owner);
+                SoundSystem.Play(Filter.Pvs(Owner), "/Audio/Effects/lightburn.ogg", Owner);
             }
 
             void Eject()
@@ -118,6 +128,15 @@ namespace Content.Server.GameObjects.Components.Power.ApcNetComponents.PowerRece
         }
 
         /// <summary>
+        /// Try to replace current bulb with a new one
+        /// </summary>
+        public bool ReplaceBulb(IEntity bulb)
+        {
+            EjectBulb();
+            return InsertBulb(bulb);
+        }
+
+        /// <summary>
         ///     Inserts the bulb if possible.
         /// </summary>
         /// <returns>True if it could insert it, false if it couldn't.</returns>
@@ -125,7 +144,7 @@ namespace Content.Server.GameObjects.Components.Power.ApcNetComponents.PowerRece
         {
             if (LightBulb != null) return false;
             if (!bulb.TryGetComponent(out LightBulbComponent? lightBulb)) return false;
-            if (lightBulb.Type != BulbType) return false;
+            if (lightBulb.Type != _bulbType) return false;
 
             var inserted = _lightBulbContainer.Insert(bulb);
 
@@ -140,7 +159,7 @@ namespace Content.Server.GameObjects.Components.Power.ApcNetComponents.PowerRece
         /// <summary>
         ///     Ejects the bulb to a mob's hand if possible.
         /// </summary>
-        private void EjectBulb(IEntity user)
+        private void EjectBulb(IEntity? user = null)
         {
             if (LightBulb == null) return;
 
@@ -151,17 +170,17 @@ namespace Content.Server.GameObjects.Components.Power.ApcNetComponents.PowerRece
 
             if (!_lightBulbContainer.Remove(bulb.Owner)) return;
 
-            if (!user.TryGetComponent(out HandsComponent? hands)
-                || !hands.PutInHand(bulb.Owner.GetComponent<ItemComponent>()))
-                bulb.Owner.Transform.Coordinates = user.Transform.Coordinates;
-        }
+            if (user != null)
+            {
+                if (!user.TryGetComponent(out HandsComponent? hands)
+                    || !hands.PutInHand(bulb.Owner.GetComponent<ItemComponent>()))
+                    bulb.Owner.Transform.Coordinates = user.Transform.Coordinates;
+            }
+            else
+            {
+                bulb.Owner.Transform.Coordinates = Owner.Transform.Coordinates;
+            }
 
-        public override void ExposeData(ObjectSerializer serializer)
-        {
-            serializer.DataField(ref BulbType, "bulb", LightBulbType.Tube);
-            serializer.DataField(ref _on, "on", true);
-            serializer.DataField(ref _hasLampOnSpawn, "hasLampOnSpawn", true);
-            serializer.DataField(ref _ignoreGhostsBoo, "ignoreGhostsBoo", false);
         }
 
         /// <summary>
@@ -200,7 +219,7 @@ namespace Content.Server.GameObjects.Components.Power.ApcNetComponents.PowerRece
                         if (time > _lastThunk + _thunkDelay)
                         {
                             _lastThunk = time;
-                            EntitySystem.Get<AudioSystem>().PlayFromEntity("/Audio/Machines/light_tube_on.ogg", Owner, AudioParams.Default.WithVolume(-10f));
+                            SoundSystem.Play(Filter.Pvs(Owner), "/Audio/Machines/light_tube_on.ogg", Owner, AudioParams.Default.WithVolume(-10f));
                         }
                     }
                     else
@@ -258,7 +277,7 @@ namespace Content.Server.GameObjects.Components.Power.ApcNetComponents.PowerRece
         {
             if (_hasLampOnSpawn)
             {
-                var prototype = BulbType switch
+                var prototype = _bulbType switch
                 {
                     LightBulbType.Bulb => "LightBulb",
                     LightBulbType.Tube => "LightTube",
@@ -267,8 +286,10 @@ namespace Content.Server.GameObjects.Components.Power.ApcNetComponents.PowerRece
 
                 var entity = Owner.EntityManager.SpawnEntity(prototype, Owner.Transform.Coordinates);
                 _lightBulbContainer.Insert(entity);
-                UpdateLight();
             }
+
+            // need this to update visualizers
+            UpdateLight();
         }
 
         public void TriggerSignal(bool signal)
