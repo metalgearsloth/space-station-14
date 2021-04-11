@@ -7,7 +7,10 @@ using Content.Shared.Interfaces;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Localization;
+using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization;
+using Robust.Shared.Serialization.Manager.Attributes;
+using Robust.Shared.Utility;
 using Robust.Shared.ViewVariables;
 
 namespace Content.Shared.GameObjects.Components.Weapons.Ranged
@@ -17,23 +20,21 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         public override string Name => "SpeedLoader";
         public override uint? NetID => ContentNetIDs.SPEED_LOADER;
 
-        [ViewVariables] protected BallisticCaliber Caliber { get; private set; }
+        [ViewVariables]
+        [DataField("caliber")]
+        protected BallisticCaliber Caliber { get; private set; } = BallisticCaliber.Unspecified;
 
-        [ViewVariables] public int Capacity { get; protected set; }
+        [ViewVariables]
+        [DataField("capacity")]
+        public int Capacity { get; protected set; } = 6;
 
         protected int UnspawnedCount;
 
         public abstract int ShotsLeft { get; }
 
-        public string? FillPrototype { get; private set; }
-
-        public override void ExposeData(ObjectSerializer serializer)
-        {
-            base.ExposeData(serializer);
-            serializer.DataReadWriteFunction("caliber", BallisticCaliber.Unspecified, value => Caliber = value, () => Caliber);
-            serializer.DataReadWriteFunction("capacity", 6, value => Capacity = value, () => Capacity);
-            serializer.DataReadWriteFunction("fillPrototype", null, value => FillPrototype = value, () => FillPrototype);
-        }
+        [ViewVariables]
+        [DataField("fillPrototype")]
+        public EntityPrototype? FillPrototype { get; private set; }
 
         public override void Initialize()
         {

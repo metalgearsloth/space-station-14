@@ -15,8 +15,10 @@ using Content.Shared.GameObjects.EntitySystems;
 using Content.Shared.GameObjects.EntitySystems.ActionBlocker;
 using Content.Shared.GameObjects.Verbs;
 using Robust.Client.GameObjects;
+using Robust.Shared.Audio;
 using Robust.Shared.IoC;
 using Robust.Shared.Localization;
+using Robust.Shared.Player;
 using Robust.Shared.Random;
 
 namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
@@ -53,57 +55,6 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             }
         }
 
-        protected override bool TryShoot(Angle angle)
-        {
-            if (!base.TryShoot(angle))
-                return false;
-
-            var currentAmmo = Ammo[CurrentSlot];
-            if (currentAmmo == null)
-            {
-                if (SoundEmpty != null)
-                    EntitySystem.Get<AudioSystem>().Play(SoundEmpty, Owner, AudioHelpers.WithVariation(EmptyVariation).WithVolume(EmptyVolume));
-
-                return true;
-            }
-
-            var shooter = Shooter();
-            CameraRecoilComponent? cameraRecoilComponent = null;
-            shooter?.TryGetComponent(out cameraRecoilComponent);
-
-            string? sound;
-            float variation;
-            float volume;
-
-            if (currentAmmo.Value)
-            {
-                sound = SoundGunshot;
-                variation = GunshotVariation;
-                volume = GunshotVolume;
-                cameraRecoilComponent?.Kick(-angle.ToVec().Normalized * RecoilMultiplier);
-                EntitySystem.Get<SharedRangedWeaponSystem>().MuzzleFlash(shooter, this, angle);
-                Ammo[CurrentSlot] = false;
-            }
-            else
-            {
-                sound = SoundEmpty;
-                variation = EmptyVariation;
-                volume = EmptyVolume;
-            }
-
-            if (sound != null)
-                EntitySystem.Get<AudioSystem>().Play(sound, Owner, AudioHelpers.WithVariation(variation).WithVolume(volume));
-
-            Cycle();
-            _statusControl?.Update();
-            return true;
-        }
-
-        protected override Angle GetWeaponSpread(TimeSpan currentTime, TimeSpan lastFire, Angle angle, IRobustRandom robustRandom)
-        {
-            return angle;
-        }
-
         protected override void EjectAllSlots()
         {
             for (var i = 0; i < Ammo.Length; i++)
@@ -135,8 +86,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             SendNetworkMessage(new RevolverSpinMessage(CurrentSlot));
 
             if (SoundSpin != null)
-                EntitySystem.Get<AudioSystem>().Play(SoundSpin, Owner, AudioHelpers.WithVariation(SpinVariation).WithVolume(SpinVolume));
-
+                SoundSystem.Play(Filter.Local(), SoundSpin, Owner, AudioHelpers.WithVariation(SpinVariation).WithVolume(SpinVolume));
         }
 
         // Item status etc.

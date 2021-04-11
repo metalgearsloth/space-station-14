@@ -1,4 +1,5 @@
 #nullable enable
+using System;
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
 using Content.Shared.GameObjects.EntitySystems;
@@ -9,13 +10,10 @@ using System.Collections.Generic;
 using Content.Server.GameObjects.Components.GUI;
 using Content.Server.GameObjects.Components.Items.Storage;
 using Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition;
-using Content.Server.GameObjects.EntitySystems;
 using Content.Shared.Audio;
-using Robust.Server.GameObjects;
-using Robust.Server.Player;
+using Robust.Shared.Audio;
 using Robust.Shared.Containers;
-using Robust.Shared.Maths;
-using Robust.Shared.Network;
+using Robust.Shared.Player;
 using Robust.Shared.Players;
 
 namespace Content.Server.GameObjects.Components.Weapon.Ranged
@@ -25,20 +23,18 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
     public sealed class ServerMagazineBarrelComponent : SharedMagazineBarrelComponent
     {
         private ContainerSlot _chamberContainer = default!;
-        private ContainerSlot? _magazineContainer;
+        private ContainerSlot _magazineContainer = default!;
 
         public override void Initialize()
         {
             base.Initialize();
 
             _chamberContainer = Owner.EnsureContainer<ContainerSlot>("magazine-chamber", out var existingChamber);
-
-            if ()
             _magazineContainer = Owner.EnsureContainer<ContainerSlot>("magazine-mag", out var existingMag);
 
             if (!existingMag && MagFillPrototype != null)
             {
-                var mag = Owner.EntityManager.SpawnEntity(MagFillPrototype, Owner.Transform.MapPosition);
+                var mag = Owner.EntityManager.SpawnEntity(MagFillPrototype.ID, Owner.Transform.MapPosition);
                 _magazineContainer.Insert(mag);
                 Dirty();
             }
@@ -61,7 +57,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
 
                 foreach (var entity in mag.SpawnedAmmo)
                 {
-                    ammo.Push(!entity.GetComponent<SharedAmmoComponent>().Spent);
+                    ammo.Push(!entity.Spent);
                     count++;
                 }
 
@@ -72,36 +68,6 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             }
 
             return new MagazineBarrelComponentState(BoltOpen, chamber, Selector, ammo);
-        }
-
-        protected override bool TrySetBolt(bool value)
-        {
-            if (BoltOpen == value)
-                return false;
-
-            var shooter = Shooter();
-
-            if (value)
-            {
-                TryEjectChamber();
-                if (SoundBoltOpen != null)
-                {
-                    Owner.PopupMessage(shooter, Loc.GetString("Bolt opened"));
-                    EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundBoltOpen, Owner, AudioHelpers.WithVariation(BoltToggleVariation).WithVolume(BoltToggleVolume));
-                }
-            }
-            else
-            {
-                TryFeedChamber();
-                if (SoundBoltClosed != null)
-                {
-                    Owner.PopupMessage(shooter, Loc.GetString("Bolt closed"));
-                    EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundBoltClosed, Owner, AudioHelpers.WithVariation(BoltToggleVariation).WithVolume(BoltToggleVolume));
-                }
-            }
-
-            BoltOpen = value;
-            return true;
         }
 
         protected override void RemoveMagazine(IEntity user)
@@ -119,7 +85,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             _magazineContainer?.Remove(mag);
 
             if (SoundMagEject != null)
-                EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundMagEject, Owner, AudioHelpers.WithVariation(MagVariation).WithVolume(MagVolume));
+               SoundSystem.Play(Filter.Pvs(Owner), SoundMagEject, Owner, AudioHelpers.WithVariation(MagVariation).WithVolume(MagVolume));
 
             if (user.TryGetComponent(out HandsComponent? handsComponent))
                 handsComponent.PutInHandOrDrop(mag.GetComponent<ItemComponent>());
@@ -160,7 +126,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             }
 
             if (SoundMagInsert != null)
-                EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundMagInsert, Owner, AudioHelpers.WithVariation(MagVariation).WithVolume(MagVolume));
+                SoundSystem.Play(Filter.Pvs(Owner), SoundMagInsert, Owner, AudioHelpers.WithVariation(MagVariation).WithVolume(MagVolume));
 
             Owner.PopupMessage(user, Loc.GetString("Magazine inserted"));
             _magazineContainer?.Insert(mag);
@@ -199,12 +165,32 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             return true;
         }
 
+        public override bool TryRemoveChambered()
+        {
+            throw new NotImplementedException();
+        }
+
+        public override bool TryInsertChamber(SharedAmmoComponent ammo)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override bool TryRemoveMagazine()
+        {
+            throw new NotImplementedException();
+        }
+
+        public override bool TryInsertMagazine(SharedRangedMagazineComponent magazine)
+        {
+            throw new NotImplementedException();
+        }
+
         protected override bool UseEntity(IEntity user)
         {
             var mag = _magazineContainer.ContainedEntity;
             if (mag?.GetComponent<SharedRangedMagazineComponent>().ShotsLeft > 0)
             {
-                Cycle(true);
+                EntitySystem.Get<SharedRangedWeaponSystem>().Cycle(this, true);
                 Dirty();
                 return true;
             }
@@ -215,7 +201,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                 return true;
             }
 
-            if (TrySetBolt(!BoltOpen))
+            if (EntitySystem.Get<SharedRangedWeaponSystem>().TrySetBolt(this, !BoltOpen))
                 Dirty();
 
             return true;

@@ -7,11 +7,13 @@ using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
 using Content.Shared.GameObjects.EntitySystems;
 using Robust.Server.GameObjects;
 using Robust.Server.Player;
+using Robust.Shared.Audio;
 using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
 using Robust.Shared.IoC;
 using Robust.Shared.Maths;
 using Robust.Shared.Network;
+using Robust.Shared.Player;
 using Robust.Shared.Players;
 using Robust.Shared.Serialization;
 using Robust.Shared.Timing;
@@ -27,12 +29,6 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
         private IEntity?[] _ammoSlots = null!;
 
         private IContainer AmmoContainer { get; set; } = default!;
-
-        public override void ExposeData(ObjectSerializer serializer)
-        {
-            base.ExposeData(serializer);
-            serializer.DataField(ref FillPrototype, "fillPrototype", null);
-        }
 
         public override void HandleNetworkMessage(ComponentMessage message, INetChannel netChannel, ICommonSession? session = null)
         {
@@ -52,8 +48,14 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             {
                 case RevolverSpinMessage msg:
                     CurrentSlot = msg.Slot;
+                    var filter = Filter.Pvs(Owner);
+                    if (session != null)
+                    {
+                        filter.RemovePlayer(session);
+                    }
+
                     if (SoundSpin != null)
-                        EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundSpin, Owner, AudioHelpers.WithVariation(SpinVariation).WithVolume(SpinVolume), excludedSession: Shooter().PlayerSession());
+                        SoundSystem.Play(filter, SoundSpin, Owner, AudioHelpers.WithVariation(SpinVariation).WithVolume(SpinVolume));
 
                     break;
             }
@@ -105,8 +107,9 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             }
         }
 
-        protected override bool TryShoot(Angle angle)
+        public override bool TryShoot(Angle angle)
         {
+            // TODO: Move me to SharedRangedWeaponSystem
             // Revolvers can keep cycling even if the ammo is invalid.
             if (!base.TryShoot(angle))
                 return false;
@@ -144,7 +147,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
             var sound = ammoComp.Spent ? SoundEmpty : SoundGunshot;
 
             if (sound != null)
-                EntitySystem.Get<AudioSystem>().PlayFromEntity(sound, Owner, AudioHelpers.WithVariation(GunshotVariation).WithVolume(GunshotVolume), excludedSession: shooter.PlayerSession());
+                //SoundSystem.Play(sound, Owner, AudioHelpers.WithVariation(IBallisticGun.GunshotVariation).WithVolume(IBallisticGun.GunshotVolume));
 
             if (!ammoComp.Spent)
             {
@@ -213,7 +216,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                     AmmoContainer.Insert(ammoComponent.Owner);
                     NextFire = IoCManager.Resolve<IGameTiming>().CurTime;
                     if (SoundInsert != null)
-                        EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundInsert, Owner, AudioHelpers.WithVariation(InsertVariation).WithVolume(InsertVolume));
+                        SoundSystem.Play(Filter.Pvs(Owner), SoundInsert, AudioHelpers.WithVariation(IBallisticGun.InsertVariation).WithVolume(IBallisticGun.InsertVolume));
 
                     // Won't need dirty once prediction is in, place we can pass in the actual user above.
                     Dirty();

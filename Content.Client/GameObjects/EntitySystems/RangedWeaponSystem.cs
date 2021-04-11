@@ -1,6 +1,8 @@
 ﻿#nullable enable
 using System;
 using Content.Client.GameObjects.Components.Items;
+using Content.Client.GameObjects.Components.Mobs;
+using Content.Shared.Audio;
 using Content.Shared.GameObjects.Components.Projectiles;
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
@@ -10,6 +12,7 @@ using Robust.Client.GameObjects;
 using Robust.Client.Graphics;
 using Robust.Client.Input;
 using Robust.Client.Player;
+using Robust.Shared.Audio;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Input;
 using Robust.Shared.IoC;
@@ -176,11 +179,52 @@ namespace Content.Client.GameObjects.EntitySystems
             return true;
         }
 
+        protected override bool TryShootMagazine(IMagazineGun magazine, Angle angle)
+        {
+            throw new NotImplementedException();
+        }
+
+        protected override bool TryShootRevolver(IRevolver revolver, Angle angle)
+        {
+            throw new NotImplementedException();
+        }
+
         protected override bool TryShootBattery(IBatteryGun weapon, Angle angle)
         {
-            // TODO: Checks here
+            if (!base.TryShootBattery(weapon, angle))
+                return false;
 
-            if (!base.TryShootBattery(weapon, angle)) return false;
+            if (weapon.PowerCell == null)
+                return false;
+
+            var (currentCharge, maxCharge) = weapon.PowerCell.Value;
+            if (currentCharge < weapon.LowerChargeLimit)
+            {
+                if (weapon.SoundEmpty != null)
+                    SoundSystem.Play(GetFilter(weapon), weapon.SoundEmpty, weapon.Owner, AudioHelpers.WithVariation(IGun.EmptyVariation).WithVolume(IGun.EmptyVolume));
+
+                return false;
+            }
+
+            var chargeChange = Math.Min(currentCharge, weapon.BaseFireCost);
+            weapon.PowerCell = (currentCharge - chargeChange, maxCharge);
+
+            var shooter = weapon.Shooter();
+            CameraRecoilComponent? cameraRecoilComponent = null;
+            shooter?.TryGetComponent(out cameraRecoilComponent);
+
+            cameraRecoilComponent?.Kick(-angle.ToVec().Normalized * weapon.RecoilMultiplier * chargeChange / weapon.BaseFireCost);
+
+            if (!weapon.AmmoIsHitscan)
+                MuzzleFlash(shooter, weapon, angle);
+
+            if (weapon.SoundGunshot != null)
+                SoundSystem.Play(GetFilter(weapon), weapon.SoundGunshot, weapon.Owner, AudioHelpers.WithVariation(IGun.GunshotVariation).WithVolume(IGun.GunshotVolume));
+
+            // TODO: Show effect here once we can get the full hitscan predicted
+
+            weapon.UpdateAppearance();
+            weapon.UpdateStatus();
             return true;
         }
     }

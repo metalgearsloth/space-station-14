@@ -22,7 +22,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
     {
         // TODO: check out the other weapons and just use default!
         private Container _ammoContainer = default!;
-        private Stack<IEntity> _spawnedAmmo = new Stack<IEntity>();
+        private Stack<IEntity> _spawnedAmmo = new();
 
         public override int ShotsLeft => UnspawnedCount + _spawnedAmmo.Count;
 
@@ -70,7 +70,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
 
             if (UnspawnedCount > 0)
             {
-                entity = Owner.EntityManager.SpawnEntity(FillPrototype, Owner.Transform.Coordinates);
+                entity = Owner.EntityManager.SpawnEntity(FillPrototype!.ID, Owner.Transform.Coordinates);
                 UnspawnedCount--;
                 Dirty();
                 return true;
@@ -147,6 +147,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                     break;
                 }
             }
+            /* TODO: Need to make a speedloadable component and have a system that does this shit instead.
             else if (eventArgs.Target.TryGetComponent(out SharedBoltActionBarrelComponent? boltActionBarrel))
             {
                 if (Caliber != boltActionBarrel.Caliber)
@@ -168,8 +169,8 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                     TryInsertAmmo(eventArgs.User, ammoComponent);
                     break;
                 }
-
             }
+            */
 
             if (changed)
             {

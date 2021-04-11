@@ -6,7 +6,9 @@ using System.Threading.Tasks;
 using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Robust.Shared.GameObjects;
+using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization;
+using Robust.Shared.Serialization.Manager.Attributes;
 using Robust.Shared.ViewVariables;
 using Component = Robust.Shared.GameObjects.Component;
 
@@ -20,30 +22,30 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
 
         public abstract int ShotsLeft { get; }
 
-        [ViewVariables] public int Capacity { get; private set; }
+        [ViewVariables]
+        [DataField("capacity")]
+        public int Capacity { get; private set; } = 20;
 
-        [ViewVariables] public MagazineType MagazineType { get; private set; }
+        [ViewVariables]
+        [DataField("magazineType")]
+        public MagazineType MagazineType { get; private set; } = MagazineType.Unspecified;
 
-        [ViewVariables] public BallisticCaliber Caliber { get; private set; }
+        [ViewVariables]
+        [DataField("caliber")]
+        public BallisticCaliber Caliber { get; private set; } = BallisticCaliber.Unspecified;
 
         // If there's anything already in the magazine
-        [ViewVariables] public string? FillPrototype { get; private set; }
+        [ViewVariables]
+        [DataField("fillPrototype")]
+        public EntityPrototype? FillPrototype { get; private set; }
+
         // By default the magazine won't spawn the entity until needed so we need to keep track of how many left we can spawn
         // Generally you probably don't want to use this
         protected int UnspawnedCount;
 
-        public override void ExposeData(ObjectSerializer serializer)
-        {
-            base.ExposeData(serializer);
-            serializer.DataReadWriteFunction("capacity", 20, value => Capacity = value, () => Capacity);
-            serializer.DataReadWriteFunction("magazineType", MagazineType.Unspecified, value => MagazineType = value, () => MagazineType);
-            serializer.DataReadWriteFunction("caliber", BallisticCaliber.Unspecified, value => Caliber = value, () => Caliber);
-            serializer.DataReadWriteFunction("fillPrototype", null, value => FillPrototype = value, () => FillPrototype);
-        }
-
         protected abstract bool TryInsertAmmo(IEntity user, IEntity ammo);
 
-        public abstract bool TryPop([NotNullWhen(true)] out SharedAmmoComponent ammo);
+        public abstract bool TryPop([NotNullWhen(true)] out SharedAmmoComponent? ammo);
 
         async Task<bool> IInteractUsing.InteractUsing(InteractUsingEventArgs eventArgs)
         {

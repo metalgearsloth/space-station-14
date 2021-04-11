@@ -19,13 +19,8 @@ namespace Content.Server.GameObjects.Components.Projectiles
     [RegisterComponent]
     public class ProjectileComponent : SharedProjectileComponent, IStartCollide
     {
-        protected override EntityUid Shooter => _shooter;
-
-        private EntityUid _shooter = EntityUid.Invalid;
-
-        [DataField("damages")] private Dictionary<DamageType, int> _damages = new();
-
         [ViewVariables]
+        [DataField("damages")]
         public Dictionary<DamageType, int> Damages { get; set; } = new Dictionary<DamageType, int>();
 
         [field: DataField("deleteOnCollide")]
@@ -76,7 +71,7 @@ namespace Content.Server.GameObjects.Components.Projectiles
             if (damage != null)
             {
                 IEntity? shooter = null;
-                
+
                 if (Shooter != null)
                     Owner.EntityManager.TryGetEntity(Shooter.Value, out shooter);
 

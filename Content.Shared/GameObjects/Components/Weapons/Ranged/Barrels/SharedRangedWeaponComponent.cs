@@ -119,6 +119,16 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         [DataField("allSelectors")]
         public FireRateSelector AllSelectors { get; protected set; }
 
+        public virtual void UpdateAppearance()
+        {
+            return;
+        }
+
+        public virtual void UpdateStatus()
+        {
+            return;
+        }
+
         /// <summary>
         ///     The earliest time the gun can fire next.
         /// </summary>
@@ -188,11 +198,9 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         [DataField("angleIncrease")]
         public float AngleIncrease { get; set; } = 40.0f;
 
-        /// <summary>
-        ///     How much camera recoil there is.
-        /// </summary>
+
         [DataField("recoilMultiplier")]
-        protected float RecoilMultiplier { get; set; } = 1.1f;
+        public float RecoilMultiplier { get; set; } = 1.1f;
 
         public MapCoordinates? FireCoordinates { get; set; }
 

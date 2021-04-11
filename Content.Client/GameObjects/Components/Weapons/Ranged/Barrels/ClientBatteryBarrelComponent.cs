@@ -58,45 +58,6 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged.Barrels
             appearanceComponent.SetData(AmmoVisuals.AmmoMax, max);
         }
 
-        protected override bool TryShoot(Angle angle)
-        {
-            if (!base.TryShoot(angle))
-                return false;
-
-            if (PowerCell == null)
-                return false;
-
-            var (currentCharge, maxCharge) = PowerCell.Value;
-            if (currentCharge < LowerChargeLimit)
-            {
-                if (SoundEmpty != null)
-                    EntitySystem.Get<AudioSystem>().Play(SoundEmpty, Owner, AudioHelpers.WithVariation(EmptyVariation).WithVolume(EmptyVolume));
-
-                return false;
-            }
-
-            var chargeChange = Math.Min(currentCharge, BaseFireCost);
-            PowerCell = (currentCharge - chargeChange, maxCharge);
-
-            var shooter = Shooter();
-            CameraRecoilComponent? cameraRecoilComponent = null;
-            shooter?.TryGetComponent(out cameraRecoilComponent);
-
-            cameraRecoilComponent?.Kick(-angle.ToVec().Normalized * RecoilMultiplier * chargeChange / BaseFireCost);
-
-            if (!AmmoIsHitscan)
-                EntitySystem.Get<SharedRangedWeaponSystem>().MuzzleFlash(shooter, this, angle);
-
-            if (SoundGunshot != null)
-                EntitySystem.Get<AudioSystem>().Play(SoundGunshot, Owner, AudioHelpers.WithVariation(GunshotVariation).WithVolume(GunshotVolume));
-
-            // TODO: Show effect here once we can get the full hitscan predicted
-
-            UpdateAppearance();
-            _statusControl?.Update();
-            return true;
-        }
-
         public override async Task<bool> InteractUsing(InteractUsingEventArgs eventArgs)
         {
             // TODO

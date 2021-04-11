@@ -12,10 +12,8 @@ using Robust.Shared.Log;
 using Robust.Shared.Map;
 using Robust.Shared.Maths;
 using Robust.Shared.Player;
-using Robust.Shared.Prototypes;
 using Robust.Shared.Random;
 using Robust.Shared.Timing;
-using Robust.Shared.Utility;
 
 namespace Content.Shared.GameObjects.EntitySystems
 {
@@ -101,15 +99,48 @@ namespace Content.Shared.GameObjects.EntitySystems
         /// </summary>
         protected virtual bool TryShootBallistic(IBallisticGun weapon, Angle angle)
         {
-            if (weapon.Chambered == null) return false;
-            if (weapon.AutoCycle)
-                Cycle(weapon);
+            switch (weapon)
+            {
+                case IMagazineGun magazine:
+                    TryShootMagazine(magazine, angle);
+                    break;
+                case IRevolver revolver:
+                    TryShootRevolver(revolver, angle);
+                    break;
+                default:
+                    throw new NotImplementedException();
+            }
 
             return true;
         }
 
-        #region Ballistic
-        protected void Cycle(IBallisticGun weapon, bool manual = false)
+        protected abstract bool TryShootMagazine(IMagazineGun magazine, Angle angle);
+
+        protected abstract bool TryShootRevolver(IRevolver revolver, Angle angle);
+
+        public virtual bool TrySetBolt(IMagazineGun weapon, bool value)
+        {
+            if (weapon.BoltOpen == value)
+                return false;
+
+            if (value)
+            {
+                TryEjectChamber(weapon);
+            }
+            else
+            {
+                TryFeedChamber(weapon);
+            }
+
+            weapon.BoltOpen = value;
+            return true;
+        }
+
+        #region Magazine
+        /// <summary>
+        ///     Cycle the chamber.
+        /// </summary>
+        public void Cycle(IMagazineGun weapon, bool manual = false)
         {
             TryEjectChamber(weapon);
             TryFeedChamber(weapon);
@@ -117,11 +148,11 @@ namespace Content.Shared.GameObjects.EntitySystems
             if (manual)
             {
                 if (weapon.SoundRack != null)
-                    SoundSystem.Play(GetFilter(weapon), weapon.SoundRack, AudioHelpers.WithVariation(IBallisticGun.RackVariation).WithVolume(IBallisticGun.RackVolume));
+                    SoundSystem.Play(GetFilter(weapon), weapon.SoundRack, AudioHelpers.WithVariation(IMagazineGun.RackVariation).WithVolume(IMagazineGun.RackVolume));
             }
         }
 
-        protected void TryEjectChamber(IBallisticGun weapon)
+        protected void TryEjectChamber(IMagazineGun weapon)
         {
             var chamberEntity = weapon.Chambered;
             if (chamberEntity != null)
@@ -130,13 +161,13 @@ namespace Content.Shared.GameObjects.EntitySystems
                     return;
 
                 if (!chamberEntity.Caseless)
-                    Get<SharedRangedWeaponSystem>().EjectCasing(weapon.Shooter(), chamberEntity.Owner);
+                    EjectCasing(weapon.Shooter(), chamberEntity.Owner);
 
                 return;
             }
         }
 
-        protected void TryFeedChamber(IBallisticGun weapon)
+        protected void TryFeedChamber(IMagazineGun weapon)
         {
             if (weapon.Chambered != null) return;
 
@@ -153,7 +184,7 @@ namespace Content.Shared.GameObjects.EntitySystems
             if (weapon.AutoEjectMag && magazine != null && magazine.ShotsLeft == 0)
             {
                 if (weapon.SoundAutoEject != null)
-                    SoundSystem.Play(GetFilter(weapon), weapon.SoundAutoEject, AudioHelpers.WithVariation(IBallisticGun.AutoEjectVariation).WithVolume(IBallisticGun.AutoEjectVolume));
+                    SoundSystem.Play(GetFilter(weapon), weapon.SoundAutoEject, AudioHelpers.WithVariation(IMagazineGun.AutoEjectVariation).WithVolume(IMagazineGun.AutoEjectVolume));
 
                 weapon.TryRemoveMagazine();
             }
@@ -253,7 +284,16 @@ namespace Content.Shared.GameObjects.EntitySystems
     /// </summary>
     public interface IBallisticGun : IGun
     {
-        // Sounds
+
+    }
+
+    public interface IRevolver : IBallisticGun
+    {
+
+    }
+
+    public interface IMagazineGun : IBallisticGun
+    {
         /// <summary>
         ///     Played when the mag is auto ejected.
         /// </summary>
@@ -271,9 +311,14 @@ namespace Content.Shared.GameObjects.EntitySystems
         const float RackVolume = 0.0f;
 
         /// <summary>
+        ///     Whether the weapon should cycle automatically weapon fired.
+        /// </summary>
+        bool AutoCycle { get; }
+
+        /// <summary>
         ///     Whether the magazine is detachable or its internal (e.g. smg vs bolt-action rifle)
         /// </summary>
-        bool InbuiltMagazine { get; }
+        bool MagazineRemovable { get; }
 
         /// <summary>
         ///     Does the magazine automatically eject on the gun being empty.
@@ -285,13 +330,12 @@ namespace Content.Shared.GameObjects.EntitySystems
         /// </summary>
         SharedRangedMagazineComponent? Magazine { get; }
 
-        bool BoltOpen { get; }
+        bool BoltOpen { get; set; }
 
         /// <summary>
         ///     If we have an entity chambered.
         /// </summary>
         SharedAmmoComponent? Chambered { get; }
-
         /// <summary>
         ///     Tries to remove the entity from the chamber slot.
         /// </summary>
@@ -304,17 +348,6 @@ namespace Content.Shared.GameObjects.EntitySystems
 
         bool TryInsertMagazine(SharedRangedMagazineComponent magazine);
 
-        /// <summary>
-        ///     Whether the weapon should cycle automatically weapon fired.
-        /// </summary>
-        bool AutoCycle { get; }
-
-        void TrySetBolt(bool value);
-
-        /// <summary>
-        ///     Cycle the chamber.
-        /// </summary>
-        void Cycle();
     }
 
     /// <summary>
@@ -345,6 +378,8 @@ namespace Content.Shared.GameObjects.EntitySystems
         bool PowerCellRemovable { get; }
 
         SharedBatteryComponent? Battery { get; }
+
+        (float CurrentCharge, float MaxCharge)? PowerCell { get; set; }
 
         float LowerChargeLimit { get; }
 
@@ -381,6 +416,11 @@ namespace Content.Shared.GameObjects.EntitySystems
         const float BoltToggleVolume = 0.0f;
         const float InsertVolume = 0.0f;
 
+        /// <summary>
+        ///     How much camera recoil there is.
+        /// </summary>
+        float RecoilMultiplier { get; set; }
+
         FireRateSelector Selector { get; set; }
 
         IEntity Owner { get; }
@@ -389,11 +429,22 @@ namespace Content.Shared.GameObjects.EntitySystems
 
         float FireRate { get; set; }
 
+        /// <summary>
+        /// Update the AppearanceComponent.
+        /// </summary>
+        void UpdateAppearance();
+
+        /// <summary>
+        /// Update the StatusControl client-side for the gun.
+        /// </summary>
+        void UpdateStatus();
+
         // Firing code
         TimeSpan NextFire { get; set; }
         int ShotCounter { get; set; }
         TimeSpan LastFire { get; set; }
         bool CanFire();
+        float AmmoSpreadRatio { get; set; }
         Angle CurrentAngle { get; set; }
         float AngleIncrease { get; set; }
         float AngleDecay { get; set; }

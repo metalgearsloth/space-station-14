@@ -3,19 +3,17 @@ using System;
 using System.Collections.Generic;
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
-using Content.Shared.GameObjects.EntitySystems;
 using Content.Shared.GameObjects.EntitySystems.ActionBlocker;
 using Content.Shared.GameObjects.Verbs;
 using Robust.Client.GameObjects;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Localization;
-using Robust.Shared.Utility;
 
 namespace Content.Client.GameObjects.Components.Weapons.Ranged
 {
     [RegisterComponent]
     [ComponentReference(typeof(SharedRangedMagazineComponent))]
-    public sealed class ClientRangedMagazineComponent : SharedRangedMagazineComponent, IExamine
+    public sealed class ClientRangedMagazineComponent : SharedRangedMagazineComponent
     {
         private Stack<bool> _spawnedAmmo = new();
 
@@ -60,16 +58,15 @@ namespace Content.Client.GameObjects.Components.Weapons.Ranged
             return true;
         }
 
+        public override bool TryPop(out SharedAmmoComponent ammo)
+        {
+            throw new NotImplementedException();
+        }
+
         protected override bool Use(IEntity user)
         {
             // TODO
             return true;
-        }
-
-        void IExamine.Examine(FormattedMessage message, bool inDetailsRange)
-        {
-            var text = Loc.GetString("It's a [color=white]{0}[/color] magazine of [color=white]{1}[/color] caliber.", MagazineType, Caliber);
-            message.AddMarkup(text);
         }
 
         [Verb]

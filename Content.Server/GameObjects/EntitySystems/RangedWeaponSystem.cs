@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Content.Server.GameObjects.Components.Projectiles;
-using Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition;
 using Content.Shared.Audio;
 using Content.Shared.Damage;
 using Content.Shared.GameObjects.Components.Damage;
@@ -11,7 +10,6 @@ using Content.Shared.GameObjects.Components.Projectiles;
 using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
 using Content.Shared.GameObjects.EntitySystems;
-using Content.Shared.Physics;
 using JetBrains.Annotations;
 using Robust.Server.GameObjects;
 using Robust.Server.Player;
@@ -45,7 +43,6 @@ namespace Content.Server.GameObjects.EntitySystems
         // SharedRangedWeapon -> SharedRevolver -> ServerRevolver
         // (needs to sync via system or component spaghetti)
 
-        [Dependency] private readonly IEntityManager _entityManager = default!;
         [Dependency] private readonly IPhysicsManager _physicsManager = default!;
         [Dependency] private readonly IPrototypeManager _prototypeManager = default!;
         [Dependency] private readonly IRobustRandom _robustRandom = default!;
@@ -72,7 +69,7 @@ namespace Content.Server.GameObjects.EntitySystems
 
         private void HandleStartMessage(ShootMessage message, EntitySessionEventArgs args)
         {
-            var entity = _entityManager.GetEntity(message.Uid);
+            var entity = EntityManager.GetEntity(message.Uid);
             var weapon = entity.GetComponent<SharedRangedWeaponComponent>();
             // TODO: Need to TryGet
 
@@ -242,12 +239,12 @@ namespace Content.Server.GameObjects.EntitySystems
             return filter;
         }
 
-        protected override bool TryShootBallistic(IBallisticGun weapon, Angle angle)
+        protected override bool TryShootMagazine(IMagazineGun weapon, Angle angle)
         {
             var chambered = weapon.Chambered;
 
             if (weapon.AutoCycle)
-                weapon.Cycle();
+                Cycle(weapon);
 
             var shooter = weapon.Shooter();
 
@@ -255,7 +252,7 @@ namespace Content.Server.GameObjects.EntitySystems
             {
                 // TODO: Bolt / pump do nothing?
                 if (weapon.SoundEmpty != null)
-                    Get<AudioSystem>().Play(
+                    SoundSystem.Play(
                         GetFilter(weapon),
                         weapon.SoundEmpty,
                         weapon.Owner,
@@ -264,7 +261,7 @@ namespace Content.Server.GameObjects.EntitySystems
                 var mag = weapon.Magazine;
 
                 if (!weapon.BoltOpen && (mag == null || mag.ShotsLeft == 0))
-                    weapon.TrySetBolt(true);
+                    TrySetBolt(weapon, true);
 
                 return true;
             }
@@ -289,6 +286,11 @@ namespace Content.Server.GameObjects.EntitySystems
             return true;
         }
 
+        protected override bool TryShootRevolver(IRevolver revolver, Angle angle)
+        {
+            throw new NotImplementedException();
+        }
+
         protected override bool TryShootBattery(IBatteryGun weapon, Angle angle)
         {
             // TODO: Shared PowerCell
@@ -309,12 +311,12 @@ namespace Content.Server.GameObjects.EntitySystems
 
             if (weapon.AmmoIsHitscan)
             {
-                var prototype = IoCManager.Resolve<IPrototypeManager>().Index<HitscanPrototype>(AmmoPrototype);
+                var prototype = _prototypeManager.Index<HitscanPrototype>(weapon.AmmoPrototype);
                 ShootHitscan(shooter, weapon, prototype, angle, energyRatio, energyRatio);
             }
             else
             {
-                var entity = EntityManager.SpawnEntity(AmmoPrototype, Owner.Transform.MapPosition);
+                var entity = EntityManager.SpawnEntity(weapon.AmmoPrototype, weapon.Owner.Transform.MapPosition);
                 var ammoComponent = entity.GetComponent<SharedAmmoComponent>();
                 var projectileComponent = entity.GetComponent<ProjectileComponent>();
 

@@ -6,38 +6,82 @@ using Content.Shared.GameObjects.EntitySystems;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Maths;
+using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization;
+using Robust.Shared.Serialization.Manager.Attributes;
 using Robust.Shared.ViewVariables;
 
 namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
 {
-    public abstract class SharedMagazineBarrelComponent : SharedRangedWeaponComponent, IBallisticGun
+    public abstract class SharedMagazineBarrelComponent : SharedRangedWeaponComponent, IMagazineGun
     {
         public override string Name => "MagazineBarrel";
 
         public override uint? NetID => ContentNetIDs.MAGAZINE_BARREL;
 
-        [ViewVariables] public MagazineType MagazineTypes { get; private set; }
+        [ViewVariables]
+        [DataField("magazineTypes")]
+        public MagazineType MagazineTypes { get; private set; } = MagazineType.Unspecified;
 
-        [ViewVariables] public BallisticCaliber Caliber { get; private set; }
+        [ViewVariables]
+        [DataField("caliber")]
+        public BallisticCaliber Caliber { get; private set; } = BallisticCaliber.Unspecified;
 
         public int Capacity { get; set; }
 
-        public string? MagFillPrototype { get; private set; }
+        [ViewVariables]
+        [DataField("magFillPrototype")]
+        public EntityPrototype? MagFillPrototype { get; private set; }
 
-        public bool BoltOpen { get; protected set; }
+        public SharedRangedMagazineComponent? Magazine { get; }
 
-        protected bool AutoEjectMag;
+        [ViewVariables]
+        [DataField("boltOpen")]
+        public bool BoltOpen { get; set; }
+
+        public SharedAmmoComponent? Chambered { get; }
+
+        [ViewVariables]
+        [DataField("autoEjectMag")]
+        public bool AutoEjectMag { get; set; }
+
+        [ViewVariables]
+        [DataField("magazineRemovable")]
+        public bool MagazineRemovable { get; } = false;
+
+        [ViewVariables]
+        [DataField("autoCycle")]
+        public bool AutoCycle { get; } = false;
+
         // If the bolt needs to be open before we can insert / remove the mag (i.e. for LMGs)
+        [ViewVariables]
+        [DataField("magNeedsOpenBolt")]
         public bool MagNeedsOpenBolt { get; private set; }
 
         // Sounds
+        [ViewVariables]
+        [DataField("soundBoltOpen")]
         public string? SoundBoltOpen { get; private set; }
+
+        [ViewVariables]
+        [DataField("soundBoltClosed")]
         public string? SoundBoltClosed { get; private set; }
+
+        [ViewVariables]
+        [DataField("soundRack")]
         public string? SoundRack { get; private set; }
+
+        [ViewVariables]
+        [DataField("soundMagInsert")]
         public string? SoundMagInsert { get; private set; }
+
+        [ViewVariables]
+        [DataField("soundMagEject")]
         public string? SoundMagEject { get; private set; }
-        public string? SoundAutoEject { get; private set; }
+
+        [ViewVariables]
+        [DataField("soundAutoEject")]
+        public string? SoundAutoEject { get; private set; } = "/Audio/Weapons/Guns/EmptyAlarm/smg_empty_alarm.ogg";
 
         protected const float AutoEjectVariation = 0.1f;
         protected const float MagVariation = 0.1f;
@@ -47,48 +91,13 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         protected const float MagVolume = 0.0f;
         protected const float RackVolume = 0.0f;
 
-        public override void ExposeData(ObjectSerializer serializer)
-        {
-            base.ExposeData(serializer);
+        public abstract bool TryRemoveChambered();
 
-            serializer.DataReadWriteFunction(
-                "magazineTypes",
-                new List<MagazineType>(),
-                types => types.ForEach(mag => MagazineTypes |= mag), GetMagazineTypes);
+        public abstract bool TryInsertChamber(SharedAmmoComponent ammo);
 
-            serializer.DataReadWriteFunction("magNeedsOpenBolt", false, value => MagNeedsOpenBolt = value,
-                () => MagNeedsOpenBolt);
+        public abstract bool TryRemoveMagazine();
 
-            serializer.DataReadWriteFunction("caliber", BallisticCaliber.Unspecified, value => Caliber = value, () => Caliber);
-            serializer.DataReadWriteFunction("magFillPrototype", null, value => MagFillPrototype = value, () => MagFillPrototype);
-            serializer.DataField(ref AutoEjectMag, "autoEjectMag", false);
-
-            serializer.DataReadWriteFunction("soundBoltOpen", null, value => SoundBoltOpen = value, () => SoundBoltOpen);
-            serializer.DataReadWriteFunction("soundBoltClosed", null, value => SoundBoltClosed = value, () => SoundBoltClosed);
-            serializer.DataReadWriteFunction("soundRack", null, value => SoundRack = value, () => SoundRack);
-            serializer.DataReadWriteFunction("soundMagInsert", null, value => SoundMagInsert = value, () => SoundMagInsert);
-            serializer.DataReadWriteFunction("soundMagEject", null, value => SoundMagEject = value, () => SoundMagEject);
-            serializer.DataReadWriteFunction("soundAutoEject", "/Audio/Weapons/Guns/EmptyAlarm/smg_empty_alarm.ogg", value => SoundAutoEject = value, () => SoundAutoEject);
-        }
-
-        protected List<MagazineType> GetMagazineTypes()
-        {
-            var types = new List<MagazineType>();
-
-            foreach (var mag in (MagazineType[]) Enum.GetValues(typeof(MagazineType)))
-            {
-                if ((MagazineTypes & mag) != 0)
-                {
-                    types.Add(mag);
-                }
-            }
-
-            return types;
-        }
-
-        protected abstract bool TrySetBolt(bool value);
-
-        protected abstract void Cycle(bool manual = false);
+        public abstract bool TryInsertMagazine(SharedRangedMagazineComponent magazine);
 
         public override bool UseEntity(UseEntityEventArgs eventArgs)
         {
@@ -97,13 +106,9 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
 
         protected abstract bool UseEntity(IEntity user);
 
-        protected abstract void TryEjectChamber();
-
-        protected abstract void TryFeedChamber();
-
         protected abstract void RemoveMagazine(IEntity user);
 
-        protected override bool TryShoot(Angle angle)
+        public override bool TryShoot(Angle angle)
         {
             if (!base.TryShoot(angle))
                 return false;

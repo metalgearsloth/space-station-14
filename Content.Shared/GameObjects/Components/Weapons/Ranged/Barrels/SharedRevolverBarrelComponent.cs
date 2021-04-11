@@ -1,9 +1,12 @@
 #nullable enable
 using System;
 using System.Threading.Tasks;
+using Content.Shared.GameObjects.EntitySystems;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Serialization;
+using Robust.Shared.Serialization.Manager.Attributes;
+using Robust.Shared.ViewVariables;
 
 namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
 {
@@ -12,15 +15,21 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         public override string Name => "RevolverBarrel";
         public override uint? NetID => ContentNetIDs.REVOLVER_BARREL;
 
-        public BallisticCaliber Caliber;
+        [ViewVariables]
+        [DataField("caliber")]
+        public BallisticCaliber Caliber = BallisticCaliber.Unspecified;
 
         /// <summary>
         ///     What slot will be used for the next bullet.
         /// </summary>
         protected int CurrentSlot = 0;
 
-        protected int Capacity { get; set; }
+        [ViewVariables]
+        [DataField("capacity")]
+        protected int Capacity { get; set; } = 6;
 
+        [ViewVariables]
+        [DataField("fillPrototype")]
         public string? FillPrototype;
 
         /// <summary>
@@ -29,31 +38,21 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         protected int UnspawnedCount;
 
         // Sounds
-        public string? SoundEject { get; private set; }
-        public string? SoundInsert { get; private set; }
-        public string? SoundSpin { get; private set; }
+        [ViewVariables]
+        [DataField("soundEject")]
+        public string? SoundEject { get; private set; } = "/Audio/Weapons/Guns/MagOut/revolver_magout.ogg";
+
+        [ViewVariables]
+        [DataField("soundInsert")]
+        public string? SoundInsert { get; private set; } = "/Audio/Weapons/Guns/MagIn/revolver_magin.ogg";
+
+        [ViewVariables]
+        [DataField("soundSpin")]
+        public string? SoundSpin { get; private set; } = "/Audio/Weapons/Guns/Misc/revolver_spin.ogg";
 
         protected const float SpinVariation = 0.1f;
 
         protected const float SpinVolume = 0.0f;
-
-        public override void ExposeData(ObjectSerializer serializer)
-        {
-            base.ExposeData(serializer);
-
-            serializer.DataReadWriteFunction(
-                "capacity",
-                6,
-                cap => Capacity = cap,
-                () => Capacity);
-
-            serializer.DataField(ref Caliber, "caliber", BallisticCaliber.Unspecified);
-            serializer.DataField(ref FillPrototype, "fillPrototype", null);
-
-            serializer.DataReadWriteFunction("soundEject", "/Audio/Weapons/Guns/MagOut/revolver_magout.ogg", value => SoundEject = value, () => SoundEject);
-            serializer.DataReadWriteFunction("soundInsert", "/Audio/Weapons/Guns/MagIn/revolver_magin.ogg", value => SoundInsert = value, () => SoundInsert);
-            serializer.DataReadWriteFunction("soundSpin", "/Audio/Weapons/Guns/Misc/revolver_spin.ogg", value => SoundSpin = value, () => SoundSpin);
-        }
 
         protected void Cycle()
         {

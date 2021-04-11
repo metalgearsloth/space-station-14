@@ -6,6 +6,7 @@ using Robust.Shared.IoC;
 using Robust.Shared.Log;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization;
+using Robust.Shared.Serialization.Manager.Attributes;
 using Robust.Shared.Utility;
 using Robust.Shared.ViewVariables;
 
@@ -22,23 +23,27 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         public override uint? NetID => ContentNetIDs.AMMO;
 
         [ViewVariables]
-        public BallisticCaliber Caliber { get; private set; }
+        [DataField("caliber")]
+        public BallisticCaliber Caliber { get; private set; } = BallisticCaliber.Unspecified;
 
         public virtual bool Spent { get; set; }
 
         public bool AmmoIsProjectile => _ammoIsProjectile;
-        
+
         /// <summary>
         ///     Used for anything without a case that fires itself, like if you loaded a banana into a banana launcher.
         /// </summary>
+        [ViewVariables(VVAccess.ReadWrite)]
+        [DataField("isProjectile")]
         private bool _ammoIsProjectile;
 
         /// <summary>
         ///     Used for ammo that is deleted when the projectile is retrieved
         /// </summary>
         [ViewVariables]
+        [DataField("caseless")]
         public bool Caseless { get; private set; }
-        
+
         // Rather than managing bullet / case state seemed easier to just have 2 toggles
         // ammoIsProjectile being for a beanbag for example and caseless being for ClRifle rounds
 
@@ -46,81 +51,42 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged
         ///     For shotguns where they might shoot multiple entities
         /// </summary>
         [ViewVariables]
-        public byte ProjectilesFired { get; private set; }
+        [DataField("projectilesFired")]
+        public byte ProjectilesFired { get; private set; } = 1;
 
         /// <summary>
         ///     Prototype ID of the entity to be spawned (projectile or hitscan).
         /// </summary>
         [ViewVariables]
+        [DataField("projectile")]
         public string ProjectileId { get; private set; } = default!;
 
         public bool IsHitscan => IoCManager.Resolve<IPrototypeManager>().Index<HitscanPrototype>(ProjectileId) != null;
-        
+
         /// <summary>
         ///     How far apart each entity is if multiple are shot, like with a shotgun.
         /// </summary>
         [ViewVariables]
+        [DataField("ammoSpread")]
         public float EvenSpreadAngle { get; private set; }
-        
+
         /// <summary>
         ///     How fast the shot entities travel
         /// </summary>
         [ViewVariables]
-        public float Velocity { get; private set; }
+        [DataField("ammoVelocity")]
+        public float Velocity { get; private set; } = 20.0f;
 
-        public string? SoundCollectionEject { get; private set; }
+        [ViewVariables]
+        [DataField("soundCollectionEject")]
+        public string? SoundCollectionEject { get; private set; } = "CasingEject";
 
-        public override void ExposeData(ObjectSerializer serializer)
+        public override void Initialize()
         {
-            base.ExposeData(serializer);
-            // For shotty or whatever as well
-            serializer.DataReadWriteFunction(
-                "projectile", 
-                string.Empty, 
-                projectile => ProjectileId = projectile,
-                () => ProjectileId);
-            
-            serializer.DataReadWriteFunction(
-                "caliber", 
-                BallisticCaliber.Unspecified, 
-                caliber => Caliber = caliber,
-                () => Caliber);
-
-            serializer.DataReadWriteFunction(
-                "projectilesFired", 
-                1, 
-                numFired => ProjectilesFired = (byte) numFired,
-                () => ProjectilesFired);
-
-            serializer.DataReadWriteFunction(
-                "ammoSpread", 
-                0, 
-                spread => EvenSpreadAngle = spread,
-                () => EvenSpreadAngle);
-            
-            serializer.DataReadWriteFunction(
-                "ammoVelocity", 
-                20.0f, 
-                velocity => Velocity = velocity,
-                () => Velocity);
-            
-            serializer.DataField(ref _ammoIsProjectile, "isProjectile", false);
-            
-            serializer.DataReadWriteFunction(
-                "caseless", 
-                false, 
-                caseless => Caseless = caseless,
-                () => Caseless);
-            
+            base.Initialize();
+            // TODO: Move to a test
             // Being both caseless and shooting yourself doesn't make sense
             DebugTools.Assert(!(_ammoIsProjectile && Caseless));
-
-            serializer.DataReadWriteFunction(
-                "soundCollectionEject", 
-                "CasingEject", 
-                soundEject => SoundCollectionEject = soundEject,
-                () => SoundCollectionEject);
-
             if (ProjectilesFired < 1)
             {
                 Logger.Error("Ammo can't have less than 1 projectile");

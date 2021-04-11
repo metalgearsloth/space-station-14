@@ -21,8 +21,8 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition
     {
         private Container _ammoContainer = default!;
 
-        public IReadOnlyCollection<IEntity> SpawnedAmmo => _spawnedAmmo;
-        private Stack<IEntity> _spawnedAmmo = new Stack<IEntity>();
+        public IReadOnlyCollection<SharedAmmoComponent> SpawnedAmmo => _spawnedAmmo;
+        private Stack<SharedAmmoComponent> _spawnedAmmo = new();
 
         public override int ShotsLeft => _spawnedAmmo.Count + UnspawnedCount;
 
@@ -45,7 +45,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition
             {
                 foreach (var entity in _ammoContainer.ContainedEntities)
                 {
-                    _spawnedAmmo.Push(entity);
+                    _spawnedAmmo.Push(entity.GetComponent<SharedAmmoComponent>());
                     UnspawnedCount--;
                 }
             }
@@ -73,9 +73,9 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition
         {
             var ammo = new Stack<bool>();
 
-            foreach (var entity in _spawnedAmmo)
+            foreach (var ammoComp in _spawnedAmmo)
             {
-                ammo.Push(!entity.GetComponent<SharedAmmoComponent>().Spent);
+                ammo.Push(!ammoComp.Spent);
             }
 
             for (var i = 0; i < UnspawnedCount; i++)
@@ -94,17 +94,17 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition
 
             for (var i = 0; i < count; i++)
             {
-                if (!TryPop(out var entity))
+                if (!TryPop(out var ammo))
                     break;
 
-                EntitySystem.Get<SharedRangedWeaponSystem>().EjectCasing(user, entity, soundsPlayed < maxSounds);
+                EntitySystem.Get<SharedRangedWeaponSystem>().EjectCasing(user, ammo.Owner, soundsPlayed < maxSounds);
                 soundsPlayed++;
             }
         }
 
-        public bool TryPop([NotNullWhen(true)] out IEntity? entity)
+        public override bool TryPop([NotNullWhen(true)] out SharedAmmoComponent? ammo)
         {
-            if (_spawnedAmmo.TryPop(out entity))
+            if (_spawnedAmmo.TryPop(out ammo))
             {
                 Dirty();
                 return true;
@@ -112,7 +112,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition
 
             if (UnspawnedCount > 0)
             {
-                entity = Owner.EntityManager.SpawnEntity(FillPrototype, Owner.Transform.Coordinates);
+                ammo = Owner.EntityManager.SpawnEntity(FillPrototype!.ID, Owner.Transform.Coordinates).GetComponent<SharedAmmoComponent>();
                 UnspawnedCount--;
                 Dirty();
                 return true;
@@ -142,7 +142,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition
             }
 
             _ammoContainer.Insert(ammo);
-            _spawnedAmmo.Push(ammo);
+            _spawnedAmmo.Push(ammoComponent);
             Dirty();
             return true;
         }
@@ -155,10 +155,10 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged.Ammunition
             if (!TryPop(out var ammo))
                 return false;
 
-            var itemComponent = ammo.GetComponent<ItemComponent>();
+            var itemComponent = ammo.Owner.GetComponent<ItemComponent>();
             if (!handsComponent.CanPutInHand(itemComponent))
             {
-                EntitySystem.Get<SharedRangedWeaponSystem>().EjectCasing(user, ammo);
+                EntitySystem.Get<SharedRangedWeaponSystem>().EjectCasing(user, ammo.Owner);
             }
             else
             {

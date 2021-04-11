@@ -18,6 +18,8 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
 
         public SharedBatteryComponent? Battery { get; }
 
+        public (float CurrentCharge, float MaxCharge)? PowerCell { get; set; }
+
         /// <summary>
         ///     The minimum change we need before we can fire
         /// </summary>
