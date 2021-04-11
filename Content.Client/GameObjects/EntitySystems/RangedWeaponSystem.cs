@@ -14,6 +14,7 @@ using Robust.Shared.GameObjects;
 using Robust.Shared.Input;
 using Robust.Shared.IoC;
 using Robust.Shared.Maths;
+using Robust.Shared.Player;
 using Robust.Shared.Timing;
 
 namespace Content.Client.GameObjects.EntitySystems
@@ -111,7 +112,7 @@ namespace Content.Client.GameObjects.EntitySystems
             weaponComponent.Firing = false;
         }
 
-        public override void MuzzleFlash(IEntity? user, SharedRangedWeaponComponent weapon, Angle angle, TimeSpan? currentTime = null, bool predicted = true, float alphaRatio = 1)
+        public override void MuzzleFlash(IEntity? user, IGun weapon, Angle angle, TimeSpan? currentTime = null, bool predicted = true, float alphaRatio = 1)
         {
             var texture = weapon.MuzzleFlash;
             if (texture == null || !predicted)
@@ -142,24 +143,29 @@ namespace Content.Client.GameObjects.EntitySystems
             throw new InvalidOperationException();
         }
 
-        public override void ShootHitscan(IEntity? user, SharedRangedWeaponComponent weapon, HitscanPrototype hitscan, Angle angle,
+        public override void ShootHitscan(IEntity? user, IGun weapon, HitscanPrototype hitscan, Angle angle,
             float damageRatio = 1, float alphaRatio = 1)
         {
             // TODO: Predict
             return;
         }
 
-        public override void ShootAmmo(IEntity? user, SharedRangedWeaponComponent weapon, Angle angle, SharedAmmoComponent ammoComponent)
+        public override void ShootAmmo(IEntity? user, IGun weapon, Angle angle, SharedAmmoComponent ammoComponent)
         {
             // TODO
             return;
         }
 
-        public override void ShootProjectile(IEntity? user, SharedRangedWeaponComponent weapon, Angle angle,
+        public override void ShootProjectile(IEntity? user, IGun weapon, Angle angle,
             SharedProjectileComponent projectileComponent, float velocity)
         {
             // TODO
             return;
+        }
+
+        protected override Filter GetFilter(IGun gun)
+        {
+            return Filter.Local();
         }
 
         protected override bool TryShootBallistic(IBallisticGun weapon, Angle angle)

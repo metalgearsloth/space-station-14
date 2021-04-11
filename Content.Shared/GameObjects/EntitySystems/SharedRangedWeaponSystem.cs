@@ -12,8 +12,10 @@ using Robust.Shared.Log;
 using Robust.Shared.Map;
 using Robust.Shared.Maths;
 using Robust.Shared.Player;
+using Robust.Shared.Prototypes;
 using Robust.Shared.Random;
 using Robust.Shared.Timing;
+using Robust.Shared.Utility;
 
 namespace Content.Shared.GameObjects.EntitySystems
 {
@@ -33,7 +35,7 @@ namespace Content.Shared.GameObjects.EntitySystems
         /// <param name="predicted">Whether we also need to show the effect for the client. Eventually this shouldn't be needed (when we can predict hitscan / weapon recoil)</param>
         /// <param name="currentTime"></param>
         /// <param name="alphaRatio"></param>
-        public abstract void MuzzleFlash(IEntity? user, SharedRangedWeaponComponent weapon, Angle angle, TimeSpan? currentTime = null, bool predicted = true, float alphaRatio = 1.0f);
+        public abstract void MuzzleFlash(IEntity? user, IGun weapon, Angle angle, TimeSpan? currentTime = null, bool predicted = true, float alphaRatio = 1.0f);
 
         public abstract void EjectCasing(IEntity? user, IEntity casing, bool playSound = true, Direction[]? ejectDirections = null);
 
@@ -46,7 +48,7 @@ namespace Content.Shared.GameObjects.EntitySystems
         /// <param name="angle"></param>
         /// <param name="damageRatio"></param>
         /// <param name="alphaRatio"></param>
-        public abstract void ShootHitscan(IEntity? user, SharedRangedWeaponComponent weapon, HitscanPrototype hitscan, Angle angle, float damageRatio = 1.0f, float alphaRatio = 1.0f);
+        public abstract void ShootHitscan(IEntity? user, IGun weapon, HitscanPrototype hitscan, Angle angle, float damageRatio = 1.0f, float alphaRatio = 1.0f);
 
         /// <summary>
         ///     If you want to pull out the projectile from ammo and shoot it.
@@ -55,7 +57,7 @@ namespace Content.Shared.GameObjects.EntitySystems
         /// <param name="weapon"></param>
         /// <param name="angle"></param>
         /// <param name="ammoComponent"></param>
-        public abstract void ShootAmmo(IEntity? user, SharedRangedWeaponComponent weapon, Angle angle, SharedAmmoComponent ammoComponent);
+        public abstract void ShootAmmo(IEntity? user, IGun weapon, Angle angle, SharedAmmoComponent ammoComponent);
 
         /// <summary>
         ///     Shoot the projectile directly
@@ -65,12 +67,12 @@ namespace Content.Shared.GameObjects.EntitySystems
         /// <param name="angle"></param>
         /// <param name="projectileComponent"></param>
         /// <param name="velocity"></param>
-        public abstract void ShootProjectile(IEntity? user, SharedRangedWeaponComponent weapon, Angle angle, SharedProjectileComponent projectileComponent, float velocity);
+        public abstract void ShootProjectile(IEntity? user, IGun weapon, Angle angle, SharedProjectileComponent projectileComponent, float velocity);
 
         /// <summary>
         ///     Actually fires the gun, cycles rounds, etc.
         /// </summary>
-        private bool TryShoot(SharedRangedWeaponComponent weapon, Angle angle)
+        private bool TryShoot(IGun weapon, Angle angle)
         {
             if (weapon.Owner.TryGetComponent(out IBallisticGun? ballistic))
             {
@@ -173,7 +175,7 @@ namespace Content.Shared.GameObjects.EntitySystems
         /// <summary>
         ///     General shooting code.
         /// </summary>
-        protected bool TryFire(IEntity user, SharedRangedWeaponComponent weapon, MapCoordinates coordinates, out int firedShots, TimeSpan? currentTime = null)
+        protected bool TryFire(IEntity user, IGun weapon, MapCoordinates coordinates, out int firedShots, TimeSpan? currentTime = null)
         {
             currentTime ??= _gameTiming.CurTime;
             firedShots = 0;
@@ -187,10 +189,10 @@ namespace Content.Shared.GameObjects.EntitySystems
             }
 
             if (!weapon.CanFire())
-                return false;
+                return true;
 
             if (currentTime < weapon.NextFire)
-                return true;
+                return false;
 
             var fireAngle = (coordinates.Position - user.Transform.WorldPosition).ToAngle();
 
@@ -228,21 +230,21 @@ namespace Content.Shared.GameObjects.EntitySystems
         /// <param name="lastFire"></param>
         /// <param name="angle"></param>
         /// <returns></returns>
-        protected Angle GetWeaponSpread(SharedRangedWeaponComponent weapon, TimeSpan lastFire, Angle angle, TimeSpan? currentTime = null)
+        protected Angle GetWeaponSpread(IGun weapon, TimeSpan lastFire, Angle angle, TimeSpan? currentTime = null)
         {
             currentTime ??= _gameTiming.CurTime;
 
             // TODO: Could also predict this client-side. Probably need to use System.Random and seeds but out of scope for this big pr.
             // If we're sure no desyncs occur then we could just use the Uid to get the seed probably.
             var newTheta = MathHelper.Clamp(
-                weapon._currentAngle.Theta + weapon._angleIncrease - weapon._angleDecay * (currentTime.Value - lastFire).TotalSeconds,
-                weapon._minAngle.Theta,
+                weapon.CurrentAngle.Theta + weapon.AngleIncrease - weapon.AngleDecay * (currentTime.Value - lastFire).TotalSeconds,
+                weapon.MinAngle.Theta,
                 weapon.MaxAngle.Theta);
 
-            weapon._currentAngle = new Angle(newTheta);
+            weapon.CurrentAngle = new Angle(newTheta);
 
             var random = (_robustRandom.NextDouble() - 0.5) * 2;
-            return Angle.FromDegrees(angle.Degrees + weapon._currentAngle.Degrees * random);
+            return Angle.FromDegrees(angle.Degrees + weapon.CurrentAngle.Degrees * random);
         }
     }
 
@@ -320,6 +322,26 @@ namespace Content.Shared.GameObjects.EntitySystems
     /// </summary>
     public interface IBatteryGun : IGun
     {
+        // Sounds
+        string? SoundPowerCellInsert { get; }
+        string? SoundPowerCellEject { get; }
+
+        const float CellInsertVariation = 0.1f;
+        const float CellEjectVariation = 0.1f;
+
+        const float CellInsertVolume = 0.0f;
+        const float CellEjectVolume = 0.0f;
+
+        /// <summary>
+        /// What gets fired from the battery as we convert the battery charge into an entity / hitscan.
+        /// Can be an EntityPrototype or a HitscanPrototype
+        /// </summary>
+        string AmmoPrototype { get; set; }
+
+        string? PowerCellPrototype { get; set; }
+
+        bool AmmoIsHitscan { get; }
+
         bool PowerCellRemovable { get; }
 
         SharedBatteryComponent? Battery { get; }
@@ -345,6 +367,8 @@ namespace Content.Shared.GameObjects.EntitySystems
 
         string? SoundEmpty { get; }
 
+        string? MuzzleFlash { get; set; }
+
         const float GunshotVariation = 0.1f;
         const float EmptyVariation = 0.1f;
         const float CycleVariation = 0.1f;
@@ -362,5 +386,18 @@ namespace Content.Shared.GameObjects.EntitySystems
         IEntity Owner { get; }
 
         IEntity? Shooter();
+
+        float FireRate { get; set; }
+
+        // Firing code
+        TimeSpan NextFire { get; set; }
+        int ShotCounter { get; set; }
+        TimeSpan LastFire { get; set; }
+        bool CanFire();
+        Angle CurrentAngle { get; set; }
+        float AngleIncrease { get; set; }
+        float AngleDecay { get; set; }
+        Angle MinAngle { get; set; }
+        Angle MaxAngle { get; set; }
     }
 }

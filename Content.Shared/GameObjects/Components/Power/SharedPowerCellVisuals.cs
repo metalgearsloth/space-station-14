@@ -16,6 +16,11 @@ namespace Content.Shared.GameObjects.Components.Power
         public override string Name => "Battery";
 
         public virtual float CurrentCharge { get; set; }
+
+        public virtual float UseCharge(float change)
+        {
+            return 0.0f;
+        }
     }
 
     [Serializable, NetSerializable]

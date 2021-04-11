@@ -1,28 +1,22 @@
 #nullable enable
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using Content.Server.GameObjects.Components.GUI;
 using Content.Server.GameObjects.Components.Items.Storage;
 using Content.Server.GameObjects.Components.Power;
-using Content.Server.GameObjects.Components.Projectiles;
 using Content.Shared.Audio;
-using Content.Shared.Damage;
-using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels;
 using Content.Shared.GameObjects.EntitySystems;
 using Content.Shared.GameObjects.EntitySystems.ActionBlocker;
 using Content.Shared.GameObjects.Verbs;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Robust.Server.GameObjects;
+using Robust.Shared.Audio;
 using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
-using Robust.Shared.IoC;
 using Robust.Shared.Localization;
-using Robust.Shared.Maths;
+using Robust.Shared.Player;
 using Robust.Shared.Players;
-using Robust.Shared.Prototypes;
-using Robust.Shared.Serialization;
 using Robust.Shared.ViewVariables;
 
 namespace Content.Server.GameObjects.Components.Weapon.Ranged
@@ -36,20 +30,6 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
         [ViewVariables] public IEntity? PowerCellEntity => _powerCellContainer.ContainedEntity;
         public BatteryComponent? PowerCell => _powerCellContainer.ContainedEntity?.GetComponent<BatteryComponent>();
         private ContainerSlot _powerCellContainer = default!;
-        [ViewVariables] private bool _powerCellRemovable;
-
-        /// <summary>
-        ///     The pre-spawned prototype to use
-        /// </summary>
-        private string? _powerCellPrototype;
-
-        public override void ExposeData(ObjectSerializer serializer)
-        {
-            base.ExposeData(serializer);
-
-            serializer.DataField(ref _powerCellPrototype, "powerCellPrototype", null);
-            serializer.DataField(ref _powerCellRemovable, "powerCellRemovable", false);
-        }
 
         public override void UpdateAppearance()
         {
@@ -87,9 +67,9 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
         {
             base.Initialize();
             _powerCellContainer = Owner.EnsureContainer<ContainerSlot>($"{Name}-powercell-container", out var existing);
-            if (!existing && _powerCellPrototype != null)
+            if (!existing && PowerCellPrototype != null)
             {
-                var powerCellEntity = Owner.EntityManager.SpawnEntity(_powerCellPrototype, Owner.Transform.Coordinates);
+                var powerCellEntity = Owner.EntityManager.SpawnEntity(PowerCellPrototype, Owner.Transform.Coordinates);
                 _powerCellContainer.Insert(powerCellEntity);
                 Dirty();
             }
@@ -104,7 +84,10 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                 return false;
 
             if (SoundPowerCellInsert != null)
-                EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundPowerCellInsert, Owner, AudioHelpers.WithVariation(CellInsertVariation).WithVolume(CellInsertVolume));
+                SoundSystem.Play(
+                    Filter.Pvs(Owner),
+                    SoundPowerCellInsert,
+                    AudioHelpers.WithVariation(IBatteryGun.CellInsertVariation).WithVolume(IBatteryGun.CellInsertVolume));
 
             _powerCellContainer.Insert(entity);
 
@@ -121,7 +104,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
         {
             var cell = PowerCell;
             if (cell == null ||
-                !_powerCellRemovable ||
+                !PowerCellRemovable ||
                 !user.TryGetComponent(out HandsComponent? hands))
             {
                 return false;
@@ -134,7 +117,10 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
                 cell.Owner.Transform.Coordinates = user.Transform.Coordinates;
 
             if (SoundPowerCellEject != null)
-                EntitySystem.Get<AudioSystem>().PlayFromEntity(SoundPowerCellEject, Owner, AudioHelpers.WithVariation(CellEjectVariation).WithVolume(CellEjectVolume));
+                SoundSystem.Play(
+                    Filter.Pvs(Owner),
+                    SoundPowerCellEject,
+                    AudioHelpers.WithVariation(IBatteryGun.CellEjectVariation).WithVolume(IBatteryGun.CellEjectVolume));
 
             Dirty();
             return true;
@@ -150,7 +136,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Ranged
         {
             protected override void GetData(IEntity user, ServerBatteryBarrelComponent component, VerbData data)
             {
-                if (!ActionBlockerSystem.CanInteract(user) || !component._powerCellRemovable)
+                if (!component.PowerCellRemovable || !ActionBlockerSystem.CanInteract(user))
                 {
                     data.Visibility = VerbVisibility.Invisible;
                     return;

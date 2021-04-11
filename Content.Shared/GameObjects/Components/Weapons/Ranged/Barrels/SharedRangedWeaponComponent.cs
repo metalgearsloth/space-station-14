@@ -13,6 +13,7 @@ using Robust.Shared.Random;
 using Robust.Shared.Serialization;
 using Robust.Shared.Serialization.Manager.Attributes;
 using Robust.Shared.Timing;
+using Robust.Shared.Utility;
 using Robust.Shared.ViewVariables;
 using YamlDotNet.Serialization;
 using Component = Robust.Shared.GameObjects.Component;
@@ -104,7 +105,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         }
     }
 
-    public abstract class SharedRangedWeaponComponent : Component, IHandSelected, IInteractUsing, IUse, IGun
+    public abstract class SharedRangedWeaponComponent : Component, IHandSelected, IInteractUsing, IUse, IGun, ISerializationHooks
     {
         /// <summary>
         ///     Current fire selector.
@@ -115,6 +116,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         /// <summary>
         ///     All available fire selectors
         /// </summary>
+        [DataField("allSelectors")]
         public FireRateSelector AllSelectors { get; protected set; }
 
         /// <summary>
@@ -131,12 +133,12 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         ///     Shots fired per second.
         /// </summary>
         [DataField("fireRate")]
-        public float FireRate { get; protected set; } = 0.0f;
+        public float FireRate { get; set; } = 0.0f;
 
         /// <summary>
         ///     Keep a running track of how many shots we've fired for single-shot (etc.) weapons.
         /// </summary>
-        public int ShotCounter;
+        public int ShotCounter { get; set; }
 
         // These 2 are mainly for handling desyncs so the server fires the same number of shots as the client.
         // Someone smarter probably has a better way of doing it but these seemed to work okay...
@@ -163,24 +165,28 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         /// <summary>
         ///     Minimum angle that recoil can be.
         /// </summary>
-        public Angle _minAngle { get; set; }
+        [DataField("minAngle")]
+        public Angle MinAngle { get; set; }
 
         /// <summary>
         ///     Maximum angle that recoil can be.
         /// </summary>
-        public Angle MaxAngle { get; set; }
+        [DataField("maxAngle")]
+        public Angle MaxAngle { get; set; } = 45.0f;
 
-        public Angle _currentAngle { get; set; } = Angle.Zero;
+        public Angle CurrentAngle { get; set; } = Angle.Zero;
 
         /// <summary>
         ///     How slowly the angle's theta decays per second in radians
         /// </summary>
-        public float _angleDecay { get; set; }
+        [DataField("angleDecay")]
+        public float AngleDecay { get; set; } = 20.0f;
 
         /// <summary>
         ///     How quickly the angle's theta builds for every shot fired in radians
         /// </summary>
-        public float _angleIncrease { get; set; }
+        [DataField("angleIncrease")]
+        public float AngleIncrease { get; set; } = 40.0f;
 
         /// <summary>
         ///     How much camera recoil there is.
@@ -199,56 +205,24 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
         [DataField("soundEmpty")]
         public string? SoundEmpty { get; private set; } = "/Audio/Weapons/Guns/Empty/empty.ogg";
 
-        public override void ExposeData(ObjectSerializer serializer)
+        void ISerializationHooks.AfterDeserialization()
         {
-            base.ExposeData(serializer);
-
-            serializer.DataReadWriteFunction(
-                "allSelectors",
-                new List<FireRateSelector>(),
-                selectors => selectors.ForEach(value => AllSelectors |= value),
-                () =>
-                {
-                    var result = new List<FireRateSelector>();
-
-                    foreach (var selector in (FireRateSelector[]) Enum.GetValues(typeof(FireRateSelector)))
-                    {
-                        if ((AllSelectors & selector) != 0)
-                            result.Add(selector);
-                    }
-
-                    return result;
-                });
-
-            // This hard-to-read area's dealing with recoil
-            // Use degrees in yaml as it's easier to read compared to "0.0125f"
-            serializer.DataReadWriteFunction(
-                "minAngle",
-                0,
-                angle => _minAngle = Angle.FromDegrees(angle / 2f),
-                () => _minAngle.Degrees * 2);
-
-            // Random doubles it as it's +/- so uhh we'll just half it here for readability
-            serializer.DataReadWriteFunction(
-                "maxAngle",
-                45,
-                angle => MaxAngle = Angle.FromDegrees(angle / 2f),
-                () => MaxAngle.Degrees * 2);
-
-            serializer.DataReadWriteFunction(
-                "angleIncrease",
-                40 / FireRate,
-                angle => _angleIncrease = angle * (float) Math.PI / 180f,
-                () => MathF.Round(_angleIncrease / ((float) Math.PI / 180f), 2));
-
-            serializer.DataReadWriteFunction(
-                "angleDecay",
-                20f,
-                angle => _angleDecay = angle * (float) Math.PI / 180f,
-                () => MathF.Round(_angleDecay / ((float) Math.PI / 180f), 2));
+            DebugTools.Assert(AllSelectors.HasFlag(Selector));
+            AngleDecay = AngleDecay * MathF.PI / 180f;
+            AngleIncrease = AngleIncrease * (float) Math.PI / 180f;
+            MaxAngle = Angle.FromDegrees(MaxAngle / 2f);
+            MinAngle = Angle.FromDegrees(MinAngle / 2f);
         }
 
-        IEntity? IGun.Shooter()
+        void ISerializationHooks.BeforeSerialization()
+        {
+            AngleDecay = MathF.Round(AngleDecay / (MathF.PI / 180f), 2);
+            AngleIncrease = MathF.Round(AngleIncrease / (MathF.PI / 180f), 2);
+            MaxAngle = MaxAngle.Degrees * 2;
+            MinAngle = MinAngle.Degrees * 2;
+        }
+
+        public IEntity? Shooter()
         {
             return !Owner.TryGetContainer(out var container) ? null : container.Owner;
         }
@@ -305,8 +279,9 @@ namespace Content.Shared.GameObjects.Components.Weapons.Ranged.Barrels
     }
 
     [Flags]
-    public enum FireRateSelector : ushort
+    public enum FireRateSelector : byte
     {
+        // If you need more than 9 values then use ushort
         Safety = 0,
         Single = 1 << 0,
         TripleBurst = 1 << 1,

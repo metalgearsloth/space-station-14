@@ -27,6 +27,7 @@ using Robust.Shared.Player;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Random;
 using Robust.Shared.Timing;
+using Robust.Shared.Utility;
 
 namespace Content.Server.GameObjects.EntitySystems
 {
@@ -53,87 +54,42 @@ namespace Content.Server.GameObjects.EntitySystems
         private EffectSystem _effectSystem = default!;
         private SharedBroadPhaseSystem _broadphase = default!;
 
-        private List<SharedRangedWeaponComponent> _activeRangedWeapons = new();
+        private List<(ShootMessage Message, IEntity Shooter)> _shootMessages = new();
 
         public override void Initialize()
         {
             base.Initialize();
             SubscribeNetworkEvent<ShootMessage>(HandleStartMessage);
-            SubscribeNetworkEvent<StopFiringMessage>(HandleStopMessage);
-            SubscribeNetworkEvent<RangedFireMessage>(HandleRangedFireMessage);
 
             _effectSystem = Get<EffectSystem>();
+        }
+
+        public override void Shutdown()
+        {
+            base.Shutdown();
+            UnsubscribeNetworkEvent<ShootMessage>();
         }
 
         private void HandleStartMessage(ShootMessage message, EntitySessionEventArgs args)
         {
             var entity = _entityManager.GetEntity(message.Uid);
             var weapon = entity.GetComponent<SharedRangedWeaponComponent>();
+            // TODO: Need to TryGet
 
             if (entity.Deleted)
             {
-                _activeRangedWeapons.Remove(weapon);
+                // TODO: Clear list
                 return;
             }
 
             var shooter = weapon.Shooter();
-            if (shooter != args.SenderSession.AttachedEntity)
+            if (shooter == null || shooter != args.SenderSession.AttachedEntity)
             {
                 // Cheater / lagger
                 return;
             }
 
-            if (!_activeRangedWeapons.Contains(weapon))
-            {
-                _activeRangedWeapons.Add(weapon);
-            }
-
-            weapon.ShotCounter = 0;
-            weapon.FireCoordinates = message.FireCoordinates;
-            weapon.Firing = true;
-        }
-
-        private void HandleStopMessage(StopFiringMessage message, EntitySessionEventArgs args)
-        {
-            var entity = _entityManager.GetEntity(message.Uid);
-            var weapon = entity.GetComponent<SharedRangedWeaponComponent>();
-
-            if (entity.Deleted)
-            {
-                _activeRangedWeapons.Remove(weapon);
-                return;
-            }
-
-            var shooter = weapon.Shooter();
-            if (shooter != args.SenderSession.AttachedEntity)
-            {
-                // Cheater / lagger
-                return;
-            }
-
-            weapon.Firing = false;
-            weapon.ExpectedShots = message.ExpectedShots;
-        }
-
-        private void HandleRangedFireMessage(RangedFireMessage message, EntitySessionEventArgs args)
-        {
-            var entity = _entityManager.GetEntity(message.Uid);
-            var weapon = entity.GetComponent<SharedRangedWeaponComponent>();
-
-            if (entity.Deleted)
-            {
-                _activeRangedWeapons.Remove(weapon);
-                return;
-            }
-
-            var shooter = weapon.Shooter();
-            if (shooter != args.SenderSession.AttachedEntity)
-            {
-                // Cheater / lagger
-                return;
-            }
-
-            weapon.FireCoordinates = message.FireCoordinates;
+            _shootMessages.Add((message, shooter));
         }
 
         public override void Update(float frameTime)
@@ -141,46 +97,51 @@ namespace Content.Server.GameObjects.EntitySystems
             base.Update(frameTime);
             var currentTime = _gameTiming.CurTime;
 
-            for (var i = _activeRangedWeapons.Count - 1; i >= 0; i--)
+            foreach (var (message, shooter) in _shootMessages.ToArray())
             {
-                var comp = _activeRangedWeapons[i];
-
-                if (!TryUpdate(comp, currentTime))
-                {
-                    _activeRangedWeapons.RemoveAt(i);
-                    comp.ExpectedShots = 0;
-                    comp.AccumulatedShots = 0;
-                    comp.Dirty();
-                }
+                if (!Pew(message, shooter, currentTime)) continue;
+                DebugTools.Assert(_shootMessages.Contains((message, shooter)));
+                _shootMessages.Remove((message, shooter));
             }
         }
 
-        private bool TryUpdate(SharedRangedWeaponComponent weaponComponent, TimeSpan currentTime)
+        /// <summary>
+        ///
+        /// </summary>
+        /// <returns>true if the message was handled; false if it needs to be re-run next tick</returns>
+        private bool Pew(ShootMessage message, IEntity shooter, TimeSpan currentTime)
         {
-            if (weaponComponent.FireCoordinates == null || !weaponComponent.Firing && weaponComponent.AccumulatedShots >= weaponComponent.ExpectedShots)
-            {
-                if (weaponComponent.AccumulatedShots != weaponComponent.ExpectedShots)
-                {
-                    Logger.Warning($"Shooting desync occurred: Fired {weaponComponent.ShotCounter} but expected {weaponComponent.ExpectedShots}");
-                }
+            var gun = EntityManager.GetEntity(message.Uid).GetComponent<SharedRangedWeaponComponent>();
 
-                weaponComponent.ExpectedShots -= weaponComponent.AccumulatedShots;
+            if (shooter != gun.Shooter())
+            {
+                return true;
+            }
+
+            if (!TryFire(shooter, gun, message.FireCoordinates, out var firedShots, currentTime))
+            {
+                // TryFire hasn't handled the message yet so we'll run it next tick.
+                return true;
+            }
+
+            if (firedShots < message.Shots)
+            {
+                // TODO: Dirty af
+                message.Shots -= firedShots;
                 return false;
             }
 
-            var shooter = weaponComponent.Shooter();
-            if (shooter == null)
-                return false;
+            if (firedShots > message.Shots)
+            {
+                Logger.ErrorS("guns", $"Fired more shots on server than client for entity {message.Uid} from {shooter}!");
+                return true;
+            }
 
-            if (!weaponComponent.TryFire(currentTime, shooter, weaponComponent.FireCoordinates.Value, out var shots))
-                return false;
-
-            weaponComponent.AccumulatedShots += shots;
             return true;
         }
 
         #region Shoot
-        public override void ShootHitscan(IEntity? user, SharedRangedWeaponComponent weapon, HitscanPrototype hitscan, Angle angle, float damageRatio = 1, float alphaRatio = 1)
+        public override void ShootHitscan(IEntity? user, IGun weapon, HitscanPrototype hitscan, Angle angle, float damageRatio = 1, float alphaRatio = 1)
         {
             var currentTime = _gameTiming.CurTime;
             var ray = new CollisionRay(weapon.Owner.Transform.MapPosition.Position, angle.ToVec(), (int) hitscan.CollisionMask);
@@ -206,7 +167,7 @@ namespace Content.Server.GameObjects.EntitySystems
             ImpactFlash(user, weapon.Owner, hitscan, angle, distance, currentTime, alphaRatio);
         }
 
-        public override void ShootAmmo(IEntity? user, SharedRangedWeaponComponent weapon, Angle angle, SharedAmmoComponent ammoComponent)
+        public override void ShootAmmo(IEntity? user, IGun weapon, Angle angle, SharedAmmoComponent ammoComponent)
         {
             if (!ammoComponent.CanFire())
                 return;
@@ -255,63 +216,74 @@ namespace Content.Server.GameObjects.EntitySystems
             }
         }
 
-        public override void ShootProjectile(IEntity? user, SharedRangedWeaponComponent weapon, Angle angle, SharedProjectileComponent projectileComponent, float velocity)
+        public override void ShootProjectile(IEntity? user, IGun weapon, Angle angle, SharedProjectileComponent projectileComponent, float velocity)
         {
             var physicsComponent = projectileComponent.Owner.GetComponent<IPhysBody>();
-            physicsComponent.Status = BodyStatus.InAir;
+            physicsComponent.BodyStatus = BodyStatus.InAir;
 
             if (user != null)
                 projectileComponent.IgnoreEntity(user);
 
             physicsComponent
-                .EnsureController<BulletController>()
                 .LinearVelocity = angle.ToVec() * velocity;
 
             projectileComponent.Owner.Transform.LocalRotation = angle.Theta;
         }
 
+        protected override Filter GetFilter(IGun gun)
+        {
+            var filter = Filter.Pvs(gun.Owner);
+            var shooter = gun.Shooter().PlayerSession();
+            if (shooter != null)
+            {
+                filter.RemovePlayer(shooter);
+            }
+
+            return filter;
+        }
+
         protected override bool TryShootBallistic(IBallisticGun weapon, Angle angle)
         {
-            var chamberEntity = weapon.Chambered;
+            var chambered = weapon.Chambered;
 
             if (weapon.AutoCycle)
                 weapon.Cycle();
 
-            var shooter = weapon.Shooter;
+            var shooter = weapon.Shooter();
 
-            if (chamberEntity == null)
+            if (chambered == null)
             {
                 // TODO: Bolt / pump do nothing?
                 if (weapon.SoundEmpty != null)
                     Get<AudioSystem>().Play(
-                        Filter.Excluding(shooter.PlayerSession()),
+                        GetFilter(weapon),
                         weapon.SoundEmpty,
                         weapon.Owner,
-                        AudioHelpers.WithVariation(weapon.EmptyVariation).WithVolume(weapon.EmptyVolume));
+                        AudioHelpers.WithVariation(IGun.EmptyVariation).WithVolume(IGun.EmptyVolume));
 
                 var mag = weapon.Magazine;
 
-                if (!weapon.BoltOpen && (mag == null || mag.GetComponent<SharedRangedMagazineComponent>().ShotsLeft == 0))
+                if (!weapon.BoltOpen && (mag == null || mag.ShotsLeft == 0))
                     weapon.TrySetBolt(true);
 
                 return true;
             }
 
-            var ammoComp = chamberEntity.GetComponent<AmmoComponent>();
-            var sound = ammoComp.Spent ? weapon.SoundEmpty : weapon.SoundGunshot;
+            var sound = chambered.Spent ? weapon.SoundEmpty : weapon.SoundGunshot;
 
             if (sound != null)
                 Get<AudioSystem>().Play(
-                    Filter.Excluding(shooter.PlayerSession()),
+                    GetFilter(weapon),
                     sound,
                     weapon.Owner,
-                    AudioHelpers.WithVariation(weapon.GunshotVariation).WithVolume(weapon.GunshotVolume))
+                    AudioHelpers.WithVariation(IGun.GunshotVariation).WithVolume(IGun.GunshotVolume));
 
-            if (!ammoComp.Spent)
+            // TODO: Needs to handle hitscan
+            if (!chambered.Spent)
             {
-                ShootAmmo(shooter, weapon, angle, ammoComp);
+                ShootAmmo(shooter, weapon, angle, chambered);
                 MuzzleFlash(shooter, weapon, angle);
-                ammoComp.Spent = true;
+                chambered.Spent = true;
             }
 
             return true;
@@ -335,14 +307,14 @@ namespace Content.Server.GameObjects.EntitySystems
             var shooter = weapon.Shooter();
             var energyRatio = chargeChange / weapon.BaseFireCost;
 
-            if (AmmoIsHitscan)
+            if (weapon.AmmoIsHitscan)
             {
                 var prototype = IoCManager.Resolve<IPrototypeManager>().Index<HitscanPrototype>(AmmoPrototype);
-                EntitySystem.Get<SharedRangedWeaponSystem>().ShootHitscan(Shooter(), this, prototype, angle, energyRatio, energyRatio);
+                ShootHitscan(shooter, weapon, prototype, angle, energyRatio, energyRatio);
             }
             else
             {
-                var entity = Owner.EntityManager.SpawnEntity(AmmoPrototype, Owner.Transform.MapPosition);
+                var entity = EntityManager.SpawnEntity(AmmoPrototype, Owner.Transform.MapPosition);
                 var ammoComponent = entity.GetComponent<SharedAmmoComponent>();
                 var projectileComponent = entity.GetComponent<ProjectileComponent>();
 
@@ -357,8 +329,8 @@ namespace Content.Server.GameObjects.EntitySystems
                     projectileComponent.Damages = newDamages;
                 }
 
-                EntitySystem.Get<SharedRangedWeaponSystem>().ShootAmmo(shooter, this, angle, ammoComponent);
-                EntitySystem.Get<SharedRangedWeaponSystem>().MuzzleFlash(shooter, this, angle, alphaRatio: energyRatio);
+                ShootAmmo(shooter, weapon, angle, ammoComponent);
+                MuzzleFlash(shooter, weapon, angle, alphaRatio: energyRatio);
             }
 
             return true;
@@ -377,7 +349,7 @@ namespace Content.Server.GameObjects.EntitySystems
         }
 
         #region Effects
-        public override void MuzzleFlash(IEntity? user, SharedRangedWeaponComponent weapon, Angle angle, TimeSpan? currentTime = null, bool predicted = true, float alphaRatio = 1.0f)
+        public override void MuzzleFlash(IEntity? user, IGun weapon, Angle angle, TimeSpan? currentTime = null, bool predicted = true, float alphaRatio = 1.0f)
         {
             var texture = weapon.MuzzleFlash;
             if (texture == null)
@@ -402,7 +374,7 @@ namespace Content.Server.GameObjects.EntitySystems
             _effectSystem.CreateParticle(message, predicted ? user?.PlayerSession() : null);
         }
 
-        private void HitscanMuzzleFlash(IEntity? user, SharedRangedWeaponComponent weapon, string? texture, Angle angle, float distance, TimeSpan? currentTime = null, float alphaRatio = 1.0f)
+        private void HitscanMuzzleFlash(IEntity? user, IGun weapon, string? texture, Angle angle, float distance, TimeSpan? currentTime = null, float alphaRatio = 1.0f)
         {
             if (texture == null || distance <= 1.0f)
                 return;

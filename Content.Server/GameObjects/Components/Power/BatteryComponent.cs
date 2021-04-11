@@ -59,15 +59,14 @@ namespace Content.Server.GameObjects.Components.Power
             {
                 return false;
             }
-            else
-            {
-                CurrentCharge -= chargeToUse;
-                return true;
-            }
+
+            CurrentCharge -= chargeToUse;
+            return true;
         }
 
-        public virtual float UseCharge(float toDeduct)
+        public override float UseCharge(float toDeduct)
         {
+            base.UseCharge(toDeduct);
             var chargeChangedBy = Math.Min(CurrentCharge, toDeduct);
             CurrentCharge -= chargeChangedBy;
             return chargeChangedBy;
