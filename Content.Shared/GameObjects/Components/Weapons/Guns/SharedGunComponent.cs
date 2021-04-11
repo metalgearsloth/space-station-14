@@ -1,10 +1,12 @@
 using System;
+using System.Diagnostics.CodeAnalysis;
 using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Map;
 using Robust.Shared.Maths;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization.Manager.Attributes;
+using Robust.Shared.Utility;
 using Robust.Shared.ViewVariables;
 
 namespace Content.Shared.GameObjects.Components.Weapons.Guns
@@ -54,7 +56,13 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         /// <summary>
         /// All guns have a magazine, some may have it internal.
         /// </summary>
-        public IAmmoProvider? Magazine { get; set; }
+        public IAmmoProvider? Magazine => _magazineSlot?.ContainedEntity?.GetComponent<IAmmoProvider>();
+
+        private ContainerSlot? _magazineSlot = null;
+
+        [ViewVariables]
+        [DataField("magazinePrototype")]
+        private EntityPrototype? _magazinePrototype;
 
         // TODO: MagazineType
 
@@ -71,7 +79,19 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         public override void Initialize()
         {
             base.Initialize();
-            if (InternalMagazine && Magazine == null)
+
+            // Pre-spawn magazine in
+            _magazineSlot = Owner.EnsureContainer<ContainerSlot>("magazine", out var existingMag);
+
+            if (!existingMag && _magazinePrototype != null)
+            {
+                var mag = Owner.EntityManager.SpawnEntity(_magazinePrototype.ID, Owner.Transform.Coordinates);
+                _magazineSlot.Insert(mag);
+                UpdateAppearance();
+                Dirty();
+            }
+
+            if (InternalMagazine && _magazineSlot.ContainedEntity == null)
             {
                 throw new InvalidOperationException();
             }
@@ -83,7 +103,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
 
             if (HasChamber)
             {
-                Owner.EnsureContainer<ContainerSlot>("chamber", out var existing);
+                Chamber = Owner.EnsureContainer<ContainerSlot>("chamber");
             }
             else
             {
@@ -125,9 +145,14 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
 
     public abstract class SharedAmmoProviderComponent : Component, IAmmoProvider
     {
+        // TODO: Most of the below seems more suited to a magazine weapon
+        // Try working on the powercell one for a bit and see what flows.
+
         // TODO: Caliber
 
         // TODO: MagazineType
+
+        private Container? _ammoContainer = null;
 
         /// <inheritdoc />
         [ViewVariables]
@@ -135,7 +160,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         public bool AutoEjectOnEmpty { get; }
 
         /// <inheritdoc />
-        public ushort ProjectileCount { get; }
+        public ushort ProjectileCount => UnspawnedCount + (ushort) _ammoContainer?.ContainedEntities?.Count ?? 0;
 
         /// <inheritdoc />
         [ViewVariables]
@@ -143,16 +168,51 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         public ushort ProjectileCapacity { get; }
 
         /// <inheritdoc />
-        public ushort UnspawnedCount { get; }
+        public ushort UnspawnedCount { get; private set; }
 
         /// <inheritdoc />
         [ViewVariables]
         [DataField("prototype")]
         public string? FillPrototype { get; }
 
-        public void UpdateAppearance(SharedAppearanceComponent? appearance = null)
+        public override void Initialize()
         {
-            throw new NotImplementedException();
+            base.Initialize();
+            if (FillPrototype != null)
+            {
+                UnspawnedCount = ProjectileCapacity;
+            }
+
+            _ammoContainer = Owner.EnsureContainer<Container>("ammo", out var existing);
+
+            if (existing)
+            {
+                UnspawnedCount -= (ushort) _ammoContainer.ContainedEntities.Count;
+            }
+
+            if (Owner.TryGetContainer(out var container) && container.Owner.TryGetComponent(out SharedGunComponent? gun))
+            {
+                // If we're attached to a gun then pre-fill its chamber
+                if (gun.HasChamber && TryGetAmmo(out var ammo))
+                {
+                    gun.Chamber!.Insert(ammo);
+                    gun.UpdateAppearance();
+                    gun.Dirty();
+                }
+            }
+
+            DebugTools.Assert(ProjectileCount <= ProjectileCapacity);
+        }
+
+        public bool TryGetAmmo([NotNullWhen(true)] out SharedAmmoComponent? ammo)
+        {
+            ammo = null;
+            return false;
+        }
+
+        public virtual void UpdateAppearance(SharedAppearanceComponent? appearance = null)
+        {
+            return;
         }
     }
 
