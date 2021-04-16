@@ -1,10 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Map;
 using Robust.Shared.Maths;
 using Robust.Shared.Prototypes;
+using Robust.Shared.Serialization;
 using Robust.Shared.Serialization.Manager.Attributes;
 using Robust.Shared.Utility;
 using Robust.Shared.ViewVariables;
@@ -25,26 +27,8 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         [DataField("soundEmpty")]
         public string? SoundEmpty { get; } = null;
 
-        /// <summary>
-        /// If we have a chamber then we pull from that to shoot.
-        /// If not then we pull directly from the magazine.
-        /// </summary>
-        [ViewVariables]
-        [DataField("hasChamber")]
-        public bool HasChamber { get; }
-
-        public ContainerSlot? Chamber { get; private set; }
-
         // If our bolt is open then we can directly insert ammo into it.
         // This is useful for stuff that is single-shot and has no need for any kind of magazine.
-
-        [ViewVariables]
-        [DataField("boltClosed")]
-        public bool BoltClosed { get; } = true;
-
-        [ViewVariables]
-        [DataField("boltToggleable")]
-        public bool BoltToggleable { get; } = false;
 
         /// <summary>
         /// Can the magazine be removed?
@@ -52,6 +36,11 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         [ViewVariables]
         [DataField("internalMag")]
         public bool InternalMagazine { get; }
+
+        /// <inheritdoc />
+        [ViewVariables]
+        [DataField("autoEjectOnEmpty")]
+        public bool AutoEjectOnEmpty { get; }
 
         /// <summary>
         /// All guns have a magazine, some may have it internal.
@@ -65,16 +54,6 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         private EntityPrototype? _magazinePrototype;
 
         // TODO: MagazineType
-
-        // I think all guns have magazines we just need to determine if internal or not
-        // Magazine needs a bool for whether it autoejects on empty
-
-        // Uhh bool for whether we can manually cycle
-        // Bool for whether it autocycles
-
-        [ViewVariables]
-        [DataField("speedLoadable")]
-        public bool SpeedLoadable { get; } = false;
 
         public override void Initialize()
         {
@@ -123,19 +102,88 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         }
     }
 
-    public abstract class SharedRevolverMagazineComponent : SharedAmmoProviderComponent
-    {
+    // I think all guns have magazines we just need to determine if internal or not
+    // Magazine needs a bool for whether it autoejects on empty
 
-    }
+    // Uhh bool for whether we can manually cycle
+    // Bool for whether it autocycles
 
     public abstract class SharedBatteryMagazineComponent : SharedAmmoProviderComponent
     {
 
     }
 
-    public abstract class SharedBallisticMagazineComponent : SharedAmmoProviderComponent
+    public abstract class SharedBallisticMagazineComponent : SharedBallisticsAmmoProvider
     {
+        /// <summary>
+        /// If we have a chamber then we pull from that to shoot.
+        /// If not then we pull directly from the magazine.
+        /// </summary>
+        [ViewVariables]
+        [DataField("hasChamber")]
+        public bool HasChamber { get; }
 
+        public ContainerSlot? Chamber { get; private set; }
+
+        private Container? _ammoContainer = null;
+
+        /// <inheritdoc />
+        public ushort ProjectileCount => UnspawnedCount + (ushort) _ammoContainer?.ContainedEntities?.Count ?? 0;
+
+        public override void Initialize()
+        {
+            base.Initialize();
+            _ammoContainer = Owner.EnsureContainer<Container>("ammo", out var existing);
+
+            if (existing)
+            {
+                UnspawnedCount -= (ushort) _ammoContainer.ContainedEntities.Count;
+            }
+
+            if (Owner.TryGetContainer(out var container) && container.Owner.TryGetComponent(out SharedGunComponent? gun))
+            {
+                // If we're attached to a gun then pre-fill its chamber
+                if (HasChamber && TryGetAmmo(out var ammo))
+                {
+                    Chamber!.Insert(ammo.Owner);
+                    gun.UpdateAppearance();
+                    gun.Dirty();
+                }
+            }
+
+            DebugTools.Assert(ProjectileCount <= ProjectileCapacity);
+        }
+    }
+
+    public abstract class SharedRevolverMagazineComponent : SharedBallisticsAmmoProvider, ISerializationHooks
+    {
+        private SharedAmmoComponent?[] _revolver;
+
+        private Stack<SharedAmmoComponent> _spawnedAmmo = new Stack<SharedAmmoComponent>();
+
+        [ViewVariables]
+        [DataField("speedLoadable")]
+        public bool SpeedLoadable { get; } = false;
+
+        private ushort _currentCylinder;
+
+        public override void Initialize()
+        {
+            base.Initialize();
+            _revolver = new SharedAmmoComponent?[ProjectileCapacity];
+        }
+
+        private void Cycle()
+        {
+            // TODO: Copy and shit.
+        }
+
+        public override bool TryGetAmmo(out SharedAmmoComponent? ammo)
+        {
+            ammo = _revolver[_currentCylinder];
+
+            return ammo != null;
+        }
     }
 
     public abstract class SharedReagentMagazineComponent : SharedAmmoProviderComponent
@@ -143,24 +191,20 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
 
     }
 
-    public abstract class SharedAmmoProviderComponent : Component, IAmmoProvider
+    /*
+     * Okay so: SharedAmmoProvider -> SharedBatteryProvider
+     * SharedAmmoProvider -> SharedBallisticsProvider -> SharedMagazineProvider
+     */
+
+    public abstract class SharedBallisticsAmmoProvider : SharedAmmoProviderComponent
     {
-        // TODO: Most of the below seems more suited to a magazine weapon
-        // Try working on the powercell one for a bit and see what flows.
-
-        // TODO: Caliber
-
-        // TODO: MagazineType
-
-        private Container? _ammoContainer = null;
-
-        /// <inheritdoc />
         [ViewVariables]
-        [DataField("autoEjectOnEmpty")]
-        public bool AutoEjectOnEmpty { get; }
+        [DataField("boltClosed")]
+        public bool BoltClosed { get; } = true;
 
-        /// <inheritdoc />
-        public ushort ProjectileCount => UnspawnedCount + (ushort) _ammoContainer?.ContainedEntities?.Count ?? 0;
+        [ViewVariables]
+        [DataField("boltToggleable")]
+        public bool BoltToggleable { get; } = false;
 
         /// <inheritdoc />
         [ViewVariables]
@@ -168,7 +212,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         public ushort ProjectileCapacity { get; }
 
         /// <inheritdoc />
-        public ushort UnspawnedCount { get; private set; }
+        public ushort UnspawnedCount { get; protected set; }
 
         /// <inheritdoc />
         [ViewVariables]
@@ -182,33 +226,24 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
             {
                 UnspawnedCount = ProjectileCapacity;
             }
-
-            _ammoContainer = Owner.EnsureContainer<Container>("ammo", out var existing);
-
-            if (existing)
-            {
-                UnspawnedCount -= (ushort) _ammoContainer.ContainedEntities.Count;
-            }
-
-            if (Owner.TryGetContainer(out var container) && container.Owner.TryGetComponent(out SharedGunComponent? gun))
-            {
-                // If we're attached to a gun then pre-fill its chamber
-                if (gun.HasChamber && TryGetAmmo(out var ammo))
-                {
-                    gun.Chamber!.Insert(ammo);
-                    gun.UpdateAppearance();
-                    gun.Dirty();
-                }
-            }
-
-            DebugTools.Assert(ProjectileCount <= ProjectileCapacity);
         }
 
-        public bool TryGetAmmo([NotNullWhen(true)] out SharedAmmoComponent? ammo)
-        {
-            ammo = null;
-            return false;
-        }
+        public abstract bool TryGetAmmo([NotNullWhen(true)] out SharedAmmoComponent? ammo);
+    }
+
+    public abstract class SharedAmmoComponent : Component
+    {
+
+    }
+
+    public abstract class SharedAmmoProviderComponent : Component, IAmmoProvider
+    {
+        // TODO: Most of the below seems more suited to a magazine weapon
+        // Try working on the powercell one for a bit and see what flows.
+
+        // TODO: Caliber
+
+        // TODO: MagazineType
 
         public virtual void UpdateAppearance(SharedAppearanceComponent? appearance = null)
         {
@@ -231,28 +266,6 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
 
     public interface IAmmoProvider
     {
-        bool AutoEjectOnEmpty { get; }
-
-        /// <summary>
-        /// How many projectiles are we currently holding
-        /// </summary>
-        ushort ProjectileCount { get; }
-
-        /// <summary>
-        /// How many projectiles can we hold?
-        /// </summary>
-        ushort ProjectileCapacity { get; }
-
-        /// <summary>
-        /// We defer spawning projectiles as late as possible hence we need a tracker for it
-        /// </summary>
-        ushort UnspawnedCount { get; }
-
-        /// <summary>
-        /// What do we spawn with out UnspawnedCount?
-        /// </summary>
-        string? FillPrototype { get; }
-
         /// <summary>
         /// Update our appearance visualizers.
         /// </summary>
