@@ -74,23 +74,6 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
             {
                 throw new InvalidOperationException();
             }
-
-            if (!BoltClosed && !BoltToggleable)
-            {
-                throw new InvalidOperationException();
-            }
-
-            if (HasChamber)
-            {
-                Chamber = Owner.EnsureContainer<ContainerSlot>("chamber");
-            }
-            else
-            {
-                if (Owner.TryGetComponent(out ContainerManagerComponent? manager) && manager.HasContainer("chamber"))
-                {
-                    throw new InvalidOperationException();
-                }
-            }
         }
 
         public void UpdateAppearance()
@@ -138,6 +121,23 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
             if (existing)
             {
                 UnspawnedCount -= (ushort) _ammoContainer.ContainedEntities.Count;
+            }
+
+            if (!BoltClosed && !BoltToggleable)
+            {
+                throw new InvalidOperationException("Can't have a forced-open bolt with a non-toggleable one on entity {Owner}");
+            }
+
+            if (HasChamber)
+            {
+                Chamber = Owner.EnsureContainer<ContainerSlot>("chamber");
+            }
+            else
+            {
+                if (Owner.TryGetComponent(out ContainerManagerComponent? manager) && manager.HasContainer("chamber"))
+                {
+                    throw new InvalidOperationException($"Found existing chamber on {Owner} but this is not allowed");
+                }
             }
 
             if (Owner.TryGetContainer(out var container) && container.Owner.TryGetComponent(out SharedGunComponent? gun))
