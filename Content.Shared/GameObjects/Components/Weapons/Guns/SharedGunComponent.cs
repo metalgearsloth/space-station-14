@@ -111,7 +111,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         private Container? _ammoContainer = null;
 
         /// <inheritdoc />
-        public ushort ProjectileCount => UnspawnedCount + (ushort) _ammoContainer?.ContainedEntities?.Count ?? 0;
+        public int ProjectileCount => UnspawnedCount + _ammoContainer?.ContainedEntities.Count ?? 0;
 
         public override void Initialize()
         {
@@ -120,7 +120,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
 
             if (existing)
             {
-                UnspawnedCount -= (ushort) _ammoContainer.ContainedEntities.Count;
+                UnspawnedCount -= _ammoContainer.ContainedEntities.Count;
             }
 
             if (!BoltClosed && !BoltToggleable)
@@ -157,15 +157,16 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
 
     public abstract class SharedRevolverMagazineComponent : SharedBallisticsAmmoProvider, ISerializationHooks
     {
-        private SharedAmmoComponent?[] _revolver;
+        private SharedAmmoComponent?[] _revolver = default!;
 
-        private Stack<SharedAmmoComponent> _spawnedAmmo = new Stack<SharedAmmoComponent>();
+        // Don't initialize to their capacity given more guns will never need their max capacity.
+        private Stack<SharedAmmoComponent> _spawnedAmmo = new();
 
         [ViewVariables]
         [DataField("speedLoadable")]
         public bool SpeedLoadable { get; } = false;
 
-        private ushort _currentCylinder;
+        private int _currentCylinder;
 
         public override void Initialize()
         {
@@ -176,13 +177,6 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         private void Cycle()
         {
             // TODO: Copy and shit.
-        }
-
-        public override bool TryGetAmmo(out SharedAmmoComponent? ammo)
-        {
-            ammo = _revolver[_currentCylinder];
-
-            return ammo != null;
         }
     }
 
@@ -209,10 +203,10 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         /// <inheritdoc />
         [ViewVariables]
         [DataField("capacity")]
-        public ushort ProjectileCapacity { get; }
+        public int ProjectileCapacity { get; }
 
         /// <inheritdoc />
-        public ushort UnspawnedCount { get; protected set; }
+        public int UnspawnedCount { get; protected set; }
 
         /// <inheritdoc />
         [ViewVariables]

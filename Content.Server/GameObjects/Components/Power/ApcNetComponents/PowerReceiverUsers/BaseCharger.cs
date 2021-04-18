@@ -1,10 +1,10 @@
-#nullable enable
+﻿#nullable enable
 using System;
 using System.Threading.Tasks;
 using Content.Server.GameObjects.Components.GUI;
 using Content.Server.GameObjects.Components.Items.Storage;
-using Content.Server.GameObjects.Components.Weapon.Ranged.Barrels;
 using Content.Shared.GameObjects.Components.Power;
+using Content.Shared.GameObjects.Components.Weapons.Guns;
 using Content.Shared.GameObjects.EntitySystems.ActionBlocker;
 using Content.Shared.GameObjects.Verbs;
 using Content.Shared.Interfaces;
@@ -13,8 +13,6 @@ using Robust.Server.GameObjects;
 using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Localization;
-using Robust.Shared.Prototypes;
-using Robust.Shared.Serialization;
 using Robust.Shared.Serialization.Manager.Attributes;
 using Robust.Shared.ViewVariables;
 
@@ -103,7 +101,8 @@ namespace Content.Server.GameObjects.Components.Power.ApcNetComponents.PowerRece
                 handsComponent.PutInHandOrDrop(heldItem.GetComponent<ItemComponent>());
             }
 
-            if (heldItem.TryGetComponent(out ServerBatteryBarrelComponent? batteryBarrelComponent))
+            // TODO: Make it generic
+            if (heldItem.TryGetComponent(out SharedBatteryMagazineComponent? batteryBarrelComponent))
             {
                 batteryBarrelComponent.UpdateAppearance();
             }

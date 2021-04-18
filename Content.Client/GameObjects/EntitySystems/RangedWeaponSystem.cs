@@ -1,7 +1,5 @@
 ﻿using System;
 using Content.Client.GameObjects.Components.Items;
-using Content.Client.GameObjects.Components.Weapons.Ranged;
-using Content.Shared.GameObjects.Components.Weapons.Ranged;
 using JetBrains.Annotations;
 using Robust.Client.GameObjects;
 using Robust.Client.Graphics;
@@ -62,6 +60,7 @@ namespace Content.Client.GameObjects.EntitySystems
             }
 
             var held = hands.ActiveHand;
+            /*
             if (held == null || !held.TryGetComponent(out ClientRangedWeaponComponent? weapon))
             {
                 _blocked = true;
@@ -102,6 +101,7 @@ namespace Content.Client.GameObjects.EntitySystems
             {
                 weapon.SyncFirePos(grid.Index, grid.MapToGrid(worldPos).Position);
             }
+            */
         }
     }
 }

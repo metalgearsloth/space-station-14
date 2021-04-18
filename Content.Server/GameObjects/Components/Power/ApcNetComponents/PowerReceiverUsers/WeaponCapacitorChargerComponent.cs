@@ -1,5 +1,5 @@
 ﻿#nullable enable
-using Content.Server.GameObjects.Components.Weapon.Ranged.Barrels;
+using Content.Shared.GameObjects.Components.Weapons.Guns;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Robust.Shared.GameObjects;
 
@@ -17,29 +17,13 @@ namespace Content.Server.GameObjects.Components.Power.ApcNetComponents.PowerRece
 
         protected override bool IsEntityCompatible(IEntity entity)
         {
-            return entity.TryGetComponent(out ServerBatteryBarrelComponent? battery) && battery.PowerCell != null ||
-                   entity.TryGetComponent(out PowerCellSlotComponent? slot) && slot.HasCell;
+            return entity.TryGetComponent(out PowerCellSlotComponent? slot) && slot.HasCell;
         }
 
         protected override BatteryComponent? GetBatteryFrom(IEntity entity)
         {
-            if (entity.TryGetComponent(out PowerCellSlotComponent? slot))
-            {
-                if (slot.Cell != null)
-                {
-                    return slot.Cell;
-                }
-            }
-
-            if (entity.TryGetComponent(out ServerBatteryBarrelComponent? battery))
-            {
-                if (battery.PowerCell != null)
-                {
-                    return battery.PowerCell;
-                }
-            }
-
-            return null;
+            if (!entity.TryGetComponent(out PowerCellSlotComponent? slot)) return null;
+            return slot.Cell ?? null;
         }
     }
 }
