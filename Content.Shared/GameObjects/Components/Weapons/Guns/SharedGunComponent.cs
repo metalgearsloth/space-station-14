@@ -56,6 +56,47 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         // TODO: MagazineType
 
         /// <summary>
+        /// How many times we can shoot per second
+        /// </summary>
+        [ViewVariables(VVAccess.ReadWrite)]
+        [DataField("fireRate")]
+        public float FireRate { get; set; }
+
+        [ViewVariables(VVAccess.ReadWrite)]
+        [DataField("ammoSpreadRatio")]
+        public float AmmoSpreadRatio { get; set; }
+
+        public Angle CurrentAngle { get; set; }
+
+        /// <summary>
+        /// How much the CurrentAngle increases per shot fired.
+        /// </summary>
+        [ViewVariables(VVAccess.ReadWrite)]
+        [DataField("angleIncrease")]
+        public float AngleIncrease { get; set; }
+
+        /// <summary>
+        /// How fast per second the CurrentAngle decays.
+        /// </summary>
+        [ViewVariables(VVAccess.ReadWrite)]
+        [DataField("angleDecay")]
+        public float AngleDecay { get; set; }
+
+        /// <summary>
+        /// The minimum variance allowed to the shooting angle.
+        /// </summary>
+        [ViewVariables(VVAccess.ReadWrite)]
+        [DataField("minAngle")]
+        public Angle MinAngle { get; set; }
+
+        /// <summary>
+        /// The maximum variance allowed to the shooting angle.
+        /// </summary>
+        [ViewVariables(VVAccess.ReadWrite)]
+        [DataField("maxAngle")]
+        public Angle MaxAngle { get; set; }
+
+        /// <summary>
         /// Last time we pulled a projectile.
         /// </summary>
         public TimeSpan LastFire { get; set; }
@@ -70,13 +111,6 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         /// </summary>
         [ViewVariables]
         public int ShotCounter { get; set; }
-
-        /// <summary>
-        /// How many times we can shoot per second
-        /// </summary>
-        [ViewVariables(VVAccess.ReadWrite)]
-        [DataField("fireRate")]
-        public float FireRate { get; set; }
 
         public override void Initialize()
         {
@@ -244,7 +278,6 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
                 UnspawnedCount = ProjectileCapacity;
             }
         }
-
 
         public virtual bool TrySetBolt(IMagazineGun weapon, bool value)
         {
