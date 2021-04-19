@@ -55,6 +55,29 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
 
         // TODO: MagazineType
 
+        /// <summary>
+        /// Last time we pulled a projectile.
+        /// </summary>
+        public TimeSpan LastFire { get; set; }
+
+        /// <summary>
+        /// Earliest time we can pull another projectile
+        /// </summary>
+        public TimeSpan NextFire { get; set; }
+
+        /// <summary>
+        /// How many times we've fired in the current burst. Useful for tracking single-shot / burst-fire.
+        /// </summary>
+        [ViewVariables]
+        public int ShotCounter { get; set; }
+
+        /// <summary>
+        /// How many times we can shoot per second
+        /// </summary>
+        [ViewVariables(VVAccess.ReadWrite)]
+        [DataField("fireRate")]
+        public float FireRate { get; set; }
+
         public override void Initialize()
         {
             base.Initialize();
@@ -222,6 +245,80 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
             }
         }
 
+
+        public virtual bool TrySetBolt(IMagazineGun weapon, bool value)
+        {
+            if (weapon.BoltOpen == value)
+                return false;
+
+            if (value)
+            {
+                TryEjectChamber(weapon);
+            }
+            else
+            {
+                TryFeedChamber(weapon);
+            }
+
+            weapon.BoltOpen = value;
+            return true;
+        }
+
+        #region Magazine
+        /// <summary>
+        ///     Cycle the chamber.
+        /// </summary>
+        public void Cycle(IMagazineGun weapon, bool manual = false)
+        {
+            TryEjectChamber(weapon);
+            TryFeedChamber(weapon);
+
+            if (manual)
+            {
+                if (weapon.SoundRack != null)
+                    SoundSystem.Play(GetFilter(weapon), weapon.SoundRack, AudioHelpers.WithVariation(IMagazineGun.RackVariation).WithVolume(IMagazineGun.RackVolume));
+            }
+        }
+
+        protected void TryEjectChamber(IMagazineGun weapon)
+        {
+            var chamberEntity = weapon.Chambered;
+            if (chamberEntity != null)
+            {
+                if (weapon.TryRemoveChambered())
+                    return;
+
+                if (!chamberEntity.Caseless)
+                    EjectCasing(weapon.Shooter(), chamberEntity.Owner);
+
+                return;
+            }
+        }
+
+        protected void TryFeedChamber(IMagazineGun weapon)
+        {
+            if (weapon.Chambered != null) return;
+
+            // Try and pull a round from the magazine to replace the chamber if possible
+            var magazine = weapon.Magazine;
+            SharedAmmoComponent? nextCartridge = null;
+            magazine?.TryPop(out nextCartridge);
+
+            if (nextCartridge == null)
+                return;
+
+            weapon.TryInsertChamber(nextCartridge);
+
+            if (weapon.AutoEjectMag && magazine != null && magazine.ShotsLeft == 0)
+            {
+                if (weapon.SoundAutoEject != null)
+                    SoundSystem.Play(GetFilter(weapon), weapon.SoundAutoEject, AudioHelpers.WithVariation(IMagazineGun.AutoEjectVariation).WithVolume(IMagazineGun.AutoEjectVolume));
+
+                weapon.TryRemoveMagazine();
+            }
+        }
+        #endregion
+
         public abstract bool TryGetAmmo([NotNullWhen(true)] out SharedAmmoComponent? ammo);
     }
 
@@ -239,10 +336,14 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
 
         // TODO: MagazineType
 
-        public virtual void UpdateAppearance(SharedAppearanceComponent? appearance = null)
+        public virtual bool CanShoot()
         {
-            return;
+            return true;
         }
+
+        public abstract bool TryGetProjectile([NotNullWhen(true)] out IProjectile? projectile);
+
+        public virtual void UpdateAppearance(SharedAppearanceComponent? appearance = null) {}
     }
 
     // Speedloader should be a flag or whatever
@@ -260,6 +361,19 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
 
     public interface IAmmoProvider
     {
+        /// <summary>
+        /// Check upfront whether we can fire e.g. is bolt-closed where relevant.
+        /// </summary>
+        /// <returns></returns>
+        bool CanShoot();
+
+        /// <summary>
+        /// Pulls the actual IProjectile for firing if available.
+        /// </summary>
+        /// <param name="projectile"></param>
+        /// <returns></returns>
+        bool TryGetProjectile([NotNullWhen(true)] out IProjectile? projectile);
+
         /// <summary>
         /// Update our appearance visualizers.
         /// </summary>
