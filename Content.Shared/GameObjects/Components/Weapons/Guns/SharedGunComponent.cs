@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using Content.Shared.GameObjects.EntitySystems;
 using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Map;
@@ -251,7 +252,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
     {
         [ViewVariables]
         [DataField("boltClosed")]
-        public bool BoltClosed { get; } = true;
+        public bool BoltClosed { get; set; } = true;
 
         [ViewVariables]
         [DataField("boltToggleable")]
@@ -279,85 +280,16 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
             }
         }
 
-        public virtual bool TrySetBolt(IMagazineGun weapon, bool value)
-        {
-            if (weapon.BoltOpen == value)
-                return false;
-
-            if (value)
-            {
-                TryEjectChamber(weapon);
-            }
-            else
-            {
-                TryFeedChamber(weapon);
-            }
-
-            weapon.BoltOpen = value;
-            return true;
-        }
-
-        #region Magazine
-        /// <summary>
-        ///     Cycle the chamber.
-        /// </summary>
-        public void Cycle(IMagazineGun weapon, bool manual = false)
-        {
-            TryEjectChamber(weapon);
-            TryFeedChamber(weapon);
-
-            if (manual)
-            {
-                if (weapon.SoundRack != null)
-                    SoundSystem.Play(GetFilter(weapon), weapon.SoundRack, AudioHelpers.WithVariation(IMagazineGun.RackVariation).WithVolume(IMagazineGun.RackVolume));
-            }
-        }
-
-        protected void TryEjectChamber(IMagazineGun weapon)
-        {
-            var chamberEntity = weapon.Chambered;
-            if (chamberEntity != null)
-            {
-                if (weapon.TryRemoveChambered())
-                    return;
-
-                if (!chamberEntity.Caseless)
-                    EjectCasing(weapon.Shooter(), chamberEntity.Owner);
-
-                return;
-            }
-        }
-
-        protected void TryFeedChamber(IMagazineGun weapon)
-        {
-            if (weapon.Chambered != null) return;
-
-            // Try and pull a round from the magazine to replace the chamber if possible
-            var magazine = weapon.Magazine;
-            SharedAmmoComponent? nextCartridge = null;
-            magazine?.TryPop(out nextCartridge);
-
-            if (nextCartridge == null)
-                return;
-
-            weapon.TryInsertChamber(nextCartridge);
-
-            if (weapon.AutoEjectMag && magazine != null && magazine.ShotsLeft == 0)
-            {
-                if (weapon.SoundAutoEject != null)
-                    SoundSystem.Play(GetFilter(weapon), weapon.SoundAutoEject, AudioHelpers.WithVariation(IMagazineGun.AutoEjectVariation).WithVolume(IMagazineGun.AutoEjectVolume));
-
-                weapon.TryRemoveMagazine();
-            }
-        }
-        #endregion
-
         public abstract bool TryGetAmmo([NotNullWhen(true)] out SharedAmmoComponent? ammo);
     }
 
-    public abstract class SharedAmmoComponent : Component
+    public abstract class SharedAmmoComponent : Component, IProjectile
     {
+        [ViewVariables(VVAccess.ReadWrite)]
+        [DataField("caliber")]
+        public GunCaliber Caliber { get; } = GunCaliber.Unspecified;
 
+        // TODO: Copy, e.g. does it spawn a new bullet or not, is it caseless, etc etc.
     }
 
     public abstract class SharedAmmoProviderComponent : Component, IAmmoProvider
@@ -365,9 +297,13 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         // TODO: Most of the below seems more suited to a magazine weapon
         // Try working on the powercell one for a bit and see what flows.
 
-        // TODO: Caliber
+        [ViewVariables(VVAccess.ReadWrite)]
+        [DataField("caliber")]
+        public GunCaliber Caliber { get; } = GunCaliber.Unspecified;
 
-        // TODO: MagazineType
+        [ViewVariables(VVAccess.ReadWrite)]
+        [DataField("magazineType")]
+        public GunMagazine MagazineType { get; } = GunMagazine.Unspecified;
 
         public virtual bool CanShoot()
         {
@@ -419,35 +355,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
     /// </summary>
     public interface IProjectile
     {
-        void Fire(MapCoordinates coordinates, Angle angle);
-    }
 
-    /// <summary>
-    /// Fires discrete entities
-    /// </summary>
-    public abstract class SharedActualAmmoComponent : IProjectile
-    {
-        public void Fire(MapCoordinates coordinates, Angle angle)
-        {
-            throw new NotImplementedException();
-        }
-    }
-
-    /// <summary>
-    /// Fires a raycast.
-    /// </summary>
-    [Prototype("hitscan")]
-    public sealed class HitscanAmmoPrototype : IPrototype, IProjectile
-    {
-        public void Fire(MapCoordinates coordinates, Angle angle)
-        {
-            throw new NotImplementedException();
-        }
-
-        public string ID
-        {
-            get { throw new NotImplementedException(); }
-        }
     }
 
     public enum GunProjectileType : byte

@@ -91,8 +91,16 @@ namespace Content.Shared.GameObjects.EntitySystems
                 return false;
             }
 
+            // TODO: Need to figure out this inheritance bullshit.
             switch (projectile)
             {
+                case SharedAmmoComponent ammo:
+                    // TODO: Support firing ammo or whatever it spawns instead.
+                    ShootAmmo(null, weapon, angle, ammo);
+                    break;
+                case HitscanPrototype hitscan:
+                    ShootHitscan(null, weapon, hitscan, angle);
+                    break;
                 default:
                     throw new NotImplementedException($"Projectile type {projectile.GetType()} not implemented!");
             }
@@ -179,5 +187,124 @@ namespace Content.Shared.GameObjects.EntitySystems
             var random = (_robustRandom.NextDouble() - 0.5) * 2;
             return Angle.FromDegrees(angle.Degrees + weapon.CurrentAngle.Degrees * random);
         }
+
+        // TODO: Move onto ammo providers and call during TryGetProjectile
+        public virtual bool TrySetRevolverBolt(SharedRevolverMagazineComponent weapon, bool value)
+        {
+            if (weapon.BoltClosed == value || !weapon.BoltToggleable) return false;
+
+            weapon.BoltClosed = value;
+            return true;
+        }
+
+        // Gun-specific behaviors
+        public virtual bool TrySetMagazineBolt(SharedBallisticMagazineComponent weapon, bool value)
+        {
+            if (weapon.BoltClosed == value || !weapon.BoltToggleable) return false;
+
+            if (value)
+            {
+                TryEjectChamber(weapon);
+            }
+            else
+            {
+                TryFeedChamber(weapon);
+            }
+
+            weapon.BoltClosed = value;
+            return true;
+        }
+
+        #region Magazine
+        /// <summary>
+        ///     Cycle the chamber.
+        /// </summary>
+        public void Cycle(SharedBallisticMagazineComponent weapon, bool manual = false)
+        {
+            TryEjectChamber(weapon);
+            TryFeedChamber(weapon);
+
+            if (manual)
+            {
+                if (weapon.SoundRack != null)
+                    SoundSystem.Play(GetFilter(weapon), weapon.SoundRack, AudioHelpers.WithVariation(IMagazineGun.RackVariation).WithVolume(IMagazineGun.RackVolume));
+            }
+        }
+
+        protected void TryEjectChamber(SharedBallisticMagazineComponent weapon)
+        {
+            var chamberEntity = weapon.Chambered;
+            if (chamberEntity != null)
+            {
+                if (weapon.TryRemoveChambered())
+                    return;
+
+                if (!chamberEntity.Caseless)
+                    EjectCasing(weapon.Shooter(), chamberEntity.Owner);
+
+                return;
+            }
+        }
+
+        protected void TryFeedChamber(SharedBallisticMagazineComponent weapon)
+        {
+            if (weapon.Chambered != null) return;
+
+            // Try and pull a round from the magazine to replace the chamber if possible
+            var magazine = weapon.Magazine;
+            SharedAmmoComponent? nextCartridge = null;
+            magazine?.TryPop(out nextCartridge);
+
+            if (nextCartridge == null)
+                return;
+
+            weapon.TryInsertChamber(nextCartridge);
+
+            if (weapon.AutoEjectMag && magazine != null && magazine.ShotsLeft == 0)
+            {
+                if (weapon.SoundAutoEject != null)
+                    SoundSystem.Play(GetFilter(weapon), weapon.SoundAutoEject, AudioHelpers.WithVariation(IMagazineGun.AutoEjectVariation).WithVolume(IMagazineGun.AutoEjectVolume));
+
+                weapon.TryRemoveMagazine();
+            }
+        }
+        #endregion
+    }
+
+    public enum GunCaliber : byte
+    {
+        Unspecified = 0,
+        A357, // Placeholder?
+        ClRifle,
+        SRifle,
+        Pistol,
+        A35, // Placeholder?
+        LRifle,
+        Magnum,
+        AntiMaterial,
+        Shotgun,
+        Cap,
+        Rocket,
+        Dart, // Placeholder
+        Grenade,
+        Energy,
+    }
+
+    [Flags]
+    public enum GunMagazine : uint
+    {
+
+        Unspecified = 0,
+        LPistol = 1 << 0, // Placeholder?
+        Pistol = 1 << 1,
+        HCPistol = 1 << 2,
+        Smg = 1 << 3,
+        SmgTopMounted = 1 << 4,
+        Rifle = 1 << 5,
+        IH = 1 << 6, // Placeholder?
+        Box = 1 << 7,
+        Pan = 1 << 8,
+        Dart = 1 << 9, // Placeholder
+        CalicoTopMounted = 1 << 10,
     }
 }
