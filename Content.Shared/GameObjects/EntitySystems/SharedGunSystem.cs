@@ -115,6 +115,8 @@ namespace Content.Shared.GameObjects.EntitySystems
         /// <returns></returns>
         protected abstract Filter GetFilter(SharedGunComponent gun);
 
+        protected abstract Filter GetFilter(SharedAmmoProviderComponent ammoProvider);
+
         /// <summary>
         ///     General shooting code.
         /// </summary>
@@ -219,15 +221,15 @@ namespace Content.Shared.GameObjects.EntitySystems
         /// <summary>
         ///     Cycle the chamber.
         /// </summary>
-        public void Cycle(SharedBallisticMagazineComponent weapon, bool manual = false)
+        public void Cycle(SharedBallisticMagazineComponent magazine, bool manual = false)
         {
-            TryEjectChamber(weapon);
-            TryFeedChamber(weapon);
+            TryEjectChamber(magazine);
+            TryFeedChamber(magazine);
 
             if (manual)
             {
-                if (weapon.SoundRack != null)
-                    SoundSystem.Play(GetFilter(weapon), weapon.SoundRack, AudioHelpers.WithVariation(weapon.RackVariation).WithVolume(weapon.RackVolume));
+                if (magazine.SoundRack != null)
+                    SoundSystem.Play(GetFilter(magazine), magazine.SoundRack, AudioHelpers.WithVariation(magazine.RackVariation).WithVolume(magazine.RackVolume));
             }
         }
 
