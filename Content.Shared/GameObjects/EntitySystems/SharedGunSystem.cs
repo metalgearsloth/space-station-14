@@ -9,15 +9,17 @@ using Robust.Shared.Log;
 using Robust.Shared.Map;
 using Robust.Shared.Maths;
 using Robust.Shared.Player;
+using Robust.Shared.Prototypes;
 using Robust.Shared.Random;
 using Robust.Shared.Timing;
 
 namespace Content.Shared.GameObjects.EntitySystems
 {
-    public abstract class SharedGunSystem
+    public abstract class SharedGunSystem : EntitySystem
     {
-        [Dependency] private readonly IGameTiming _gameTiming = default!;
-        [Dependency] private readonly IRobustRandom _robustRandom = default!;
+        [Dependency] protected readonly IGameTiming GameTiming = default!;
+        [Dependency] protected readonly IPrototypeManager PrototypeManager = default!;
+        [Dependency] protected readonly IRobustRandom RobustRandom = default!;
 
         protected const float EffectDuration = 0.5f;
 
@@ -26,11 +28,12 @@ namespace Content.Shared.GameObjects.EntitySystems
         /// </summary>
         /// <param name="user"></param>
         /// <param name="weapon"></param>
+        /// <param name="ammo"></param>
         /// <param name="angle"></param>
         /// <param name="predicted">Whether we also need to show the effect for the client. Eventually this shouldn't be needed (when we can predict hitscan / weapon recoil)</param>
         /// <param name="currentTime"></param>
         /// <param name="alphaRatio"></param>
-        public abstract void MuzzleFlash(IEntity? user, SharedGunComponent weapon, Angle angle, TimeSpan? currentTime = null, bool predicted = true, float alphaRatio = 1.0f);
+        public abstract void MuzzleFlash(IEntity? user, IEntity weapon, SharedAmmoComponent ammo, Angle angle, TimeSpan? currentTime = null, bool predicted = false, float alphaRatio = 1.0f);
 
         public abstract void EjectCasing(IEntity? user, IEntity casing, bool playSound = true, Direction[]? ejectDirections = null);
 
@@ -122,7 +125,7 @@ namespace Content.Shared.GameObjects.EntitySystems
         /// </summary>
         protected bool TryFire(IEntity user, SharedGunComponent weapon, MapCoordinates coordinates, out int firedShots, TimeSpan? currentTime = null)
         {
-            currentTime ??= _gameTiming.CurTime;
+            currentTime ??= GameTiming.CurTime;
             firedShots = 0;
             var lastFire = weapon.NextFire;
 
@@ -175,7 +178,7 @@ namespace Content.Shared.GameObjects.EntitySystems
         /// <returns></returns>
         protected Angle GetWeaponSpread(SharedGunComponent weapon, TimeSpan lastFire, Angle angle, TimeSpan? currentTime = null)
         {
-            currentTime ??= _gameTiming.CurTime;
+            currentTime ??= GameTiming.CurTime;
 
             // TODO: Could also predict this client-side. Probably need to use System.Random and seeds but out of scope for this big pr.
             // If we're sure no desyncs occur then we could just use the Uid to get the seed probably.
@@ -186,7 +189,7 @@ namespace Content.Shared.GameObjects.EntitySystems
 
             weapon.CurrentAngle = new Angle(newTheta);
 
-            var random = (_robustRandom.NextDouble() - 0.5) * 2;
+            var random = (RobustRandom.NextDouble() - 0.5) * 2;
             return Angle.FromDegrees(angle.Degrees + weapon.CurrentAngle.Degrees * random);
         }
 

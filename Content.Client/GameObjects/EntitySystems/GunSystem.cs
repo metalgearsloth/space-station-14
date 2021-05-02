@@ -10,8 +10,8 @@ namespace Content.Client.GameObjects.EntitySystems
 {
     internal sealed class GunSystem : SharedGunSystem
     {
-        public override void MuzzleFlash(IEntity? user, SharedGunComponent weapon, Angle angle, TimeSpan? currentTime = null,
-            bool predicted = true, float alphaRatio = 1)
+        public override void MuzzleFlash(IEntity? user, IEntity weapon, SharedAmmoComponent ammo, Angle angle, TimeSpan? currentTime = null,
+            bool predicted = false, float alphaRatio = 1)
         {
             throw new NotImplementedException();
         }

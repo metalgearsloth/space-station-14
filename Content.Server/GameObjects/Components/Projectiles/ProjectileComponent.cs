@@ -19,10 +19,6 @@ namespace Content.Server.GameObjects.Components.Projectiles
     [RegisterComponent]
     public class ProjectileComponent : SharedProjectileComponent, IStartCollide
     {
-        protected override EntityUid Shooter => _shooter;
-
-        private EntityUid _shooter = EntityUid.Invalid;
-
         [DataField("damages")] private Dictionary<DamageType, int> _damages = new();
 
         [ViewVariables]
@@ -51,7 +47,7 @@ namespace Content.Server.GameObjects.Components.Projectiles
         /// <param name="shooter"></param>
         public void IgnoreEntity(IEntity shooter)
         {
-            _shooter = shooter.Uid;
+            Shooter = shooter.Uid;
             Dirty();
         }
 
@@ -79,7 +75,10 @@ namespace Content.Server.GameObjects.Components.Projectiles
 
             if (damage != null)
             {
-                Owner.EntityManager.TryGetEntity(_shooter, out var shooter);
+                IEntity? shooter = null;
+
+                if (Shooter != null)
+                    Owner.EntityManager.TryGetEntity(Shooter.Value, out shooter);
 
                 foreach (var (damageType, amount) in _damages)
                 {
@@ -102,7 +101,7 @@ namespace Content.Server.GameObjects.Components.Projectiles
 
         public override ComponentState GetComponentState(ICommonSession player)
         {
-            return new ProjectileComponentState(NetID!.Value, _shooter, IgnoreShooter);
+            return new ProjectileComponentState(Shooter, IgnoreShooter);
         }
     }
 }

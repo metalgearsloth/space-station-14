@@ -15,7 +15,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
     ///     Allows this entity to be loaded into a ranged weapon (if the caliber matches)
     ///     Generally used for bullets but can be used for other things like bananas
     /// </summary>
-    public abstract class SharedAmmoComponent : Component
+    public abstract class SharedAmmoComponent : Component, IProjectile
     {
         public override string Name => "Ammo";
 
@@ -28,6 +28,14 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         public virtual bool Spent { get; set; }
 
         public bool AmmoIsProjectile => _ammoIsProjectile;
+
+        // TODO: Particles or something less uggers
+        /// <summary>
+        /// Texture to use for a muzzle flash
+        /// </summary>
+        [ViewVariables]
+        [DataField("muzzleFlash")]
+        public string? MuzzleFlash { get; } = null; // TODO: No null
 
         /// <summary>
         ///     Used for anything without a case that fires itself, like if you loaded a banana into a banana launcher.
@@ -60,7 +68,11 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         [DataField("projectile")]
         public string ProjectileId { get; private set; } = default!;
 
-        public bool IsHitscan => IoCManager.Resolve<IPrototypeManager>().HasIndex<HitscanPrototype>(ProjectileId);
+        public bool IsHitscan(IPrototypeManager? protoManager = null)
+        {
+            protoManager ??= IoCManager.Resolve<IPrototypeManager>();
+            return protoManager.HasIndex<HitscanPrototype>(ProjectileId);
+        }
 
         /// <summary>
         ///     How far apart each entity is if multiple are shot, like with a shotgun.

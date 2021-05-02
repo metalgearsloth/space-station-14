@@ -12,7 +12,7 @@ namespace Content.Shared.GameObjects.Components.Projectiles
         public override string Name => "Projectile";
         public override uint? NetID => ContentNetIDs.PROJECTILE;
 
-        protected abstract EntityUid Shooter { get; }
+        public EntityUid? Shooter { get; set; } = null;
 
         public bool IgnoreShooter
         {
@@ -29,13 +29,13 @@ namespace Content.Shared.GameObjects.Components.Projectiles
         [NetSerializable, Serializable]
         protected class ProjectileComponentState : ComponentState
         {
-            public ProjectileComponentState(uint netId, EntityUid shooter, bool ignoreShooter) : base(netId)
+            public ProjectileComponentState(EntityUid? shooter, bool ignoreShooter) : base(ContentNetIDs.PROJECTILE)
             {
                 Shooter = shooter;
                 IgnoreShooter = ignoreShooter;
             }
 
-            public EntityUid Shooter { get; }
+            public EntityUid? Shooter { get; }
             public bool IgnoreShooter { get; }
         }
 
