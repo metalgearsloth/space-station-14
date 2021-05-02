@@ -227,7 +227,7 @@ namespace Content.Shared.GameObjects.EntitySystems
             if (manual)
             {
                 if (weapon.SoundRack != null)
-                    SoundSystem.Play(GetFilter(weapon), weapon.SoundRack, AudioHelpers.WithVariation(IMagazineGun.RackVariation).WithVolume(IMagazineGun.RackVolume));
+                    SoundSystem.Play(GetFilter(weapon), weapon.SoundRack, AudioHelpers.WithVariation(weapon.RackVariation).WithVolume(weapon.RackVolume));
             }
         }
 
