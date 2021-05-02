@@ -217,7 +217,6 @@ namespace Content.Shared.GameObjects.EntitySystems
             return true;
         }
 
-        #region Magazine
         /// <summary>
         ///     Cycle the chamber.
         /// </summary>
@@ -254,7 +253,6 @@ namespace Content.Shared.GameObjects.EntitySystems
 
             magazine.TryInsertChamber(nextCartridge);
         }
-        #endregion
     }
 
     public enum GunCaliber : byte

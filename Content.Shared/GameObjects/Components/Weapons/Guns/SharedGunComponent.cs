@@ -353,15 +353,6 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         public abstract bool TryGetAmmo([NotNullWhen(true)] out SharedAmmoComponent? ammo);
     }
 
-    public abstract class SharedAmmoComponent : Component, IProjectile
-    {
-        [ViewVariables(VVAccess.ReadWrite)]
-        [DataField("caliber")]
-        public GunCaliber Caliber { get; } = GunCaliber.Unspecified;
-
-        // TODO: Copy, e.g. does it spawn a new bullet or not, is it caseless, etc etc.
-    }
-
     public abstract class SharedAmmoProviderComponent : Component, IAmmoProvider
     {
         // TODO: Most of the below seems more suited to a magazine weapon
@@ -374,6 +365,11 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         [ViewVariables(VVAccess.ReadWrite)]
         [DataField("magazineType")]
         public GunMagazine MagazineType { get; } = GunMagazine.Unspecified;
+
+        public IEntity? Shooter()
+        {
+            return null;
+        }
 
         public virtual bool CanShoot()
         {
