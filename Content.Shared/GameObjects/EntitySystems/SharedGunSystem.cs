@@ -231,42 +231,26 @@ namespace Content.Shared.GameObjects.EntitySystems
             }
         }
 
-        protected void TryEjectChamber(SharedBallisticMagazineComponent weapon)
+        protected void TryEjectChamber(SharedBallisticMagazineComponent magazine)
         {
-            var chamberEntity = weapon.Chambered;
-            if (chamberEntity != null)
+            if (magazine.TryPopChamber(out var chambered))
             {
-                if (weapon.TryRemoveChambered())
-                    return;
-
-                if (!chamberEntity.Caseless)
-                    EjectCasing(weapon.Shooter(), chamberEntity.Owner);
+                if (!chambered.Caseless)
+                    EjectCasing(magazine.Shooter(), chambered.Owner);
 
                 return;
             }
         }
 
-        protected void TryFeedChamber(SharedBallisticMagazineComponent weapon)
+        protected void TryFeedChamber(SharedBallisticMagazineComponent magazine)
         {
-            if (weapon.Chambered != null) return;
+            if (magazine.Chambered != null) return;
 
             // Try and pull a round from the magazine to replace the chamber if possible
-            var magazine = weapon.Magazine;
-            SharedAmmoComponent? nextCartridge = null;
-            magazine?.TryPop(out nextCartridge);
-
-            if (nextCartridge == null)
+            if (!magazine.TryPopAmmo(out var nextCartridge))
                 return;
 
-            weapon.TryInsertChamber(nextCartridge);
-
-            if (weapon.AutoEjectMag && magazine != null && magazine.ShotsLeft == 0)
-            {
-                if (weapon.SoundAutoEject != null)
-                    SoundSystem.Play(GetFilter(weapon), weapon.SoundAutoEject, AudioHelpers.WithVariation(IMagazineGun.AutoEjectVariation).WithVolume(IMagazineGun.AutoEjectVolume));
-
-                weapon.TryRemoveMagazine();
-            }
+            magazine.TryInsertChamber(nextCartridge);
         }
         #endregion
     }

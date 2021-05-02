@@ -156,6 +156,19 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
 
     public abstract class SharedBallisticMagazineComponent : SharedBallisticsAmmoProvider
     {
+        // Sounds
+        [ViewVariables]
+        [DataField("soundRack")]
+        public string? SoundRack { get; } = null;
+
+        [ViewVariables]
+        [DataField("rackVariation")]
+        public float RackVariation { get; } = 0.01f;
+
+        [ViewVariables]
+        [DataField("rackVolume")]
+        public float RackVolume { get; } = 0.0f;
+
         /// <summary>
         /// If we have a chamber then we pull from that to shoot.
         /// If not then we pull directly from the magazine.
@@ -167,6 +180,8 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         public ContainerSlot? Chamber { get; private set; }
 
         private Container? _ammoContainer = null;
+
+        public IEntity? Chambered => Chamber?.ContainedEntity;
 
         /// <inheritdoc />
         public int ProjectileCount => UnspawnedCount + _ammoContainer?.ContainedEntities.Count ?? 0;
@@ -210,6 +225,61 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
             }
 
             DebugTools.Assert(ProjectileCount <= ProjectileCapacity);
+        }
+
+        public bool TryInsertChamber(SharedAmmoComponent ammo)
+        {
+            if (Chamber == null ||
+                ammo.Caliber != Caliber ||
+                !Chamber.Insert(ammo.Owner)) return false;
+
+            return true;
+        }
+
+        /// <summary>
+        /// Tries to pop the currently chambered entity.
+        /// </summary>
+        /// <param name="ammo"></param>
+        /// <returns></returns>
+        public bool TryPopChamber([NotNullWhen(true)] out SharedAmmoComponent? ammo)
+        {
+            var chambered = Chamber?.ContainedEntity;
+
+            if (chambered != null)
+            {
+                ammo = chambered.GetComponent<SharedAmmoComponent>();
+                return true;
+            }
+
+            ammo = null;
+            return false;
+        }
+
+        /// <summary>
+        /// Tries to pop spawned then unspawned ammo for usage.
+        /// </summary>
+        public bool TryPopAmmo([NotNullWhen(true)] out SharedAmmoComponent? ammo)
+        {
+            if (_ammoContainer != null && _ammoContainer.ContainedEntities.Count > 0)
+            {
+                var ammoEntity = _ammoContainer.ContainedEntities[0];
+
+                ammo = ammoEntity.GetComponent<SharedAmmoComponent>();
+                _ammoContainer.Remove(ammoEntity);
+                return true;
+            }
+
+            if (UnspawnedCount > 0)
+            {
+                DebugTools.AssertNotNull(FillPrototype);
+                UnspawnedCount--;
+                var ammoEntity = Owner.EntityManager.SpawnEntity(FillPrototype, Owner.Transform.MapPosition);
+                ammo = ammoEntity.GetComponent<SharedAmmoComponent>();
+                return true;
+            }
+
+            ammo = null;
+            return false;
         }
     }
 
