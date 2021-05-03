@@ -1,12 +1,13 @@
 #nullable enable
 using System;
+using Content.Shared.GameObjects.Components.Weapons.Guns;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Physics;
 using Robust.Shared.Serialization;
 
 namespace Content.Shared.GameObjects.Components.Projectiles
 {
-    public abstract class SharedProjectileComponent : Component, ICollideSpecial
+    public abstract class SharedProjectileComponent : Component, ICollideSpecial, IProjectile
     {
         private bool _ignoreShooter = true;
         public override string Name => "Projectile";

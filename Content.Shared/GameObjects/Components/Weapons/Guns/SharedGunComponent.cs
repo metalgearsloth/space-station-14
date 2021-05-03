@@ -421,7 +421,6 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
     /// </summary>
     public interface IProjectile
     {
-
     }
 
     public enum GunProjectileType : byte

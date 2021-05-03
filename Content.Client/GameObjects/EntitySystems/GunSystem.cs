@@ -10,6 +10,14 @@ namespace Content.Client.GameObjects.EntitySystems
 {
     internal sealed class GunSystem : SharedGunSystem
     {
+        public override void Update(float frameTime)
+        {
+            base.Update(frameTime);
+            // TODO: Copy existing gun code
+
+            TryFire()
+        }
+
         public override void MuzzleFlash(IEntity? user, IEntity weapon, SharedAmmoComponent ammo, Angle angle, TimeSpan? currentTime = null,
             bool predicted = false, float alphaRatio = 1)
         {

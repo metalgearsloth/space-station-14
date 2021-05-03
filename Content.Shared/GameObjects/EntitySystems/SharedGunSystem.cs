@@ -87,8 +87,6 @@ namespace Content.Shared.GameObjects.EntitySystems
                 return false;
             }
 
-            // TODO: What some games do is bundle multiple shots into a single one with increased damage at low tickrates
-            // which we could potentially look at doing, but this is more for stuff with stupidly high firerates.
             if (!magazine.TryGetProjectile(out var projectile))
             {
                 return false;
@@ -98,8 +96,11 @@ namespace Content.Shared.GameObjects.EntitySystems
             switch (projectile)
             {
                 case SharedAmmoComponent ammo:
-                    // TODO: Support firing ammo or whatever it spawns instead.
                     ShootAmmo(null, weapon, angle, ammo);
+                    break;
+                case SharedProjectileComponent proj:
+                    // TODO: Support firing ammo or whatever it spawns instead.
+                    ShootProjectile(null, weapon, angle, proj, 20f);
                     break;
                 case HitscanPrototype hitscan:
                     ShootHitscan(null, weapon, hitscan, angle);

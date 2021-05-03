@@ -186,17 +186,17 @@ namespace Content.Server.GameObjects.EntitySystems
             // and we can just call ShootHitscan directly. Alternatively we could have ammo that fires hitscan bullets
             // which we also need to handle it. It seemed like the easiest way to do it.
 
-            DebugTools.Assert(!ammoComponent.Spent);
-            // TODO: IProjectile
-            var projectile = ammoComponent.GetProjectile();
+            if (ammoComponent.Spent) return;
 
             if (ammoComponent.IsHitscan(PrototypeManager))
             {
-                ShootHitscan();
+                var hitscan = PrototypeManager.Index<HitscanPrototype>(ammoComponent.ProjectileId);
+                ShootHitscan(user, weapon, hitscan, angle);
             }
             else
             {
-                ShootProjectile();
+                var projectile = EntityManager.SpawnEntity(ammoComponent.ProjectileId, weapon.Owner.Transform.MapPosition).GetComponent<SharedProjectileComponent>();
+                ShootProjectile(user, weapon, angle, projectile, ammoComponent.Velocity);
             }
         }
 
