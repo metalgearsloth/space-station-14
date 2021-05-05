@@ -56,7 +56,6 @@ namespace Content.Client
             "Drink",
             "Food",
             "FoodContainer",
-            "Rotatable",
             "MagicMirror",
             "FloorTile",
             "ShuttleController",
@@ -254,6 +253,7 @@ namespace Content.Client
             "SpawnAfterInteract",
             "DisassembleOnActivate",
             "ExplosionLaunched",
+            "Advertise",
         };
     }
 }
