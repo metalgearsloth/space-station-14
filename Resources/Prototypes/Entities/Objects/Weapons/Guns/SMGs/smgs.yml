@@ -11,13 +11,18 @@
     state: icon
   - type: Item
     size: 24
-  - type: Gun
+  - type: ChamberedGun
     soundGunshot: /Audio/Weapons/Guns/Gunshots/smg.ogg
+    soundMagInsert: /Audio/Weapons/Guns/MagIn/smg_magin.ogg
+    soundMagEject: /Audio/Weapons/Guns/MagOut/smg_magout.ogg
+    soundRack: /Audio/Weapons/Guns/Cock/smg_cock.ogg
+    soundBoltOpen: /Audio/Weapons/Guns/Bolt/rifle_bolt_open.ogg
+    soundBoltClosed: /Audio/Weapons/Guns/Bolt/rifle_bolt_closed.ogg
     magazinePrototype: MagazinePistolSmg
     fireRate: 8
     caliber: Pistol
     magazineTypes:
-      - Smg
+    - Smg
     currentSelector: Automatic
     allSelectors:
     - Single
@@ -26,13 +31,6 @@
     maxAngle: 60
     angleIncrease: 10
     angleDecay: 60
-  - type: MagazineBarrel
-    soundRack: /Audio/Weapons/Guns/Cock/smg_cock.ogg
-    soundBoltOpen: /Audio/Weapons/Guns/Bolt/rifle_bolt_open.ogg
-    soundBoltClosed: /Audio/Weapons/Guns/Bolt/rifle_bolt_closed.ogg
-    soundMagInsert: /Audio/Weapons/Guns/MagIn/smg_magin.ogg
-    soundMagEject: /Audio/Weapons/Guns/MagOut/smg_magout.ogg
-
 - type: entity
   name: Atreides
   parent: SmgBase
@@ -94,16 +92,7 @@
   - type: Item
     size: 24
     sprite: Objects/Weapons/Guns/SMGs/c20r.rsi
-  - type: Gun
-  - type: MagazineBarrel
-    currentSelector: Automatic
-    allSelectors:
-    - Single
-    - Automatic
-    fireRate: 8
-    caliber: Pistol
-    magazineTypes:
-    - Smg
+  - type: ChamberedGun
     minAngle: 5
     maxAngle: 60
     angleIncrease: 10

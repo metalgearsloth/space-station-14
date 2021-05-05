@@ -2,10 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using Content.Shared.GameObjects.EntitySystems;
+using Robust.Shared.Audio;
 using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
-using Robust.Shared.Map;
+using Robust.Shared.IoC;
 using Robust.Shared.Maths;
+using Robust.Shared.Player;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization;
 using Robust.Shared.Serialization.Manager.Attributes;
@@ -14,7 +16,113 @@ using Robust.Shared.ViewVariables;
 
 namespace Content.Shared.GameObjects.Components.Weapons.Guns
 {
-    public abstract class SharedGunComponent : Component
+    public interface IGun
+    {
+        IEntity Owner { get; }
+        IAmmoProvider? Magazine { get; }
+    }
+
+    [ComponentReference(typeof(SharedGunComponent))]
+    public abstract class SharedChamberedGunComponent : SharedGunComponent, IGun
+    {
+        // Gun + a chamber + bolt
+        // Look it's kinda weird but I couldn't see a cleaner way to do it so be my guest if you want to change it.
+
+        public override string Name => "ChamberedGun";
+
+        // Sounds
+        [ViewVariables]
+        [DataField("soundBoltOpen")]
+        public string? soundBoltOpen { get; }
+
+        [ViewVariables]
+        [DataField("soundBoltClosed")]
+        public string? SoundBoltClosed { get; }
+
+        // You could also potentially make these 2 below optional if you want a bolt but no chamber or vice versa
+        public ContainerSlot Chamber { get; private set; } = default!;
+
+        [ViewVariables]
+        [DataField("boltClosed")]
+        public bool BoltClosed { get; set; } = true;
+
+        [ViewVariables]
+        [DataField("caliber")]
+        public GunCaliber Caliber { get; } = GunCaliber.Unspecified;
+
+        public override void Initialize()
+        {
+            base.Initialize();
+            // DebugTools.Assert(); // TODO: Assert the caliber of us matches any magazines we gots.
+
+            var ammoProvider = _magazineSlot?.ContainedEntity;
+
+            if (ammoProvider != null && Chamber.ContainedEntity == null)
+            {
+                // Chambers only work with ballistic mags I guess.
+                DebugTools.Assert(ammoProvider.HasComponent<SharedBallisticsAmmoProvider>());
+
+                if (ammoProvider.GetComponent<SharedBallisticsAmmoProvider>().TryGetAmmo(out var ammo))
+                {
+                    if (!TryInsertChamber(ammo))
+                    {
+                        throw new InvalidOperationException("Unable to insert magazine ammo into chamber for {Owner}");
+                    }
+                }
+            }
+        }
+
+        public override bool CanFire()
+        {
+            if (!base.CanFire()) return false;
+            if (!BoltClosed) return false;
+            return true;
+        }
+
+        public bool TryInsertChamber(SharedAmmoComponent ammo)
+        {
+            if (ammo.Caliber != Caliber ||
+                !Chamber.Insert(ammo.Owner)) return false;
+
+            return true;
+        }
+
+        /// <summary>
+        /// Tries to pop the currently chambered entity.
+        /// </summary>
+        /// <param name="ammo"></param>
+        /// <returns></returns>
+        public bool TryPopChamber([NotNullWhen(true)] out IProjectile? ammo)
+        {
+            var chambered = Chamber.ContainedEntity;
+
+            if (chambered != null)
+            {
+                Chamber.Remove(chambered);
+                ammo = chambered.GetComponent<SharedAmmoComponent>();
+                return true;
+            }
+
+            ammo = null;
+            return false;
+        }
+
+        public void TryFeedChamber()
+        {
+            if (Chamber.ContainedEntity != null) return;
+            var magazine = _magazineSlot?.ContainedEntity;
+
+            if (magazine == null) return;
+            if (magazine.GetComponent<SharedAmmoProviderComponent>().TryGetProjectile(out var projectile))
+            {
+                var ammo = projectile as SharedAmmoComponent;
+                DebugTools.AssertNotNull(ammo);
+                Chamber.Insert(ammo!.Owner);
+            }
+        }
+    }
+
+    public abstract class SharedGunComponent : Component, IGun
     {
         public override string Name => "Gun";
         // Bool for whether we can chamber load if bolt is open
@@ -28,9 +136,19 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         [DataField("soundEmpty")]
         public string? SoundEmpty { get; } = "/Audio/Weapons/Guns/Empty/empty.ogg";
 
+        [ViewVariables]
+        [DataField("soundMagInsert")]
+        public string? SoundMagInsert { get; }
+
+        [ViewVariables]
+        [DataField("soundMagEject")]
+        public string? SoundMagEject { get; }
+
         // If our bolt is open then we can directly insert ammo into it.
         // This is useful for stuff that is single-shot and has no need for any kind of magazine.
 
+        // TODO: Maybe have a separate magazine prototype for where the magazine is internal that way we don't need duplicate entities
+        // for guns that have internal?
         /// <summary>
         /// Can the magazine be removed?
         /// </summary>
@@ -48,13 +166,23 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         /// </summary>
         public IAmmoProvider? Magazine => _magazineSlot?.ContainedEntity?.GetComponent<IAmmoProvider>();
 
-        private ContainerSlot? _magazineSlot = null;
+        protected ContainerSlot? _magazineSlot = null;
 
         [ViewVariables]
         [DataField("magazinePrototype")]
         private EntityPrototype? _magazinePrototype;
 
-        // TODO: MagazineType
+        [ViewVariables]
+        [DataField("magazineType")]
+        public GunMagazine MagazineType { get; } = GunMagazine.Unspecified;
+
+        [ViewVariables]
+        [DataField("currentSelector")]
+        public GunFireSelector CurrentSelector { get; private set; } = GunFireSelector.Safety;
+
+        [ViewVariables]
+        [DataField("allSelectors")]
+        public GunFireSelector AllSelectors { get; } = GunFireSelector.Safety;
 
         /// <summary>
         /// How many times we can shoot per second
@@ -116,6 +244,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         public override void Initialize()
         {
             base.Initialize();
+            DebugTools.Assert(_magazinePrototype == null || IoCManager.Resolve<IPrototypeManager>().HasIndex<EntityPrototype>(_magazinePrototype.ID));
 
             // Pre-spawn magazine in
             _magazineSlot = Owner.EnsureContainer<ContainerSlot>("magazine", out var existingMag);
@@ -134,6 +263,52 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
             }
         }
 
+        public void ChangeSelector(GunFireSelector selector)
+        {
+            if (CurrentSelector == selector) return;
+
+            if ((AllSelectors & selector) == 0)
+            {
+                throw new InvalidOperationException($"Tried to change fire selector for {Owner} but {selector} isn't valid for it!");
+            }
+
+            CurrentSelector = selector;
+        }
+
+        public bool TryInsertMagazine(IAmmoProvider magazine)
+        {
+            if (_magazineSlot == null) return false;
+            if (_magazineSlot.ContainedEntity != null || !_magazineSlot.Insert(magazine.Owner)) return false;
+            if (SoundMagInsert != null)
+                SoundSystem.Play(Filter.Pvs(Owner), SoundMagInsert, Owner); // TODO: Variations + volumes
+
+            return true;
+        }
+
+        public bool TryRemoveMagazine([NotNullWhen(true)] out IAmmoProvider? magazine)
+        {
+            magazine = _magazineSlot?.ContainedEntity?.GetComponent<IAmmoProvider>();
+
+            if (magazine == null)
+            {
+                return false;
+            }
+
+            if (_magazineSlot?.Remove(magazine.Owner) != true)
+            {
+                magazine = null;
+                return false;
+            }
+
+            return true;
+        }
+
+        public virtual bool CanFire()
+        {
+            if (CurrentSelector == GunFireSelector.Safety) return false;
+            return true;
+        }
+
         public void UpdateAppearance()
         {
             if (!Owner.TryGetComponent(out SharedAppearanceComponent? appearance)) return;
@@ -149,11 +324,13 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
     // Uhh bool for whether we can manually cycle
     // Bool for whether it autocycles
 
+    [ComponentReference(typeof(IAmmoProvider))]
     public abstract class SharedBatteryMagazineComponent : SharedAmmoProviderComponent
     {
 
     }
 
+    [ComponentReference(typeof(IAmmoProvider))]
     public abstract class SharedBallisticMagazineComponent : SharedBallisticsAmmoProvider
     {
         // Sounds
@@ -169,19 +346,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         [DataField("rackVolume")]
         public float RackVolume { get; } = 0.0f;
 
-        /// <summary>
-        /// If we have a chamber then we pull from that to shoot.
-        /// If not then we pull directly from the magazine.
-        /// </summary>
-        [ViewVariables]
-        [DataField("hasChamber")]
-        public bool HasChamber { get; }
-
-        public ContainerSlot? Chamber { get; private set; }
-
         private Container? _ammoContainer = null;
-
-        public IEntity? Chambered => Chamber?.ContainedEntity;
 
         /// <inheritdoc />
         public int ProjectileCount => UnspawnedCount + _ammoContainer?.ContainedEntities.Count ?? 0;
@@ -196,63 +361,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
                 UnspawnedCount -= _ammoContainer.ContainedEntities.Count;
             }
 
-            if (!BoltClosed && !BoltToggleable)
-            {
-                throw new InvalidOperationException("Can't have a forced-open bolt with a non-toggleable one on entity {Owner}");
-            }
-
-            if (HasChamber)
-            {
-                Chamber = Owner.EnsureContainer<ContainerSlot>("chamber");
-            }
-            else
-            {
-                if (Owner.TryGetComponent(out ContainerManagerComponent? manager) && manager.HasContainer("chamber"))
-                {
-                    throw new InvalidOperationException($"Found existing chamber on {Owner} but this is not allowed");
-                }
-            }
-
-            if (Owner.TryGetContainer(out var container) && container.Owner.TryGetComponent(out SharedGunComponent? gun))
-            {
-                // If we're attached to a gun then pre-fill its chamber
-                if (HasChamber && TryGetAmmo(out var ammo))
-                {
-                    Chamber!.Insert(ammo.Owner);
-                    gun.UpdateAppearance();
-                    gun.Dirty();
-                }
-            }
-
             DebugTools.Assert(ProjectileCount <= ProjectileCapacity);
-        }
-
-        public bool TryInsertChamber(SharedAmmoComponent ammo)
-        {
-            if (Chamber == null ||
-                ammo.Caliber != Caliber ||
-                !Chamber.Insert(ammo.Owner)) return false;
-
-            return true;
-        }
-
-        /// <summary>
-        /// Tries to pop the currently chambered entity.
-        /// </summary>
-        /// <param name="ammo"></param>
-        /// <returns></returns>
-        public bool TryPopChamber([NotNullWhen(true)] out SharedAmmoComponent? ammo)
-        {
-            var chambered = Chamber?.ContainedEntity;
-
-            if (chambered != null)
-            {
-                ammo = chambered.GetComponent<SharedAmmoComponent>();
-                return true;
-            }
-
-            ammo = null;
-            return false;
         }
 
         /// <summary>
@@ -283,6 +392,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         }
     }
 
+    [ComponentReference(typeof(IAmmoProvider))]
     public abstract class SharedRevolverMagazineComponent : SharedBallisticsAmmoProvider, ISerializationHooks
     {
         private SharedAmmoComponent?[] _revolver = default!;
@@ -320,14 +430,6 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
 
     public abstract class SharedBallisticsAmmoProvider : SharedAmmoProviderComponent
     {
-        [ViewVariables]
-        [DataField("boltClosed")]
-        public bool BoltClosed { get; set; } = true;
-
-        [ViewVariables]
-        [DataField("boltToggleable")]
-        public bool BoltToggleable { get; } = false;
-
         /// <inheritdoc />
         [ViewVariables]
         [DataField("capacity")]
@@ -338,7 +440,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
 
         /// <inheritdoc />
         [ViewVariables]
-        [DataField("prototype")]
+        [DataField("fillPrototype")]
         public string? FillPrototype { get; }
 
         public override void Initialize()
@@ -396,6 +498,8 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
 
     public interface IAmmoProvider
     {
+        IEntity Owner { get; }
+
         /// <summary>
         /// Check upfront whether we can fire e.g. is bolt-closed where relevant.
         /// </summary>

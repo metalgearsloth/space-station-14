@@ -96,7 +96,7 @@ namespace Content.Server.GameObjects.EntitySystems
             SoundSystem.Play(Filter.Pvs(casing), randomFile, casing.Transform.Coordinates, AudioParams.Default.WithVolume(-1));
         }
 
-        public override void ShootHitscan(IEntity? user, SharedGunComponent weapon, HitscanPrototype hitscan, Angle angle,
+        public override void ShootHitscan(IEntity? user, IGun weapon, HitscanPrototype hitscan, Angle angle,
             float damageRatio = 1, float alphaRatio = 1)
         {
             var currentTime = GameTiming.CurTime;
@@ -199,7 +199,7 @@ namespace Content.Server.GameObjects.EntitySystems
             _effectSystem.CreateParticle(message);
         }
 
-        public override void ShootAmmo(IEntity? user, SharedGunComponent weapon, Angle angle, SharedAmmoComponent ammoComponent)
+        public override void ShootAmmo(IEntity? user, IGun weapon, Angle angle, SharedAmmoComponent ammoComponent)
         {
             // This is kinda weird but essentially say we have a battery it could just store the hitscan prototypes directly
             // and we can just call ShootHitscan directly. Alternatively we could have ammo that fires hitscan bullets
@@ -219,7 +219,7 @@ namespace Content.Server.GameObjects.EntitySystems
             }
         }
 
-        public override void ShootProjectile(IEntity? user, SharedGunComponent weapon, Angle angle,
+        public override void ShootProjectile(IEntity? user, IGun weapon, Angle angle,
             SharedProjectileComponent projectileComponent, float velocity)
         {
             projectileComponent.Owner.Transform.AttachToGridOrMap();

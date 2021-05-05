@@ -47,7 +47,7 @@ namespace Content.Shared.GameObjects.EntitySystems
         /// <param name="angle"></param>
         /// <param name="damageRatio"></param>
         /// <param name="alphaRatio"></param>
-        public abstract void ShootHitscan(IEntity? user, SharedGunComponent weapon, HitscanPrototype hitscan, Angle angle, float damageRatio = 1.0f, float alphaRatio = 1.0f);
+        public abstract void ShootHitscan(IEntity? user, IGun weapon, HitscanPrototype hitscan, Angle angle, float damageRatio = 1.0f, float alphaRatio = 1.0f);
 
         /// <summary>
         ///     If you want to pull out the projectile from ammo and shoot it.
@@ -56,7 +56,7 @@ namespace Content.Shared.GameObjects.EntitySystems
         /// <param name="weapon"></param>
         /// <param name="angle"></param>
         /// <param name="ammoComponent"></param>
-        public abstract void ShootAmmo(IEntity? user, SharedGunComponent weapon, Angle angle, SharedAmmoComponent ammoComponent);
+        public abstract void ShootAmmo(IEntity? user, IGun weapon, Angle angle, SharedAmmoComponent ammoComponent);
 
         /// <summary>
         ///     Shoot the projectile directly
@@ -66,31 +66,46 @@ namespace Content.Shared.GameObjects.EntitySystems
         /// <param name="angle"></param>
         /// <param name="projectileComponent"></param>
         /// <param name="velocity"></param>
-        public abstract void ShootProjectile(IEntity? user, SharedGunComponent weapon, Angle angle, SharedProjectileComponent projectileComponent, float velocity);
+        public abstract void ShootProjectile(IEntity? user, IGun weapon, Angle angle, SharedProjectileComponent projectileComponent, float velocity);
 
         /// <summary>
         ///     Actually fires the gun, cycles rounds, etc.
         /// </summary>
-        private bool TryShoot(SharedGunComponent weapon, Angle angle)
+        private bool TryShoot(IGun weapon, Angle angle)
         {
-            var magazine = weapon.Magazine;
+            IProjectile? projectile;
 
-            if (magazine == null)
+            switch (weapon)
             {
-                if (weapon.SoundEmpty != null)
-                    SoundSystem.Play(GetFilter(weapon), weapon.SoundEmpty, weapon.Owner);
+                case SharedChamberedGunComponent chamberedGun:
+                    if (!chamberedGun.CanFire())
+                    {
+                        return false;
+                    }
 
-                return false;
-            }
+                    chamberedGun.TryPopChamber(out projectile);
+                    chamberedGun.TryFeedChamber();
+                    break;
+                case SharedGunComponent gun:
+                    var magazine = weapon.Magazine;
 
-            if (!magazine.CanShoot())
-            {
-                return false;
-            }
+                    if (magazine == null)
+                    {
+                        return false;
+                    }
 
-            if (!magazine.TryGetProjectile(out var projectile))
-            {
-                return false;
+                    if (!magazine.CanShoot())
+                    {
+                        return false;
+                    }
+
+                    if (!magazine.TryGetProjectile(out projectile))
+                    {
+                        return false;
+                    }
+                    break;
+                default:
+                    throw new InvalidOperationException();
             }
 
             // TODO: Need to figure out this inheritance bullshit.
@@ -107,7 +122,7 @@ namespace Content.Shared.GameObjects.EntitySystems
                     ShootHitscan(null, weapon, hitscan, angle);
                     break;
                 default:
-                    throw new NotImplementedException($"Projectile type {projectile.GetType()} not implemented!");
+                    throw new NotImplementedException($"Projectile type {projectile?.GetType()} not implemented!");
             }
 
             return true;
@@ -139,7 +154,18 @@ namespace Content.Shared.GameObjects.EntitySystems
             }
 
             if (currentTime < weapon.NextFire)
+            {
                 return false;
+            }
+
+            if (!weapon.CanFire())
+            {
+                // TODO: Empty variation and volume
+                if (weapon.SoundEmpty != null)
+                    SoundSystem.Play(GetFilter(weapon), weapon.SoundEmpty, weapon.Owner);
+
+                return false;
+            }
 
             var fireAngle = (coordinates.Position - user.Transform.WorldPosition).ToAngle();
 
@@ -163,6 +189,7 @@ namespace Content.Shared.GameObjects.EntitySystems
             if (firedShots == 0)
                 return false;
 
+            // TODO: HANDLE AUTOEJECT HERE
             weapon.UpdateAppearance();
             return true;
         }
@@ -193,70 +220,6 @@ namespace Content.Shared.GameObjects.EntitySystems
 
             var random = (RobustRandom.NextDouble() - 0.5) * 2;
             return Angle.FromDegrees(angle.Degrees + weapon.CurrentAngle.Degrees * random);
-        }
-
-        // TODO: Move onto ammo providers and call during TryGetProjectile
-        public virtual bool TrySetRevolverBolt(SharedRevolverMagazineComponent weapon, bool value)
-        {
-            if (weapon.BoltClosed == value || !weapon.BoltToggleable) return false;
-
-            weapon.BoltClosed = value;
-            return true;
-        }
-
-        // Gun-specific behaviors
-        public virtual bool TrySetMagazineBolt(SharedBallisticMagazineComponent weapon, bool value)
-        {
-            if (weapon.BoltClosed == value || !weapon.BoltToggleable) return false;
-
-            if (value)
-            {
-                TryEjectChamber(weapon);
-            }
-            else
-            {
-                TryFeedChamber(weapon);
-            }
-
-            weapon.BoltClosed = value;
-            return true;
-        }
-
-        /// <summary>
-        ///     Cycle the chamber.
-        /// </summary>
-        public void Cycle(SharedBallisticMagazineComponent magazine, bool manual = false)
-        {
-            TryEjectChamber(magazine);
-            TryFeedChamber(magazine);
-
-            if (manual)
-            {
-                if (magazine.SoundRack != null)
-                    SoundSystem.Play(GetFilter(magazine), magazine.SoundRack, AudioHelpers.WithVariation(magazine.RackVariation).WithVolume(magazine.RackVolume));
-            }
-        }
-
-        protected void TryEjectChamber(SharedBallisticMagazineComponent magazine)
-        {
-            if (magazine.TryPopChamber(out var chambered))
-            {
-                if (!chambered.Caseless)
-                    EjectCasing(magazine.Shooter(), chambered.Owner);
-
-                return;
-            }
-        }
-
-        protected void TryFeedChamber(SharedBallisticMagazineComponent magazine)
-        {
-            if (magazine.Chambered != null) return;
-
-            // Try and pull a round from the magazine to replace the chamber if possible
-            if (!magazine.TryPopAmmo(out var nextCartridge))
-                return;
-
-            magazine.TryInsertChamber(nextCartridge);
         }
 
         [Serializable, NetSerializable]

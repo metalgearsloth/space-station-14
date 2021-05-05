@@ -100,18 +100,18 @@ namespace Content.Client.GameObjects.EntitySystems
             throw new NotImplementedException();
         }
 
-        public override void ShootHitscan(IEntity? user, SharedGunComponent weapon, HitscanPrototype hitscan, Angle angle,
+        public override void ShootHitscan(IEntity? user, IGun weapon, HitscanPrototype hitscan, Angle angle,
             float damageRatio = 1, float alphaRatio = 1)
         {
             throw new NotImplementedException();
         }
 
-        public override void ShootAmmo(IEntity? user, SharedGunComponent weapon, Angle angle, SharedAmmoComponent ammoComponent)
+        public override void ShootAmmo(IEntity? user, IGun weapon, Angle angle, SharedAmmoComponent ammoComponent)
         {
             throw new NotImplementedException();
         }
 
-        public override void ShootProjectile(IEntity? user, SharedGunComponent weapon, Angle angle,
+        public override void ShootProjectile(IEntity? user, IGun weapon, Angle angle,
             SharedProjectileComponent projectileComponent, float velocity)
         {
             throw new NotImplementedException();
@@ -119,12 +119,12 @@ namespace Content.Client.GameObjects.EntitySystems
 
         protected override Filter GetFilter(SharedGunComponent gun)
         {
-            throw new NotImplementedException();
+            return Filter.Local();
         }
 
         protected override Filter GetFilter(SharedAmmoProviderComponent ammoProvider)
         {
-            throw new NotImplementedException();
+            return Filter.Local();
         }
     }
 }
