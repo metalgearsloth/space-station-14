@@ -9,6 +9,7 @@ using Content.Shared.GameObjects.EntitySystems;
 using Robust.Server.GameObjects;
 using Robust.Shared.Audio;
 using Robust.Shared.GameObjects;
+using Robust.Shared.Log;
 using Robust.Shared.Maths;
 using Robust.Shared.Physics;
 using Robust.Shared.Physics.Broadphase;
@@ -27,6 +28,24 @@ namespace Content.Server.GameObjects.EntitySystems
         {
             base.Initialize();
             _broadphase = Get<SharedBroadPhaseSystem>();
+            SubscribeNetworkEvent<ShootMessage>(HandleShoot);
+        }
+
+        public override void Update(float frameTime)
+        {
+            base.Update(frameTime);
+            // TODO: Handle queued shoot messages and stuff
+        }
+
+        private void HandleShoot(ShootMessage shootMessage, EntitySessionEventArgs session)
+        {
+            if (shootMessage.Shots == 0)
+            {
+                Logger.ErrorS("gun", $"Received 0 shots message from {session.SenderSession}");
+                return;
+            }
+
+            Logger.Debug("Handle shoot!");
         }
 
         public override void MuzzleFlash(IEntity? user, IEntity weapon, SharedAmmoComponent ammo, Angle angle, TimeSpan? currentTime = null,

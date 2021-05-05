@@ -11,6 +11,7 @@ using Robust.Shared.Maths;
 using Robust.Shared.Player;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Random;
+using Robust.Shared.Serialization;
 using Robust.Shared.Timing;
 
 namespace Content.Shared.GameObjects.EntitySystems
@@ -256,6 +257,26 @@ namespace Content.Shared.GameObjects.EntitySystems
                 return;
 
             magazine.TryInsertChamber(nextCartridge);
+        }
+
+        [Serializable, NetSerializable]
+        protected sealed class ShootMessage : EntityEventArgs
+        {
+            public EntityUid Gun { get; }
+
+            public MapCoordinates Coordinates { get; }
+
+            public int Shots { get; }
+
+            public TimeSpan Time { get; }
+
+            public ShootMessage(EntityUid gun, MapCoordinates coordinates, int shots, TimeSpan time)
+            {
+                Gun = gun;
+                Coordinates = coordinates;
+                Shots = shots;
+                Time = time;
+            }
         }
     }
 
