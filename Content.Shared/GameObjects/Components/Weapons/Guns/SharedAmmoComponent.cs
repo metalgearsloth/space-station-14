@@ -3,6 +3,7 @@ using Content.Shared.GameObjects.EntitySystems;
 using Robust.Shared.GameObjects;
 using Robust.Shared.IoC;
 using Robust.Shared.Log;
+using Robust.Shared.Players;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization;
 using Robust.Shared.Serialization.Manager.Attributes;
@@ -25,7 +26,22 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         [DataField("caliber")]
         public GunCaliber Caliber { get; private set; } = GunCaliber.Unspecified;
 
-        public virtual bool Spent { get; set; }
+        [ViewVariables]
+        public virtual bool Spent
+        {
+            get => _spent;
+            set
+            {
+                if (_spent == value) return;
+                _spent = value;
+                if (Owner.TryGetComponent(out SharedAppearanceComponent? appearanceComponent))
+                {
+                    appearanceComponent.SetData(GunVisuals.AmmoSpent, _spent);
+                }
+            }
+        }
+
+        private bool _spent;
 
         public bool AmmoIsProjectile => _ammoIsProjectile;
 
@@ -91,6 +107,11 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         [ViewVariables]
         [DataField("soundCollectionEject")]
         public string? SoundCollectionEject { get; private set; } = "CasingEject";
+
+        public override ComponentState GetComponentState(ICommonSession player)
+        {
+            return new AmmoComponentState(Spent);
+        }
 
         public override void Initialize()
         {

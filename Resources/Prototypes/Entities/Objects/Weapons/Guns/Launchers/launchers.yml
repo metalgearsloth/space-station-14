@@ -40,7 +40,7 @@
     soundInsert: /Audio/Weapons/Guns/MagIn/batrifle_magin.ogg
   - type: Appearance
     visuals:
-    - type: BarrelBoltVisualizer
+    - type: GunBoltVisualizer
 
 - type: entity
   name: RPG-7

@@ -33,7 +33,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         // Sounds
         [ViewVariables]
         [DataField("soundBoltOpen")]
-        public string? soundBoltOpen { get; }
+        public string? SoundBoltOpen { get; }
 
         [ViewVariables]
         [DataField("soundBoltClosed")]
@@ -70,6 +70,13 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
                     }
                 }
             }
+        }
+
+        public override void UpdateAppearance()
+        {
+            base.UpdateAppearance();
+            if (!Owner.TryGetComponent(out SharedAppearanceComponent? appearanceComponent)) return;
+            appearanceComponent.SetData(GunVisuals.BoltClosed, BoltClosed);
         }
 
         public override bool CanFire()
@@ -282,6 +289,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
             if (SoundMagInsert != null)
                 SoundSystem.Play(Filter.Pvs(Owner), SoundMagInsert, Owner); // TODO: Variations + volumes
 
+            UpdateAppearance();
             return true;
         }
 
@@ -300,6 +308,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
                 return false;
             }
 
+            UpdateAppearance();
             return true;
         }
 
@@ -309,10 +318,25 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
             return true;
         }
 
-        public void UpdateAppearance()
+        public virtual void UpdateAppearance()
         {
             if (!Owner.TryGetComponent(out SharedAppearanceComponent? appearance)) return;
-            Magazine?.UpdateAppearance(appearance);
+
+            var mag = Magazine;
+
+            if (mag != null)
+            {
+                mag.UpdateAppearance(appearance);
+                appearance.SetData(GunVisuals.MagLoaded, true);
+                appearance.SetData(GunVisuals.AmmoCount, mag.AmmoCount);
+                appearance.SetData(GunVisuals.AmmoMax, mag.AmmoMax);
+            }
+            else
+            {
+                appearance.SetData(GunVisuals.MagLoaded, false);
+                appearance.SetData(GunVisuals.AmmoCount, 0);
+                appearance.SetData(GunVisuals.AmmoMax, 0);
+            }
 
             // TODO: All the other appearance updates for bolts and shiznit.
         }
@@ -473,6 +497,9 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
             return null;
         }
 
+        public abstract int AmmoCount { get; }
+        public abstract int AmmoMax { get; }
+
         public virtual bool CanShoot()
         {
             return true;
@@ -498,6 +525,10 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
 
     public interface IAmmoProvider
     {
+        int AmmoCount { get; }
+
+        int AmmoMax { get; }
+
         IEntity Owner { get; }
 
         /// <summary>

@@ -44,7 +44,7 @@
   - type: BoltActionBarrel
   - type: Appearance
     visuals:
-    - type: BarrelBoltVisualizer
+    - type: GunBoltVisualizer
 
 - type: entity
   name: Kardashev-Mosin
@@ -58,7 +58,7 @@
   - type: BoltActionBarrel
   - type: Appearance
     visuals:
-    - type: BarrelBoltVisualizer
+    - type: GunBoltVisualizer
 
 - type: entity
   name: Hristov
@@ -75,4 +75,4 @@
     fillPrototype: CartridgeAntiMaterial
   - type: Appearance
     visuals:
-    - type: BarrelBoltVisualizer
+    - type: GunBoltVisualizer

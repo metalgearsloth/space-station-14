@@ -217,6 +217,8 @@ namespace Content.Server.GameObjects.EntitySystems
                 var projectile = EntityManager.SpawnEntity(ammoComponent.ProjectileId, weapon.Owner.Transform.MapPosition).GetComponent<SharedProjectileComponent>();
                 ShootProjectile(user, weapon, angle, projectile, ammoComponent.Velocity);
             }
+
+            ammoComponent.Spent = true;
         }
 
         public override void ShootProjectile(IEntity? user, IGun weapon, Angle angle,

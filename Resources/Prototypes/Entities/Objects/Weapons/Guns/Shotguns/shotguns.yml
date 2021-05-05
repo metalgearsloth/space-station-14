@@ -67,7 +67,7 @@
     soundMagEject: /Audio/Weapons/Guns/MagOut/smg_magout.ogg
   - type: Appearance
     visuals:
-    - type: BarrelBoltVisualizer
+    - type: GunBoltVisualizer
     - type: MagVisualizer
       magState: mag
       steps: 1
@@ -113,7 +113,7 @@
     soundBoltClosed: /Audio/Weapons/Guns/Cock/shotgun_close.ogg
   - type: Appearance
     visuals:
-    - type: BarrelBoltVisualizer
+    - type: GunBoltVisualizer
 
 - type: entity
   name: Bull
@@ -235,4 +235,4 @@
     soundBoltClosed: /Audio/Weapons/Guns/Cock/shotgun_close.ogg
   - type: Appearance
     visuals:
-    - type: BarrelBoltVisualizer
+    - type: GunBoltVisualizer

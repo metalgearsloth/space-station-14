@@ -63,7 +63,7 @@
     angleDecay: 60
   - type: Appearance
     visuals:
-    - type: BarrelBoltVisualizer
+    - type: GunBoltVisualizer
     - type: MagVisualizer
       magState: mag
       steps: 4
@@ -99,7 +99,7 @@
     angleDecay: 60
   - type: Appearance
     visuals:
-    - type: BarrelBoltVisualizer
+    - type: GunBoltVisualizer
     - type: MagVisualizer
       magState: mag
       steps: 6

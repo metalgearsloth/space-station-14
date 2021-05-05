@@ -5,6 +5,7 @@ using Robust.Shared.Serialization.Manager.Attributes;
 
 namespace Content.Shared.GameObjects.Components.Weapons.Guns
 {
+    [Prototype("hitscan")]
     public class HitscanPrototype : IPrototype, IProjectile
     {
         [DataField("id")]

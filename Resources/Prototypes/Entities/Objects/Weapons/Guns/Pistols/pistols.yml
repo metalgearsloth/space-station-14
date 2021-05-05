@@ -40,7 +40,7 @@
     soundMagEject: /Audio/Weapons/Guns/MagOut/pistol_magout.ogg
   - type: Appearance
     visuals:
-    - type: BarrelBoltVisualizer
+    - type: GunBoltVisualizer
     - type: MagVisualizer
       magState: mag
       steps: 1
@@ -101,7 +101,7 @@
     angleDecay: 60
   - type: Appearance
     visuals:
-    - type: BarrelBoltVisualizer
+    - type: GunBoltVisualizer
 
 - type: entity
   name: giskard
@@ -169,7 +169,7 @@
     soundMagEject: /Audio/Weapons/Guns/MagOut/pistol_magout.ogg
   - type: Appearance
     visuals:
-    - type: BarrelBoltVisualizer
+    - type: GunBoltVisualizer
 
 - type: entity
   name: lamia
@@ -277,7 +277,7 @@
     angleDecay: 60
   - type: Appearance
     visuals:
-    - type: BarrelBoltVisualizer
+    - type: GunBoltVisualizer
 
 - type: entity
   name: mk 58 (wood)
@@ -309,7 +309,7 @@
     angleDecay: 60
   - type: Appearance
     visuals:
-    - type: BarrelBoltVisualizer
+    - type: GunBoltVisualizer
 
 - type: entity
   name: molly
@@ -372,7 +372,7 @@
     angleDecay: 60
   - type: Appearance
     visuals:
-    - type: BarrelBoltVisualizer
+    - type: GunBoltVisualizer
 
 - type: entity
   name: paco

@@ -66,7 +66,7 @@
     angleDecay: 60
   - type: Appearance
     visuals:
-    - type: BarrelBoltVisualizer
+    - type: GunBoltVisualizer
     - type: MagVisualizer
       magState: mag
       steps: 1
@@ -100,7 +100,7 @@
     autoEjectMag: true
   - type: Appearance
     visuals:
-    - type: BarrelBoltVisualizer
+    - type: GunBoltVisualizer
     - type: MagVisualizer
       magState: mag
       steps: 1
@@ -142,7 +142,7 @@
     angleDecay: 60
   - type: Appearance
     visuals:
-    - type: BarrelBoltVisualizer
+    - type: GunBoltVisualizer
     - type: MagVisualizer
       magState: mag
       steps: 1
@@ -221,7 +221,7 @@
     magFillPrototype: MagazineMagnumSmg
   - type: Appearance
     visuals:
-    - type: BarrelBoltVisualizer
+    - type: GunBoltVisualizer
     - type: MagVisualizer
       magState: mag
       steps: 1
