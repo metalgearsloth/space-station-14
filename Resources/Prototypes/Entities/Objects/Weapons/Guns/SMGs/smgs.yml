@@ -11,22 +11,22 @@
     state: icon
   - type: Item
     size: 24
-  - type: MagazineBarrel
+  - type: Gun
+    soundGunshot: /Audio/Weapons/Guns/Gunshots/smg.ogg
+    magazinePrototype: MagazinePistolSmg
+    fireRate: 8
+    caliber: Pistol
+    magazineTypes:
+      - Smg
     currentSelector: Automatic
     allSelectors:
     - Single
     - Automatic
-    fireRate: 8
-    caliber: Pistol
-    magazineTypes:
-    - Smg
     minAngle: 5
     maxAngle: 60
     angleIncrease: 10
     angleDecay: 60
-    magFillPrototype: MagazinePistolSmg
-    soundGunshot: /Audio/Weapons/Guns/Gunshots/smg.ogg
-    soundEmpty: /Audio/Weapons/Guns/Empty/empty.ogg
+  - type: MagazineBarrel
     soundRack: /Audio/Weapons/Guns/Cock/smg_cock.ogg
     soundBoltOpen: /Audio/Weapons/Guns/Bolt/rifle_bolt_open.ogg
     soundBoltClosed: /Audio/Weapons/Guns/Bolt/rifle_bolt_closed.ogg
@@ -94,7 +94,7 @@
   - type: Item
     size: 24
     sprite: Objects/Weapons/Guns/SMGs/c20r.rsi
-  - type: RangedWeapon
+  - type: Gun
   - type: MagazineBarrel
     currentSelector: Automatic
     allSelectors:

@@ -26,7 +26,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
 
         [ViewVariables]
         [DataField("soundEmpty")]
-        public string? SoundEmpty { get; } = null;
+        public string? SoundEmpty { get; } = "/Audio/Weapons/Guns/Empty/empty.ogg";
 
         // If our bolt is open then we can directly insert ammo into it.
         // This is useful for stuff that is single-shot and has no need for any kind of magazine.
