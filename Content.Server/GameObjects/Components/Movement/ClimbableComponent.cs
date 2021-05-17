@@ -158,7 +158,7 @@ namespace Content.Server.GameObjects.Components.Movement
 
             var result = await EntitySystem.Get<DoAfterSystem>().DoAfter(doAfterEventArgs);
 
-            if (result != DoAfterStatus.Cancelled && entityToMove.TryGetComponent(out PhysicsComponent? body) && body.Fixtures.Count >= 1)
+            if (result != DoAfterStatus.Cancelled && entityToMove.TryGetComponent(out PhysicsComponent? body) && body.FixtureCount >= 1)
             {
                 var entityPos = entityToMove.Transform.WorldPosition;
 
@@ -205,7 +205,7 @@ namespace Content.Server.GameObjects.Components.Movement
 
             var result = await EntitySystem.Get<DoAfterSystem>().DoAfter(doAfterEventArgs);
 
-            if (result != DoAfterStatus.Cancelled && user.TryGetComponent(out PhysicsComponent? body) && body.Fixtures.Count >= 1)
+            if (result != DoAfterStatus.Cancelled && user.TryGetComponent(out PhysicsComponent? body) && body.FixtureCount >= 1)
             {
                 // TODO: Remove the copy-paste code
                 var userPos = user.Transform.WorldPosition;

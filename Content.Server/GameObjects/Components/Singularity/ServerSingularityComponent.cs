@@ -66,7 +66,7 @@ namespace Content.Server.GameObjects.Components.Singularity
                     appearance.SetData(SingularityVisuals.Level, _level);
                 }
 
-                if (_collidableComponent != null && _collidableComponent.Fixtures.Any() && _collidableComponent.Fixtures[0].Shape is PhysShapeCircle circle)
+                if (_collidableComponent != null && _collidableComponent.FixtureCount > 0 && _collidableComponent.FixtureList!.Shape is PhysShapeCircle circle)
                 {
                     circle.Radius = _level - 0.5f;
                 }

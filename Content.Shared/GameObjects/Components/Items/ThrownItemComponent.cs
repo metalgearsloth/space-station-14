@@ -32,9 +32,9 @@ namespace Content.Shared.GameObjects.Components.Items
         void IThrown.Thrown(ThrownEventArgs eventArgs)
         {
             if (!Owner.TryGetComponent(out PhysicsComponent? physicsComponent) ||
-                physicsComponent.Fixtures.Count != 1) return;
+                physicsComponent.FixtureCount != 1) return;
 
-            var shape = physicsComponent.Fixtures[0].Shape;
+            var shape = physicsComponent.FixtureList!.Shape;
             _fixture = new Fixture(physicsComponent, shape) {CollisionLayer = (int) CollisionGroup.ThrownItem, Hard = false};
             physicsComponent.AddFixture(_fixture);
         }
