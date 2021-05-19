@@ -16,7 +16,7 @@
   - type: Item
     size: 24
     sprite: Objects/Weapons/Guns/Battery/laser_retro.rsi
-  - type: RangedWeapon
+  - type: Gun
   - type: BatteryBarrel
     minAngle: 10
     maxAngle: 45
@@ -55,7 +55,7 @@
   - type: Item
     size: 24
     sprite: Objects/Weapons/Guns/Battery/laser_cannon.rsi
-  - type: RangedWeapon
+  - type: Gun
   - type: BatteryBarrel
     currentSelector: Single
     allSelectors:
@@ -95,7 +95,7 @@
   - type: Item
     size: 24
     sprite: Objects/Weapons/Guns/Battery/xray.rsi
-  - type: RangedWeapon
+  - type: Gun
   - type: BatteryBarrel
     currentSelector: Single
     allSelectors:
@@ -139,7 +139,7 @@
     Slots:
     - Belt
     HeldPrefix: taser4
-  - type: RangedWeapon
+  - type: Gun
   - type: BatteryBarrel
     currentSelector: Single
     allSelectors:
@@ -178,7 +178,7 @@
   - type: Item
     size: 24
     sprite: Objects/Weapons/Guns/Battery/laser_gun.rsi
-  - type: RangedWeapon
+  - type: Gun
   - type: BatteryBarrel
     minAngle: 10
     maxAngle: 45

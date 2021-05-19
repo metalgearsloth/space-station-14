@@ -462,7 +462,7 @@
     size: 24
     sprite: Objects/Fun/toys.rsi
     HeldPrefix: foamcrossbow
-  - type: RangedWeapon
+  - type: Gun
   - type: RevolverBarrel
     caliber: Rocket
     currentSelector: Single
@@ -501,7 +501,7 @@
     size: 24
     sprite: Objects/Fun/toys.rsi
     state: base
-  - type: RangedWeapon
+  - type: Gun
   - type: BoltActionBarrel
     currentSelector: Single
     allSelectors:

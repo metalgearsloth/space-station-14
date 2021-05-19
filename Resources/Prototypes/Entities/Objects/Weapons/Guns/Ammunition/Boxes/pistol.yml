@@ -4,7 +4,7 @@
   id: BoxPistolBase
   name: ammunition box (.35 auto)
   components:
-  - type: AmmoBox
+  - type: AmmoProvider
     caliber: Pistol
     capacity: 60
   - type: Sprite
@@ -23,7 +23,7 @@
   id: BoxPistolBox
   name: ammunition box (.35 auto)
   components:
-  - type: AmmoBox
+  - type: AmmoProvider
     fillPrototype: CartridgePistol
   - type: Sprite
     layers:
@@ -37,7 +37,7 @@
   id: BoxPistolBoxFlash
   name: ammunition box (.35 auto flash)
   components:
-  - type: AmmoBox
+  - type: AmmoProvider
     fillPrototype: CartridgePistolFlash
   - type: Sprite
     layers:
@@ -52,7 +52,7 @@
   id: BoxPistolBoxHV
   name: ammunition box (.35 auto high-velocity)
   components:
-  - type: AmmoBox
+  - type: AmmoProvider
     fillPrototype: CartridgePistolHV
   - type: Sprite
     layers:
@@ -67,7 +67,7 @@
   id: BoxPistolBoxPractice
   name: ammunition box (.35 auto practice)
   components:
-  - type: AmmoBox
+  - type: AmmoProvider
     fillPrototype: CartridgePistolPractice
   - type: Sprite
     layers:
@@ -82,7 +82,7 @@
   id: BoxPistolBoxRubber
   name: ammunition box (.35 auto rubber)
   components:
-  - type: AmmoBox
+  - type: AmmoProvider
     fillPrototype: CartridgePistolRubber
   - type: Sprite
     layers:

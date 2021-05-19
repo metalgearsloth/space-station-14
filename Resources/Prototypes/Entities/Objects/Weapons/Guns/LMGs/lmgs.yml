@@ -11,7 +11,6 @@
     state: icon
   - type: Item
     size: 24
-  - type: MagazineBarrel
     currentSelector: Automatic
     allSelectors:
     - Automatic
@@ -53,8 +52,7 @@
   - type: Item
     size: 24
     sprite: Objects/Weapons/Guns/LMGs/l6.rsi
-  - type: RangedWeapon
-  - type: MagazineBarrel
+  - type: Gun
     magFillPrototype: MagazineLRifleBox
     fireRate: 5
     minAngle: 0
@@ -89,8 +87,7 @@
   - type: Item
     size: 24
     sprite: Objects/Weapons/Guns/LMGs/pk.rsi
-  - type: RangedWeapon
-  - type: MagazineBarrel
+  - type: Gun
     magFillPrototype: MagazineLRiflePkBox
     fireRate: 5
     minAngle: 0

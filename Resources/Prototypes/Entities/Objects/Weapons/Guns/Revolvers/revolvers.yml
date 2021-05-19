@@ -28,7 +28,7 @@
   - type: Item
     size: 24
     sprite: Objects/Weapons/Guns/Revolvers/deckard.rsi
-  - type: RangedWeapon
+  - type: Gun
   - type: BoltActionBarrel
     currentSelector: Single
     allSelectors:
@@ -59,7 +59,7 @@
   - type: Item
     size: 24
     sprite: Objects/Weapons/Guns/Revolvers/inspector.rsi
-  - type: RangedWeapon
+  - type: Gun
   - type: RevolverBarrel
     currentSelector: Single
     allSelectors:
@@ -83,7 +83,7 @@
   - type: Item
     size: 24
     sprite: Objects/Weapons/Guns/Revolvers/mateba.rsi
-  - type: RangedWeapon
+  - type: Gun
   - type: RevolverBarrel
     currentSelector: Single
     allSelectors:

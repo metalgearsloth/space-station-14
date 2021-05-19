@@ -357,6 +357,8 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
     [ComponentReference(typeof(IAmmoProvider))]
     public abstract class SharedBallisticMagazineComponent : SharedBallisticsAmmoProvider
     {
+        public override string Name => "BallisticMagazine";
+
         // Sounds
         [ViewVariables]
         [DataField("soundRack")]
@@ -419,6 +421,8 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
     [ComponentReference(typeof(IAmmoProvider))]
     public abstract class SharedRevolverMagazineComponent : SharedBallisticsAmmoProvider, ISerializationHooks
     {
+        public override string Name => "Revolver";
+
         private SharedAmmoComponent?[] _revolver = default!;
 
         // Don't initialize to their capacity given more guns will never need their max capacity.
@@ -481,8 +485,17 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
 
     public abstract class SharedAmmoProviderComponent : Component, IAmmoProvider
     {
+        public override string Name => "AmmoProvider";
+        public override uint? NetID => ContentNetIDs.AMMO_PROVIDER;
+
         // TODO: Most of the below seems more suited to a magazine weapon
         // Try working on the powercell one for a bit and see what flows.
+
+        /// <summary>
+        /// Does the magazine only transfer to other magazines / guns.
+        /// </summary>
+        [ViewVariables(VVAccess.ReadWrite)]
+        [DataField("speedLoader")] public bool SpeedLoader { get; } = false;
 
         [ViewVariables(VVAccess.ReadWrite)]
         [DataField("caliber")]

@@ -40,7 +40,7 @@
     sprite: Objects/Weapons/Guns/Snipers/bolt_gun.rsi
   - type: Item
     sprite: Objects/Weapons/Guns/Snipers/bolt_gun.rsi
-  - type: RangedWeapon
+  - type: Gun
   - type: BoltActionBarrel
   - type: Appearance
     visuals:
@@ -54,7 +54,7 @@
   components:
   - type: Sprite
     sprite: Objects/Weapons/Guns/Snipers/bolt_gun_wood.rsi
-  - type: RangedWeapon
+  - type: Gun
   - type: BoltActionBarrel
   - type: Appearance
     visuals:
@@ -68,7 +68,7 @@
   components:
   - type: Sprite
     sprite: Objects/Weapons/Guns/Snipers/heavy_sniper.rsi
-  - type: RangedWeapon
+  - type: Gun
   - type: BoltActionBarrel
     caliber: AntiMaterial
     capacity: 1

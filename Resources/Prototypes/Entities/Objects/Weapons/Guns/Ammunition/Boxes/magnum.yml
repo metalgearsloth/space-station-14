@@ -3,7 +3,7 @@
   parent: BaseItem
   id: BoxMagnumBase
   components:
-  - type: AmmoBox
+  - type: AmmoProvider
     caliber: Magnum
     capacity: 60
   - type: Sprite
@@ -22,7 +22,7 @@
   id: BoxMagnum
   name: ammunition box (.40 magnum)
   components:
-  - type: AmmoBox
+  - type: AmmoProvider
     fillPrototype: CartridgeMagnum
   - type: Sprite
     layers:
@@ -36,7 +36,7 @@
   id: BoxMagnumFlash
   name: ammunition box (.40 magnum flash)
   components:
-  - type: AmmoBox
+  - type: AmmoProvider
     fillPrototype: CartridgeMagnumFlash
   - type: Sprite
     layers:
@@ -51,7 +51,7 @@
   id: BoxMagnumHV
   name: ammunition box (.40 magnum high-velocity)
   components:
-  - type: AmmoBox
+  - type: AmmoProvider
     fillPrototype: CartridgeMagnumHV
   - type: Sprite
     layers:
@@ -66,7 +66,7 @@
   id: BoxMagnumPractice
   name: ammunition box (.40 magnum practice)
   components:
-  - type: AmmoBox
+  - type: AmmoProvider
     fillPrototype: CartridgeMagnumPractice
   - type: Sprite
     layers:
@@ -81,7 +81,7 @@
   id: BoxMagnumRubber
   name: ammunition box (.40 magnum rubber)
   components:
-  - type: AmmoBox
+  - type: AmmoProvider
     fillPrototype: CartridgeMagnumRubber
   - type: Sprite
     layers:

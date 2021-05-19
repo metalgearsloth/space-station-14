@@ -12,8 +12,7 @@
   - type: Item
     size: 1
     sprite: Objects/Weapons/Guns/Pistols/debug.rsi
-  - type: RangedWeapon
-  - type: MagazineBarrel
+  - type: Gun
     caliber: Pistol
     magazineTypes:
     - Pistol

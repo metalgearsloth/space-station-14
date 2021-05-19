@@ -12,7 +12,6 @@
   - type: Item
     size: 24
     state: icon
-  - type: MagazineBarrel
     currentSelector: Automatic
     allSelectors:
     - Automatic
@@ -48,8 +47,7 @@
   - type: Item
     size: 24
     sprite: Objects/Weapons/Guns/Rifles/ak.rsi
-  - type: RangedWeapon
-  - type: MagazineBarrel
+  - type: Gun
     caliber: LRifle
     magazineTypes:
     - Rifle
@@ -87,8 +85,7 @@
   - type: Item
     size: 24
     sprite: Objects/Weapons/Guns/Rifles/black_ak.rsi
-  - type: RangedWeapon
-  - type: MagazineBarrel
+  - type: Gun
     caliber: LRifle
     magazineTypes:
     - Rifle
@@ -128,8 +125,7 @@
   - type: Item
     size: 24
     sprite: Objects/Weapons/Guns/Rifles/carbine.rsi
-  - type: RangedWeapon
-  - type: MagazineBarrel
+  - type: Gun
     caliber: SRifle
     magazineTypes:
     - Rifle
@@ -169,8 +165,7 @@
   - type: Item
     size: 24
     sprite: Objects/Weapons/Guns/Rifles/dallas.rsi
-  - type: RangedWeapon
-  - type: MagazineBarrel
+  - type: Gun
     caliber: ClRifle
     magazineTypes:
     - Rifle
@@ -211,8 +206,7 @@
   - type: Item
     size: 24
     sprite: Objects/Weapons/Guns/Rifles/sts.rsi
-  - type: RangedWeapon
-  - type: MagazineBarrel
+  - type: Gun
     caliber: LRifle
     magazineTypes:
     - Rifle
@@ -253,8 +247,7 @@
   - type: Item
     size: 24
     sprite: Objects/Weapons/Guns/Rifles/vintorez.rsi
-  - type: RangedWeapon
-  - type: MagazineBarrel
+  - type: Gun
     caliber: SRifle
     magazineTypes:
     - Rifle
@@ -292,8 +285,7 @@
   - type: Item
     size: 24
     sprite: Objects/Weapons/Guns/Rifles/wintermute.rsi
-  - type: RangedWeapon
-  - type: MagazineBarrel
+  - type: Gun
     caliber: SRifle
     magazineTypes:
     - Rifle
@@ -334,8 +326,7 @@
   - type: Item
     size: 24
     sprite: Objects/Weapons/Guns/Rifles/calico.rsi
-  - type: RangedWeapon
-  - type: MagazineBarrel
+  - type: Gun
     magFillPrototype: MagazinePistolCalicoTopMounted
     caliber: Pistol
     magazineTypes:

@@ -6,7 +6,7 @@ namespace Content.Client
         public static string[] List => new[]
         {
             "Anchorable",
-            "AmmoBox",
+            "AmmoProvider",
             "Pickaxe",
             "Interactable",
             "CloningPod",
@@ -34,9 +34,6 @@ namespace Content.Client
             "Smes",
             "LightBulb",
             "Healing",
-            "RangedMagazine",
-            "Ammo",
-            "HitscanWeaponCapacitor",
             "PowerCell",
             "PowerCellCharger",
             "PowerCellSlot",
@@ -72,8 +69,6 @@ namespace Content.Client
             "Bucket",
             "Puddle",
             "CanSpill",
-            "SpeedLoader",
-            "Hitscan",
             "ExplosiveProjectile",
             "StunnableProjectile",
             "RandomPottedPlant",

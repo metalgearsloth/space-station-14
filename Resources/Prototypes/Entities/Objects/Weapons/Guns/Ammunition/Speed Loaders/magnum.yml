@@ -4,7 +4,8 @@
   parent: BaseItem
   abstract: true
   components:
-  - type: SpeedLoader
+  - type: AmmoProvider
+    speedLoader: true
     caliber: Magnum
     capacity: 6
 
@@ -27,7 +28,8 @@
   name: "speed loader (.40 magnum)"
   parent: SLMagnumBase
   components:
-  - type: SpeedLoader
+  - type: AmmoProvider
+    speedLoader: true
     fillPrototype: CartridgeMagnum
 
   - type: Sprite
@@ -38,7 +40,8 @@
   name: "speed loader (.40 magnum flash)"
   parent: SLMagnumBase
   components:
-  - type: SpeedLoader
+  - type: AmmoProvider
+    speedLoader: true
     fillPrototype: CartridgeMagnumFlash
 
   - type: Sprite
@@ -49,7 +52,8 @@
   name: "speed loader (.40 magnum high-velocity)"
   parent: SLMagnumBase
   components:
-  - type: SpeedLoader
+  - type: AmmoProvider
+    speedLoader: true
     fillPrototype: CartridgeMagnumHV
 
   - type: Sprite
@@ -60,7 +64,8 @@
   name: "speed loader (.40 magnum practice)"
   parent: SLMagnumBase
   components:
-  - type: SpeedLoader
+  - type: AmmoProvider
+    speedLoader: true
     fillPrototype: CartridgeMagnumPractice
 
   - type: Sprite
@@ -71,7 +76,8 @@
   name: "speed loader (.40 magnum rubber)"
   parent: SLMagnumBase
   components:
-  - type: SpeedLoader
+  - type: AmmoProvider
+    speedLoader: true
     fillPrototype: CartridgeMagnumRubber
 
   - type: Sprite
