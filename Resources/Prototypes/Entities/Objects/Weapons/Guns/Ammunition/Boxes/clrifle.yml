@@ -4,7 +4,7 @@
   id: BoxClRifleBase
   name: ammunition box (.25 caseless)
   components:
-  - type: AmmoProvider
+  - type: BallisticAmmoProvider
     caliber: ClRifle
     capacity: 60
   - type: Sprite
@@ -23,7 +23,7 @@
   id: BoxClRifle10x24
   name: ammunition box (.25 caseless)
   components:
-  - type: AmmoProvider
+  - type: BallisticAmmoProvider
     capacity: 200
     fillPrototype: CartridgeClRifle
   - type: Sprite
@@ -44,7 +44,7 @@
   id: BoxClRifleBigBox
   name: ammunition box (.25 caseless)
   components:
-  - type: AmmoProvider
+  - type: BallisticAmmoProvider
     capacity: 200
     fillPrototype: CartridgeClRifle
   - type: Sprite
@@ -65,7 +65,7 @@
   id: BoxClRifleBigBoxRubber
   name: ammunition box (.25 caseless rubber)
   components:
-  - type: AmmoProvider
+  - type: BallisticAmmoProvider
     capacity: 200
     fillPrototype: CartridgeClRifleRubber
   - type: Sprite
@@ -87,7 +87,7 @@
   id: BoxClRifleBox
   name: ammunition box (.25 caseless)
   components:
-  - type: AmmoProvider
+  - type: BallisticAmmoProvider
     fillPrototype: CartridgeClRifle
   - type: Sprite
     layers:
@@ -101,7 +101,7 @@
   id: BoxClRifleBoxFlash
   name: ammunition box (.25 caseless flash)
   components:
-  - type: AmmoProvider
+  - type: BallisticAmmoProvider
     fillPrototype: CartridgeClRifleFlash
   - type: Sprite
     layers:
@@ -116,7 +116,7 @@
   id: BoxClRifleBoxHV
   name: ammunition box (.25 caseless high-velocity)
   components:
-  - type: AmmoProvider
+  - type: BallisticAmmoProvider
     fillPrototype: CartridgeClRifleHV
   - type: Sprite
     layers:
@@ -131,7 +131,7 @@
   id: BoxClRifleBoxPractice
   name: ammunition box (.25 caseless practice)
   components:
-  - type: AmmoProvider
+  - type: BallisticAmmoProvider
     fillPrototype: CartridgeClRiflePractice
   - type: Sprite
     layers:
@@ -146,7 +146,7 @@
   id: BoxClRifleBoxRubber
   name: ammunition box (.25 caseless rubber)
   components:
-  - type: AmmoProvider
+  - type: BallisticAmmoProvider
     fillPrototype: CartridgeClRifleRubber
   - type: Sprite
     layers:

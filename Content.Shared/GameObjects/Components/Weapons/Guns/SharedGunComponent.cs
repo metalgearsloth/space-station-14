@@ -349,15 +349,15 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
     // Bool for whether it autocycles
 
     [ComponentReference(typeof(IAmmoProvider))]
-    public abstract class SharedBatteryMagazineComponent : SharedAmmoProviderComponent
+    public abstract class SharedBatteryAmmoProviderComponent : SharedAmmoProviderComponent
     {
-
+        public override string Name => "BatteryAmmoProvider";
     }
 
     [ComponentReference(typeof(IAmmoProvider))]
     public abstract class SharedBallisticMagazineComponent : SharedBallisticsAmmoProvider
     {
-        public override string Name => "BallisticMagazine";
+        public override string Name => "BallisticAmmoProvider";
 
         // Sounds
         [ViewVariables]
@@ -419,9 +419,9 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
     }
 
     [ComponentReference(typeof(IAmmoProvider))]
-    public abstract class SharedRevolverMagazineComponent : SharedBallisticsAmmoProvider, ISerializationHooks
+    public abstract class SharedRevolverAmmoProviderComponent : SharedBallisticsAmmoProvider, ISerializationHooks
     {
-        public override string Name => "Revolver";
+        public override string Name => "RevolverAmmoProvider";
 
         private SharedAmmoComponent?[] _revolver = default!;
 
@@ -446,9 +446,9 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         }
     }
 
-    public abstract class SharedReagentMagazineComponent : SharedAmmoProviderComponent
+    public abstract class SharedReagentAmmoProviderComponent : SharedAmmoProviderComponent
     {
-
+        public override string Name => "ReagentAmmoProvider";
     }
 
     /*
@@ -486,7 +486,6 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
     public abstract class SharedAmmoProviderComponent : Component, IAmmoProvider
     {
         public override string Name => "AmmoProvider";
-        public override uint? NetID => ContentNetIDs.AMMO_PROVIDER;
 
         // TODO: Most of the below seems more suited to a magazine weapon
         // Try working on the powercell one for a bit and see what flows.

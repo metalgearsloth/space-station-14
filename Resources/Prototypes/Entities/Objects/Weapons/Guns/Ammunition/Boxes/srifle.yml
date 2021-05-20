@@ -3,7 +3,7 @@
   parent: BaseItem
   id: BoxSRifleBase
   components:
-  - type: AmmoProvider
+  - type: BallisticAmmoProvider
     caliber: SRifle
     capacity: 60
   - type: Sprite
@@ -22,7 +22,7 @@
   id: BoxSRifleBigBox
   name: ammunition box (.20 rifle)
   components:
-  - type: AmmoProvider
+  - type: BallisticAmmoProvider
     capacity: 200
     fillPrototype: CartridgeSRifle
   - type: Sprite
@@ -43,7 +43,7 @@
   id: BoxSRifleBigBoxRubber
   name: ammunition box (.20 rifle rubber)
   components:
-  - type: AmmoProvider
+  - type: BallisticAmmoProvider
     capacity: 200
     fillPrototype: CartridgeSRiflePractice
   - type: Sprite
@@ -65,7 +65,7 @@
   id: BoxSRifleBox
   name: ammunition box (.20 rifle)
   components:
-  - type: AmmoProvider
+  - type: BallisticAmmoProvider
     fillPrototype: CartridgeSRifle
   - type: Sprite
     layers:
@@ -79,7 +79,7 @@
   id: BoxSRifleBoxFlash
   name: ammunition box (.20 rifle flash)
   components:
-  - type: AmmoProvider
+  - type: BallisticAmmoProvider
     fillPrototype: CartridgeSRifleFlash
   - type: Sprite
     layers:
@@ -94,7 +94,7 @@
   id: BoxSRifleBoxHV
   name: ammunition box (.20 rifle high-velocity)
   components:
-  - type: AmmoProvider
+  - type: BallisticAmmoProvider
     fillPrototype: CartridgeSRifleHV
   - type: Sprite
     layers:
@@ -109,7 +109,7 @@
   id: BoxSRifleBoxPractice
   name: ammunition box (.20 rifle practice)
   components:
-  - type: AmmoProvider
+  - type: BallisticAmmoProvider
     fillPrototype: CartridgeSRiflePractice
   - type: Sprite
     layers:
@@ -124,7 +124,7 @@
   id: BoxSRifleBoxRubber
   name: ammunition box (.20 rifle rubber)
   components:
-  - type: AmmoProvider
+  - type: BallisticAmmoProvider
     fillPrototype: CartridgeSRifleRubber
   - type: Sprite
     layers:

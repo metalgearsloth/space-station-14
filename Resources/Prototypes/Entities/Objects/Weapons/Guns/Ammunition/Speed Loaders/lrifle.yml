@@ -3,7 +3,7 @@
   name: "speed loader (.30 rifle)"
   parent: BaseItem
   components:
-  - type: AmmoProvider
+  - type: RevolverAmmoProvider
     speedLoader: true
     caliber: LRifle
     capacity: 5

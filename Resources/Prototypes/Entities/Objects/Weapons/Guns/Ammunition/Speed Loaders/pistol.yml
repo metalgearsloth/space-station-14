@@ -4,7 +4,7 @@
   parent: BaseItem
   abstract: true
   components:
-  - type: AmmoProvider
+  - type: RevolverAmmoProvider
     speedLoader: true
     caliber: Pistol
     capacity: 6
@@ -28,7 +28,7 @@
   name: "speed loader (.35 auto)"
   parent: SLPistolBase
   components:
-  - type: AmmoProvider
+  - type: RevolverAmmoProvider
     speedLoader: true
     fillPrototype: CartridgePistol
 
@@ -40,7 +40,7 @@
   name: "speed loader (.35 auto flash)"
   parent: SLPistolBase
   components:
-  - type: AmmoProvider
+  - type: RevolverAmmoProvider
     speedLoader: true
     fillPrototype: CartridgePistolFlash
 
@@ -52,7 +52,7 @@
   name: "speed loader (.35 auto high-velocity)"
   parent: SLPistolBase
   components:
-  - type: AmmoProvider
+  - type: RevolverAmmoProvider
     speedLoader: true
     fillPrototype: CartridgePistolHV
 
@@ -64,7 +64,7 @@
   name: "speed loader (.35 auto practice)"
   parent: SLPistolBase
   components:
-  - type: AmmoProvider
+  - type: RevolverAmmoProvider
     speedLoader: true
     fillPrototype: CartridgePistolPractice
 
@@ -76,7 +76,7 @@
   name: "speed loader (.35 auto rubber)"
   parent: SLPistolBase
   components:
-  - type: AmmoProvider
+  - type: RevolverAmmoProvider
     speedLoader: true
     fillPrototype: CartridgePistolRubber
 

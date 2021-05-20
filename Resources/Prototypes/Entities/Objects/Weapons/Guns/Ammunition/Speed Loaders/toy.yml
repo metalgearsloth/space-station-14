@@ -4,7 +4,7 @@
   parent: BaseItem
   abstract: true
   components:
-  - type: AmmoProvider
+  - type: RevolverAmmoProvider
     speedLoader: true
     caliber: Cap
     capacity: 6
@@ -27,7 +27,7 @@
   name: "cap gun loader"
   parent: CapAmmoBase
   components:
-  - type: AmmoProvider
+  - type: RevolverAmmoProvider
     speedLoader: true
     fillPrototype: CartridgeCap
   - type: Sprite
