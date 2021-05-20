@@ -34,6 +34,7 @@ namespace Content.Client
             "Smes",
             "LightBulb",
             "Healing",
+            "Material",
             "PowerCell",
             "PowerCellCharger",
             "PowerCellSlot",
@@ -83,6 +84,7 @@ namespace Content.Client
             "TilePrying",
             "RandomSpriteColor",
             "ConditionalSpawner",
+            "ExaminableBattery",
             "PottedPlantHide",
             "SecureEntityStorage",
             "PresetIdCard",
@@ -248,6 +250,7 @@ namespace Content.Client
             "SpawnAfterInteract",
             "DisassembleOnActivate",
             "ExplosionLaunched",
+            "BeingCloned",
             "Advertise",
         };
     }
