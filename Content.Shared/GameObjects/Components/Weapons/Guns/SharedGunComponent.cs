@@ -176,7 +176,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         protected ContainerSlot? _magazineSlot = null;
 
         [ViewVariables]
-        [DataField("magazinePrototype")]
+        [DataField("magFillPrototype")]
         private EntityPrototype? _magazinePrototype;
 
         [ViewVariables]

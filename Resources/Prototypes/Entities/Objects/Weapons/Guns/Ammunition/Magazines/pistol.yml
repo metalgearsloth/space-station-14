@@ -5,7 +5,7 @@
   parent: BaseItem
   abstract: true
   components:
-  - type: RangedMagazine
+  - type: BallisticAmmoProvider
     caliber: Pistol
     magazineType: Pistol
     capacity: 10
@@ -29,7 +29,7 @@
   parent: BaseItem
   abstract: true
   components:
-  - type: RangedMagazine
+  - type: BallisticAmmoProvider
     caliber: Pistol
     magazineType: HCPistol
     capacity: 16
@@ -54,7 +54,7 @@
   parent: BaseItem
   abstract: true
   components:
-  - type: RangedMagazine
+  - type: BallisticAmmoProvider
     caliber: Pistol
     magazineType: Smg
     capacity: 35
@@ -79,7 +79,7 @@
   name: WT550 magazine (.35 auto top-mounted)
   parent: MagazinePistolSmgBase
   components:
-  - type: RangedMagazine
+  - type: BallisticAmmoProvider
     caliber: Pistol
     magazineType: SmgTopMounted
     fillPrototype: CartridgePistol
@@ -104,7 +104,7 @@
   name: Calico magazine (.35 auto top-mounted)
   parent: MagazinePistolSmgBase
   components:
-  - type: RangedMagazine
+  - type: BallisticAmmoProvider
     caliber: Pistol
     magazineType: CalicoTopMounted
     fillPrototype: CartridgePistol
@@ -129,7 +129,7 @@
   name: pistol magazine (.35 auto)
   parent: MagazinePistolBase
   components:
-  - type: RangedMagazine
+  - type: BallisticAmmoProvider
     fillPrototype: CartridgePistol
 
   - type: Sprite
@@ -140,7 +140,7 @@
   name: pistol magazine (.35 auto flash)
   parent: MagazinePistolBase
   components:
-  - type: RangedMagazine
+  - type: BallisticAmmoProvider
     fillPrototype: CartridgePistolFlash
 
   - type: Sprite
@@ -151,7 +151,7 @@
   name: pistol magazine (.35 auto high-velocity)
   parent: MagazinePistolBase
   components:
-  - type: RangedMagazine
+  - type: BallisticAmmoProvider
     fillPrototype: CartridgePistolHV
 
   - type: Sprite
@@ -162,7 +162,7 @@
   name: pistol magazine (.35 auto practice)
   parent: MagazinePistolBase
   components:
-  - type: RangedMagazine
+  - type: BallisticAmmoProvider
     fillPrototype: CartridgePistolPractice
 
   - type: Sprite
@@ -173,7 +173,7 @@
   name: pistol magazine (.35 auto rubber)
   parent: MagazinePistolBase
   components:
-  - type: RangedMagazine
+  - type: BallisticAmmoProvider
     fillPrototype: CartridgePistolRubber
 
   - type: Sprite
@@ -184,7 +184,7 @@
   name: machine pistol magazine (.35 auto)
   parent: MagazinePistolHCBase
   components:
-  - type: RangedMagazine
+  - type: BallisticAmmoProvider
     fillPrototype: CartridgePistol
 
   - type: Sprite
@@ -195,7 +195,7 @@
   name: machine pistol magazine (.35 auto high-velocity)
   parent: MagazinePistolHCBase
   components:
-  - type: RangedMagazine
+  - type: BallisticAmmoProvider
     fillPrototype: CartridgePistol
 
   - type: Sprite
@@ -206,7 +206,7 @@
   name: machine pistol magazine (.35 auto practice)
   parent: MagazinePistolHCBase
   components:
-  - type: RangedMagazine
+  - type: BallisticAmmoProvider
     fillPrototype: CartridgePistol
 
   - type: Sprite
@@ -217,7 +217,7 @@
   name: machine pistol magazine (.35 auto rubber)
   parent: MagazinePistolHCBase
   components:
-  - type: RangedMagazine
+  - type: BallisticAmmoProvider
     fillPrototype: CartridgePistol
 
   - type: Sprite
@@ -228,7 +228,7 @@
   name: SMG magazine (.35 auto)
   parent: MagazinePistolSmgBase
   components:
-  - type: RangedMagazine
+  - type: BallisticAmmoProvider
     fillPrototype: CartridgePistol
 
   - type: Sprite
@@ -239,7 +239,7 @@
   name: SMG magazine (.35 auto flash)
   parent: MagazinePistolSmgBase
   components:
-  - type: RangedMagazine
+  - type: BallisticAmmoProvider
     fillPrototype: CartridgePistolFlash
 
   - type: Sprite
@@ -250,7 +250,7 @@
   name: SMG magazine (.35 auto high-velocity)
   parent: MagazinePistolSmgBase
   components:
-  - type: RangedMagazine
+  - type: BallisticAmmoProvider
     fillPrototype: CartridgePistolHV
 
   - type: Sprite
@@ -261,7 +261,7 @@
   name: SMG magazine (.35 auto practice)
   parent: MagazinePistolSmgBase
   components:
-  - type: RangedMagazine
+  - type: BallisticAmmoProvider
     fillPrototype: CartridgePistolPractice
 
   - type: Sprite
@@ -272,7 +272,7 @@
   name: SMG magazine (.35 auto rubber)
   parent: MagazinePistolSmgBase
   components:
-  - type: RangedMagazine
+  - type: BallisticAmmoProvider
     fillPrototype: CartridgePistolRubber
 
   - type: Sprite

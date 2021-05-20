@@ -5,7 +5,7 @@
   parent: BaseItem
   abstract: true
   components:
-  - type: RangedMagazine
+  - type: BallisticAmmoProvider
     caliber: ClRifle
     magazineType: Rifle
     capacity: 30
@@ -30,7 +30,7 @@
   name: "box magazine (.25 caseless)"
   parent: MagazineClRifleBase
   components:
-  - type: RangedMagazine
+  - type: BallisticAmmoProvider
     fillPrototype: CartridgeClRifle
     capacity: 99
 
@@ -42,7 +42,7 @@
   name: "pistol magazine (.25 caseless)"
   parent: MagazineClRifleBase
   components:
-  - type: RangedMagazine
+  - type: BallisticAmmoProvider
     fillPrototype: CartridgeClRifle
     magazineType: Pistol
     capacity: 10
@@ -63,7 +63,7 @@
   name: "pistol magazine (.25 caseless high-velocity)"
   parent: MagazineClRifleBase
   components:
-  - type: RangedMagazine
+  - type: BallisticAmmoProvider
     fillPrototype: CartridgeClRifleHV
     magazineType: Pistol
     capacity: 10
@@ -82,7 +82,7 @@
   name: "pistol magazine (.25 caseless practice)"
   parent: MagazineClRifleBase
   components:
-  - type: RangedMagazine
+  - type: BallisticAmmoProvider
     fillPrototype: CartridgeClRiflePractice
     magazineType: Pistol
     capacity: 10
@@ -101,7 +101,7 @@
   name: "pistol magazine (.25 caseless rubber)"
   parent: MagazineClRifleBase
   components:
-  - type: RangedMagazine
+  - type: BallisticAmmoProvider
     fillPrototype: CartridgeClRifleRubber
     magazineType: Pistol
     capacity: 10
@@ -120,7 +120,7 @@
   name: "magazine (.25 caseless)"
   parent: MagazineClRifleBase
   components:
-  - type: RangedMagazine
+  - type: BallisticAmmoProvider
     fillPrototype: CartridgeClRifle
 
   - type: Sprite
@@ -131,7 +131,7 @@
   name: "magazine (.25 caseless high-velocity)"
   parent: MagazineClRifleBase
   components:
-  - type: RangedMagazine
+  - type: BallisticAmmoProvider
     fillPrototype: CartridgeClRifleHV
 
   - type: Sprite
@@ -142,7 +142,7 @@
   name: "magazine (.25 caseless practice)"
   parent: MagazineClRifleBase
   components:
-  - type: RangedMagazine
+  - type: BallisticAmmoProvider
     fillPrototype: CartridgeClRiflePractice
 
   - type: Sprite
@@ -153,7 +153,7 @@
   name: "magazine (.25 caseless rubber)"
   parent: MagazineClRifleBase
   components:
-  - type: RangedMagazine
+  - type: BallisticAmmoProvider
     fillPrototype: CartridgeClRifleRubber
 
   - type: Sprite
@@ -164,7 +164,7 @@
   name: "short magazine (.25 caseless)"
   parent: MagazineClRifleBase
   components:
-  - type: RangedMagazine
+  - type: BallisticAmmoProvider
     fillPrototype: CartridgeClRifle
     capacity: 20
 
@@ -176,7 +176,7 @@
   name: "short magazine (.25 caseless flash)"
   parent: MagazineClRifleBase
   components:
-  - type: RangedMagazine
+  - type: BallisticAmmoProvider
     fillPrototype: CartridgeClRifleFlash
     capacity: 20
 
@@ -188,7 +188,7 @@
   name: "short magazine (.25 caseless high-velocity)"
   parent: MagazineClRifleBase
   components:
-  - type: RangedMagazine
+  - type: BallisticAmmoProvider
     fillPrototype: CartridgeClRifleHV
     capacity: 20
 
@@ -200,7 +200,7 @@
   name: "short magazine (.25 caseless practice)"
   parent: MagazineClRifleBase
   components:
-  - type: RangedMagazine
+  - type: BallisticAmmoProvider
     fillPrototype: CartridgeClRiflePractice
     capacity: 20
 
@@ -212,7 +212,7 @@
   name: "short magazine (.25 caseless rubber)"
   parent: MagazineClRifleBase
   components:
-  - type: RangedMagazine
+  - type: BallisticAmmoProvider
     fillPrototype: CartridgeClRifleRubber
     capacity: 20
 

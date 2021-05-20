@@ -243,6 +243,7 @@ namespace Content.Shared.GameObjects.EntitySystems
         }
     }
 
+    // TODO: Move to Yaml
     public enum GunCaliber : byte
     {
         Unspecified = 0,
@@ -260,6 +261,7 @@ namespace Content.Shared.GameObjects.EntitySystems
         Dart, // Placeholder
         Grenade,
         Energy,
+        CreamPie,
     }
 
     [Flags]

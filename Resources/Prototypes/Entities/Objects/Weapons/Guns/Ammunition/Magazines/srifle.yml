@@ -5,7 +5,7 @@
   parent: BaseItem
   abstract: true
   components:
-  - type: RangedMagazine
+  - type: BallisticAmmoProvider
     caliber: SRifle
     magazineType: Rifle
     capacity: 25
@@ -30,7 +30,7 @@
   name: "magazine (.20 rifle)"
   parent: MagazineSRifleBase
   components:
-  - type: RangedMagazine
+  - type: BallisticAmmoProvider
     fillPrototype: CartridgeSRifle
 
   - type: Sprite
@@ -41,7 +41,7 @@
   name: "magazine (.20 rifle flash)"
   parent: MagazineSRifleBase
   components:
-  - type: RangedMagazine
+  - type: BallisticAmmoProvider
     fillPrototype: CartridgeSRifleFlash
 
   - type: Sprite
@@ -52,7 +52,7 @@
   name: "magazine (.20 rifle high-velocity)"
   parent: MagazineSRifleBase
   components:
-  - type: RangedMagazine
+  - type: BallisticAmmoProvider
     fillPrototype: CartridgeSRifleHV
 
   - type: Sprite
@@ -63,7 +63,7 @@
   name: "magazine (.20 rifle practice)"
   parent: MagazineSRifleBase
   components:
-  - type: RangedMagazine
+  - type: BallisticAmmoProvider
     fillPrototype: CartridgeSRiflePractice
 
   - type: Sprite
@@ -74,7 +74,7 @@
   name: "magazine (.20 rifle rubber)"
   parent: MagazineSRifleBase
   components:
-  - type: RangedMagazine
+  - type: BallisticAmmoProvider
     fillPrototype: CartridgeSRifleRubber
 
   - type: Sprite

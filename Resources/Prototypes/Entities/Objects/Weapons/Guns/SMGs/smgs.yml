@@ -18,7 +18,7 @@
     soundRack: /Audio/Weapons/Guns/Cock/smg_cock.ogg
     soundBoltOpen: /Audio/Weapons/Guns/Bolt/rifle_bolt_open.ogg
     soundBoltClosed: /Audio/Weapons/Guns/Bolt/rifle_bolt_closed.ogg
-    magazinePrototype: MagazinePistolSmg
+    magFillPrototype: MagazinePistolSmg
     fireRate: 8
     caliber: Pistol
     magazineTypes:
@@ -31,6 +31,7 @@
     maxAngle: 60
     angleIncrease: 10
     angleDecay: 60
+
 - type: entity
   name: Atreides
   parent: SmgBase
@@ -51,7 +52,7 @@
   - type: Item
     size: 24
     sprite: Objects/Weapons/Guns/SMGs/atreides.rsi
-  - type: Gun
+  - type: ChamberedGun
     currentSelector: Automatic
     allSelectors:
     - Automatic
@@ -125,7 +126,7 @@
   - type: Item
     size: 24
     sprite: Objects/Weapons/Guns/SMGs/drozd.rsi
-  - type: Gun
+  - type: ChamberedGun
     fireRate: 6
     currentSelector: Automatic
     allSelectors:
@@ -170,7 +171,7 @@
   - type: Item
     size: 24
     sprite: Objects/Weapons/Guns/SMGs/wt550.rsi
-  - type: Gun
+  - type: ChamberedGun
     currentSelector: Automatic
     allSelectors:
     - Automatic
@@ -206,7 +207,7 @@
   - type: Item
     size: 24
     sprite: Objects/Weapons/Guns/SMGs/zoric.rsi
-  - type: Gun
+  - type: ChamberedGun
     currentSelector: Automatic
     allSelectors:
     - Automatic

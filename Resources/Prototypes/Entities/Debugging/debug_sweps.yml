@@ -27,7 +27,7 @@
   parent: MagazinePistolBase
   suffix: DEBUG
   components:
-  - type: RangedMagazine
+  - type: BallisticAmmoProvider
     fillPrototype: CartridgeDebug
     capacity: 1000
   - type: Sprite

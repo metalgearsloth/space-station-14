@@ -15071,11 +15071,6 @@ entities:
     type: Transform
   - canCollide: False
     type: Physics
-  - containers:
-      MagazineBarrel-chamber: !type:ContainerSlot {}
-      MagazineBarrel-magazine: !type:ContainerSlot
-        ent: 3179
-    type: ContainerContainer
 - uid: 1223
   type: LockerToolFilled
   components:
@@ -22297,11 +22292,6 @@ entities:
     type: Transform
   - canCollide: False
     type: Physics
-  - containers:
-      MagazineBarrel-chamber: !type:ContainerSlot {}
-      MagazineBarrel-magazine: !type:ContainerSlot
-        ent: 2152
-    type: ContainerContainer
 - uid: 2152
   type: MagazineMagnumSmg
   components:
@@ -22398,11 +22388,6 @@ entities:
     type: Transform
   - canCollide: False
     type: Physics
-  - containers:
-      MagazineBarrel-chamber: !type:ContainerSlot {}
-      MagazineBarrel-magazine: !type:ContainerSlot
-        ent: 2165
-    type: ContainerContainer
 - uid: 2165
   type: MagazineMagnumSmg
   components:
@@ -24142,11 +24127,6 @@ entities:
     type: Transform
   - canCollide: False
     type: Physics
-  - containers:
-      PumpBarrel-ammo-container: !type:Container
-        ents: []
-      PumpBarrel-chamber-container: !type:ContainerSlot {}
-    type: ContainerContainer
 - uid: 2412
   type: LowWall
   components:
@@ -24628,11 +24608,6 @@ entities:
     type: Transform
   - canCollide: False
     type: Physics
-  - containers:
-      PumpBarrel-ammo-container: !type:Container
-        ents: []
-      PumpBarrel-chamber-container: !type:ContainerSlot {}
-    type: ContainerContainer
 - uid: 2478
   type: ShellShotgunSlug
   components:

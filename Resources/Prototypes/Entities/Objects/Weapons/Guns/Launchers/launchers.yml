@@ -27,7 +27,6 @@
     size: 24
     sprite: Objects/Weapons/Guns/Launchers/china_lake.rsi
   - type: Gun
-  - type: BoltActionBarrel
     caliber: Grenade
     currentSelector: Single
     allSelectors:
@@ -59,7 +58,6 @@
     size: 24
     sprite: Objects/Weapons/Guns/Launchers/rocket.rsi
   - type: Gun
-  - type: RevolverBarrel
     caliber: Rocket
     currentSelector: Single
     allSelectors:
@@ -91,7 +89,6 @@
       sprite: Objects/Weapons/Guns/Launchers/pie_cannon.rsi
     - type: Gun
       clumsyCheck: false
-    - type: RevolverBarrel
       caliber: CreamPie
       currentSelector: Single
       allSelectors:

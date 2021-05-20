@@ -463,7 +463,6 @@
     sprite: Objects/Fun/toys.rsi
     HeldPrefix: foamcrossbow
   - type: Gun
-  - type: RevolverBarrel
     caliber: Rocket
     currentSelector: Single
     allSelectors:
@@ -502,7 +501,6 @@
     sprite: Objects/Fun/toys.rsi
     state: base
   - type: Gun
-  - type: BoltActionBarrel
     currentSelector: Single
     allSelectors:
     - Single

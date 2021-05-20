@@ -14,7 +14,7 @@
       map: ["enum.RangedBarrelVisualLayers.Bolt"]
   - type: Item
     size: 24
-  - type: BoltActionBarrel
+  - type: Gun
     currentSelector: Single
     allSelectors:
     - Single
@@ -40,8 +40,6 @@
     sprite: Objects/Weapons/Guns/Snipers/bolt_gun.rsi
   - type: Item
     sprite: Objects/Weapons/Guns/Snipers/bolt_gun.rsi
-  - type: Gun
-  - type: BoltActionBarrel
   - type: Appearance
     visuals:
     - type: GunBoltVisualizer
@@ -54,8 +52,6 @@
   components:
   - type: Sprite
     sprite: Objects/Weapons/Guns/Snipers/bolt_gun_wood.rsi
-  - type: Gun
-  - type: BoltActionBarrel
   - type: Appearance
     visuals:
     - type: GunBoltVisualizer
@@ -69,7 +65,6 @@
   - type: Sprite
     sprite: Objects/Weapons/Guns/Snipers/heavy_sniper.rsi
   - type: Gun
-  - type: BoltActionBarrel
     caliber: AntiMaterial
     capacity: 1
     fillPrototype: CartridgeAntiMaterial

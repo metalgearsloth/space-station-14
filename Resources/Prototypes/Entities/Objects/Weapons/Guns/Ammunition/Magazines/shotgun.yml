@@ -4,7 +4,7 @@
   parent: BaseItem
   abstract: true
   components:
-  - type: RangedMagazine
+  - type: BallisticAmmoProvider
     caliber: Shotgun
     magazineType: Rifle
     capacity: 8
@@ -27,7 +27,7 @@
   name: ammo drum (.50 pellet)
   parent: MagazineShotgunBase
   components:
-  - type: RangedMagazine
+  - type: BallisticAmmoProvider
     fillPrototype: ShellShotgun
   - type: Sprite
     sprite: Objects/Weapons/Guns/Ammunition/Magazine/Shotgun/m12_pellets.rsi
@@ -37,7 +37,7 @@
   name: ammo drum (.50 beanbags)
   parent: MagazineShotgunBase
   components:
-  - type: RangedMagazine
+  - type: BallisticAmmoProvider
     fillPrototype: ShellShotgunBeanbag
   - type: Sprite
     sprite: Objects/Weapons/Guns/Ammunition/Magazine/Shotgun/m12_beanbag.rsi
@@ -47,7 +47,7 @@
   name: ammo drum (.50 slug)
   parent: MagazineShotgunBase
   components:
-  - type: RangedMagazine
+  - type: BallisticAmmoProvider
     fillPrototype: ShellShotgunSlug
   - type: Sprite
     sprite: Objects/Weapons/Guns/Ammunition/Magazine/Shotgun/m12_slug.rsi

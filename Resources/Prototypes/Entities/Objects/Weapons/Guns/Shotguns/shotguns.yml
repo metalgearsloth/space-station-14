@@ -12,7 +12,7 @@
     state: icon
   - type: Item
     size: 24
-  - type: PumpBarrel
+  - type: Gun
     currentSelector: Single
     allSelectors:
     - Single
@@ -92,7 +92,6 @@
     size: 24
     sprite: Objects/Weapons/Guns/Shotguns/db_shotgun.rsi
   - type: Gun
-  - type: BoltActionBarrel
     caliber: Shotgun
     currentSelector: Single
     allSelectors:
@@ -133,7 +132,6 @@
   - type: Item
     sprite: Objects/Weapons/Guns/Shotguns/bull.rsi
   - type: Gun
-  - type: PumpBarrel
     fireRate: 4.0
     minAngle: 10
     maxAngle: 120
@@ -157,7 +155,6 @@
   - type: Item
     sprite: Objects/Weapons/Guns/Shotguns/gladstone.rsi
   - type: Gun
-  - type: PumpBarrel
     capacity: 9
     ammoSpreadRatio: 0.5
 
@@ -174,7 +171,6 @@
   - type: Item
     sprite: Objects/Weapons/Guns/Shotguns/regulator.rsi
   - type: Gun
-  - type: PumpBarrel
     capacity: 7
     ammoSpreadRatio: 0.7
 
@@ -191,7 +187,6 @@
   - type: Item
     sprite: Objects/Weapons/Guns/Shotguns/pump.rsi
   - type: Gun
-  - type: PumpBarrel
     capacity: 4
     ammoSpreadRatio: 0.7
 
@@ -215,7 +210,6 @@
     size: 24
     sprite: Objects/Weapons/Guns/Shotguns/sawn.rsi
   - type: Gun
-  - type: BoltActionBarrel
     caliber: Shotgun
     currentSelector: Single
     allSelectors:
