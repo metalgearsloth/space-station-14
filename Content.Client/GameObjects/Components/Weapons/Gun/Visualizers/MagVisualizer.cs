@@ -4,7 +4,7 @@ using Robust.Client.GameObjects;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Serialization.Manager.Attributes;
 
-namespace Content.Client.GameObjects.Components.Weapons.Gun
+namespace Content.Client.GameObjects.Components.Weapons.Gun.Visualizers
 {
     public sealed class MagVisualizer : AppearanceVisualizer
     {
@@ -47,7 +47,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Gun
 
             if (!component.TryGetData(GunVisuals.MagLoaded, out bool magLoaded))
             {
-                magLoaded = false;
+                magLoaded = true;
             }
 
             if (magLoaded)

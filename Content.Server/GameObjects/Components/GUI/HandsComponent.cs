@@ -30,6 +30,7 @@ using Robust.Shared.Physics;
 using Robust.Shared.Players;
 using Robust.Shared.ViewVariables;
 using Robust.Shared.Player;
+using Robust.Shared.Random;
 
 namespace Content.Server.GameObjects.Components.GUI
 {
@@ -219,7 +220,9 @@ namespace Content.Server.GameObjects.Components.GUI
 
         private static void DropAtFeet(IEntity mob, ItemComponent item)
         {
-            item.Owner.Transform.Coordinates = mob.Transform.Coordinates;
+            var transform = item.Owner.Transform;
+            transform.Coordinates = mob.Transform.Coordinates;
+            transform.LocalRotation = IoCManager.Resolve<IRobustRandom>().NextFloat() * MathF.Tau;
         }
 
         public bool CanPutInHand(ItemComponent item, bool mobCheck = true)

@@ -47,7 +47,7 @@
   - type: Item
     size: 24
     sprite: Objects/Weapons/Guns/Rifles/ak.rsi
-  - type: Gun
+  - type: ChamberedGun
     caliber: LRifle
     magazineTypes:
     - Rifle
@@ -85,7 +85,7 @@
   - type: Item
     size: 24
     sprite: Objects/Weapons/Guns/Rifles/black_ak.rsi
-  - type: Gun
+  - type: ChamberedGun
     caliber: LRifle
     magazineTypes:
     - Rifle
@@ -125,7 +125,7 @@
   - type: Item
     size: 24
     sprite: Objects/Weapons/Guns/Rifles/carbine.rsi
-  - type: Gun
+  - type: ChamberedGun
     caliber: SRifle
     magazineTypes:
     - Rifle
@@ -165,7 +165,7 @@
   - type: Item
     size: 24
     sprite: Objects/Weapons/Guns/Rifles/dallas.rsi
-  - type: Gun
+  - type: ChamberedGun
     caliber: ClRifle
     magazineTypes:
     - Rifle
@@ -206,7 +206,7 @@
   - type: Item
     size: 24
     sprite: Objects/Weapons/Guns/Rifles/sts.rsi
-  - type: Gun
+  - type: ChamberedGun
     caliber: LRifle
     magazineTypes:
     - Rifle
@@ -247,7 +247,7 @@
   - type: Item
     size: 24
     sprite: Objects/Weapons/Guns/Rifles/vintorez.rsi
-  - type: Gun
+  - type: ChamberedGun
     caliber: SRifle
     magazineTypes:
     - Rifle
@@ -285,7 +285,7 @@
   - type: Item
     size: 24
     sprite: Objects/Weapons/Guns/Rifles/wintermute.rsi
-  - type: Gun
+  - type: ChamberedGun
     caliber: SRifle
     magazineTypes:
     - Rifle
@@ -326,7 +326,7 @@
   - type: Item
     size: 24
     sprite: Objects/Weapons/Guns/Rifles/calico.rsi
-  - type: Gun
+  - type: ChamberedGun
     magFillPrototype: MagazinePistolCalicoTopMounted
     caliber: Pistol
     magazineTypes:

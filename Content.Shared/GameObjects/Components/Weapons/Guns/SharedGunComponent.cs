@@ -373,49 +373,15 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         [DataField("rackVolume")]
         public float RackVolume { get; } = 0.0f;
 
-        private Container? _ammoContainer = null;
+        public abstract int ProjectileCount { get; }
 
-        /// <inheritdoc />
-        public int ProjectileCount => UnspawnedCount + _ammoContainer?.ContainedEntities.Count ?? 0;
-
-        public override void Initialize()
+        public override void UpdateAppearance(SharedAppearanceComponent? appearance = null)
         {
-            base.Initialize();
-            _ammoContainer = Owner.EnsureContainer<Container>("ammo", out var existing);
-
-            if (existing)
-            {
-                UnspawnedCount -= _ammoContainer.ContainedEntities.Count;
-            }
-
-            DebugTools.Assert(ProjectileCount <= ProjectileCapacity);
-        }
-
-        /// <summary>
-        /// Tries to pop spawned then unspawned ammo for usage.
-        /// </summary>
-        public bool TryPopAmmo([NotNullWhen(true)] out SharedAmmoComponent? ammo)
-        {
-            if (_ammoContainer != null && _ammoContainer.ContainedEntities.Count > 0)
-            {
-                var ammoEntity = _ammoContainer.ContainedEntities[0];
-
-                ammo = ammoEntity.GetComponent<SharedAmmoComponent>();
-                _ammoContainer.Remove(ammoEntity);
-                return true;
-            }
-
-            if (UnspawnedCount > 0)
-            {
-                DebugTools.AssertNotNull(FillPrototype);
-                UnspawnedCount--;
-                var ammoEntity = Owner.EntityManager.SpawnEntity(FillPrototype, Owner.Transform.MapPosition);
-                ammo = ammoEntity.GetComponent<SharedAmmoComponent>();
-                return true;
-            }
-
-            ammo = null;
-            return false;
+            // TODO: Suss this shit out
+            base.UpdateAppearance(appearance);
+            appearance?.SetData(GunVisuals.MagLoaded, true);
+            appearance?.SetData(GunVisuals.AmmoCount, ProjectileCount);
+            appearance?.SetData(GunVisuals.AmmoMax, ProjectileCapacity);
         }
     }
 

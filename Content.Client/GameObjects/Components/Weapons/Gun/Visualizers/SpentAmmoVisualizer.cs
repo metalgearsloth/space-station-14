@@ -1,7 +1,9 @@
 using Content.Shared.GameObjects.Components.Weapons.Guns;
 using Robust.Client.GameObjects;
+using Robust.Shared.IoC;
+using Robust.Shared.Reflection;
 
-namespace Content.Client.GameObjects.Components.Weapons.Gun
+namespace Content.Client.GameObjects.Components.Weapons.Gun.Visualizers
 {
     public sealed class SpentAmmoVisualizer : AppearanceVisualizer
     {
