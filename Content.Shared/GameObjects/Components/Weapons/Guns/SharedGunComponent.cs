@@ -11,6 +11,7 @@ using Robust.Shared.Player;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization;
 using Robust.Shared.Serialization.Manager.Attributes;
+using Robust.Shared.Serialization.TypeSerializers.Implementations.Custom.Prototype;
 using Robust.Shared.Utility;
 using Robust.Shared.ViewVariables;
 
@@ -176,8 +177,8 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         protected ContainerSlot? _magazineSlot = null;
 
         [ViewVariables]
-        [DataField("magFillPrototype")]
-        private EntityPrototype? _magazinePrototype;
+        [DataField("magFillPrototype", customTypeSerializer: typeof(PrototypeIdSerializer<EntityPrototype>))]
+        private string? _magazinePrototype;
 
         [ViewVariables]
         [DataField("magazineType")]
@@ -251,14 +252,14 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         public override void Initialize()
         {
             base.Initialize();
-            DebugTools.Assert(_magazinePrototype == null || IoCManager.Resolve<IPrototypeManager>().HasIndex<EntityPrototype>(_magazinePrototype.ID));
+            DebugTools.Assert(_magazinePrototype == null || IoCManager.Resolve<IPrototypeManager>().HasIndex<EntityPrototype>(_magazinePrototype));
 
             // Pre-spawn magazine in
             _magazineSlot = Owner.EnsureContainer<ContainerSlot>("magazine", out var existingMag);
 
             if (!existingMag && _magazinePrototype != null)
             {
-                var mag = Owner.EntityManager.SpawnEntity(_magazinePrototype.ID, Owner.Transform.Coordinates);
+                var mag = Owner.EntityManager.SpawnEntity(_magazinePrototype, Owner.Transform.Coordinates);
                 _magazineSlot.Insert(mag);
                 UpdateAppearance();
                 Dirty();

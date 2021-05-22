@@ -611,6 +611,8 @@ entities:
 - uid: 68
   type: VendingMachineCoffee
   components:
+  - name: Hot drinks machine
+    type: MetaData
   - pos: -11.5,-17.5
     parent: 853
     type: Transform
@@ -5377,18 +5379,6 @@ entities:
       board: !type:Container
         ents: []
     type: ContainerContainer
-- uid: 585
-  type: LockerBoozeFilled
-  components:
-  - pos: -11.5,-6.5
-    parent: 853
-    type: Transform
-  - IsPlaceable: False
-    type: PlaceableSurface
-  - containers:
-      EntityStorageComponent: !type:Container
-        ents: []
-    type: ContainerContainer
 - uid: 586
   type: StoolBar
   components:
@@ -6990,6 +6980,8 @@ entities:
 - uid: 758
   type: VendingMachineCigs
   components:
+  - name: Cigarette machine
+    type: MetaData
   - pos: 12.5,7.5
     parent: 853
     type: Transform
@@ -7414,19 +7406,6 @@ entities:
       EntityStorageComponent: !type:Container
         ents: []
     type: ContainerContainer
-- uid: 794
-  type: LockerCaptainFilled
-  components:
-  - rot: 4.371139006309477E-08 rad
-    pos: 6.5,26.5
-    parent: 853
-    type: Transform
-  - IsPlaceable: False
-    type: PlaceableSurface
-  - containers:
-      EntityStorageComponent: !type:Container
-        ents: []
-    type: ContainerContainer
 - uid: 795
   type: Paper
   components:
@@ -7596,19 +7575,6 @@ entities:
     pos: -2.5,-17.5
     parent: 853
     type: Transform
-- uid: 811
-  type: LockerHeadOfPersonnelFilled
-  components:
-  - rot: 4.371139006309477E-08 rad
-    pos: 10.5,21.5
-    parent: 853
-    type: Transform
-  - IsPlaceable: False
-    type: PlaceableSurface
-  - containers:
-      EntityStorageComponent: !type:Container
-        ents: []
-    type: ContainerContainer
 - uid: 812
   type: LowWall
   components:
@@ -12245,6 +12211,8 @@ entities:
 - uid: 874
   type: VendingMachineCigs
   components:
+  - name: Cigarette machine
+    type: MetaData
   - pos: -7.5,1.5
     parent: 853
     type: Transform
@@ -13046,6 +13014,8 @@ entities:
 - uid: 985
   type: VendingMachineCoffee
   components:
+  - name: Hot drinks machine
+    type: MetaData
   - rot: 4.371139006309477E-08 rad
     pos: 0.5,23.5
     parent: 853
@@ -13105,6 +13075,8 @@ entities:
 - uid: 992
   type: VendingMachineDinnerware
   components:
+  - name: Dinnerware
+    type: MetaData
   - pos: -13.5,1.5
     parent: 853
     type: Transform
@@ -14288,12 +14260,11 @@ entities:
     parent: 853
     type: Transform
 - uid: 1133
-  type: PowerCellSmallStandard
+  type: Table
   components:
-  - parent: 1566
+  - pos: -14.5,21.5
+    parent: 853
     type: Transform
-  - canCollide: False
-    type: Physics
 - uid: 1134
   type: LowWall
   components:
@@ -14574,19 +14545,6 @@ entities:
     type: Transform
   - bodyType: Dynamic
     type: Physics
-- uid: 1167
-  type: LockerHeadOfSecurityFilled
-  components:
-  - rot: 4.371139006309477E-08 rad
-    pos: -6.5,22.5
-    parent: 853
-    type: Transform
-  - IsPlaceable: False
-    type: PlaceableSurface
-  - containers:
-      EntityStorageComponent: !type:Container
-        ents: []
-    type: ContainerContainer
 - uid: 1168
   type: WallSolid
   components:
@@ -14934,12 +14892,11 @@ entities:
   - bodyType: Dynamic
     type: Physics
 - uid: 1210
-  type: PowerCellSmallStandard
+  type: Table
   components:
-  - parent: 4734
+  - pos: -14.5,20.5
+    parent: 853
     type: Transform
-  - canCollide: False
-    type: Physics
 - uid: 1211
   type: PoweredSmallLight
   components:
@@ -15063,14 +15020,6 @@ entities:
   - pos: 12.5,12.5
     parent: 853
     type: Transform
-- uid: 1222
-  type: SmgWt550
-  components:
-  - pos: -7.338622,21.61197
-    parent: 853
-    type: Transform
-  - canCollide: False
-    type: Physics
 - uid: 1223
   type: LockerToolFilled
   components:
@@ -18212,19 +18161,6 @@ entities:
     pos: -13.5,-14.5
     parent: 853
     type: Transform
-- uid: 1566
-  type: TaserGun
-  components:
-  - pos: -13.462238,16.135218
-    parent: 853
-    type: Transform
-  - canCollide: False
-    type: Physics
-  - containers:
-      BatteryBarrel-powercell-container: !type:ContainerSlot
-        ent: 1133
-      BatteryBarrel-ammo-container: !type:ContainerSlot {}
-    type: ContainerContainer
 - uid: 1567
   type: Catwalk
   components:
@@ -22266,43 +22202,12 @@ entities:
     pos: 16.5,-0.5
     parent: 853
     type: Transform
-- uid: 2148
-  type: Table
-  components:
-  - pos: -14.5,20.5
-    parent: 853
-    type: Transform
-- uid: 2149
-  type: Table
-  components:
-  - pos: -14.5,21.5
-    parent: 853
-    type: Transform
 - uid: 2150
   type: Table
   components:
   - pos: -13.5,21.5
     parent: 853
     type: Transform
-- uid: 2151
-  type: SmgDrozd
-  components:
-  - pos: -14.411121,19.344717
-    parent: 853
-    type: Transform
-  - canCollide: False
-    type: Physics
-- uid: 2152
-  type: MagazineMagnumSmg
-  components:
-  - parent: 2151
-    type: Transform
-  - canCollide: False
-    type: Physics
-  - containers:
-      RangedMagazine-magazine: !type:Container
-        ents: []
-    type: ContainerContainer
 - uid: 2153
   type: WallSolid
   components:
@@ -22380,41 +22285,6 @@ entities:
     pos: 5.5,-10.5
     parent: 853
     type: Transform
-- uid: 2164
-  type: SmgDrozd
-  components:
-  - pos: -14.442371,19.782217
-    parent: 853
-    type: Transform
-  - canCollide: False
-    type: Physics
-- uid: 2165
-  type: MagazineMagnumSmg
-  components:
-  - parent: 2164
-    type: Transform
-  - canCollide: False
-    type: Physics
-  - containers:
-      RangedMagazine-magazine: !type:Container
-        ents: []
-    type: ContainerContainer
-- uid: 2166
-  type: ShellShotgunBeanbag
-  components:
-  - pos: -14.442371,21.532217
-    parent: 853
-    type: Transform
-  - canCollide: False
-    type: Physics
-- uid: 2167
-  type: ShellShotgunBeanbag
-  components:
-  - pos: -14.379871,21.500967
-    parent: 853
-    type: Transform
-  - canCollide: False
-    type: Physics
 - uid: 2168
   type: LowWall
   components:
@@ -22492,22 +22362,6 @@ entities:
     pos: 12.5,-6.5
     parent: 853
     type: Transform
-- uid: 2179
-  type: ShellShotgunBeanbag
-  components:
-  - pos: -14.286121,21.500967
-    parent: 853
-    type: Transform
-  - canCollide: False
-    type: Physics
-- uid: 2180
-  type: ShellShotgunBeanbag
-  components:
-  - pos: -14.317371,21.485342
-    parent: 853
-    type: Transform
-  - canCollide: False
-    type: Physics
 - uid: 2181
   type: WallSolid
   components:
@@ -23922,6 +23776,8 @@ entities:
 - uid: 2383
   type: VendingMachineCoffee
   components:
+  - name: Hot drinks machine
+    type: MetaData
   - rot: 4.371139006309477E-08 rad
     pos: 5.5,-13.5
     parent: 853
@@ -24115,14 +23971,6 @@ entities:
   type: ApcExtensionCable
   components:
   - pos: -1.5,6.5
-    parent: 853
-    type: Transform
-  - canCollide: False
-    type: Physics
-- uid: 2411
-  type: ShotgunGladstone
-  components:
-  - pos: -13.692371,21.641592
     parent: 853
     type: Transform
   - canCollide: False
@@ -24600,22 +24448,6 @@ entities:
   - pos: -6.5,23.5
     parent: 853
     type: Transform
-- uid: 2477
-  type: ShotgunGladstone
-  components:
-  - pos: -13.895496,21.438467
-    parent: 853
-    type: Transform
-  - canCollide: False
-    type: Physics
-- uid: 2478
-  type: ShellShotgunSlug
-  components:
-  - pos: -14.661121,21.735569
-    parent: 853
-    type: Transform
-  - canCollide: False
-    type: Physics
 - uid: 2479
   type: WallSolid
   components:
@@ -24981,14 +24813,6 @@ entities:
     type: Battery
   - drawRate: 2000
     type: PowerConsumer
-- uid: 2521
-  type: ShellShotgunSlug
-  components:
-  - pos: -14.582996,21.735449
-    parent: 853
-    type: Transform
-  - canCollide: False
-    type: Physics
 - uid: 2522
   type: SalternApc
   components:
@@ -26269,17 +26093,6 @@ entities:
   components:
   - rot: 4.371139006309477E-08 rad
     pos: -13.5,20.5
-    parent: 853
-    type: Transform
-  - visible: False
-    type: Sprite
-  - canCollide: False
-    type: Physics
-- uid: 2642
-  type: ApcExtensionCable
-  components:
-  - rot: 4.371139006309477E-08 rad
-    pos: -14.5,20.5
     parent: 853
     type: Transform
   - visible: False
@@ -30137,14 +29950,6 @@ entities:
     type: Sprite
   - canCollide: False
     type: Physics
-- uid: 3003
-  type: ShellShotgunSlug
-  components:
-  - pos: -14.489246,21.735449
-    parent: 853
-    type: Transform
-  - canCollide: False
-    type: Physics
 - uid: 3004
   type: ApcExtensionCable
   components:
@@ -32013,17 +31818,6 @@ entities:
   - pos: 5.5,-27.5
     parent: 853
     type: Transform
-- uid: 3179
-  type: MagazinePistolSmgTopMounted
-  components:
-  - parent: 1222
-    type: Transform
-  - canCollide: False
-    type: Physics
-  - containers:
-      RangedMagazine-magazine: !type:Container
-        ents: []
-    type: ContainerContainer
 - uid: 3180
   type: ApcExtensionCable
   components:
@@ -35899,14 +35693,6 @@ entities:
     type: Sprite
   - canCollide: False
     type: Physics
-- uid: 3579
-  type: ShellShotgunSlug
-  components:
-  - pos: -14.457996,21.735449
-    parent: 853
-    type: Transform
-  - canCollide: False
-    type: Physics
 - uid: 3580
   type: HVWire
   components:
@@ -39344,14 +39130,6 @@ entities:
     type: PowerReceiver
   - startingCharge: 30000
     type: Battery
-- uid: 3904
-  type: ShellShotgunSlug
-  components:
-  - pos: -14.395496,21.719717
-    parent: 853
-    type: Transform
-  - canCollide: False
-    type: Physics
 - uid: 3905
   type: EmergencyLight
   components:
@@ -39676,14 +39454,6 @@ entities:
       EntityStorageComponent: !type:Container
         ents: []
     type: ContainerContainer
-- uid: 3940
-  type: ShellShotgunSlug
-  components:
-  - pos: -14.332996,21.704092
-    parent: 853
-    type: Transform
-  - canCollide: False
-    type: Physics
 - uid: 3941
   type: WallSolid
   components:
@@ -39696,14 +39466,6 @@ entities:
   - pos: -13.5,-7.5
     parent: 853
     type: Transform
-- uid: 3943
-  type: ShellShotgunSlug
-  components:
-  - pos: -14.286121,21.704092
-    parent: 853
-    type: Transform
-  - canCollide: False
-    type: Physics
 - uid: 3944
   type: ApcExtensionCable
   components:
@@ -39976,14 +39738,6 @@ entities:
       DisposalTransit: !type:Container
         ents: []
     type: ContainerContainer
-- uid: 3973
-  type: ShellShotgunBeanbag
-  components:
-  - pos: -14.735261,21.532217
-    parent: 853
-    type: Transform
-  - canCollide: False
-    type: Physics
 - uid: 3974
   type: ApcExtensionCable
   components:
@@ -40398,14 +40152,6 @@ entities:
     type: Transform
   - airBlocked: False
     type: Airtight
-- uid: 4020
-  type: ShellShotgunBeanbag
-  components:
-  - pos: -14.692371,21.516592
-    parent: 853
-    type: Transform
-  - canCollide: False
-    type: Physics
 - uid: 4021
   type: ApcExtensionCable
   components:
@@ -40702,14 +40448,6 @@ entities:
     type: Transform
   - airBlocked: False
     type: Airtight
-- uid: 4057
-  type: ShellShotgunBeanbag
-  components:
-  - pos: -14.598621,21.516592
-    parent: 853
-    type: Transform
-  - canCollide: False
-    type: Physics
 - uid: 4058
   type: PianoInstrument
   components:
@@ -40717,14 +40455,6 @@ entities:
     pos: 0.5,-4.5
     parent: 853
     type: Transform
-- uid: 4059
-  type: ShellShotgunFlash
-  components:
-  - pos: -14.73512,21.063467
-    parent: 853
-    type: Transform
-  - canCollide: False
-    type: Physics
 - uid: 4060
   type: WallSolid
   components:
@@ -41635,26 +41365,6 @@ entities:
   - containers:
       cellslot_cell_container: !type:ContainerSlot {}
     type: ContainerContainer
-- uid: 4170
-  type: MagazinePistolSmgTopMounted
-  components:
-  - pos: -8.129097,21.659065
-    parent: 853
-    type: Transform
-  - containers:
-      RangedMagazine-magazine: !type:Container
-        ents: []
-    type: ContainerContainer
-- uid: 4171
-  type: MagazinePistolSmgTopMounted
-  components:
-  - pos: -8.347847,21.83094
-    parent: 853
-    type: Transform
-  - containers:
-      RangedMagazine-magazine: !type:Container
-        ents: []
-    type: ContainerContainer
 - uid: 4172
   type: AirlockMedicalLocked
   components:
@@ -42353,14 +42063,6 @@ entities:
     pos: -14.5,19.5
     parent: 853
     type: Transform
-- uid: 4261
-  type: ShellShotgunFlash
-  components:
-  - pos: -14.567371,21.047842
-    parent: 853
-    type: Transform
-  - canCollide: False
-    type: Physics
 - uid: 4262
   type: CarpetBlue
   components:
@@ -46297,58 +45999,6 @@ entities:
   - pos: -36.5,4.5
     parent: 853
     type: Transform
-- uid: 4724
-  type: ShellShotgunFlash
-  components:
-  - pos: -14.426746,21.047842
-    parent: 853
-    type: Transform
-  - canCollide: False
-    type: Physics
-- uid: 4725
-  type: ShellShotgunFlash
-  components:
-  - pos: -14.270496,21.032217
-    parent: 853
-    type: Transform
-  - canCollide: False
-    type: Physics
-- uid: 4726
-  type: MagazineMagnumSmgRubber
-  components:
-  - pos: -14.7353,20.40566
-    parent: 853
-    type: Transform
-  - canCollide: False
-    type: Physics
-  - containers:
-      RangedMagazine-magazine: !type:Container
-        ents: []
-    type: ContainerContainer
-- uid: 4727
-  type: MagazineMagnumSmgRubber
-  components:
-  - pos: -14.536245,20.421286
-    parent: 853
-    type: Transform
-  - canCollide: False
-    type: Physics
-  - containers:
-      RangedMagazine-magazine: !type:Container
-        ents: []
-    type: ContainerContainer
-- uid: 4728
-  type: MagazineMagnumSmgRubber
-  components:
-  - pos: -14.33312,20.40566
-    parent: 853
-    type: Transform
-  - canCollide: False
-    type: Physics
-  - containers:
-      RangedMagazine-magazine: !type:Container
-        ents: []
-    type: ContainerContainer
 - uid: 4729
   type: Flash
   components:
@@ -46378,39 +46028,6 @@ entities:
     type: Physics
   - containers:
       cellslot_cell_container: !type:ContainerSlot {}
-    type: ContainerContainer
-- uid: 4732
-  type: TaserGun
-  components:
-  - pos: -13.462238,16.735422
-    parent: 853
-    type: Transform
-  - canCollide: False
-    type: Physics
-  - containers:
-      BatteryBarrel-powercell-container: !type:ContainerSlot
-        ent: 4733
-      BatteryBarrel-ammo-container: !type:ContainerSlot {}
-    type: ContainerContainer
-- uid: 4733
-  type: PowerCellSmallStandard
-  components:
-  - parent: 4732
-    type: Transform
-  - canCollide: False
-    type: Physics
-- uid: 4734
-  type: TaserGun
-  components:
-  - pos: -13.462238,16.432093
-    parent: 853
-    type: Transform
-  - canCollide: False
-    type: Physics
-  - containers:
-      BatteryBarrel-powercell-container: !type:ContainerSlot
-        ent: 1210
-      BatteryBarrel-ammo-container: !type:ContainerSlot {}
     type: ContainerContainer
 - uid: 4735
   type: WallSolid
