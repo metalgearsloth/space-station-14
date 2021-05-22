@@ -39,11 +39,11 @@
     sprite: Objects/Weapons/Guns/Shotguns/bojevic.rsi
     layers:
     - state: base
-      map: ["enum.RangedBarrelVisualLayers.Base"]
+      map: ["enum.GunVisualLayers.Base"]
     - state: bolt-closed
-      map: ["enum.RangedBarrelVisualLayers.Bolt"]
+      map: ["enum.GunVisualLayers.Bolt"]
     - state: mag-0
-      map: ["enum.RangedBarrelVisualLayers.Mag"]
+      map: ["enum.GunVisualLayers.Mag"]
   - type: Icon
     sprite: Objects/Weapons/Guns/Shotguns/bojevic.rsi
   - type: Item
@@ -82,9 +82,9 @@
     sprite: Objects/Weapons/Guns/Shotguns/db_shotgun.rsi
     layers:
       - state: base
-        map: ["enum.RangedBarrelVisualLayers.Base"]
+        map: ["enum.GunVisualLayers.Base"]
       - state: bolt-closed
-        map: ["enum.RangedBarrelVisualLayers.Bolt"]
+        map: ["enum.GunVisualLayers.Bolt"]
   - type: Icon
     sprite: Objects/Weapons/Guns/Shotguns/db_shotgun.rsi
     state: icon
@@ -123,9 +123,9 @@
     sprite: Objects/Weapons/Guns/Shotguns/bull.rsi
     layers:
       - state: base
-        map: ["enum.RangedBarrelVisualLayers.Base"]
+        map: ["enum.GunVisualLayers.Base"]
       - state: mag-unshaded-1
-        map: ["enum.RangedBarrelVisualLayers.MagUnshaded"]
+        map: ["enum.GunVisualLayers.MagUnshaded"]
         shader: unshaded
   - type: Icon
     sprite: Objects/Weapons/Guns/Shotguns/bull.rsi
@@ -200,9 +200,9 @@
     sprite: Objects/Weapons/Guns/Shotguns/sawn.rsi
     layers:
       - state: base
-        map: ["enum.RangedBarrelVisualLayers.Base"]
+        map: ["enum.GunVisualLayers.Base"]
       - state: bolt-closed
-        map: ["enum.RangedBarrelVisualLayers.Bolt"]
+        map: ["enum.GunVisualLayers.Bolt"]
   - type: Icon
     sprite: Objects/Weapons/Guns/Shotguns/sawn.rsi
     state: icon

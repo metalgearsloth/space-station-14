@@ -9,9 +9,9 @@
     netsync: false
     layers:
     - state: base
-      map: ["enum.RangedBarrelVisualLayers.Base"]
+      map: ["enum.GunVisualLayers.Base"]
     - state: bolt-closed
-      map: ["enum.RangedBarrelVisualLayers.Bolt"]
+      map: ["enum.GunVisualLayers.Bolt"]
   - type: Item
     size: 24
   - type: Gun

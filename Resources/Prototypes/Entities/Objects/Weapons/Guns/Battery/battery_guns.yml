@@ -9,9 +9,9 @@
     sprite: Objects/Weapons/Guns/Battery/laser_retro.rsi
     layers:
       - state: base
-        map: ["enum.RangedBarrelVisualLayers.Base"]
+        map: ["enum.GunVisualLayers.Base"]
       - state: mag-unshaded-4
-        map: ["enum.RangedBarrelVisualLayers.MagUnshaded"]
+        map: ["enum.GunVisualLayers.MagUnshaded"]
         shader: unshaded
   - type: Item
     size: 24
@@ -47,9 +47,9 @@
     sprite: Objects/Weapons/Guns/Battery/laser_cannon.rsi
     layers:
       - state: base
-        map: ["enum.RangedBarrelVisualLayers.Base"]
+        map: ["enum.GunVisualLayers.Base"]
       - state: mag-unshaded-4
-        map: ["enum.RangedBarrelVisualLayers.MagUnshaded"]
+        map: ["enum.GunVisualLayers.MagUnshaded"]
         shader: unshaded
   - type: Item
     size: 24
@@ -85,9 +85,9 @@
     sprite: Objects/Weapons/Guns/Battery/xray.rsi
     layers:
       - state: base
-        map: ["enum.RangedBarrelVisualLayers.Base"]
+        map: ["enum.GunVisualLayers.Base"]
       - state: mag-unshaded-0
-        map: ["enum.RangedBarrelVisualLayers.MagUnshaded"]
+        map: ["enum.GunVisualLayers.MagUnshaded"]
         shader: unshaded
 
   - type: Item
@@ -125,9 +125,9 @@
     sprite: Objects/Weapons/Guns/Battery/taser.rsi
     layers:
       - state: base
-        map: ["enum.RangedBarrelVisualLayers.Base"]
+        map: ["enum.GunVisualLayers.Base"]
       - state: mag-unshaded-0
-        map: ["enum.RangedBarrelVisualLayers.MagUnshaded"]
+        map: ["enum.GunVisualLayers.MagUnshaded"]
         shader: unshaded
   - type: Clothing
     sprite: Objects/Weapons/Guns/Battery/taser.rsi
@@ -167,9 +167,9 @@
     sprite: Objects/Weapons/Guns/Battery/laser_gun.rsi
     layers:
       - state: base
-        map: ["enum.RangedBarrelVisualLayers.Base"]
+        map: ["enum.GunVisualLayers.Base"]
       - state: mag-unshaded-4
-        map: ["enum.RangedBarrelVisualLayers.MagUnshaded"]
+        map: ["enum.GunVisualLayers.MagUnshaded"]
         shader: unshaded
   - type: Item
     size: 24

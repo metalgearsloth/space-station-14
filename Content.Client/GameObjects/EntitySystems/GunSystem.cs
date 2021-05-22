@@ -26,6 +26,13 @@ namespace Content.Client.GameObjects.EntitySystems
 
         private SharedGunComponent? _firingWeapon;
 
+        public override void Initialize()
+        {
+            base.Initialize();
+            _combatModeSystem = Get<CombatModeSystem>();
+            _inputSystem = Get<InputSystem>();
+        }
+
         private SharedGunComponent? GetRangedWeapon(IEntity entity)
         {
             if (!entity.TryGetComponent(out HandsComponent? hands))

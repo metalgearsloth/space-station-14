@@ -42,11 +42,11 @@
     sprite: Objects/Weapons/Guns/LMGs/l6.rsi
     layers:
     - state: base
-      map: ["enum.RangedBarrelVisualLayers.Base"]
+      map: ["enum.GunVisualLayers.Base"]
     - state: bolt-closed
-      map: ["enum.RangedBarrelVisualLayers.Bolt"]
+      map: ["enum.GunVisualLayers.Bolt"]
     - state: mag-3
-      map: ["enum.RangedBarrelVisualLayers.Mag"]
+      map: ["enum.GunVisualLayers.Mag"]
   - type: Icon
     sprite: Objects/Weapons/Guns/LMGs/l6.rsi
   - type: Item
@@ -77,11 +77,11 @@
     sprite: Objects/Weapons/Guns/LMGs/pk.rsi
     layers:
     - state: base
-      map: ["enum.RangedBarrelVisualLayers.Base"]
+      map: ["enum.GunVisualLayers.Base"]
     - state: bolt-closed
-      map: ["enum.RangedBarrelVisualLayers.Bolt"]
+      map: ["enum.GunVisualLayers.Bolt"]
     - state: mag-5
-      map: ["enum.RangedBarrelVisualLayers.Mag"]
+      map: ["enum.GunVisualLayers.Mag"]
   - type: Icon
     sprite: Objects/Weapons/Guns/LMGs/pk.rsi
   - type: Item

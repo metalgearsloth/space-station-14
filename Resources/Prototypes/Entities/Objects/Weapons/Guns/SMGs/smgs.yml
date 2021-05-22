@@ -42,11 +42,11 @@
     sprite: Objects/Weapons/Guns/SMGs/atreides.rsi
     layers:
     - state: base
-      map: ["enum.RangedBarrelVisualLayers.Base"]
+      map: ["enum.GunVisualLayers.Base"]
     - state: bolt-closed
-      map: ["enum.RangedBarrelVisualLayers.Bolt"]
+      map: ["enum.GunVisualLayers.Bolt"]
     - state: mag-0
-      map: ["enum.RangedBarrelVisualLayers.Mag"]
+      map: ["enum.GunVisualLayers.Mag"]
   - type: Icon
     sprite: Objects/Weapons/Guns/SMGs/atreides.rsi
   - type: Item
@@ -82,11 +82,11 @@
     sprite: Objects/Weapons/Guns/SMGs/c20r.rsi
     layers:
     - state: base
-      map: ["enum.RangedBarrelVisualLayers.Base"]
+      map: ["enum.GunVisualLayers.Base"]
     - state: bolt-closed
-      map: ["enum.RangedBarrelVisualLayers.Bolt"]
+      map: ["enum.GunVisualLayers.Bolt"]
     - state: mag-0
-      map: ["enum.RangedBarrelVisualLayers.Mag"]
+      map: ["enum.GunVisualLayers.Mag"]
   - type: Icon
     sprite: Objects/Weapons/Guns/SMGs/c20r.rsi
   - type: Item
@@ -116,11 +116,11 @@
     sprite: Objects/Weapons/Guns/SMGs/drozd.rsi
     layers:
       - state: base
-        map: ["enum.RangedBarrelVisualLayers.Base"]
+        map: ["enum.GunVisualLayers.Base"]
       - state: bolt-closed
-        map: ["enum.RangedBarrelVisualLayers.Bolt"]
+        map: ["enum.GunVisualLayers.Bolt"]
       - state: mag-0
-        map: ["enum.RangedBarrelVisualLayers.Mag"]
+        map: ["enum.GunVisualLayers.Mag"]
   - type: Icon
     sprite: Objects/Weapons/Guns/SMGs/drozd.rsi
   - type: Item
@@ -157,14 +157,14 @@
     sprite: Objects/Weapons/Guns/SMGs/wt550.rsi
     layers:
     - state: base
-      map: ["enum.RangedBarrelVisualLayers.Base"]
+      map: ["enum.GunVisualLayers.Base"]
     - state: base-unshaded
-      map: ["enum.RangedBarrelVisualLayers.BaseUnshaded"]
+      map: ["enum.GunVisualLayers.BaseUnshaded"]
       shader: unshaded
     - state: mag-0
-      map: ["enum.RangedBarrelVisualLayers.Mag"]
+      map: ["enum.GunVisualLayers.Mag"]
     - state: mag-unshaded-0
-      map: ["enum.RangedBarrelVisualLayers.MagUnshaded"]
+      map: ["enum.GunVisualLayers.MagUnshaded"]
       shader: unshaded
   - type: Icon
     sprite: Objects/Weapons/Guns/SMGs/wt550.rsi
@@ -197,11 +197,11 @@
     sprite: Objects/Weapons/Guns/SMGs/zoric.rsi
     layers:
     - state: base
-      map: ["enum.RangedBarrelVisualLayers.Base"]
+      map: ["enum.GunVisualLayers.Base"]
     - state: bolt-closed
-      map: ["enum.RangedBarrelVisualLayers.Bolt"]
+      map: ["enum.GunVisualLayers.Bolt"]
     - state: mag-0
-      map: ["enum.RangedBarrelVisualLayers.Mag"]
+      map: ["enum.GunVisualLayers.Mag"]
   - type: Icon
     sprite: Objects/Weapons/Guns/SMGs/zoric.rsi
   - type: Item

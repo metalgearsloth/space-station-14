@@ -9,13 +9,13 @@ namespace Content.Client.GameObjects.Components.Weapons.Gun
     public sealed class MagVisualizer : AppearanceVisualizer
     {
         [DataField("magState")]
-        private string? _magState;
+        private string? _magState = null;
 
         [DataField("steps")]
-        private int _magSteps;
+        private int _magSteps = 0;
 
         [DataField("zeroVisible")]
-        private bool _zeroVisible;
+        private bool _zeroVisible = false;
 
         public override void InitializeEntity(IEntity entity)
         {
@@ -106,6 +106,10 @@ namespace Content.Client.GameObjects.Components.Weapons.Gun
 
         private enum GunVisualLayers : byte
         {
+            Base,
+            BaseUnshaded,
+            Bolt,
+            BoltUnshaded,
             Mag,
             MagUnshaded,
         }

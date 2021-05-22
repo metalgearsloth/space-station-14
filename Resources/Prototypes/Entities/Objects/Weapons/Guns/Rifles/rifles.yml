@@ -39,9 +39,9 @@
     sprite: Objects/Weapons/Guns/Rifles/ak.rsi
     layers:
       - state: base
-        map: ["enum.RangedBarrelVisualLayers.Base"]
+        map: ["enum.GunVisualLayers.Base"]
       - state: mag-0
-        map: ["enum.RangedBarrelVisualLayers.Mag"]
+        map: ["enum.GunVisualLayers.Mag"]
   - type: Icon
     sprite: Objects/Weapons/Guns/Rifles/ak.rsi
   - type: Item
@@ -77,9 +77,9 @@
     sprite: Objects/Weapons/Guns/Rifles/black_ak.rsi
     layers:
       - state: base
-        map: ["enum.RangedBarrelVisualLayers.Base"]
+        map: ["enum.GunVisualLayers.Base"]
       - state: mag-0
-        map: ["enum.RangedBarrelVisualLayers.Mag"]
+        map: ["enum.GunVisualLayers.Mag"]
   - type: Icon
     sprite: Objects/Weapons/Guns/Rifles/black_ak.rsi
   - type: Item
@@ -115,11 +115,11 @@
     sprite: Objects/Weapons/Guns/Rifles/carbine.rsi
     layers:
       - state: base
-        map: ["enum.RangedBarrelVisualLayers.Base"]
+        map: ["enum.GunVisualLayers.Base"]
       - state: bolt-closed
-        map: ["enum.RangedBarrelVisualLayers.Bolt"]
+        map: ["enum.GunVisualLayers.Bolt"]
       - state: mag-0
-        map: ["enum.RangedBarrelVisualLayers.Mag"]
+        map: ["enum.GunVisualLayers.Mag"]
   - type: Icon
     sprite: Objects/Weapons/Guns/Rifles/carbine.rsi
   - type: Item
@@ -157,9 +157,9 @@
     sprite: Objects/Weapons/Guns/Rifles/dallas.rsi
     layers:
       - state: base
-        map: ["enum.RangedBarrelVisualLayers.Base"]
+        map: ["enum.GunVisualLayers.Base"]
       - state: mag-0
-        map: ["enum.RangedBarrelVisualLayers.Mag"]
+        map: ["enum.GunVisualLayers.Mag"]
   - type: Icon
     sprite: Objects/Weapons/Guns/Rifles/dallas.rsi
   - type: Item
@@ -196,11 +196,11 @@
     sprite: Objects/Weapons/Guns/Rifles/sts.rsi
     layers:
       - state: base
-        map: ["enum.RangedBarrelVisualLayers.Base"]
+        map: ["enum.GunVisualLayers.Base"]
       - state: bolt-closed
-        map: ["enum.RangedBarrelVisualLayers.Bolt"]
+        map: ["enum.GunVisualLayers.Bolt"]
       - state: mag-0
-        map: ["enum.RangedBarrelVisualLayers.Mag"]
+        map: ["enum.GunVisualLayers.Mag"]
   - type: Icon
     sprite: Objects/Weapons/Guns/Rifles/sts.rsi
   - type: Item
@@ -237,11 +237,11 @@
     sprite: Objects/Weapons/Guns/Rifles/vintorez.rsi
     layers:
       - state: base
-        map: ["enum.RangedBarrelVisualLayers.Base"]
+        map: ["enum.GunVisualLayers.Base"]
       - state: bolt-closed
-        map: ["enum.RangedBarrelVisualLayers.Bolt"]
+        map: ["enum.GunVisualLayers.Bolt"]
       - state: mag-0
-        map: ["enum.RangedBarrelVisualLayers.Mag"]
+        map: ["enum.GunVisualLayers.Mag"]
   - type: Icon
     sprite: Objects/Weapons/Guns/Rifles/vintorez.rsi
   - type: Item
@@ -275,11 +275,11 @@
     sprite: Objects/Weapons/Guns/Rifles/wintermute.rsi
     layers:
       - state: base
-        map: ["enum.RangedBarrelVisualLayers.Base"]
+        map: ["enum.GunVisualLayers.Base"]
       - state: bolt-closed
-        map: ["enum.RangedBarrelVisualLayers.Bolt"]
+        map: ["enum.GunVisualLayers.Bolt"]
       - state: mag-0
-        map: ["enum.RangedBarrelVisualLayers.Mag"]
+        map: ["enum.GunVisualLayers.Mag"]
   - type: Icon
     sprite: Objects/Weapons/Guns/Rifles/wintermute.rsi
   - type: Item
@@ -318,9 +318,9 @@
     sprite: Objects/Weapons/Guns/Rifles/calico.rsi
     layers:
       - state: base
-        map: ["enum.RangedBarrelVisualLayers.Base"]
+        map: ["enum.GunVisualLayers.Base"]
       - state: mag-0
-        map: ["enum.RangedBarrelVisualLayers.Mag"]
+        map: ["enum.GunVisualLayers.Mag"]
   - type: Icon
     sprite: Objects/Weapons/Guns/Rifles/calico.rsi
   - type: Item
