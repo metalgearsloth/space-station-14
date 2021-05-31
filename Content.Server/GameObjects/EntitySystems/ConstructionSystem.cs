@@ -224,7 +224,7 @@ namespace Content.Server.GameObjects.EntitySystems
                 return null;
             }
 
-            var doAfterSystem = Get<DoAfterSystem>();
+            var doAfterSystem = Get<NewDoAfterSystem>();
 
             var doAfterArgs = new DoAfterEventArgs(user, doAfterTime)
             {

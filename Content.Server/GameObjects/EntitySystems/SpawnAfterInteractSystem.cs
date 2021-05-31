@@ -48,7 +48,7 @@ namespace Content.Server.GameObjects.EntitySystems
             if (!IsTileClear())
                 return;
 
-            if (component.DoAfterTime > 0 && TryGet<DoAfterSystem>(out var doAfterSystem))
+            if (component.DoAfterTime > 0 && TryGet<NewDoAfterSystem>(out var doAfterSystem))
             {
                 var doAfterArgs = new DoAfterEventArgs(args.User, component.DoAfterTime)
                 {
