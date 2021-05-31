@@ -64,10 +64,9 @@ namespace Content.Shared.GameObjects.Components.DoAfter
         [field: NonSerialized]
         public Func<bool>? ExtraCheck { get; set; }
 
-        public bool Finished { get; set; }
-        public bool ActionRun { get; set; }
+        public bool Finished { get; private set; }
 
-        private bool _cancelled = false;
+        public bool Cancelled { get; private set; }
 
         public NewDoAfter(EntityUid userUid, EntityUid targetUid, string targetComponent)
         {
@@ -105,25 +104,27 @@ namespace Content.Shared.GameObjects.Components.DoAfter
 
         public void Cancel()
         {
-            _cancelled = true;
+            Cancelled = true;
         }
 
         public void Run()
         {
             if (IsFinished())
             {
+                Finished = true;
                 return;
             }
 
             if (IsCancelled())
             {
+                Cancelled = true;
                 return;
             }
         }
 
         private bool IsCancelled()
         {
-            if (_cancelled)
+            if (Cancelled)
             {
                 return true;
             }

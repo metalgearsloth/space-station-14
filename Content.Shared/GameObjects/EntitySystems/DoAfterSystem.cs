@@ -14,7 +14,6 @@ namespace Content.Shared.GameObjects.EntitySystems
             var user = EntityManager.GetEntity(doAfter.UserUid);
             var comp = GetComp();
 
-            // TODO: Check if there's an existing one and don't add
             comp.Add(doAfter);
         }
 
@@ -36,7 +35,11 @@ namespace Content.Shared.GameObjects.EntitySystems
 
                 foreach (var (doAfter, action) in comp.DoAfters)
                 {
-                    if (doAfter.Cancelled) continue;
+                    if (doAfter.Cancelled)
+                    {
+                        toRemove.Add(doAfter);
+                        continue;
+                    }
 
                     if (doAfter.Finished)
                     {
@@ -44,8 +47,6 @@ namespace Content.Shared.GameObjects.EntitySystems
                         toRemove.Add(doAfter);
                         continue;
                     }
-
-                    toRemove.Add(doAfter);
                 }
 
                 foreach (var doAfter in toRemove)
