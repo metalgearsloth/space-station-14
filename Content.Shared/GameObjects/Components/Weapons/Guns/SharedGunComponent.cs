@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using Content.Shared.GameObjects.Components.Items;
 using Content.Shared.GameObjects.EntitySystems;
+using Content.Shared.GameObjects.Verbs;
 using Robust.Shared.Audio;
 using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
@@ -20,7 +22,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
     public interface IGun
     {
         IEntity Owner { get; }
-        IAmmoProvider? Magazine { get; }
+        SharedAmmoProviderComponent? Magazine { get; }
     }
 
     [ComponentReference(typeof(SharedGunComponent))]
@@ -55,6 +57,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         {
             base.Initialize();
             // DebugTools.Assert(); // TODO: Assert the caliber of us matches any magazines we gots.
+            Chamber = Owner.EnsureContainer<ContainerSlot>(nameof(SharedChamberedGunComponent) + "-chamber");
 
             var ammoProvider = _magazineSlot?.ContainedEntity;
 
@@ -172,7 +175,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         /// <summary>
         /// All guns have a magazine, some may have it internal.
         /// </summary>
-        public IAmmoProvider? Magazine => _magazineSlot?.ContainedEntity?.GetComponent<IAmmoProvider>();
+        public SharedAmmoProviderComponent? Magazine => _magazineSlot?.ContainedEntity?.GetComponent<SharedAmmoProviderComponent>();
 
         protected ContainerSlot? _magazineSlot = null;
 
@@ -283,7 +286,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
             CurrentSelector = selector;
         }
 
-        public bool TryInsertMagazine(IAmmoProvider magazine)
+        public bool TryInsertMagazine(SharedAmmoProviderComponent magazine)
         {
             if (_magazineSlot == null) return false;
             if (_magazineSlot.ContainedEntity != null || !_magazineSlot.Insert(magazine.Owner)) return false;
@@ -294,9 +297,9 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
             return true;
         }
 
-        public bool TryRemoveMagazine([NotNullWhen(true)] out IAmmoProvider? magazine)
+        public bool TryRemoveMagazine([NotNullWhen(true)] out SharedAmmoProviderComponent? magazine)
         {
-            magazine = _magazineSlot?.ContainedEntity?.GetComponent<IAmmoProvider>();
+            magazine = _magazineSlot?.ContainedEntity?.GetComponent<SharedAmmoProviderComponent>();
 
             if (magazine == null)
             {
@@ -341,6 +344,35 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
 
             // TODO: All the other appearance updates for bolts and shiznit.
         }
+
+        /// <summary>
+        /// Eject the magazine from the gun.
+        /// </summary>
+        private sealed class EjectVerb : Verb<SharedGunComponent>
+        {
+            protected override void GetData(IEntity user, SharedGunComponent component, VerbData data)
+            {
+                if (component.InternalMagazine)
+                {
+                    data.Visibility = VerbVisibility.Invisible;
+                    return;
+                }
+
+                data.Visibility = component.Magazine == null ? VerbVisibility.Disabled : VerbVisibility.Visible;
+            }
+
+            protected override void Activate(IEntity user, SharedGunComponent component)
+            {
+                // TODO: Move this over to client as a request for eject and have server handle it.
+                // TODO: When hands are predicted we can also make more gun stuff predicted
+                if (InternalMagazine ||
+                    !user.TryGetComponent(out HandsComponent? handsComponent) ||
+                    !TryRemoveMagazine(out var mag)) return;
+
+                handsComponent.PutInHandOrDrop(mag.Owner.GetComponent<ItemComponent>());
+                IoCManager.Resolve<IEntityManager>().EventBus.RaiseLocalEvent();
+            }
+        }
     }
 
     // I think all guns have magazines we just need to determine if internal or not
@@ -349,13 +381,13 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
     // Uhh bool for whether we can manually cycle
     // Bool for whether it autocycles
 
-    [ComponentReference(typeof(IAmmoProvider))]
+    [ComponentReference(typeof(SharedAmmoProviderComponent))]
     public abstract class SharedBatteryAmmoProviderComponent : SharedAmmoProviderComponent
     {
         public override string Name => "BatteryAmmoProvider";
     }
 
-    [ComponentReference(typeof(IAmmoProvider))]
+    [ComponentReference(typeof(SharedAmmoProviderComponent))]
     public abstract class SharedBallisticMagazineComponent : SharedBallisticsAmmoProvider
     {
         public override string Name => "BallisticAmmoProvider";
@@ -373,19 +405,17 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         [DataField("rackVolume")]
         public float RackVolume { get; } = 0.0f;
 
-        public abstract int ProjectileCount { get; }
-
-        public override void UpdateAppearance(SharedAppearanceComponent? appearance = null)
+        public override void UpdateAppearance(SharedAppearanceComponent appearance)
         {
             // TODO: Suss this shit out
             base.UpdateAppearance(appearance);
             appearance?.SetData(GunVisuals.MagLoaded, true);
-            appearance?.SetData(GunVisuals.AmmoCount, ProjectileCount);
-            appearance?.SetData(GunVisuals.AmmoMax, ProjectileCapacity);
+            appearance?.SetData(GunVisuals.AmmoCount, AmmoCount);
+            appearance?.SetData(GunVisuals.AmmoMax, AmmoCapacity);
         }
     }
 
-    [ComponentReference(typeof(IAmmoProvider))]
+    [ComponentReference(typeof(SharedAmmoProviderComponent))]
     public abstract class SharedRevolverAmmoProviderComponent : SharedBallisticsAmmoProvider, ISerializationHooks
     {
         public override string Name => "RevolverAmmoProvider";
@@ -404,7 +434,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         public override void Initialize()
         {
             base.Initialize();
-            _revolver = new SharedAmmoComponent?[ProjectileCapacity];
+            _revolver = new SharedAmmoComponent?[AmmoCapacity];
         }
 
         private void Cycle()
@@ -428,7 +458,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         /// <inheritdoc />
         [ViewVariables]
         [DataField("capacity")]
-        public int ProjectileCapacity { get; }
+        public int AmmoCapacity { get; }
 
         /// <inheritdoc />
         public int UnspawnedCount { get; protected set; }
@@ -443,14 +473,14 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
             base.Initialize();
             if (FillPrototype != null)
             {
-                UnspawnedCount = ProjectileCapacity;
+                UnspawnedCount = AmmoCapacity;
             }
         }
 
         public abstract bool TryGetAmmo([NotNullWhen(true)] out SharedAmmoComponent? ammo);
     }
 
-    public abstract class SharedAmmoProviderComponent : Component, IAmmoProvider
+    public abstract class SharedAmmoProviderComponent : Component
     {
         public override string Name => "AmmoProvider";
 
@@ -486,7 +516,9 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
 
         public abstract bool TryGetProjectile([NotNullWhen(true)] out IProjectile? projectile);
 
-        public virtual void UpdateAppearance(SharedAppearanceComponent? appearance = null) {}
+        public virtual void UpdateAppearance(SharedAppearanceComponent appearance)
+        {
+        }
     }
 
     // Speedloader should be a flag or whatever
@@ -501,33 +533,6 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
     // SpeedLoader
     // Magazine
     // PowerCell
-
-    public interface IAmmoProvider
-    {
-        int AmmoCount { get; }
-
-        int AmmoMax { get; }
-
-        IEntity Owner { get; }
-
-        /// <summary>
-        /// Check upfront whether we can fire e.g. is bolt-closed where relevant.
-        /// </summary>
-        /// <returns></returns>
-        bool CanShoot();
-
-        /// <summary>
-        /// Pulls the actual IProjectile for firing if available.
-        /// </summary>
-        /// <param name="projectile"></param>
-        /// <returns></returns>
-        bool TryGetProjectile([NotNullWhen(true)] out IProjectile? projectile);
-
-        /// <summary>
-        /// Update our appearance visualizers.
-        /// </summary>
-        void UpdateAppearance(SharedAppearanceComponent? appearance = null);
-    }
 
     /// <summary>
     /// Because we have multiple very different types of "projectiles" that can be fired we need an interface for them.

@@ -11,27 +11,28 @@ namespace Content.Server.GameObjects.Components.Weapon.Gun
 {
     [RegisterComponent]
     [ComponentReference(typeof(SharedBallisticMagazineComponent))]
-    public class BallisticMagazineComponent : SharedBallisticMagazineComponent
+    [ComponentReference(typeof(SharedAmmoProviderComponent))]
+    [ComponentReference(typeof(SharedBallisticsAmmoProvider))]
+    internal sealed class BallisticMagazineComponent : SharedBallisticMagazineComponent
     {
-        public override int AmmoCount { get; }
         public override int AmmoMax { get; }
 
-        private Container? _ammoContainer = null;
+        public Container AmmoContainer = default!;
 
         /// <inheritdoc />
-        public override int ProjectileCount => UnspawnedCount + _ammoContainer?.ContainedEntities.Count ?? 0;
+        public override int AmmoCount => UnspawnedCount + AmmoContainer.ContainedEntities.Count;
 
         public override void Initialize()
         {
             base.Initialize();
-            _ammoContainer = Owner.EnsureContainer<Container>("ammo", out var existing);
+            AmmoContainer = Owner.EnsureContainer<Container>("ammo", out var existing);
 
             if (existing)
             {
-                UnspawnedCount -= _ammoContainer.ContainedEntities.Count;
+                UnspawnedCount -= AmmoContainer.ContainedEntities.Count;
             }
 
-            DebugTools.Assert(ProjectileCount <= ProjectileCapacity);
+            DebugTools.Assert(AmmoCount <= AmmoCapacity);
 
             if (Owner.TryGetComponent(out SharedAppearanceComponent? appearanceComponent))
             {
@@ -70,12 +71,12 @@ namespace Content.Server.GameObjects.Components.Weapon.Gun
 
         public override bool TryGetAmmo([NotNullWhen(true)] out SharedAmmoComponent? ammo)
         {
-            if (_ammoContainer != null && _ammoContainer.ContainedEntities.Count > 0)
+            if (AmmoContainer.ContainedEntities.Count > 0)
             {
-                var ammoEntity = _ammoContainer.ContainedEntities[0];
+                var ammoEntity = AmmoContainer.ContainedEntities[0];
 
                 ammo = ammoEntity.GetComponent<SharedAmmoComponent>();
-                _ammoContainer.Remove(ammoEntity);
+                AmmoContainer.Remove(ammoEntity);
                 return true;
             }
 

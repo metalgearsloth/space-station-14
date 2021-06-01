@@ -102,9 +102,10 @@ namespace Content.Server.GameObjects.Components.Power.ApcNetComponents.PowerRece
             }
 
             // TODO: Make it generic
-            if (heldItem.TryGetComponent(out SharedBatteryAmmoProviderComponent? batteryBarrelComponent))
+            if (heldItem.TryGetComponent(out SharedBatteryAmmoProviderComponent? batteryBarrelComponent) &&
+                batteryBarrelComponent.Owner.TryGetComponent(out SharedAppearanceComponent? appearanceComponent))
             {
-                batteryBarrelComponent.UpdateAppearance();
+                batteryBarrelComponent.UpdateAppearance(appearanceComponent);
             }
 
             UpdateStatus();

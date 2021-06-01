@@ -210,7 +210,7 @@ namespace Content.Server.GameObjects.Components.GUI
             hands.PutInHandOrDrop(item, mobCheck);
         }
 
-        public void PutInHandOrDrop(ItemComponent item, bool mobCheck = true)
+        public void PutInHandOrDrop(ItemComponent item, bool mobCheck = true, string? sound = null)
         {
             if (!PutInHand(item, mobCheck))
             {

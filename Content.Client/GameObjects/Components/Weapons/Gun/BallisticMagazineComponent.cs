@@ -6,12 +6,13 @@ namespace Content.Client.GameObjects.Components.Weapons.Gun
 {
     [RegisterComponent]
     [ComponentReference(typeof(SharedBallisticMagazineComponent))]
+    [ComponentReference(typeof(SharedAmmoProviderComponent))]
+    [ComponentReference(typeof(SharedBallisticsAmmoProvider))]
     internal sealed class BallisticMagazineComponent : SharedBallisticMagazineComponent
     {
-        public override int ProjectileCount => _projectileCount;
-        private int _projectileCount;
+        public override int AmmoCount => _ammoCount;
+        private int _ammoCount;
 
-        public override int AmmoCount { get; }
         public override int AmmoMax { get; }
 
         public override void Initialize()

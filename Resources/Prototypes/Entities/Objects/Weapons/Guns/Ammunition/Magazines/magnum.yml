@@ -34,7 +34,6 @@
     caliber: Magnum
     magazineType: Smg
     capacity: 25
-
   - type: Sprite
     netsync: false
     layers:
@@ -57,7 +56,6 @@
   components:
   - type: BallisticAmmoProvider
     fillPrototype: CartridgeMagnum
-
   - type: Sprite
     sprite: Objects/Weapons/Guns/Ammunition/Magazine/Magnum/magnum_mag.rsi
 
@@ -68,7 +66,6 @@
   components:
   - type: BallisticAmmoProvider
     fillPrototype: CartridgeMagnumFlash
-
   - type: Sprite
     sprite: Objects/Weapons/Guns/Ammunition/Magazine/Magnum/magnum_mag_flash.rsi
 
@@ -79,7 +76,6 @@
   components:
   - type: BallisticAmmoProvider
     fillPrototype: CartridgeMagnumHV
-
   - type: Sprite
     sprite: Objects/Weapons/Guns/Ammunition/Magazine/Magnum/magnum_mag_hv.rsi
 
@@ -90,7 +86,6 @@
   components:
   - type: BallisticAmmoProvider
     fillPrototype: CartridgeMagnumPractice
-
   - type: Sprite
     sprite: Objects/Weapons/Guns/Ammunition/Magazine/Magnum/magnum_mag_practice.rsi
 
@@ -101,7 +96,6 @@
   components:
   - type: BallisticAmmoProvider
     fillPrototype: CartridgeMagnumRubber
-
   - type: Sprite
     sprite: Objects/Weapons/Guns/Ammunition/Magazine/Magnum/magnum_mag_rubber.rsi
 
@@ -112,7 +106,6 @@
   components:
   - type: BallisticAmmoProvider
     fillPrototype: CartridgeMagnum
-
   - type: Sprite
     sprite: Objects/Weapons/Guns/Ammunition/Magazine/Magnum/magnum_smg_mag.rsi
 
@@ -123,7 +116,6 @@
   components:
   - type: BallisticAmmoProvider
     fillPrototype: CartridgeMagnumHV
-
   - type: Sprite
     sprite: Objects/Weapons/Guns/Ammunition/Magazine/Magnum/magnum_smg_mag_hv.rsi
 
@@ -134,7 +126,6 @@
   components:
   - type: BallisticAmmoProvider
     fillPrototype: CartridgeMagnumPractice
-
   - type: Sprite
     sprite: Objects/Weapons/Guns/Ammunition/Magazine/Magnum/magnum_smg_mag_practice.rsi
 
@@ -145,6 +136,5 @@
   components:
   - type: BallisticAmmoProvider
     fillPrototype: CartridgeMagnumRubber
-
   - type: Sprite
     sprite: Objects/Weapons/Guns/Ammunition/Magazine/Magnum/magnum_smg_mag_rubber.rsi
