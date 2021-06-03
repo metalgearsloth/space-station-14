@@ -36,7 +36,7 @@ namespace Content.Shared.GameObjects.EntitySystems
         /// <param name="alphaRatio"></param>
         public abstract void MuzzleFlash(IEntity? user, IEntity weapon, SharedAmmoComponent ammo, Angle angle, TimeSpan? currentTime = null, bool predicted = false, float alphaRatio = 1.0f);
 
-        public abstract void EjectCasing(IEntity? user, IEntity casing, bool playSound = true, Direction[]? ejectDirections = null);
+        public abstract void EjectCasing(IEntity? user, IEntity casing, bool playSound = true);
 
         /// <summary>
         ///     Shoot a hitscan weapon (e.g. laser).
@@ -83,8 +83,10 @@ namespace Content.Shared.GameObjects.EntitySystems
                         return false;
                     }
 
-                    chamberedGun.TryPopChamber(out projectile);
+
+                    chamberedGun.TryPopChamber(out var ammo);
                     chamberedGun.TryFeedChamber();
+                    projectile = ammo;
                     break;
                 case SharedGunComponent gun:
                     var magazine = weapon.Magazine;

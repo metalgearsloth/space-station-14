@@ -102,7 +102,7 @@ namespace Content.Client.GameObjects.EntitySystems
             throw new NotImplementedException();
         }
 
-        public override void EjectCasing(IEntity? user, IEntity casing, bool playSound = true, Direction[]? ejectDirections = null)
+        public override void EjectCasing(IEntity? user, IEntity casing, bool playSound = true)
         {
             throw new NotImplementedException();
         }

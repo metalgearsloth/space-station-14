@@ -2,7 +2,7 @@ using Content.Shared.GameObjects.Components.Weapons.Guns;
 using Robust.Client.GameObjects;
 using Robust.Shared.GameObjects;
 
-namespace Content.Client.GameObjects.Components.Weapons.Gun
+namespace Content.Client.GameObjects.Components.Weapons.Gun.Visualizers
 {
     public sealed class GunBoltVisualizer : AppearanceVisualizer
     {
@@ -11,7 +11,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Gun
             base.InitializeEntity(entity);
             if (!entity.TryGetComponent(out ISpriteComponent? spriteComponent)) return;
 
-            spriteComponent.LayerSetState(GunVisuals.BoltClosed, "bolt-closed");
+            spriteComponent.LayerSetState(GunVisualLayers.Bolt, "bolt-closed");
         }
 
         public override void OnChangeData(AppearanceComponent component)
@@ -23,7 +23,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Gun
                 return;
             }
 
-            spriteComponent.LayerSetState(GunVisuals.BoltClosed, boltClosed ? "bolt-closed" : "bolt-open");
+            spriteComponent.LayerSetState(GunVisualLayers.Bolt, boltClosed ? "bolt-closed" : "bolt-open");
         }
     }
 }

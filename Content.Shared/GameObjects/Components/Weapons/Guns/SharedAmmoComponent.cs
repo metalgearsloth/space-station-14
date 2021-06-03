@@ -23,6 +23,14 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         public override uint? NetID => ContentNetIDs.AMMO;
 
         [ViewVariables]
+        [DataField("soundCollectionEject")]
+        public string? SoundCollectionEject { get; private set; } = "CasingEject";
+
+        [ViewVariables]
+        [DataField("soundInsert")]
+        public string? SoundInsert { get; private set; } = "/Audio/Weapons/Guns/MagIn/bullet_insert.ogg";
+
+        [ViewVariables]
         [DataField("caliber")]
         public GunCaliber Caliber { get; private set; } = GunCaliber.Unspecified;
 
@@ -103,10 +111,6 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         [ViewVariables]
         [DataField("ammoVelocity")]
         public float Velocity { get; private set; } = 20.0f;
-
-        [ViewVariables]
-        [DataField("soundCollectionEject")]
-        public string? SoundCollectionEject { get; private set; } = "CasingEject";
 
         public override ComponentState GetComponentState(ICommonSession player)
         {

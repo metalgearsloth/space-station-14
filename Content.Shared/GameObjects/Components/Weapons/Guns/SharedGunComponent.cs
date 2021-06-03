@@ -42,6 +42,10 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         [DataField("soundBoltClosed")]
         public string? SoundBoltClosed { get; }
 
+        [ViewVariables]
+        [DataField("soundCycle")]
+        public string? SoundCycle { get; } = "/Audio/Weapons/Guns/Cock/sf_rifle_cock.ogg";
+
         // You could also potentially make these 2 below optional if you want a bolt but no chamber or vice versa
         public ContainerSlot Chamber { get; private set; } = default!;
 
@@ -59,7 +63,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
             // DebugTools.Assert(); // TODO: Assert the caliber of us matches any magazines we gots.
             Chamber = Owner.EnsureContainer<ContainerSlot>(nameof(SharedChamberedGunComponent) + "-chamber");
 
-            var ammoProvider = _magazineSlot?.ContainedEntity;
+            var ammoProvider = MagazineSlot?.ContainedEntity;
 
             if (ammoProvider != null && Chamber.ContainedEntity == null)
             {
@@ -103,7 +107,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         /// </summary>
         /// <param name="ammo"></param>
         /// <returns></returns>
-        public bool TryPopChamber([NotNullWhen(true)] out IProjectile? ammo)
+        public bool TryPopChamber([NotNullWhen(true)] out SharedAmmoComponent? ammo)
         {
             var chambered = Chamber.ContainedEntity;
 
@@ -121,14 +125,21 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         public void TryFeedChamber()
         {
             if (Chamber.ContainedEntity != null) return;
-            var magazine = _magazineSlot?.ContainedEntity;
+            var magazine = MagazineSlot?.ContainedEntity;
 
             if (magazine == null) return;
-            if (magazine.GetComponent<SharedAmmoProviderComponent>().TryGetProjectile(out var projectile))
+
+            var ballistics = magazine.GetComponent<SharedBallisticsAmmoProvider>();
+
+            if (ballistics.TryGetAmmo(out var ammo))
             {
-                var ammo = projectile as SharedAmmoComponent;
+                if (ballistics.Owner.TryGetComponent(out SharedAppearanceComponent? appearanceComponent))
+                {
+                    ballistics.UpdateAppearance(appearanceComponent);
+                }
+
                 DebugTools.AssertNotNull(ammo);
-                Chamber.Insert(ammo!.Owner);
+                Chamber.Insert(ammo.Owner);
             }
         }
     }
@@ -175,9 +186,9 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         /// <summary>
         /// All guns have a magazine, some may have it internal.
         /// </summary>
-        public SharedAmmoProviderComponent? Magazine => _magazineSlot?.ContainedEntity?.GetComponent<SharedAmmoProviderComponent>();
+        public SharedAmmoProviderComponent? Magazine => MagazineSlot?.ContainedEntity?.GetComponent<SharedAmmoProviderComponent>();
 
-        protected ContainerSlot? _magazineSlot = null;
+        public ContainerSlot MagazineSlot = default!;
 
         [ViewVariables]
         [DataField("magFillPrototype", customTypeSerializer: typeof(PrototypeIdSerializer<EntityPrototype>))]
@@ -258,17 +269,17 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
             DebugTools.Assert(_magazinePrototype == null || IoCManager.Resolve<IPrototypeManager>().HasIndex<EntityPrototype>(_magazinePrototype));
 
             // Pre-spawn magazine in
-            _magazineSlot = Owner.EnsureContainer<ContainerSlot>("magazine", out var existingMag);
+            MagazineSlot = Owner.EnsureContainer<ContainerSlot>("magazine", out var existingMag);
 
             if (!existingMag && _magazinePrototype != null)
             {
                 var mag = Owner.EntityManager.SpawnEntity(_magazinePrototype, Owner.Transform.Coordinates);
-                _magazineSlot.Insert(mag);
+                MagazineSlot.Insert(mag);
                 UpdateAppearance();
                 Dirty();
             }
 
-            if (InternalMagazine && _magazineSlot.ContainedEntity == null)
+            if (InternalMagazine && MagazineSlot.ContainedEntity == null)
             {
                 throw new InvalidOperationException();
             }
@@ -288,8 +299,8 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
 
         public bool TryInsertMagazine(SharedAmmoProviderComponent magazine)
         {
-            if (_magazineSlot == null) return false;
-            if (_magazineSlot.ContainedEntity != null || !_magazineSlot.Insert(magazine.Owner)) return false;
+            if (MagazineSlot == null) return false;
+            if (MagazineSlot.ContainedEntity != null || !MagazineSlot.Insert(magazine.Owner)) return false;
             if (SoundMagInsert != null)
                 SoundSystem.Play(Filter.Pvs(Owner), SoundMagInsert, Owner); // TODO: Variations + volumes
 
@@ -299,14 +310,14 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
 
         public bool TryRemoveMagazine([NotNullWhen(true)] out SharedAmmoProviderComponent? magazine)
         {
-            magazine = _magazineSlot?.ContainedEntity?.GetComponent<SharedAmmoProviderComponent>();
+            magazine = MagazineSlot?.ContainedEntity?.GetComponent<SharedAmmoProviderComponent>();
 
             if (magazine == null)
             {
                 return false;
             }
 
-            if (_magazineSlot?.Remove(magazine.Owner) != true)
+            if (MagazineSlot?.Remove(magazine.Owner) != true)
             {
                 magazine = null;
                 return false;
@@ -343,35 +354,6 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
             }
 
             // TODO: All the other appearance updates for bolts and shiznit.
-        }
-
-        /// <summary>
-        /// Eject the magazine from the gun.
-        /// </summary>
-        private sealed class EjectVerb : Verb<SharedGunComponent>
-        {
-            protected override void GetData(IEntity user, SharedGunComponent component, VerbData data)
-            {
-                if (component.InternalMagazine)
-                {
-                    data.Visibility = VerbVisibility.Invisible;
-                    return;
-                }
-
-                data.Visibility = component.Magazine == null ? VerbVisibility.Disabled : VerbVisibility.Visible;
-            }
-
-            protected override void Activate(IEntity user, SharedGunComponent component)
-            {
-                // TODO: Move this over to client as a request for eject and have server handle it.
-                // TODO: When hands are predicted we can also make more gun stuff predicted
-                if (InternalMagazine ||
-                    !user.TryGetComponent(out HandsComponent? handsComponent) ||
-                    !TryRemoveMagazine(out var mag)) return;
-
-                handsComponent.PutInHandOrDrop(mag.Owner.GetComponent<ItemComponent>());
-                IoCManager.Resolve<IEntityManager>().EventBus.RaiseLocalEvent();
-            }
         }
     }
 

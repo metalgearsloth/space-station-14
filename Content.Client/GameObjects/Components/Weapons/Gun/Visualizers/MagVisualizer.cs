@@ -103,15 +103,15 @@ namespace Content.Client.GameObjects.Components.Weapons.Gun.Visualizers
                 }
             }
         }
+    }
 
-        private enum GunVisualLayers : byte
-        {
-            Base,
-            BaseUnshaded,
-            Bolt,
-            BoltUnshaded,
-            Mag,
-            MagUnshaded,
-        }
+    public enum GunVisualLayers : byte
+    {
+        Base,
+        BaseUnshaded,
+        Bolt,
+        BoltUnshaded,
+        Mag,
+        MagUnshaded,
     }
 }

@@ -1,11 +1,11 @@
 using System;
 using System.Linq;
-using Content.Server.Actions;
 using Content.Shared.Audio;
 using Content.Shared.GameObjects.Components.Damage;
 using Content.Shared.GameObjects.Components.Projectiles;
 using Content.Shared.GameObjects.Components.Weapons.Guns;
 using Content.Shared.GameObjects.EntitySystems;
+using Content.Shared.Interfaces.GameObjects.Components;
 using Robust.Server.GameObjects;
 using Robust.Shared.Audio;
 using Robust.Shared.GameObjects;
@@ -15,7 +15,6 @@ using Robust.Shared.Physics;
 using Robust.Shared.Physics.Broadphase;
 using Robust.Shared.Player;
 using Robust.Shared.Random;
-using Robust.Shared.Utility;
 
 namespace Content.Server.GameObjects.EntitySystems
 {
@@ -24,11 +23,110 @@ namespace Content.Server.GameObjects.EntitySystems
         private EffectSystem _effectSystem = default!;
         private SharedBroadPhaseSystem _broadphase = default!;
 
+        private const float BoltVariation = 0.01f;
+        private const float BoltVolume = 0.0f;
+
+        private const float MagEjectOffset = 0.5f;
+
+        private static Direction[] _ejectDirections = {Direction.East, Direction.North, Direction.NorthWest, Direction.South, Direction.SouthEast, Direction.West};
+
         public override void Initialize()
         {
             base.Initialize();
             _broadphase = Get<SharedBroadPhaseSystem>();
             SubscribeNetworkEvent<ShootMessage>(HandleShoot);
+            SubscribeLocalEvent<SharedChamberedGunComponent, UseInHandMessage>(HandleUse);
+        }
+
+        private void HandleUse(EntityUid uid, SharedChamberedGunComponent component, UseInHandMessage args)
+        {
+            var mag = component.Magazine;
+
+            // TODO: predict someday
+            if (mag == null || !component.BoltClosed)
+            {
+                ToggleBolt(component);
+                return;
+            }
+
+            Cycle(component, args.User, true);
+
+            if (!Chambered(component) && mag.AmmoCount == 0)
+            {
+                ToggleBolt(component);
+                EjectMagazine(component);
+                return;
+            }
+        }
+
+        private void EjectMagazine(SharedGunComponent component)
+        {
+            if (component.InternalMagazine) return;
+
+            var mag = component.Magazine;
+            if (mag == null) return;
+
+            component.MagazineSlot.Remove(mag.Owner);
+
+            var sound = component.SoundMagEject;
+
+            if (!string.IsNullOrEmpty(sound))
+                SoundSystem.Play(Filter.Pvs(component.Owner), sound);
+
+            var offsetPos = ((RobustRandom.NextFloat() - 0.5f) * MagEjectOffset, (RobustRandom.NextFloat() - 0.5f) * MagEjectOffset);
+            var transform = mag.Owner.Transform;
+
+            transform.Coordinates = transform.Coordinates.Offset(offsetPos);
+            transform.LocalRotation = RobustRandom.Pick(_ejectDirections).ToAngle();
+            component.UpdateAppearance();
+        }
+
+        private bool Chambered(SharedChamberedGunComponent component)
+        {
+            return component.Chamber.ContainedEntity != null;
+        }
+
+        private void Cycle(SharedChamberedGunComponent component, IEntity? user = null, bool manual = false)
+        {
+            if (component.TryPopChamber(out var ammo))
+            {
+                EjectCasing(user, ammo.Owner);
+            }
+
+            component.TryFeedChamber();
+
+            if (manual)
+            {
+                var cycle = component.SoundCycle;
+
+                if (!string.IsNullOrEmpty(cycle))
+                {
+                    SoundSystem.Play(Filter.Pvs(component.Owner), cycle);
+                }
+            }
+        }
+
+        private void ToggleBolt(SharedChamberedGunComponent component)
+        {
+            var bolt = component.BoltClosed;
+
+            component.BoltClosed ^= true;
+            component.UpdateAppearance();
+            string? sound;
+
+            if (bolt)
+            {
+                sound = component.SoundBoltOpen;
+            }
+            else
+            {
+                sound = component.SoundBoltClosed;
+            }
+
+            if (!string.IsNullOrEmpty(sound))
+            {
+                SoundSystem.Play(Filter.Pvs(component.Owner), sound, AudioHelpers.WithVariation(BoltVariation).WithVolume(BoltVolume));
+            }
         }
 
         public override void Update(float frameTime)
@@ -75,16 +173,13 @@ namespace Content.Server.GameObjects.EntitySystems
             _effectSystem.CreateParticle(message);
         }
 
-        public override void EjectCasing(IEntity? user, IEntity casing, bool playSound = true, Direction[]? ejectDirections = null)
+        public override void EjectCasing(IEntity? user, IEntity casing, bool playSound = true)
         {
-            ejectDirections ??= new[]
-                {Direction.East, Direction.North, Direction.NorthWest, Direction.South, Direction.SouthEast, Direction.West};
-
             const float ejectOffset = 1.8f;
             var ammo = casing.GetComponent<SharedAmmoComponent>();
             var offsetPos = ((RobustRandom.NextFloat() - 0.5f) * ejectOffset, (RobustRandom.NextFloat() - 0.5f) * ejectOffset);
             casing.Transform.Coordinates = casing.Transform.Coordinates.Offset(offsetPos);
-            casing.Transform.LocalRotation = RobustRandom.Pick(ejectDirections).ToAngle();
+            casing.Transform.LocalRotation = RobustRandom.Pick(_ejectDirections).ToAngle();
 
             if (ammo.SoundCollectionEject == null || !playSound)
             {

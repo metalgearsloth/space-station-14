@@ -26,6 +26,8 @@ namespace Content.Server.GameObjects.EntitySystems.Weapon
         private const float EjectVariation = 0.01f;
         private const float EjectVolume = -0.1f;
 
+        private const float InsertVariation = 0.01f;
+
         public override void Initialize()
         {
             base.Initialize();
@@ -61,7 +63,9 @@ namespace Content.Server.GameObjects.EntitySystems.Weapon
                 component.UpdateAppearance(appearanceComponent);
             }
 
-            // TODO: Sound insert
+            if (!string.IsNullOrEmpty(ammoComponent.SoundInsert))
+                SoundSystem.Play(Filter.Pvs(component.Owner), ammoComponent.SoundInsert, AudioHelpers.WithVariation(InsertVariation));
+
         }
 
         private void HandleUseEntity(EntityUid uid, BallisticMagazineComponent component, UseInHandMessage args)
