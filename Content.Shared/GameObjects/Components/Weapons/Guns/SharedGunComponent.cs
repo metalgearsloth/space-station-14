@@ -88,7 +88,15 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         public override bool CanFire()
         {
             if (!base.CanFire()) return false;
-            if (!BoltClosed) return false;
+
+            if (!BoltClosed)
+            {
+                // TODO: Popup bolt needs to be closed (client only prolly).
+                return false;
+            }
+
+            if (Chamber.ContainedEntity == null && Magazine == null) return false;
+
             return true;
         }
 
@@ -273,8 +281,16 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
 
         public virtual bool CanFire()
         {
-            if (CurrentSelector == GunFireSelector.Safety ||
-                FireRate <= 0f) return false;
+            if (CurrentSelector == GunFireSelector.Safety)
+            {
+                // TODO: Popup message (client-only)
+                return false;
+            }
+
+            if (FireRate <= 0f)
+            {
+                return false;
+            }
 
             var mag = Magazine;
 
