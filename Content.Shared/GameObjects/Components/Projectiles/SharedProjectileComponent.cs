@@ -7,7 +7,7 @@ using Robust.Shared.Serialization;
 
 namespace Content.Shared.GameObjects.Components.Projectiles
 {
-    public abstract class SharedProjectileComponent : Component, ICollideSpecial, IProjectile
+    public abstract class SharedProjectileComponent : Component, IProjectile
     {
         private bool _ignoreShooter = true;
         public override string Name => "Projectile";
@@ -38,11 +38,6 @@ namespace Content.Shared.GameObjects.Components.Projectiles
 
             public EntityUid? Shooter { get; }
             public bool IgnoreShooter { get; }
-        }
-
-        public bool PreventCollide(IPhysBody collidedwith)
-        {
-            return IgnoreShooter && collidedwith.Owner.Uid == Shooter;
         }
     }
 }
