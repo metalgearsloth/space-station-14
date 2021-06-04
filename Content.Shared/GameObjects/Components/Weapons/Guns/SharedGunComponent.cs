@@ -271,39 +271,15 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
             CurrentSelector = selector;
         }
 
-        public bool TryInsertMagazine(SharedAmmoProviderComponent magazine)
-        {
-            if (MagazineSlot == null) return false;
-            if (MagazineSlot.ContainedEntity != null || !MagazineSlot.Insert(magazine.Owner)) return false;
-            if (SoundMagInsert != null)
-                SoundSystem.Play(Filter.Pvs(Owner), SoundMagInsert, Owner); // TODO: Variations + volumes
-
-            UpdateAppearance();
-            return true;
-        }
-
-        public bool TryRemoveMagazine([NotNullWhen(true)] out SharedAmmoProviderComponent? magazine)
-        {
-            magazine = MagazineSlot?.ContainedEntity?.GetComponent<SharedAmmoProviderComponent>();
-
-            if (magazine == null)
-            {
-                return false;
-            }
-
-            if (MagazineSlot?.Remove(magazine.Owner) != true)
-            {
-                magazine = null;
-                return false;
-            }
-
-            UpdateAppearance();
-            return true;
-        }
-
         public virtual bool CanFire()
         {
-            if (CurrentSelector == GunFireSelector.Safety) return false;
+            if (CurrentSelector == GunFireSelector.Safety ||
+                FireRate <= 0f) return false;
+
+            var mag = Magazine;
+
+            if (mag?.AmmoCount == 0) return false;
+
             return true;
         }
 
@@ -341,12 +317,17 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
     public abstract class SharedBatteryAmmoProviderComponent : SharedAmmoProviderComponent
     {
         public override string Name => "BatteryAmmoProvider";
+
+        public override int AmmoCount { get; }
+
+        public override int AmmoMax { get; protected set; }
     }
 
     [ComponentReference(typeof(SharedAmmoProviderComponent))]
     public abstract class SharedBallisticMagazineComponent : SharedBallisticsAmmoProvider
     {
         public override string Name => "BallisticAmmoProvider";
+        public override uint? NetID => ContentNetIDs.BALLISTIC_AMMO_PROVIDER;
 
         // Sounds
         [ViewVariables]
@@ -365,9 +346,23 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         {
             // TODO: Suss this shit out
             base.UpdateAppearance(appearance);
-            appearance?.SetData(GunVisuals.MagLoaded, true);
-            appearance?.SetData(GunVisuals.AmmoCount, AmmoCount);
-            appearance?.SetData(GunVisuals.AmmoMax, AmmoCapacity);
+            appearance.SetData(GunVisuals.MagLoaded, true);
+            appearance.SetData(GunVisuals.AmmoCount, AmmoCount);
+            appearance.SetData(GunVisuals.AmmoMax, AmmoMax);
+        }
+
+        [Serializable, NetSerializable]
+        protected sealed class BallisticMagazineComponentState : ComponentState
+        {
+            public int AmmoCount { get; }
+
+            public int AmmoMax { get; }
+
+            public BallisticMagazineComponentState(int count, int max) : base(ContentNetIDs.BALLISTIC_AMMO_PROVIDER)
+            {
+                AmmoCount = count;
+                AmmoMax = max;
+            }
         }
     }
 
@@ -375,6 +370,9 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
     public abstract class SharedRevolverAmmoProviderComponent : SharedBallisticsAmmoProvider, ISerializationHooks
     {
         public override string Name => "RevolverAmmoProvider";
+
+        public override int AmmoCount { get; }
+        public override int AmmoMax { get; protected set; }
 
         private SharedAmmoComponent?[] _revolver = default!;
 
@@ -390,18 +388,16 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         public override void Initialize()
         {
             base.Initialize();
-            _revolver = new SharedAmmoComponent?[AmmoCapacity];
-        }
-
-        private void Cycle()
-        {
-            // TODO: Copy and shit.
+            _revolver = new SharedAmmoComponent?[AmmoMax];
         }
     }
 
     public abstract class SharedReagentAmmoProviderComponent : SharedAmmoProviderComponent
     {
         public override string Name => "ReagentAmmoProvider";
+
+        public override int AmmoCount { get; }
+        public override int AmmoMax { get; protected set; }
     }
 
     /*
@@ -414,12 +410,10 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         /// <inheritdoc />
         [ViewVariables]
         [DataField("capacity")]
-        public int AmmoCapacity { get; }
+        public override int AmmoMax { get; protected set; }
 
-        /// <inheritdoc />
         public int UnspawnedCount { get; protected set; }
 
-        /// <inheritdoc />
         [ViewVariables]
         [DataField("fillPrototype")]
         public string? FillPrototype { get; }
@@ -429,7 +423,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
             base.Initialize();
             if (FillPrototype != null)
             {
-                UnspawnedCount = AmmoCapacity;
+                UnspawnedCount = AmmoMax;
             }
         }
 
@@ -463,7 +457,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         }
 
         public abstract int AmmoCount { get; }
-        public abstract int AmmoMax { get; }
+        public abstract int AmmoMax { get; protected set; }
 
         public virtual bool CanShoot()
         {

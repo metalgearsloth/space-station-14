@@ -79,7 +79,7 @@ namespace Content.Client.GameObjects.EntitySystems
 
             var mouseCoordinates = _eyeManager.ScreenToMap(_inputManager.MouseScreenPosition);
 
-            if (TryFire(player, _firingWeapon, mouseCoordinates, out var shots, currentTime))
+            if (TryFire(player, _firingWeapon, mouseCoordinates, out var shots, currentTime) && shots > 0)
             {
                 Logger.DebugS("gun", $"Fired {shots} shots at {currentTime}");
                 RaiseNetworkEvent(new ShootMessage(_firingWeapon.Owner.Uid, mouseCoordinates, shots, currentTime));
@@ -126,7 +126,7 @@ namespace Content.Client.GameObjects.EntitySystems
             throw new NotImplementedException();
         }
 
-        protected override Filter GetFilter(SharedGunComponent gun)
+        protected override Filter GetFilter(IEntity user, SharedGunComponent gun)
         {
             return Filter.Local();
         }

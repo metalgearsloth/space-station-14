@@ -5,7 +5,6 @@ using Content.Shared.GameObjects.Components.Weapons.Guns;
 using Robust.Shared.Audio;
 using Robust.Shared.GameObjects;
 using Robust.Shared.IoC;
-using Robust.Shared.Log;
 using Robust.Shared.Map;
 using Robust.Shared.Maths;
 using Robust.Shared.Player;
@@ -71,7 +70,7 @@ namespace Content.Shared.GameObjects.EntitySystems
         /// <summary>
         ///     Actually fires the gun, cycles rounds, etc.
         /// </summary>
-        private bool TryShoot(IGun weapon, Angle angle)
+        private bool TryShoot(IEntity user, SharedGunComponent weapon, Angle angle)
         {
             IProjectile? projectile;
 
@@ -95,10 +94,16 @@ namespace Content.Shared.GameObjects.EntitySystems
 
                     // TODO: Cycle instead
                     chamberedGun.TryFeedChamber();
+
+                    if (chamberedGun.Chamber.ContainedEntity == null)
+                    {
+                        // TODO: Toggle bolt.
+                    }
+
                     projectile = ammo;
                     break;
-                case SharedGunComponent gun:
-                    var magazine = gun.Magazine;
+                default:
+                    var magazine = weapon.Magazine;
 
                     if (magazine == null)
                     {
@@ -114,23 +119,23 @@ namespace Content.Shared.GameObjects.EntitySystems
                     {
                         return false;
                     }
+
+                    magazine.Dirty();
                     break;
-                default:
-                    throw new InvalidOperationException();
             }
 
             // TODO: Need to figure out this inheritance bullshit.
             switch (projectile)
             {
                 case SharedAmmoComponent ammo:
-                    ShootAmmo(null, weapon, angle, ammo);
+                    ShootAmmo(user, weapon, angle, ammo);
                     break;
                 case SharedProjectileComponent proj:
                     // TODO: Support firing ammo or whatever it spawns instead.
-                    ShootProjectile(null, weapon, angle, proj, 20f);
+                    ShootProjectile(user, weapon, angle, proj, 20f);
                     break;
                 case HitscanPrototype hitscan:
-                    ShootHitscan(null, weapon, hitscan, angle);
+                    ShootHitscan(user, weapon, hitscan, angle);
                     break;
                 // Client-side support
                 case null:
@@ -138,6 +143,15 @@ namespace Content.Shared.GameObjects.EntitySystems
                 default:
                     throw new NotImplementedException($"Projectile type {projectile?.GetType()} not implemented!");
             }
+
+            var sound = weapon.SoundGunshot;
+
+            if (sound != null)
+            {
+                SoundSystem.Play(GetFilter(user, weapon), sound, AudioHelpers.WithVariation(0.01f));
+            }
+
+            // TODO: Update GunAmmoCounter
 
             return true;
         }
@@ -147,7 +161,7 @@ namespace Content.Shared.GameObjects.EntitySystems
         /// </summary>
         /// <param name="gun"></param>
         /// <returns></returns>
-        protected abstract Filter GetFilter(SharedGunComponent gun);
+        protected abstract Filter GetFilter(IEntity user, SharedGunComponent gun);
 
         protected abstract Filter GetFilter(SharedAmmoProviderComponent ammoProvider);
 
@@ -169,14 +183,17 @@ namespace Content.Shared.GameObjects.EntitySystems
 
             if (currentTime < weapon.NextFire)
             {
-                return false;
+                return true;
             }
 
             if (!weapon.CanFire())
             {
+                if (weapon.FireRate > 0f)
+                    weapon.NextFire += TimeSpan.FromSeconds(1 / weapon.FireRate);
+
                 // TODO: Empty variation and volume
                 if (weapon.SoundEmpty != null)
-                    SoundSystem.Play(GetFilter(weapon), weapon.SoundEmpty, weapon.Owner);
+                    SoundSystem.Play(GetFilter(user, weapon), weapon.SoundEmpty, weapon.Owner);
 
                 return false;
             }
@@ -192,7 +209,7 @@ namespace Content.Shared.GameObjects.EntitySystems
                 lastFire = weapon.NextFire;
 
                 // Mainly check if we can get more bullets (e.g. if there's only 1 left in the clip).
-                if (!TryShoot(weapon, spread))
+                if (!TryShoot(user, weapon, spread))
                     break;
 
                 firedShots++;
@@ -203,6 +220,7 @@ namespace Content.Shared.GameObjects.EntitySystems
             if (firedShots == 0)
                 return false;
 
+            // MuzzleFlash(user, weapon.Owner, );
             weapon.UpdateAppearance();
             return true;
         }
@@ -242,7 +260,7 @@ namespace Content.Shared.GameObjects.EntitySystems
 
             public MapCoordinates Coordinates { get; }
 
-            public int Shots { get; }
+            public int Shots { get; set; }
 
             public TimeSpan Time { get; }
 

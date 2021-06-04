@@ -8,6 +8,7 @@ using Content.Shared.GameObjects.Components.Weapons.Guns;
 using Content.Shared.GameObjects.EntitySystems;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Robust.Server.GameObjects;
+using Robust.Server.Player;
 using Robust.Shared.Audio;
 using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
@@ -216,21 +217,32 @@ namespace Content.Server.GameObjects.EntitySystems
 
             for (var i = _shootQueue.Count - 1; i >= 0; i--)
             {
-                var msg = _shootQueue[i];
-                if (HandleShoot(msg, currentTime))
+                var (msg, user) = _shootQueue[i];
+                if (HandleShoot(user, msg, currentTime))
                 {
                     _shootQueue.RemoveAt(i);
-                    Logger.DebugS("gun", $"Shot gun {msg.Gun} at {currentTime}");
                 }
             }
+        }
+
+        private void ResetShoot(SharedGunComponent gunComponent, TimeSpan currentTime)
+        {
+            gunComponent.ShotCounter = 0;
+            gunComponent.NextFire = TimeSpan.FromSeconds(Math.Max(gunComponent.NextFire.TotalSeconds, currentTime.TotalSeconds));
         }
 
         /// <summary>
         /// Try to pew pew the gun.
         /// </summary>
         /// <returns>true if the message has been handled regardless of whether it fired</returns>
-        private bool HandleShoot(ShootMessage message, TimeSpan currentTime)
+        private bool HandleShoot(IEntity user, ShootMessage message, TimeSpan currentTime)
         {
+            if (!EntityManager.TryGetEntity(message.Gun, out var gun) ||
+                !gun.TryGetComponent(out SharedGunComponent? gunComponent))
+            {
+                return true;
+            }
+
             var diff = (message.Time - currentTime).TotalSeconds;
 
             if (diff > 0)
@@ -238,36 +250,46 @@ namespace Content.Server.GameObjects.EntitySystems
                 if (diff > 5)
                 {
                     Logger.WarningS("gun", $"Found a ShootMessage for {message.Gun} that was significantly ahead?");
+                    ResetShoot(gunComponent, currentTime);
                     return true;
                 }
 
                 return false;
             }
 
-            if (!EntityManager.TryGetEntity(message.Gun, out var gun) ||
-                !gun.TryGetComponent(out SharedGunComponent? gunComponent))
-            {
-                return true;
-            }
-
             // TODO: Need to copy a lot of this shit from client to play sounds and stuff.
-            if (!gunComponent.CanFire())
+            if (!TryFire(user, gunComponent, message.Coordinates, out var shots, currentTime))
             {
+                ResetShoot(gunComponent, currentTime);
                 return true;
             }
 
-            // TODO: Need to set shot counter
+            message.Shots -= shots;
 
-            // TODO: Move this to shared
-            while (gunComponent.NextFire <= currentTime)
+            if (shots > 0)
             {
-                gunComponent.NextFire += TimeSpan.FromSeconds(1 / gunComponent.FireRate);
+                Logger.DebugS("gun", $"Shot gun {gunComponent.Owner} {shots} times at {currentTime}");
             }
 
+            if (message.Shots < 0)
+            {
+                // Uh ohh
+                Logger.ErrorS("gun", $"Fired too many shots for gun: {message.Gun} Expected {message.Shots + shots} but got {shots}");
+                ResetShoot(gunComponent, currentTime);
+                return true;
+            }
+
+            // Keep firing
+            if (message.Shots > 0)
+            {
+                return false;
+            }
+
+            ResetShoot(gunComponent, currentTime);
             return true;
         }
 
-        private List<ShootMessage> _shootQueue = new();
+        private List<(ShootMessage Message, IEntity user)> _shootQueue = new();
 
         private void HandleShoot(ShootMessage shootMessage, EntitySessionEventArgs session)
         {
@@ -282,28 +304,30 @@ namespace Content.Server.GameObjects.EntitySystems
                 return;
             }
 
-            if (!gun.TryGetContainerMan(out var manager) || manager.Owner != session.SenderSession.AttachedEntity)
+            var user = session.SenderSession.AttachedEntity;
+
+            if (!gun.TryGetContainerMan(out var manager) || manager.Owner != user)
             {
                 return;
             }
 
             if (_shootQueue.Count == 0)
             {
-                _shootQueue.Add(shootMessage);
+                _shootQueue.Add((shootMessage, user));
                 return;
             }
 
             for (var i = 0; i < _shootQueue.Count; i++)
             {
-                var msg = _shootQueue[i];
+                var (msg, _) = _shootQueue[i];
                 if (msg.Time > shootMessage.Time)
                 {
-                    _shootQueue.Insert(i, shootMessage);
+                    _shootQueue.Insert(i, (shootMessage, user));
                     return;
                 }
             }
 
-            _shootQueue.Add(shootMessage);
+            _shootQueue.Add((shootMessage, user));
         }
 
         public override void MuzzleFlash(IEntity? user, IEntity weapon, SharedAmmoComponent ammo, Angle angle, TimeSpan? currentTime = null,
@@ -489,12 +513,15 @@ namespace Content.Server.GameObjects.EntitySystems
             physicsComponent
                 .LinearVelocity = angle.ToVec() * velocity;
 
-            projectileComponent.Owner.Transform.WorldRotation = angle.Theta;
+            projectileComponent.Owner.Transform.WorldRotation = angle.Theta + MathF.PI / 2;
         }
 
-        protected override Filter GetFilter(SharedGunComponent gun)
+        protected override Filter GetFilter(IEntity user, SharedGunComponent gun)
         {
-            return Filter.Pvs(gun.Owner);
+            var filter = Filter.Pvs(gun.Owner);
+            var session = user.PlayerSession();
+
+            return session == null ? filter : filter.RemovePlayer(session);
         }
 
         protected override Filter GetFilter(SharedAmmoProviderComponent ammoProvider)

@@ -49,7 +49,7 @@ namespace Content.Server.GameObjects.EntitySystems.Weapon
                 return;
             }
 
-            if (component.AmmoCount >= component.AmmoCapacity)
+            if (component.AmmoCount >= ((SharedBallisticsAmmoProvider) component).AmmoMax)
             {
                 // TODO: Popup mag full
                 return;

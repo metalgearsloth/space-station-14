@@ -48,6 +48,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Gun
 
                 DebugTools.AssertNotNull(ammo);
                 Chamber.Insert(ammo.Owner);
+                ballistics.Dirty();
             }
         }
     }

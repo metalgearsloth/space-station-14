@@ -7,8 +7,6 @@ namespace Content.Server.GameObjects.Components.Weapon.Gun
     [RegisterComponent]
     internal sealed class RevolverAmmoProviderComponent : SharedRevolverAmmoProviderComponent
     {
-        public override int AmmoCount { get; }
-        public override int AmmoMax { get; }
         public override bool TryGetProjectile([NotNullWhen(true)] out IProjectile? projectile)
         {
             throw new System.NotImplementedException();

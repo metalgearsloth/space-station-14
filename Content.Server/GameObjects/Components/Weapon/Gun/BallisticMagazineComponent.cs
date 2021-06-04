@@ -1,10 +1,14 @@
+using System;
 using System.Diagnostics.CodeAnalysis;
+using Content.Shared.GameObjects;
 using Content.Shared.GameObjects.Components.Projectiles;
 using Content.Shared.GameObjects.Components.Weapons.Guns;
 using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
 using Robust.Shared.IoC;
+using Robust.Shared.Players;
 using Robust.Shared.Prototypes;
+using Robust.Shared.Serialization;
 using Robust.Shared.Utility;
 
 namespace Content.Server.GameObjects.Components.Weapon.Gun
@@ -15,8 +19,6 @@ namespace Content.Server.GameObjects.Components.Weapon.Gun
     [ComponentReference(typeof(SharedBallisticsAmmoProvider))]
     internal sealed class BallisticMagazineComponent : SharedBallisticMagazineComponent
     {
-        public override int AmmoMax { get; }
-
         public Container AmmoContainer = default!;
 
         /// <inheritdoc />
@@ -32,12 +34,15 @@ namespace Content.Server.GameObjects.Components.Weapon.Gun
                 UnspawnedCount -= AmmoContainer.ContainedEntities.Count;
             }
 
-            DebugTools.Assert(AmmoCount <= AmmoCapacity);
-
             if (Owner.TryGetComponent(out SharedAppearanceComponent? appearanceComponent))
             {
                 UpdateAppearance(appearanceComponent);
             }
+        }
+
+        public override ComponentState GetComponentState(ICommonSession player)
+        {
+            return new BallisticMagazineComponentState(AmmoCount, AmmoMax);
         }
 
         public override bool TryGetProjectile([NotNullWhen(true)] out IProjectile? projectile)
