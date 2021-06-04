@@ -36,6 +36,41 @@ namespace Content.Server.GameObjects.EntitySystems
             _broadphase = Get<SharedBroadPhaseSystem>();
             SubscribeNetworkEvent<ShootMessage>(HandleShoot);
             SubscribeLocalEvent<SharedChamberedGunComponent, UseInHandMessage>(HandleUse);
+            SubscribeLocalEvent<SharedGunComponent, InteractUsingMessage>(HandleInteractUsing);
+            SubscribeLocalEvent<SharedChamberedGunComponent, InteractUsingMessage>(HandleChamberedInteractUsing);
+        }
+
+        private void HandleChamberedInteractUsing(EntityUid uid, SharedChamberedGunComponent component, InteractUsingMessage args)
+        {
+            if (!args.ItemInHand.TryGetComponent(out SharedAmmoComponent? ammoComponent)) return;
+
+            if (component.Chamber.ContainedEntity != null)
+            {
+                // TODO: Chamber is full
+                return;
+            }
+
+            if (component.BoltClosed)
+            {
+                // TODO: Need to open bolt
+                return;
+            }
+
+            component.Chamber.Insert(ammoComponent.Owner);
+            component.UpdateAppearance();
+
+            // TODO: Sound for dis
+        }
+
+        private void HandleInteractUsing(EntityUid uid, SharedGunComponent component, InteractUsingMessage args)
+        {
+            if (args.ItemInHand.TryGetComponent(out SharedAmmoProviderComponent? ammoProviderComponent))
+            {
+                TryInsertMagazine(component, ammoProviderComponent);
+                return;
+            }
+
+            // TODO: Attachments
         }
 
         private void HandleUse(EntityUid uid, SharedChamberedGunComponent component, UseInHandMessage args)
@@ -43,7 +78,7 @@ namespace Content.Server.GameObjects.EntitySystems
             var mag = component.Magazine;
 
             // TODO: predict someday
-            if (mag == null || !component.BoltClosed)
+            if (mag == null || !component.BoltClosed && mag.AmmoCount > 0)
             {
                 ToggleBolt(component);
                 return;
@@ -51,11 +86,15 @@ namespace Content.Server.GameObjects.EntitySystems
 
             Cycle(component, args.User, true);
 
-            if (!Chambered(component) && mag.AmmoCount == 0)
+            if (Chambered(component) || mag.AmmoCount != 0) return;
+
+            if (component.BoltClosed)
             {
                 ToggleBolt(component);
+            }
+            else
+            {
                 EjectMagazine(component);
-                return;
             }
         }
 
@@ -68,17 +107,48 @@ namespace Content.Server.GameObjects.EntitySystems
 
             component.MagazineSlot.Remove(mag.Owner);
 
-            var sound = component.SoundMagEject;
-
-            if (!string.IsNullOrEmpty(sound))
-                SoundSystem.Play(Filter.Pvs(component.Owner), sound);
-
             var offsetPos = ((RobustRandom.NextFloat() - 0.5f) * MagEjectOffset, (RobustRandom.NextFloat() - 0.5f) * MagEjectOffset);
             var transform = mag.Owner.Transform;
 
             transform.Coordinates = transform.Coordinates.Offset(offsetPos);
             transform.LocalRotation = RobustRandom.Pick(_ejectDirections).ToAngle();
             component.UpdateAppearance();
+
+            var sound = component.SoundMagEject;
+
+            if (!string.IsNullOrEmpty(sound))
+                SoundSystem.Play(Filter.Pvs(component.Owner), sound);
+        }
+
+        private bool TryInsertMagazine(SharedGunComponent component, SharedAmmoProviderComponent mag)
+        {
+            if (component.InternalMagazine) return false;
+
+            var existing = component.Magazine;
+
+            if (existing != null)
+            {
+                // TODO: Popup message that one already there
+                return false;
+            }
+
+            if (mag.MagazineType != component.MagazineType)
+            {
+                // TODO: Popup wrong caliber
+                return false;
+            }
+
+            component.MagazineSlot.Insert(mag.Owner);
+            component.UpdateAppearance();
+
+            var sound = component.SoundMagInsert;
+
+            if (!string.IsNullOrEmpty(sound))
+            {
+                SoundSystem.Play(Filter.Pvs(component.Owner), sound);
+            }
+
+            return true;
         }
 
         private bool Chambered(SharedChamberedGunComponent component)
@@ -94,6 +164,11 @@ namespace Content.Server.GameObjects.EntitySystems
             }
 
             component.TryFeedChamber();
+
+            var mag = component.Magazine;
+
+            if (component.AutoEjectOnEmpty && mag != null && mag.AmmoCount == 0 && component.Chamber.ContainedEntity == null)
+                EjectMagazine(component);
 
             if (manual)
             {
