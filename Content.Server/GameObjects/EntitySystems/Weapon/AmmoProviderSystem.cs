@@ -31,14 +31,14 @@ namespace Content.Server.GameObjects.EntitySystems.Weapon
         public override void Initialize()
         {
             base.Initialize();
-            SubscribeLocalEvent<BallisticMagazineComponent, UseInHandMessage>(HandleUseEntity);
-            SubscribeLocalEvent<BallisticMagazineComponent, InteractUsingMessage>(HandleInteractUsing);
+            SubscribeLocalEvent<BallisticMagazineComponent, UseInHandEvent>(HandleUseEntity);
+            SubscribeLocalEvent<BallisticMagazineComponent, InteractUsingEvent>(HandleInteractUsing);
         }
 
-        private void HandleInteractUsing(EntityUid uid, BallisticMagazineComponent component, InteractUsingMessage args)
+        private void HandleInteractUsing(EntityUid uid, BallisticMagazineComponent component, InteractUsingEvent args)
         {
             // If it's not ammo don't spam em
-            if (!args.ItemInHand.TryGetComponent(out SharedAmmoComponent? ammoComponent))
+            if (!args.Used.TryGetComponent(out SharedAmmoComponent? ammoComponent))
             {
                 return;
             }
@@ -68,7 +68,7 @@ namespace Content.Server.GameObjects.EntitySystems.Weapon
 
         }
 
-        private void HandleUseEntity(EntityUid uid, BallisticMagazineComponent component, UseInHandMessage args)
+        private void HandleUseEntity(EntityUid uid, BallisticMagazineComponent component, UseInHandEvent args)
         {
             if (!component.TryGetAmmo(out var ammo)) return;
 

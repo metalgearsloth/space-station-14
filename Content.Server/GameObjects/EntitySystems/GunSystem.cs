@@ -35,14 +35,14 @@ namespace Content.Server.GameObjects.EntitySystems
             base.Initialize();
             _broadphase = Get<SharedBroadPhaseSystem>();
             SubscribeNetworkEvent<ShootMessage>(HandleShoot);
-            SubscribeLocalEvent<SharedChamberedGunComponent, UseInHandMessage>(HandleUse);
-            SubscribeLocalEvent<SharedGunComponent, InteractUsingMessage>(HandleInteractUsing);
-            SubscribeLocalEvent<SharedChamberedGunComponent, InteractUsingMessage>(HandleChamberedInteractUsing);
+            SubscribeLocalEvent<SharedChamberedGunComponent, UseInHandEvent>(HandleUse);
+            SubscribeLocalEvent<SharedGunComponent, InteractUsingEvent>(HandleInteractUsing);
+            SubscribeLocalEvent<SharedChamberedGunComponent, InteractUsingEvent>(HandleChamberedInteractUsing);
         }
 
-        private void HandleChamberedInteractUsing(EntityUid uid, SharedChamberedGunComponent component, InteractUsingMessage args)
+        private void HandleChamberedInteractUsing(EntityUid uid, SharedChamberedGunComponent component, InteractUsingEvent args)
         {
-            if (!args.ItemInHand.TryGetComponent(out SharedAmmoComponent? ammoComponent)) return;
+            if (!args.Used.TryGetComponent(out SharedAmmoComponent? ammoComponent)) return;
 
             if (component.Chamber.ContainedEntity != null)
             {
@@ -62,9 +62,9 @@ namespace Content.Server.GameObjects.EntitySystems
             // TODO: Sound for dis
         }
 
-        private void HandleInteractUsing(EntityUid uid, SharedGunComponent component, InteractUsingMessage args)
+        private void HandleInteractUsing(EntityUid uid, SharedGunComponent component, InteractUsingEvent args)
         {
-            if (args.ItemInHand.TryGetComponent(out SharedAmmoProviderComponent? ammoProviderComponent))
+            if (args.Used.TryGetComponent(out SharedAmmoProviderComponent? ammoProviderComponent))
             {
                 TryInsertMagazine(component, ammoProviderComponent);
                 return;
@@ -73,7 +73,7 @@ namespace Content.Server.GameObjects.EntitySystems
             // TODO: Attachments
         }
 
-        private void HandleUse(EntityUid uid, SharedChamberedGunComponent component, UseInHandMessage args)
+        private void HandleUse(EntityUid uid, SharedChamberedGunComponent component, UseInHandEvent args)
         {
             var mag = component.Magazine;
 
@@ -132,7 +132,7 @@ namespace Content.Server.GameObjects.EntitySystems
                 return false;
             }
 
-            if (mag.MagazineType != component.MagazineType)
+            if ((component.MagazineTypes & mag.MagazineType) == 0)
             {
                 // TODO: Popup wrong caliber
                 return false;

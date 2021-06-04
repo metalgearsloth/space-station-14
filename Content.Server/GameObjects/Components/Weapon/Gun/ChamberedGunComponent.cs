@@ -5,6 +5,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Gun
 {
     [RegisterComponent]
     [ComponentReference(typeof(SharedChamberedGunComponent))]
+    [ComponentReference(typeof(SharedGunComponent))]
     internal sealed class ChamberedGunComponent : SharedChamberedGunComponent
     {
     }

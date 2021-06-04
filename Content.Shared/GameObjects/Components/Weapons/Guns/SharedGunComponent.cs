@@ -6,6 +6,7 @@ using Robust.Shared.Audio;
 using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
 using Robust.Shared.IoC;
+using Robust.Shared.Log;
 using Robust.Shared.Maths;
 using Robust.Shared.Player;
 using Robust.Shared.Prototypes;
@@ -23,7 +24,6 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         SharedAmmoProviderComponent? Magazine { get; }
     }
 
-    [ComponentReference(typeof(SharedGunComponent))]
     public abstract class SharedChamberedGunComponent : SharedGunComponent, IGun
     {
         // Gun + a chamber + bolt
@@ -193,8 +193,8 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         private string? _magazinePrototype;
 
         [ViewVariables]
-        [DataField("magazineType")]
-        public GunMagazine MagazineType { get; } = GunMagazine.Unspecified;
+        [DataField("magazineTypes")]
+        public GunMagazine MagazineTypes { get; } = GunMagazine.Unspecified;
 
         [ViewVariables]
         [DataField("currentSelector")]
@@ -280,6 +280,14 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
             if (InternalMagazine && MagazineSlot.ContainedEntity == null)
             {
                 throw new InvalidOperationException();
+            }
+
+            var mago = Magazine;
+
+            if (mago != null && (MagazineTypes & mago.MagazineType) == 0)
+            {
+                // This can still work but it just means we can't put the mag back in
+                Logger.ErrorS("gun", $"{Owner} has a magazine with a different type than its allowed types!");
             }
         }
 
