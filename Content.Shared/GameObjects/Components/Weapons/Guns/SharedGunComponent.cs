@@ -105,41 +105,9 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         /// </summary>
         /// <param name="ammo"></param>
         /// <returns></returns>
-        public bool TryPopChamber([NotNullWhen(true)] out SharedAmmoComponent? ammo)
-        {
-            var chambered = Chamber.ContainedEntity;
+        public abstract bool TryPopChamber([NotNullWhen(true)] out SharedAmmoComponent? ammo);
 
-            if (chambered != null)
-            {
-                Chamber.Remove(chambered);
-                ammo = chambered.GetComponent<SharedAmmoComponent>();
-                return true;
-            }
-
-            ammo = null;
-            return false;
-        }
-
-        public void TryFeedChamber()
-        {
-            if (Chamber.ContainedEntity != null) return;
-            var magazine = MagazineSlot?.ContainedEntity;
-
-            if (magazine == null) return;
-
-            var ballistics = magazine.GetComponent<SharedBallisticsAmmoProvider>();
-
-            if (ballistics.TryGetAmmo(out var ammo))
-            {
-                if (ballistics.Owner.TryGetComponent(out SharedAppearanceComponent? appearanceComponent))
-                {
-                    ballistics.UpdateAppearance(appearanceComponent);
-                }
-
-                DebugTools.AssertNotNull(ammo);
-                Chamber.Insert(ammo.Owner);
-            }
-        }
+        public abstract void TryFeedChamber();
     }
 
     public abstract class SharedGunComponent : Component, IGun

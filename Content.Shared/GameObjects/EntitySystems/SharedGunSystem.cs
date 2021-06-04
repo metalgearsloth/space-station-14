@@ -83,13 +83,22 @@ namespace Content.Shared.GameObjects.EntitySystems
                         return false;
                     }
 
+                    // TODO: Client needs all of the fuckery as we don't have a lot of stuff predicted
+                    // (e.g. using a stack and stuff).
 
-                    chamberedGun.TryPopChamber(out var ammo);
+                    // TODO: Remove the ShootAmmo and have this get the projectile
+                    // TODO: This is duped with Cycle
+                    if (chamberedGun.TryPopChamber(out var ammo))
+                    {
+                        EjectCasing(null, ammo.Owner);
+                    }
+
+                    // TODO: Cycle instead
                     chamberedGun.TryFeedChamber();
                     projectile = ammo;
                     break;
                 case SharedGunComponent gun:
-                    var magazine = weapon.Magazine;
+                    var magazine = gun.Magazine;
 
                     if (magazine == null)
                     {
@@ -122,6 +131,9 @@ namespace Content.Shared.GameObjects.EntitySystems
                     break;
                 case HitscanPrototype hitscan:
                     ShootHitscan(null, weapon, hitscan, angle);
+                    break;
+                // Client-side support
+                case null:
                     break;
                 default:
                     throw new NotImplementedException($"Projectile type {projectile?.GetType()} not implemented!");
@@ -191,7 +203,6 @@ namespace Content.Shared.GameObjects.EntitySystems
             if (firedShots == 0)
                 return false;
 
-            // TODO: HANDLE AUTOEJECT HERE
             weapon.UpdateAppearance();
             return true;
         }

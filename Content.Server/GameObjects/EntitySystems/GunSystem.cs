@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Content.Shared.Audio;
 using Content.Shared.GameObjects.Components.Damage;
@@ -8,6 +9,7 @@ using Content.Shared.GameObjects.EntitySystems;
 using Content.Shared.Interfaces.GameObjects.Components;
 using Robust.Server.GameObjects;
 using Robust.Shared.Audio;
+using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Log;
 using Robust.Shared.Maths;
@@ -207,8 +209,65 @@ namespace Content.Server.GameObjects.EntitySystems
         public override void Update(float frameTime)
         {
             base.Update(frameTime);
-            // TODO: Handle queued shoot messages and stuff
+
+            if (_shootQueue.Count == 0) return;
+
+            var currentTime = GameTiming.CurTime;
+
+            for (var i = _shootQueue.Count - 1; i >= 0; i--)
+            {
+                var msg = _shootQueue[i];
+                if (HandleShoot(msg, currentTime))
+                {
+                    _shootQueue.RemoveAt(i);
+                    Logger.DebugS("gun", $"Shot gun {msg.Gun} at {currentTime}");
+                }
+            }
         }
+
+        /// <summary>
+        /// Try to pew pew the gun.
+        /// </summary>
+        /// <returns>true if the message has been handled regardless of whether it fired</returns>
+        private bool HandleShoot(ShootMessage message, TimeSpan currentTime)
+        {
+            var diff = (message.Time - currentTime).TotalSeconds;
+
+            if (diff > 0)
+            {
+                if (diff > 5)
+                {
+                    Logger.WarningS("gun", $"Found a ShootMessage for {message.Gun} that was significantly ahead?");
+                    return true;
+                }
+
+                return false;
+            }
+
+            if (!EntityManager.TryGetEntity(message.Gun, out var gun) ||
+                !gun.TryGetComponent(out SharedGunComponent? gunComponent))
+            {
+                return true;
+            }
+
+            // TODO: Need to copy a lot of this shit from client to play sounds and stuff.
+            if (!gunComponent.CanFire())
+            {
+                return true;
+            }
+
+            // TODO: Need to set shot counter
+
+            // TODO: Move this to shared
+            while (gunComponent.NextFire <= currentTime)
+            {
+                gunComponent.NextFire += TimeSpan.FromSeconds(1 / gunComponent.FireRate);
+            }
+
+            return true;
+        }
+
+        private List<ShootMessage> _shootQueue = new();
 
         private void HandleShoot(ShootMessage shootMessage, EntitySessionEventArgs session)
         {
@@ -218,7 +277,33 @@ namespace Content.Server.GameObjects.EntitySystems
                 return;
             }
 
-            Logger.Debug("Handle shoot!");
+            if (!EntityManager.TryGetEntity(shootMessage.Gun, out var gun))
+            {
+                return;
+            }
+
+            if (!gun.TryGetContainerMan(out var manager) || manager.Owner != session.SenderSession.AttachedEntity)
+            {
+                return;
+            }
+
+            if (_shootQueue.Count == 0)
+            {
+                _shootQueue.Add(shootMessage);
+                return;
+            }
+
+            for (var i = 0; i < _shootQueue.Count; i++)
+            {
+                var msg = _shootQueue[i];
+                if (msg.Time > shootMessage.Time)
+                {
+                    _shootQueue.Insert(i, shootMessage);
+                    return;
+                }
+            }
+
+            _shootQueue.Add(shootMessage);
         }
 
         public override void MuzzleFlash(IEntity? user, IEntity weapon, SharedAmmoComponent ammo, Angle angle, TimeSpan? currentTime = null,

@@ -10,6 +10,7 @@ using Robust.Client.Player;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Input;
 using Robust.Shared.IoC;
+using Robust.Shared.Log;
 using Robust.Shared.Maths;
 using Robust.Shared.Player;
 
@@ -80,6 +81,7 @@ namespace Content.Client.GameObjects.EntitySystems
 
             if (TryFire(player, _firingWeapon, mouseCoordinates, out var shots, currentTime))
             {
+                Logger.DebugS("gun", $"Fired {shots} shots at {currentTime}");
                 RaiseNetworkEvent(new ShootMessage(_firingWeapon.Owner.Uid, mouseCoordinates, shots, currentTime));
             }
         }
