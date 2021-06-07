@@ -85,9 +85,11 @@ namespace Content.Client.GameObjects.EntitySystems
 
             if (TryFire(player, _firingWeapon, mouseCoordinates, out var shots, currentTime) && shots > 0)
             {
-                if (player.TryGetComponent(out SharedCameraRecoilComponent? cameraRecoil))
+                var kickBack = _firingWeapon.KickBack;
+
+                if (kickBack > 0.0f && player.TryGetComponent(out SharedCameraRecoilComponent? cameraRecoil))
                 {
-                    cameraRecoil.Kick(-fireAngle.ToVec() * 0.15f);
+                    cameraRecoil.Kick(-fireAngle.ToVec() * kickBack * shots);
                 }
 
                 Logger.DebugS("gun", $"Fired {shots} shots at {currentTime}");

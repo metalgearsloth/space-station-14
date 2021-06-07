@@ -143,6 +143,13 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         [DataField("soundMagEject")]
         public string? SoundMagEject { get; private set; }
 
+        /// <summary>
+        /// How much camera recoil there is when shooting.
+        /// </summary>
+        [ViewVariables(VVAccess.ReadWrite)]
+        [DataField("kickBack")]
+        public float KickBack { get; private set; } = 0.15f;
+
         [ViewVariables]
         [DataField("muzzleFlash")]
         public string? MuzzleFlash { get; private set; } = "Objects/Weapons/Guns/Projectiles/bullet_muzzle.png";
