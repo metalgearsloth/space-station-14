@@ -13,9 +13,17 @@ using Robust.Shared.ViewVariables;
 
 namespace Content.Client.GameObjects.Components.Weapons.Gun
 {
+    // Temporary Event don't fucken @ me
+    internal sealed class AmmoCounterDirtyEvent : EntityEventArgs
+    {
+
+    }
+
     [RegisterComponent]
     internal sealed class BallisticAmmoCounterComponent : SharedAmmoCounterComponent, IItemStatus
     {
+        // TODO: make this handle both battery and ballistics?
+
         /// <summary>
         ///     True if a bullet is chambered.
         /// </summary>
@@ -42,6 +50,8 @@ namespace Content.Client.GameObjects.Components.Weapons.Gun
 
         public Control MakeControl()
         {
+            // TODO: God this is ugly but interactions aren't predicted
+            Owner.EntityManager.EventBus.RaiseLocalEvent(Owner.Uid, new AmmoCounterDirtyEvent());
             _statusControl = new StatusControl(this);
             _statusControl.Update();
             return _statusControl;
@@ -49,10 +59,10 @@ namespace Content.Client.GameObjects.Components.Weapons.Gun
 
         public void DestroyControl(Control control)
         {
-            if (_statusControl == control)
-            {
-                _statusControl = null;
-            }
+            if (_statusControl != control) return;
+
+            Owner.EntityManager.EventBus.RaiseLocalEvent(Owner.Uid, new AmmoCounterDirtyEvent());
+            _statusControl = null;
         }
 
         private sealed class StatusControl : Control

@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using Content.Shared.GameObjects.Components.Weapons.Guns;
+using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
 
 namespace Content.Client.GameObjects.Components.Weapons.Gun
@@ -11,33 +12,12 @@ namespace Content.Client.GameObjects.Components.Weapons.Gun
     [ComponentReference(typeof(SharedBallisticsAmmoProvider))]
     internal sealed class BallisticMagazineComponent : SharedBallisticMagazineComponent
     {
-        public bool? Chamber { get; set; }
-
         // TODO
         public bool HasMagazine { get; set; }
 
-        public bool?[] Magazine { get; set; } = Array.Empty<bool?>();
+        public override int AmmoCount => Magazine ?? 0;
 
-        public override int AmmoCount
-        {
-            get
-            {
-                var count = 0;
-
-                for (var i = 0; i < Magazine.Length; i++)
-                {
-                    if (Magazine[i] != null)
-                    {
-                        count++;
-                        continue;
-                    }
-
-                    return count;
-                }
-
-                return count;
-            }
-        }
+        public int? Magazine { get; private set; }
 
         public override void Initialize()
         {
@@ -47,11 +27,9 @@ namespace Content.Client.GameObjects.Components.Weapons.Gun
                 UpdateAppearance(appearanceComponent);
             }
 
-            Magazine = new bool?[AmmoMax];
-
             if (FillPrototype != null)
             {
-                Magazine[^1] = null;
+                Magazine = AmmoMax - 1;
             }
         }
 
@@ -62,24 +40,27 @@ namespace Content.Client.GameObjects.Components.Weapons.Gun
 
             var uiDirty = false;
 
-            /* TODO
-            if (_ammoCount != state.AmmoCount)
+            if (AmmoMax != state.AmmoMax)
             {
-                _ammoCount = state.AmmoCount;
+                AmmoMax = state.AmmoMax;
                 uiDirty = true;
             }
-            */
 
-            AmmoMax = state.AmmoMax;
+            // TODO: Desyncs and shit on this.
+            if (AmmoCount != state.AmmoCount)
+            {
+                Magazine = state.AmmoCount;
+                uiDirty = true;
+            }
 
             if (Owner.TryGetComponent(out SharedAppearanceComponent? appearanceComponent))
             {
                 UpdateAppearance(appearanceComponent);
             }
 
-            if (uiDirty)
+            if (uiDirty && Owner.TryGetContainerMan(out var man) && man.Owner.TryGetComponent(out ChamberedGunComponent? chamberedGun))
             {
-                Owner.EntityManager.EventBus.RaiseLocalEvent(Owner.Uid, new AmmoUpdateEvent(Chamber != null, AmmoCount, AmmoMax));
+                Owner.EntityManager.EventBus.RaiseLocalEvent(chamberedGun.Owner.Uid, new AmmoUpdateEvent(chamberedGun.Chamber != null, AmmoCount, AmmoMax));
             }
 
             Dirty();
@@ -87,12 +68,25 @@ namespace Content.Client.GameObjects.Components.Weapons.Gun
 
         public override bool TryGetProjectile([NotNullWhen(true)] out IProjectile? projectile)
         {
-            throw new System.NotImplementedException();
+            throw new NotImplementedException();
         }
 
         public override bool TryGetAmmo([NotNullWhen(true)] out SharedAmmoComponent? ammo)
         {
-            throw new System.NotImplementedException();
+            throw new NotImplementedException();
+        }
+
+        public bool TryPopAmmo([NotNullWhen(true)] out bool? ammo)
+        {
+            if (Magazine is null or <= 0)
+            {
+                ammo = null;
+                return false;
+            }
+
+            ammo = true;
+            Magazine--;
+            return true;
         }
     }
 
@@ -100,9 +94,9 @@ namespace Content.Client.GameObjects.Components.Weapons.Gun
     {
         public bool Chambered { get; }
         public int? MagazineAmmo { get; }
-        public int MagazineMax { get; }
+        public int? MagazineMax { get; }
 
-        public AmmoUpdateEvent(bool chambered, int? magazineAmmo, int magazineMax)
+        public AmmoUpdateEvent(bool chambered, int? magazineAmmo, int? magazineMax)
         {
             Chambered = chambered;
             MagazineAmmo = magazineAmmo;

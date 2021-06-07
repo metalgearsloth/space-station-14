@@ -30,6 +30,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         // Look it's kinda weird but I couldn't see a cleaner way to do it so be my guest if you want to change it.
 
         public override string Name => "ChamberedGun";
+        public override uint? NetID => ContentNetIDs.CHAMBERED_GUN;
 
         // Sounds
         [ViewVariables]
@@ -54,6 +55,9 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         [ViewVariables]
         [DataField("caliber")]
         public GunCaliber Caliber { get; } = GunCaliber.Unspecified;
+
+        public SharedBallisticsAmmoProvider? BallisticsMagazine =>
+            Magazine?.Owner.GetComponent<SharedBallisticMagazineComponent>();
 
         public override void Initialize()
         {
@@ -98,7 +102,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
             var mag = Magazine;
 
             if (Chamber.ContainedEntity == null && (mag == null ||
-                mag.AmmoCount == 0)) return false;
+                mag.AmmoCount <= 0)) return false;
 
             return true;
         }
@@ -119,6 +123,20 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         public abstract bool TryPopChamber([NotNullWhen(true)] out SharedAmmoComponent? ammo);
 
         public abstract void TryFeedChamber();
+
+        [Serializable, NetSerializable]
+        protected sealed class ChamberedGunComponentState : ComponentState
+        {
+            public bool? Chamber { get; }
+
+            public bool BoltClosed { get; }
+
+            public ChamberedGunComponentState(bool? chamber, bool boltClosed) : base(ContentNetIDs.CHAMBERED_GUN)
+            {
+                Chamber = chamber;
+                BoltClosed = boltClosed;
+            }
+        }
     }
 
     public abstract class SharedGunComponent : Component, IGun

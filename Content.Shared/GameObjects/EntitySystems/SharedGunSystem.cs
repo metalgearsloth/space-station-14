@@ -23,6 +23,12 @@ namespace Content.Shared.GameObjects.EntitySystems
 
         protected const float EffectDuration = 0.5f;
 
+        protected abstract void Cycle(SharedChamberedGunComponent component, IEntity? user = null, bool manual = false);
+
+        protected abstract void EjectMagazine(SharedGunComponent component);
+
+        protected abstract void ToggleBolt(SharedChamberedGunComponent component);
+
         /// <summary>
         ///     Show the muzzle flash for the weapon.
         /// </summary>
@@ -85,13 +91,7 @@ namespace Content.Shared.GameObjects.EntitySystems
                         EjectCasing(null, ammo.Owner);
                     }
 
-                    // TODO: Cycle instead
-                    chamberedGun.TryFeedChamber();
-
-                    if (chamberedGun.Chamber.ContainedEntity == null)
-                    {
-                        // TODO: Toggle bolt.
-                    }
+                    Cycle(chamberedGun, user);
 
                     projectile = ammo;
                     break;

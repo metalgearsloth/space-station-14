@@ -11,6 +11,7 @@
     state: icon
   - type: Item
     size: 24
+  - type: AmmoCounter
   - type: ChamberedGun
     soundGunshot: /Audio/Weapons/Guns/Gunshots/smg.ogg
     soundMagInsert: /Audio/Weapons/Guns/MagIn/smg_magin.ogg

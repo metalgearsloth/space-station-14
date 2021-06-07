@@ -103,6 +103,8 @@ namespace Content.Shared.GameObjects
         public const uint BALLISTIC_AMMO_PROVIDER = 1093;
         public const uint BATTERY_AMMO_PROVIDER = 1094;
         public const uint REAGENT_AMMO_PROVIDER = 1095;
+
+        public const uint CHAMBERED_GUN = 1096;
         // Net IDs for integration tests.
         public const uint PREDICTION_TEST = 10001;
     }

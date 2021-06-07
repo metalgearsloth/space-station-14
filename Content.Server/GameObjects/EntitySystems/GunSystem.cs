@@ -92,17 +92,10 @@ namespace Content.Server.GameObjects.EntitySystems
 
             if (Chambered(component) || mag.AmmoCount != 0) return;
 
-            if (component.BoltClosed)
-            {
-                ToggleBolt(component);
-            }
-            else
-            {
-                EjectMagazine(component);
-            }
+            EjectMagazine(component);
         }
 
-        private void EjectMagazine(SharedGunComponent component)
+        protected override void EjectMagazine(SharedGunComponent component)
         {
             if (component.InternalMagazine) return;
 
@@ -160,7 +153,7 @@ namespace Content.Server.GameObjects.EntitySystems
             return component.Chamber.ContainedEntity != null;
         }
 
-        private void Cycle(SharedChamberedGunComponent component, IEntity? user = null, bool manual = false)
+        protected override void Cycle(SharedChamberedGunComponent component, IEntity? user = null, bool manual = false)
         {
             if (component.TryPopChamber(out var ammo))
             {
@@ -171,8 +164,13 @@ namespace Content.Server.GameObjects.EntitySystems
 
             var mag = component.Magazine;
 
-            if (component.AutoEjectOnEmpty && mag != null && mag.AmmoCount == 0 && component.Chamber.ContainedEntity == null)
-                EjectMagazine(component);
+            if (mag is {AmmoCount: 0} && component.Chamber.ContainedEntity == null)
+            {
+                ToggleBolt(component);
+
+                if (component.AutoEjectOnEmpty)
+                    EjectMagazine(component);
+            }
 
             if (manual)
             {
@@ -185,11 +183,12 @@ namespace Content.Server.GameObjects.EntitySystems
             }
         }
 
-        private void ToggleBolt(SharedChamberedGunComponent component)
+        protected override void ToggleBolt(SharedChamberedGunComponent component)
         {
             var bolt = component.BoltClosed;
 
             component.BoltClosed ^= true;
+            component.Dirty();
             component.UpdateAppearance();
             string? sound;
 

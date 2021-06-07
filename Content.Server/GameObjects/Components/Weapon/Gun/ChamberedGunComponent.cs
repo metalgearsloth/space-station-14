@@ -1,6 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
 using Content.Shared.GameObjects.Components.Weapons.Guns;
 using Robust.Shared.GameObjects;
+using Robust.Shared.Players;
 using Robust.Shared.Utility;
 
 namespace Content.Server.GameObjects.Components.Weapon.Gun
@@ -10,6 +11,11 @@ namespace Content.Server.GameObjects.Components.Weapon.Gun
     [ComponentReference(typeof(SharedGunComponent))]
     internal sealed class ChamberedGunComponent : SharedChamberedGunComponent
     {
+        public override ComponentState GetComponentState(ICommonSession player)
+        {
+            return new ChamberedGunComponentState(Chamber.ContainedEntity != null, BoltClosed);
+        }
+
         /// <summary>
         /// Tries to pop the currently chambered entity.
         /// </summary>
@@ -23,6 +29,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Gun
             {
                 Chamber.Remove(chambered);
                 ammo = chambered.GetComponent<SharedAmmoComponent>();
+                Dirty();
                 return true;
             }
 
@@ -48,6 +55,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Gun
 
                 DebugTools.AssertNotNull(ammo);
                 Chamber.Insert(ammo.Owner);
+                Dirty();
                 ballistics.Dirty();
             }
         }

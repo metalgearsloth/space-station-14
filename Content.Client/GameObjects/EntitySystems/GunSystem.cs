@@ -1,5 +1,6 @@
 using System;
 using Content.Client.GameObjects.Components.Items;
+using Content.Client.GameObjects.Components.Weapons.Gun;
 using Content.Shared.GameObjects.Components.Mobs;
 using Content.Shared.GameObjects.Components.Projectiles;
 using Content.Shared.GameObjects.Components.Weapons.Guns;
@@ -58,6 +59,7 @@ namespace Content.Client.GameObjects.EntitySystems
 
             var currentTime = GameTiming.CurTime;
             var state = _inputSystem.CmdStates.GetState(EngineKeyFunctions.Use);
+
             if (!_combatModeSystem.IsInCombatMode() || state != BoundKeyState.Down)
             {
                 StopFiring(currentTime);
@@ -92,6 +94,18 @@ namespace Content.Client.GameObjects.EntitySystems
                     cameraRecoil.Kick(-fireAngle.ToVec() * kickBack * shots);
                 }
 
+                switch (_firingWeapon)
+                {
+                    case ChamberedGunComponent chamberedGun:
+                        var mag = chamberedGun.Magazine;
+
+                        EntityManager.EventBus.RaiseLocalEvent(
+                            _firingWeapon.Owner.Uid,
+                            new AmmoUpdateEvent(chamberedGun.Chamber != null, mag?.AmmoCount, mag?.AmmoMax));
+
+                        break;
+                }
+
                 Logger.DebugS("gun", $"Fired {shots} shots at {currentTime}");
                 RaiseNetworkEvent(new ShootMessage(_firingWeapon.Owner.Uid, mouseCoordinates, shots, currentTime));
             }
@@ -107,6 +121,41 @@ namespace Content.Client.GameObjects.EntitySystems
 
                 _firingWeapon.ShotCounter = 0;
             }
+        }
+
+        protected override void Cycle(SharedChamberedGunComponent component, IEntity? user = null, bool manual = false)
+        {
+            if (component is not ChamberedGunComponent chamberedGun) return;
+
+            if (component.TryPopChamber(out var ammo))
+            {
+                // EjectCasing(user, ammo.Owner);
+            }
+
+            component.TryFeedChamber();
+
+            var mag = component.Magazine;
+
+            if (mag is {AmmoCount: 0} && chamberedGun.Chamber == null)
+            {
+                ToggleBolt(chamberedGun);
+
+                if (component.AutoEjectOnEmpty)
+                    EjectMagazine(component);
+            }
+        }
+
+        protected override void EjectMagazine(SharedGunComponent component)
+        {
+            return;
+        }
+
+        protected override void ToggleBolt(SharedChamberedGunComponent component)
+        {
+            component.BoltClosed ^= true;
+            // Server will play sound for now until more predicted (main reason is the interactions aren't done client-side
+            // so we can't really predict all cases of the bolt being toggled).
+            component.UpdateAppearance();
         }
 
         public override void MuzzleFlash(IEntity? user, SharedGunComponent weapon, Angle angle, TimeSpan currentTime, bool predicted = false)

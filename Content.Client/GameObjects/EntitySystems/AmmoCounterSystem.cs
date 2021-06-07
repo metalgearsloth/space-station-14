@@ -1,6 +1,6 @@
 using System;
 using Content.Client.GameObjects.Components.Weapons.Gun;
-using Content.Shared.Interfaces.GameObjects.Components;
+using Content.Shared.GameObjects.Components.Weapons.Guns;
 using Robust.Client.Animations;
 using Robust.Client.Player;
 using Robust.Client.UserInterface.Controls;
@@ -20,6 +20,31 @@ namespace Content.Client.GameObjects.EntitySystems
         {
             base.Initialize();
             SubscribeLocalEvent<BallisticAmmoCounterComponent, AmmoUpdateEvent>(HandleAmmoUpdate);
+            SubscribeLocalEvent<BallisticAmmoCounterComponent, AmmoCounterDirtyEvent>(HandleDirty);
+        }
+
+        private void HandleDirty(EntityUid uid, BallisticAmmoCounterComponent component, AmmoCounterDirtyEvent args)
+        {
+            var player = _playerManager.LocalPlayer?.ControlledEntity;
+
+            if (!component.Owner.TryGetComponent(out SharedChamberedGunComponent? chamberedGun) ||
+                !chamberedGun.Owner.TryGetContainerMan(out var containerMan) ||
+                containerMan.Owner != player)
+            {
+                return;
+            }
+
+            component.Chambered = chamberedGun.Chamber.ContainedEntity != null;
+            var mag = chamberedGun.Magazine;
+
+            if (mag == null)
+            {
+                component.MagazineCount = null;
+            }
+            else
+            {
+                component.MagazineCount = (mag.AmmoCount, mag.AmmoMax);
+            }
         }
 
         private void HandleAmmoUpdate(EntityUid uid, BallisticAmmoCounterComponent component, AmmoUpdateEvent args)
@@ -31,13 +56,13 @@ namespace Content.Client.GameObjects.EntitySystems
                 conMan.Owner != player) return;
 
             component.Chambered = args.Chambered;
-            if (args.MagazineAmmo == null)
+            if (args.MagazineAmmo == null || args.MagazineMax == null)
             {
                 component.MagazineCount = null;
             }
             else
             {
-                component.MagazineCount = (args.MagazineAmmo.Value, args.MagazineMax);
+                component.MagazineCount = (args.MagazineAmmo.Value, args.MagazineMax.Value);
             }
 
             component.UpdateControl();
