@@ -32,6 +32,8 @@ namespace Content.Client.GameObjects.EntitySystems
 
         private SharedGunComponent? _firingWeapon;
 
+        private bool _firing;
+
         public override void Initialize()
         {
             base.Initialize();
@@ -81,6 +83,12 @@ namespace Content.Client.GameObjects.EntitySystems
             if (_firingWeapon == null)
                 return;
 
+            if (!_firing)
+            {
+                _firingWeapon.NextFire = TimeSpan.FromSeconds(Math.Max(_firingWeapon.NextFire.TotalSeconds, currentTime.TotalSeconds));
+                _firing = true;
+            }
+
             var mouseCoordinates = _eyeManager.ScreenToMap(_inputManager.MouseScreenPosition);
             var fireAngle = (mouseCoordinates.Position - player.Transform.WorldPosition).ToAngle();
 
@@ -129,6 +137,8 @@ namespace Content.Client.GameObjects.EntitySystems
 
                 _firingWeapon.ShotCounter = 0;
             }
+
+            _firing = false;
         }
 
         protected override void Cycle(SharedChamberedGunComponent component, IEntity? user = null, bool manual = false)

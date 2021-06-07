@@ -163,13 +163,6 @@ namespace Content.Shared.GameObjects.EntitySystems
             firedShots = 0;
             var lastFire = weapon.NextFire;
 
-            // If it's first shot we'll just set it to now.
-            if (weapon.ShotCounter == 0 && weapon.NextFire <= currentTime)
-            {
-                weapon.LastFire = weapon.NextFire;
-                weapon.NextFire = currentTime.Value;
-            }
-
             if (currentTime < weapon.NextFire)
             {
                 return true;
@@ -192,7 +185,6 @@ namespace Content.Shared.GameObjects.EntitySystems
             // To handle guns with firerates higher than framerate / tickrate
             while (weapon.NextFire <= currentTime)
             {
-                weapon.LastFire = weapon.NextFire;
                 weapon.NextFire += TimeSpan.FromSeconds(1 / weapon.FireRate);
                 var spread = GetWeaponSpread(weapon, lastFire, fireAngle);
                 muzzleAngle += spread;
@@ -266,7 +258,7 @@ namespace Content.Shared.GameObjects.EntitySystems
 
             public int Shots { get; set; }
 
-            public TimeSpan Time { get; }
+            public TimeSpan Time { get; set; }
 
             public ShootMessage(EntityUid gun, MapCoordinates coordinates, int shots, TimeSpan time)
             {

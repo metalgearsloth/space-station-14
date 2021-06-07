@@ -261,11 +261,6 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         public Angle MaxAngle { get; set; }
 
         /// <summary>
-        /// Last time we pulled a projectile.
-        /// </summary>
-        public TimeSpan LastFire { get; set; }
-
-        /// <summary>
         /// Earliest time we can pull another projectile
         /// </summary>
         public TimeSpan NextFire { get; set; }

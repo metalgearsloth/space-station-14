@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Content.Shared.Audio;
 using Content.Shared.GameObjects.Components.Damage;
+using Content.Shared.GameObjects.Components.Mobs;
 using Content.Shared.GameObjects.Components.Projectiles;
 using Content.Shared.GameObjects.Components.Weapons.Guns;
 using Content.Shared.GameObjects.EntitySystems;
@@ -12,6 +13,7 @@ using Robust.Server.Player;
 using Robust.Shared.Audio;
 using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
+using Robust.Shared.Input;
 using Robust.Shared.Log;
 using Robust.Shared.Maths;
 using Robust.Shared.Physics;
@@ -25,6 +27,7 @@ namespace Content.Server.GameObjects.EntitySystems
     {
         private EffectSystem _effectSystem = default!;
         private SharedBroadPhaseSystem _broadphase = default!;
+        private InputSystem _inputSystem = default!;
 
         private const float BoltVariation = 0.01f;
         private const float BoltVolume = 0.0f;
@@ -33,12 +36,15 @@ namespace Content.Server.GameObjects.EntitySystems
 
         private static Direction[] _ejectDirections = {Direction.East, Direction.North, Direction.NorthWest, Direction.South, Direction.SouthEast, Direction.West};
 
+        private Dictionary<EntityUid, int> _firing = new();
+
         public override void Initialize()
         {
             base.Initialize();
             _broadphase = Get<SharedBroadPhaseSystem>();
             _effectSystem = Get<EffectSystem>();
-            SubscribeNetworkEvent<ShootMessage>(HandleShoot);
+            _inputSystem = Get<InputSystem>();
+            SubscribeNetworkEvent<ShootMessage>(HandleShootMessage);
             SubscribeLocalEvent<SharedChamberedGunComponent, UseInHandEvent>(HandleUse);
             SubscribeLocalEvent<SharedGunComponent, InteractUsingEvent>(HandleInteractUsing);
             SubscribeLocalEvent<SharedChamberedGunComponent, InteractUsingEvent>(HandleChamberedInteractUsing);
@@ -233,6 +239,17 @@ namespace Content.Server.GameObjects.EntitySystems
                 if (HandleShoot(user, msg, currentTime))
                 {
                     _shootQueue.RemoveAt(i);
+                    var fireCounter = _firing[user.Uid];
+                    fireCounter -= 1;
+
+                    if (fireCounter <= 0)
+                    {
+                        _firing.Remove(user.Uid);
+                    }
+                    else
+                    {
+                        _firing[user.Uid] = fireCounter;
+                    }
                 }
             }
         }
@@ -249,6 +266,21 @@ namespace Content.Server.GameObjects.EntitySystems
         /// <returns>true if the message has been handled regardless of whether it fired</returns>
         private bool HandleShoot(IEntity user, ShootMessage message, TimeSpan currentTime)
         {
+            if (!user.TryGetComponent(out SharedCombatModeComponent? combatMode) ||
+                !combatMode.IsInCombatMode)
+            {
+                return true;
+            }
+
+            var session = user.PlayerSession();
+
+            if (session != null &&
+                _inputSystem.GetInputStates(session).GetState(EngineKeyFunctions.Use) !=
+                BoundKeyState.Down)
+            {
+                return true;
+            }
+
             if (!EntityManager.TryGetEntity(message.Gun, out var gun) ||
                 !gun.TryGetComponent(out SharedGunComponent? gunComponent))
             {
@@ -303,7 +335,7 @@ namespace Content.Server.GameObjects.EntitySystems
 
         private List<(ShootMessage Message, IEntity user)> _shootQueue = new();
 
-        private void HandleShoot(ShootMessage shootMessage, EntitySessionEventArgs session)
+        private void HandleShootMessage(ShootMessage shootMessage, EntitySessionEventArgs session)
         {
             if (shootMessage.Shots == 0)
             {
@@ -321,6 +353,23 @@ namespace Content.Server.GameObjects.EntitySystems
             if (!gun.TryGetContainerMan(out var manager) || manager.Owner != user)
             {
                 return;
+            }
+
+            var currentTime = GameTiming.CurTime;
+
+            if (shootMessage.Time < currentTime)
+            {
+                Logger.WarningS("gun", $"Received past message for shooting from {session}, earliest is {currentTime} and received {shootMessage.Time}");
+                shootMessage.Time = currentTime;
+            }
+
+            if (!_firing.ContainsKey(user.Uid))
+            {
+                var gunComp = gun.GetComponent<SharedGunComponent>();
+
+                gunComp.NextFire =
+                    TimeSpan.FromSeconds(Math.Max(gunComp.NextFire.TotalSeconds, currentTime.TotalSeconds));
+                _firing[user.Uid] = 1;
             }
 
             if (_shootQueue.Count == 0)
