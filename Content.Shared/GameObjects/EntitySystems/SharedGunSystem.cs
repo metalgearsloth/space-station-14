@@ -26,14 +26,7 @@ namespace Content.Shared.GameObjects.EntitySystems
         /// <summary>
         ///     Show the muzzle flash for the weapon.
         /// </summary>
-        /// <param name="user"></param>
-        /// <param name="weapon"></param>
-        /// <param name="ammo"></param>
-        /// <param name="angle"></param>
-        /// <param name="predicted">Whether we also need to show the effect for the client. Eventually this shouldn't be needed (when we can predict hitscan / weapon recoil)</param>
-        /// <param name="currentTime"></param>
-        /// <param name="alphaRatio"></param>
-        public abstract void MuzzleFlash(IEntity? user, IEntity weapon, SharedAmmoComponent ammo, Angle angle, TimeSpan? currentTime = null, bool predicted = false, float alphaRatio = 1.0f);
+        public abstract void MuzzleFlash(IEntity? user, SharedGunComponent weapon, Angle angle, TimeSpan currentTime, bool predicted = false);
 
         public abstract void EjectCasing(IEntity? user, IEntity casing, bool playSound = true);
 
@@ -151,8 +144,6 @@ namespace Content.Shared.GameObjects.EntitySystems
                 SoundSystem.Play(GetFilter(user, weapon), sound, AudioHelpers.WithVariation(0.01f));
             }
 
-            // TODO: Update GunAmmoCounter
-
             return true;
         }
 
@@ -170,6 +161,7 @@ namespace Content.Shared.GameObjects.EntitySystems
         /// </summary>
         protected bool TryFire(IEntity user, SharedGunComponent weapon, MapCoordinates coordinates, out int firedShots, TimeSpan? currentTime = null)
         {
+            // TODO: Change MapCoordinates to Angle to optimise client
             currentTime ??= GameTiming.CurTime;
             firedShots = 0;
             var lastFire = weapon.NextFire;
@@ -199,6 +191,7 @@ namespace Content.Shared.GameObjects.EntitySystems
             }
 
             var fireAngle = (coordinates.Position - user.Transform.WorldPosition).ToAngle();
+            var muzzleAngle = Angle.Zero;
 
             // To handle guns with firerates higher than framerate / tickrate
             while (weapon.NextFire <= currentTime)
@@ -206,6 +199,7 @@ namespace Content.Shared.GameObjects.EntitySystems
                 weapon.LastFire = weapon.NextFire;
                 weapon.NextFire += TimeSpan.FromSeconds(1 / weapon.FireRate);
                 var spread = GetWeaponSpread(weapon, lastFire, fireAngle);
+                muzzleAngle += spread;
                 lastFire = weapon.NextFire;
 
                 // Mainly check if we can get more bullets (e.g. if there's only 1 left in the clip).
@@ -220,7 +214,21 @@ namespace Content.Shared.GameObjects.EntitySystems
             if (firedShots == 0)
                 return false;
 
-            // MuzzleFlash(user, weapon.Owner, );
+            // TODO: Eventually muzzle should be handled by the projectile itself (so we can mix hitscan and projectile freely)
+            // but because no entity creation prediction we'll just store it on the gun for now.
+            if (weapon.CanMuzzleFlash)
+            {
+                switch (weapon)
+                {
+                    case SharedChamberedGunComponent _:
+                        MuzzleFlash(user, weapon, fireAngle, currentTime.Value, true);
+                        break;
+                    default:
+                        MuzzleFlash(user, weapon, fireAngle, currentTime.Value);
+                        break;
+                }
+            }
+
             weapon.UpdateAppearance();
             return true;
         }

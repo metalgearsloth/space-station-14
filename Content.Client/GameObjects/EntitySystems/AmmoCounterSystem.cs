@@ -19,23 +19,10 @@ namespace Content.Client.GameObjects.EntitySystems
         public override void Initialize()
         {
             base.Initialize();
-            SubscribeLocalEvent<AmmoCounterComponent, AmmoUpdateEvent>(HandleAmmoUpdate);
-            SubscribeLocalEvent<AmmoCounterComponent, EquippedEvent>(HandleEquipped);
-            SubscribeLocalEvent<AmmoCounterComponent, UnequippedEvent>(HandleUnequipped);
-            // TODO: Equip and un-equip
+            SubscribeLocalEvent<BallisticAmmoCounterComponent, AmmoUpdateEvent>(HandleAmmoUpdate);
         }
 
-        private void HandleUnequipped(EntityUid uid, AmmoCounterComponent component, UnequippedEvent args)
-        {
-            return;
-        }
-
-        private void HandleEquipped(EntityUid uid, AmmoCounterComponent component, EquippedEvent args)
-        {
-            return;
-        }
-
-        private void HandleAmmoUpdate(EntityUid uid, AmmoCounterComponent component, AmmoUpdateEvent args)
+        private void HandleAmmoUpdate(EntityUid uid, BallisticAmmoCounterComponent component, AmmoUpdateEvent args)
         {
             var player = _playerManager.LocalPlayer?.ControlledEntity;
 
@@ -43,10 +30,20 @@ namespace Content.Client.GameObjects.EntitySystems
                 !component.Owner.TryGetContainerMan(out var conMan) ||
                 conMan.Owner != player) return;
 
-            // TODO: UI Shiznit
+            component.Chambered = args.Chambered;
+            if (args.MagazineAmmo == null)
+            {
+                component.MagazineCount = null;
+            }
+            else
+            {
+                component.MagazineCount = (args.MagazineAmmo.Value, args.MagazineMax);
+            }
+
+            component.UpdateControl();
         }
 
-        private readonly Animation AlarmAnimationSmg = new()
+        internal static readonly Animation AlarmAnimationSmg = new()
         {
             Length = TimeSpan.FromSeconds(1.4),
             AnimationTracks =
@@ -69,7 +66,7 @@ namespace Content.Client.GameObjects.EntitySystems
             }
         };
 
-        private readonly Animation AlarmAnimationLmg = new()
+        internal static readonly Animation AlarmAnimationLmg = new()
         {
             Length = TimeSpan.FromSeconds(0.75),
             AnimationTracks =

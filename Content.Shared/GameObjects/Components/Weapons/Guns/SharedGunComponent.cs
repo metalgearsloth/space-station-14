@@ -95,7 +95,10 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
                 return false;
             }
 
-            if (Chamber.ContainedEntity == null && Magazine == null) return false;
+            var mag = Magazine;
+
+            if (Chamber.ContainedEntity == null && (mag == null ||
+                mag.AmmoCount == 0)) return false;
 
             return true;
         }
@@ -126,19 +129,27 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         // Sounds (TODO: Copy existing)
         [ViewVariables]
         [DataField("soundGunshot")]
-        public string? SoundGunshot { get; } = null;
+        public string? SoundGunshot { get; private set; } = "/Audio/Weapons/Guns/Gunshots/smg.ogg";
 
         [ViewVariables]
         [DataField("soundEmpty")]
-        public string? SoundEmpty { get; } = "/Audio/Weapons/Guns/Empty/empty.ogg";
+        public string? SoundEmpty { get; private set; } = "/Audio/Weapons/Guns/Empty/empty.ogg";
 
         [ViewVariables]
         [DataField("soundMagInsert")]
-        public string? SoundMagInsert { get; }
+        public string? SoundMagInsert { get; private set; }
 
         [ViewVariables]
         [DataField("soundMagEject")]
-        public string? SoundMagEject { get; }
+        public string? SoundMagEject { get; private set; }
+
+        [ViewVariables]
+        [DataField("muzzleFlash")]
+        public string? MuzzleFlash { get; private set; } = "Objects/Weapons/Guns/Projectiles/bullet_muzzle.png";
+
+        [ViewVariables]
+        [DataField("canMuzzleFlash")]
+        public bool CanMuzzleFlash { get; set; } = true;
 
         // If our bolt is open then we can directly insert ammo into it.
         // This is useful for stuff that is single-shot and has no need for any kind of magazine.
@@ -291,10 +302,6 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
             {
                 return false;
             }
-
-            var mag = Magazine;
-
-            if (mag?.AmmoCount == 0) return false;
 
             return true;
         }

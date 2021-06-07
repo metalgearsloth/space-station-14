@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics.CodeAnalysis;
 using Content.Shared.GameObjects.Components.Weapons.Guns;
 using Robust.Shared.GameObjects;
@@ -10,9 +11,33 @@ namespace Content.Client.GameObjects.Components.Weapons.Gun
     [ComponentReference(typeof(SharedBallisticsAmmoProvider))]
     internal sealed class BallisticMagazineComponent : SharedBallisticMagazineComponent
     {
-        public override int AmmoCount => _ammoCount;
+        public bool? Chamber { get; set; }
 
-        private int _ammoCount;
+        // TODO
+        public bool HasMagazine { get; set; }
+
+        public bool?[] Magazine { get; set; } = Array.Empty<bool?>();
+
+        public override int AmmoCount
+        {
+            get
+            {
+                var count = 0;
+
+                for (var i = 0; i < Magazine.Length; i++)
+                {
+                    if (Magazine[i] != null)
+                    {
+                        count++;
+                        continue;
+                    }
+
+                    return count;
+                }
+
+                return count;
+            }
+        }
 
         public override void Initialize()
         {
@@ -22,9 +47,11 @@ namespace Content.Client.GameObjects.Components.Weapons.Gun
                 UpdateAppearance(appearanceComponent);
             }
 
+            Magazine = new bool?[AmmoMax];
+
             if (FillPrototype != null)
             {
-                _ammoCount = AmmoMax - 1;
+                Magazine[^1] = null;
             }
         }
 
@@ -33,17 +60,26 @@ namespace Content.Client.GameObjects.Components.Weapons.Gun
             base.HandleComponentState(curState, nextState);
             if (curState is not BallisticMagazineComponentState state || nextState != null) return;
 
+            var uiDirty = false;
+
+            /* TODO
             if (_ammoCount != state.AmmoCount)
             {
                 _ammoCount = state.AmmoCount;
-                Owner.EntityManager.EventBus.RaiseLocalEvent(Owner.Uid, new AmmoUpdateEvent());
+                uiDirty = true;
             }
+            */
 
             AmmoMax = state.AmmoMax;
 
             if (Owner.TryGetComponent(out SharedAppearanceComponent? appearanceComponent))
             {
                 UpdateAppearance(appearanceComponent);
+            }
+
+            if (uiDirty)
+            {
+                Owner.EntityManager.EventBus.RaiseLocalEvent(Owner.Uid, new AmmoUpdateEvent(Chamber != null, AmmoCount, AmmoMax));
             }
 
             Dirty();
@@ -60,5 +96,17 @@ namespace Content.Client.GameObjects.Components.Weapons.Gun
         }
     }
 
-    public sealed class AmmoUpdateEvent : EntityEventArgs {}
+    internal sealed class AmmoUpdateEvent : EntityEventArgs
+    {
+        public bool Chambered { get; }
+        public int? MagazineAmmo { get; }
+        public int MagazineMax { get; }
+
+        public AmmoUpdateEvent(bool chambered, int? magazineAmmo, int magazineMax)
+        {
+            Chambered = chambered;
+            MagazineAmmo = magazineAmmo;
+            MagazineMax = magazineMax;
+        }
+    }
 }

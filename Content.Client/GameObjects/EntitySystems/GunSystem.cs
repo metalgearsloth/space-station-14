@@ -1,5 +1,6 @@
 using System;
 using Content.Client.GameObjects.Components.Items;
+using Content.Shared.GameObjects.Components.Mobs;
 using Content.Shared.GameObjects.Components.Projectiles;
 using Content.Shared.GameObjects.Components.Weapons.Guns;
 using Content.Shared.GameObjects.EntitySystems;
@@ -24,6 +25,7 @@ namespace Content.Client.GameObjects.EntitySystems
 
         private CombatModeSystem _combatModeSystem = default!;
         private InputSystem _inputSystem = default!;
+        private EffectSystem _effectSystem = default!;
 
         private SharedGunComponent? _firingWeapon;
 
@@ -32,6 +34,7 @@ namespace Content.Client.GameObjects.EntitySystems
             base.Initialize();
             _combatModeSystem = Get<CombatModeSystem>();
             _inputSystem = Get<InputSystem>();
+            _effectSystem = Get<EffectSystem>();
         }
 
         private SharedGunComponent? GetRangedWeapon(IEntity entity)
@@ -78,9 +81,15 @@ namespace Content.Client.GameObjects.EntitySystems
                 return;
 
             var mouseCoordinates = _eyeManager.ScreenToMap(_inputManager.MouseScreenPosition);
+            var fireAngle = (mouseCoordinates.Position - player.Transform.WorldPosition).ToAngle();
 
             if (TryFire(player, _firingWeapon, mouseCoordinates, out var shots, currentTime) && shots > 0)
             {
+                if (player.TryGetComponent(out SharedCameraRecoilComponent? cameraRecoil))
+                {
+                    cameraRecoil.Kick(-fireAngle.ToVec() * 0.15f);
+                }
+
                 Logger.DebugS("gun", $"Fired {shots} shots at {currentTime}");
                 RaiseNetworkEvent(new ShootMessage(_firingWeapon.Owner.Uid, mouseCoordinates, shots, currentTime));
             }
@@ -98,10 +107,29 @@ namespace Content.Client.GameObjects.EntitySystems
             }
         }
 
-        public override void MuzzleFlash(IEntity? user, IEntity weapon, SharedAmmoComponent ammo, Angle angle, TimeSpan? currentTime = null,
-            bool predicted = false, float alphaRatio = 1)
+        public override void MuzzleFlash(IEntity? user, SharedGunComponent weapon, Angle angle, TimeSpan currentTime, bool predicted = false)
         {
-            throw new NotImplementedException();
+            if (!predicted || weapon.MuzzleFlash == null) return;
+
+            var deathTime = currentTime + TimeSpan.FromMilliseconds(200);
+            // Offset the sprite so it actually looks like it's coming from the gun
+            var offset = angle.ToVec().Normalized / 2;
+
+            var message = new EffectSystemMessage
+            {
+                EffectSprite = weapon.MuzzleFlash,
+                Born = currentTime,
+                DeathTime = deathTime,
+                AttachedEntityUid = weapon.Owner.Uid,
+                AttachedOffset = offset,
+                //Rotated from east facing
+                Rotation = (float) angle.Theta,
+                Color = Vector4.Multiply(new Vector4(255, 255, 255, 255), 1.0f),
+                ColorDelta = new Vector4(0, 0, 0, -1500f),
+                Shaded = false
+            };
+
+            _effectSystem.CreateEffect(message);
         }
 
         public override void EjectCasing(IEntity? user, IEntity casing, bool playSound = true)

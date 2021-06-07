@@ -53,13 +53,17 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
 
         public bool AmmoIsProjectile => _ammoIsProjectile;
 
-        // TODO: Particles or something less uggers
-        /// <summary>
-        /// Texture to use for a muzzle flash
-        /// </summary>
         [ViewVariables]
-        [DataField("muzzleFlash")]
-        public string? MuzzleFlash { get; } = null; // TODO: No null
+        [DataField("muzzleEffect")]
+        public string? MuzzleEffect { get; }
+
+        [ViewVariables]
+        [DataField("impactEffect")]
+        public string? ImpactEffect { get; }
+
+        [ViewVariables]
+        [DataField("travelEffect")]
+        public string? TravelEffect { get; }
 
         /// <summary>
         ///     Used for anything without a case that fires itself, like if you loaded a banana into a banana launcher.

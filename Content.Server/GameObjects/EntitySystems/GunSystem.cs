@@ -37,6 +37,7 @@ namespace Content.Server.GameObjects.EntitySystems
         {
             base.Initialize();
             _broadphase = Get<SharedBroadPhaseSystem>();
+            _effectSystem = Get<EffectSystem>();
             SubscribeNetworkEvent<ShootMessage>(HandleShoot);
             SubscribeLocalEvent<SharedChamberedGunComponent, UseInHandEvent>(HandleUse);
             SubscribeLocalEvent<SharedGunComponent, InteractUsingEvent>(HandleInteractUsing);
@@ -330,22 +331,21 @@ namespace Content.Server.GameObjects.EntitySystems
             _shootQueue.Add((shootMessage, user));
         }
 
-        public override void MuzzleFlash(IEntity? user, IEntity weapon, SharedAmmoComponent ammo, Angle angle, TimeSpan? currentTime = null,
-            bool predicted = false, float alphaRatio = 1)
+        public override void MuzzleFlash(IEntity? user, SharedGunComponent weapon, Angle angle, TimeSpan currentTime, bool predicted = false)
         {
-            if (ammo.MuzzleFlash == null) return;
+            if (weapon.MuzzleFlash == null) return;
 
-            var time = GameTiming.CurTime;
-            var deathTime = time + TimeSpan.FromMilliseconds(200);
+            // TODO: These get dropped in transit like a motherfucker at high ping.
+            var deathTime = currentTime + TimeSpan.FromMilliseconds(200);
             // Offset the sprite so it actually looks like it's coming from the gun
             var offset = angle.ToVec().Normalized / 2;
 
             var message = new EffectSystemMessage
             {
-                EffectSprite = ammo.MuzzleFlash,
-                Born = time,
+                EffectSprite = weapon.MuzzleFlash,
+                Born = currentTime,
                 DeathTime = deathTime,
-                AttachedEntityUid = weapon.Uid,
+                AttachedEntityUid = weapon.Owner.Uid,
                 AttachedOffset = offset,
                 //Rotated from east facing
                 Rotation = (float) angle.Theta,
@@ -354,7 +354,7 @@ namespace Content.Server.GameObjects.EntitySystems
                 Shaded = false
             };
 
-            _effectSystem.CreateParticle(message);
+            _effectSystem.CreateParticle(message, predicted ? user.PlayerSession() : null);
         }
 
         public override void EjectCasing(IEntity? user, IEntity casing, bool playSound = true)
