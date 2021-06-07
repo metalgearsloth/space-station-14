@@ -1,6 +1,7 @@
 using System;
 using Content.Client.GameObjects.Components.Items;
 using Content.Client.GameObjects.Components.Weapons.Gun;
+using Content.Shared.Audio;
 using Content.Shared.GameObjects.Components.Mobs;
 using Content.Shared.GameObjects.Components.Projectiles;
 using Content.Shared.GameObjects.Components.Weapons.Guns;
@@ -9,6 +10,7 @@ using Robust.Client.GameObjects;
 using Robust.Client.Graphics;
 using Robust.Client.Input;
 using Robust.Client.Player;
+using Robust.Shared.Audio;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Input;
 using Robust.Shared.IoC;
@@ -50,13 +52,8 @@ namespace Content.Client.GameObjects.EntitySystems
             return weapon;
         }
 
-        public override void Update(float frameTime)
+        private void GunUpdate(float frameTime)
         {
-            base.Update(frameTime);
-
-            if (!GameTiming.IsFirstTimePredicted)
-                return;
-
             var currentTime = GameTiming.CurTime;
             var state = _inputSystem.CmdStates.GetState(EngineKeyFunctions.Use);
 
@@ -87,13 +84,6 @@ namespace Content.Client.GameObjects.EntitySystems
 
             if (TryFire(player, _firingWeapon, mouseCoordinates, out var shots, currentTime) && shots > 0)
             {
-                var kickBack = _firingWeapon.KickBack;
-
-                if (kickBack > 0.0f && player.TryGetComponent(out SharedCameraRecoilComponent? cameraRecoil))
-                {
-                    cameraRecoil.Kick(-fireAngle.ToVec() * kickBack * shots);
-                }
-
                 switch (_firingWeapon)
                 {
                     case ChamberedGunComponent chamberedGun:
@@ -106,9 +96,32 @@ namespace Content.Client.GameObjects.EntitySystems
                         break;
                 }
 
-                Logger.DebugS("gun", $"Fired {shots} shots at {currentTime}");
-                RaiseNetworkEvent(new ShootMessage(_firingWeapon.Owner.Uid, mouseCoordinates, shots, currentTime));
+                if (GameTiming.IsFirstTimePredicted)
+                {
+                    var kickBack = _firingWeapon.KickBack;
+
+                    if (kickBack > 0.0f && player.TryGetComponent(out SharedCameraRecoilComponent? cameraRecoil))
+                    {
+                        cameraRecoil.Kick(-fireAngle.ToVec() * kickBack * shots);
+                    }
+
+                    Logger.DebugS("gun", $"Fired {shots} shots at {currentTime}");
+                    RaiseNetworkEvent(new ShootMessage(_firingWeapon.Owner.Uid, mouseCoordinates, shots, currentTime));
+                }
             }
+        }
+
+        public override void FrameUpdate(float frameTime)
+        {
+            base.FrameUpdate(frameTime);
+            GunUpdate(frameTime);
+        }
+
+        public override void Update(float frameTime)
+        {
+            base.Update(frameTime);
+
+            GunUpdate(frameTime);
         }
 
         private void StopFiring(TimeSpan currentTime)
@@ -158,9 +171,15 @@ namespace Content.Client.GameObjects.EntitySystems
             component.UpdateAppearance();
         }
 
+        protected override void PlayGunSound(IEntity? user, IEntity entity, string? sound, float variation = 0, float volume = 0)
+        {
+            if (string.IsNullOrEmpty(sound) || !GameTiming.IsFirstTimePredicted) return;
+            SoundSystem.Play(Filter.Local(), sound, AudioHelpers.WithVariation(variation).WithVolume(volume));
+        }
+
         public override void MuzzleFlash(IEntity? user, SharedGunComponent weapon, Angle angle, TimeSpan currentTime, bool predicted = false)
         {
-            if (!predicted || weapon.MuzzleFlash == null) return;
+            if (!predicted || weapon.MuzzleFlash == null || !GameTiming.IsFirstTimePredicted) return;
 
             var deathTime = currentTime + TimeSpan.FromMilliseconds(200);
             // Offset the sprite so it actually looks like it's coming from the gun

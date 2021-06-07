@@ -131,7 +131,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
 
             public bool BoltClosed { get; }
 
-            public ChamberedGunComponentState(bool? chamber, bool boltClosed) : base(ContentNetIDs.CHAMBERED_GUN)
+            public ChamberedGunComponentState(TimeSpan lastFire, bool? chamber, bool boltClosed) : base(ContentNetIDs.CHAMBERED_GUN)
             {
                 Chamber = chamber;
                 BoltClosed = boltClosed;
@@ -352,6 +352,17 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
             }
 
             // TODO: All the other appearance updates for bolts and shiznit.
+        }
+
+        [Serializable, NetSerializable]
+        protected class GunComponentState : ComponentState
+        {
+            public TimeSpan LastFire { get; }
+
+            public GunComponentState(TimeSpan lastFire) : base(ContentNetIDs.GUN)
+            {
+                LastFire = lastFire;
+            }
         }
     }
 

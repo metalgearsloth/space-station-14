@@ -207,6 +207,18 @@ namespace Content.Server.GameObjects.EntitySystems
             }
         }
 
+        protected override void PlayGunSound(IEntity? user, IEntity entity, string? sound, float variation = 0.0f, float volume = 0.0f)
+        {
+            if (string.IsNullOrEmpty(sound)) return;
+
+            var attached = user.PlayerSession();
+            var filter = Filter.Pvs(entity);
+            if (attached != null)
+                filter.RemovePlayer(attached);
+
+            SoundSystem.Play(filter, sound, AudioHelpers.WithVariation(variation).WithVolume(volume));
+        }
+
         public override void Update(float frameTime)
         {
             base.Update(frameTime);

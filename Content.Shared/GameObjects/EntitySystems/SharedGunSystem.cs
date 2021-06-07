@@ -29,6 +29,8 @@ namespace Content.Shared.GameObjects.EntitySystems
 
         protected abstract void ToggleBolt(SharedChamberedGunComponent component);
 
+        protected abstract void PlayGunSound(IEntity? user, IEntity entity, string? sound, float variation = 0.0f, float volume = 0.0f);
+
         /// <summary>
         ///     Show the muzzle flash for the weapon.
         /// </summary>
@@ -137,12 +139,7 @@ namespace Content.Shared.GameObjects.EntitySystems
                     throw new NotImplementedException($"Projectile type {projectile?.GetType()} not implemented!");
             }
 
-            var sound = weapon.SoundGunshot;
-
-            if (sound != null)
-            {
-                SoundSystem.Play(GetFilter(user, weapon), sound, AudioHelpers.WithVariation(0.01f));
-            }
+            PlayGunSound(user, weapon.Owner, weapon.SoundGunshot, 0.01f);
 
             return true;
         }
@@ -184,8 +181,7 @@ namespace Content.Shared.GameObjects.EntitySystems
                     weapon.NextFire += TimeSpan.FromSeconds(1 / weapon.FireRate);
 
                 // TODO: Empty variation and volume
-                if (weapon.SoundEmpty != null)
-                    SoundSystem.Play(GetFilter(user, weapon), weapon.SoundEmpty, weapon.Owner);
+                PlayGunSound(user, weapon.Owner, weapon.SoundEmpty);
 
                 return false;
             }
