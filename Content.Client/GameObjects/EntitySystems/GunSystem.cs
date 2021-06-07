@@ -52,6 +52,8 @@ namespace Content.Client.GameObjects.EntitySystems
             return weapon;
         }
 
+        private bool Prediction => !GameTiming.InSimulation || GameTiming.IsFirstTimePredicted;
+
         private void GunUpdate(float frameTime)
         {
             var currentTime = GameTiming.CurTime;
@@ -96,7 +98,7 @@ namespace Content.Client.GameObjects.EntitySystems
                         break;
                 }
 
-                if (GameTiming.IsFirstTimePredicted || !GameTiming.InSimulation)
+                if (Prediction)
                 {
                     var kickBack = _firingWeapon.KickBack;
 
@@ -111,16 +113,9 @@ namespace Content.Client.GameObjects.EntitySystems
             }
         }
 
-        public override void FrameUpdate(float frameTime)
-        {
-            base.FrameUpdate(frameTime);
-            GunUpdate(frameTime);
-        }
-
         public override void Update(float frameTime)
         {
             base.Update(frameTime);
-
             GunUpdate(frameTime);
         }
 
@@ -173,13 +168,13 @@ namespace Content.Client.GameObjects.EntitySystems
 
         protected override void PlayGunSound(IEntity? user, IEntity entity, string? sound, float variation = 0, float volume = 0)
         {
-            if (string.IsNullOrEmpty(sound) || !GameTiming.IsFirstTimePredicted && GameTiming.InSimulation) return;
+            if (string.IsNullOrEmpty(sound) || !Prediction) return;
             SoundSystem.Play(Filter.Local(), sound, AudioHelpers.WithVariation(variation).WithVolume(volume));
         }
 
         public override void MuzzleFlash(IEntity? user, SharedGunComponent weapon, Angle angle, TimeSpan currentTime, bool predicted = false)
         {
-            if (!predicted || weapon.MuzzleFlash == null || !GameTiming.IsFirstTimePredicted && GameTiming.InSimulation) return;
+            if (!predicted || weapon.MuzzleFlash == null || !Prediction) return;
 
             var deathTime = currentTime + TimeSpan.FromMilliseconds(200);
             // Offset the sprite so it actually looks like it's coming from the gun
