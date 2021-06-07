@@ -13,7 +13,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Gun
     {
         public override ComponentState GetComponentState(ICommonSession player)
         {
-            return new ChamberedGunComponentState(LastFire, Chamber.ContainedEntity != null, BoltClosed);
+            return new ChamberedGunComponentState(NextFire, Chamber.ContainedEntity != null, BoltClosed);
         }
 
         /// <summary>

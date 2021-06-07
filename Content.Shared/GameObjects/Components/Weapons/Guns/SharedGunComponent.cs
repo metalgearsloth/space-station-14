@@ -127,12 +127,15 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         [Serializable, NetSerializable]
         protected sealed class ChamberedGunComponentState : ComponentState
         {
+            public TimeSpan NextFire { get; }
+
             public bool? Chamber { get; }
 
             public bool BoltClosed { get; }
 
-            public ChamberedGunComponentState(TimeSpan lastFire, bool? chamber, bool boltClosed) : base(ContentNetIDs.CHAMBERED_GUN)
+            public ChamberedGunComponentState(TimeSpan nextFire, bool? chamber, bool boltClosed) : base(ContentNetIDs.CHAMBERED_GUN)
             {
+                NextFire = nextFire;
                 Chamber = chamber;
                 BoltClosed = boltClosed;
             }
@@ -357,11 +360,11 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         [Serializable, NetSerializable]
         protected class GunComponentState : ComponentState
         {
-            public TimeSpan LastFire { get; }
+            public TimeSpan NextFire { get; }
 
-            public GunComponentState(TimeSpan lastFire) : base(ContentNetIDs.GUN)
+            public GunComponentState(TimeSpan nextFire) : base(ContentNetIDs.GUN)
             {
-                LastFire = lastFire;
+                NextFire = nextFire;
             }
         }
     }

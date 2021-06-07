@@ -25,6 +25,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Gun
         {
             base.HandleComponentState(curState, nextState);
             if (curState is not ChamberedGunComponentState state) return;
+            NextFire = state.NextFire;
             Chamber = state.Chamber;
             BoltClosed = state.BoltClosed;
 

@@ -96,7 +96,7 @@ namespace Content.Client.GameObjects.EntitySystems
                         break;
                 }
 
-                if (GameTiming.IsFirstTimePredicted)
+                if (GameTiming.IsFirstTimePredicted || !GameTiming.InSimulation)
                 {
                     var kickBack = _firingWeapon.KickBack;
 
@@ -173,13 +173,13 @@ namespace Content.Client.GameObjects.EntitySystems
 
         protected override void PlayGunSound(IEntity? user, IEntity entity, string? sound, float variation = 0, float volume = 0)
         {
-            if (string.IsNullOrEmpty(sound) || !GameTiming.IsFirstTimePredicted) return;
+            if (string.IsNullOrEmpty(sound) || !GameTiming.IsFirstTimePredicted && GameTiming.InSimulation) return;
             SoundSystem.Play(Filter.Local(), sound, AudioHelpers.WithVariation(variation).WithVolume(volume));
         }
 
         public override void MuzzleFlash(IEntity? user, SharedGunComponent weapon, Angle angle, TimeSpan currentTime, bool predicted = false)
         {
-            if (!predicted || weapon.MuzzleFlash == null || !GameTiming.IsFirstTimePredicted) return;
+            if (!predicted || weapon.MuzzleFlash == null || !GameTiming.IsFirstTimePredicted && GameTiming.InSimulation) return;
 
             var deathTime = currentTime + TimeSpan.FromMilliseconds(200);
             // Offset the sprite so it actually looks like it's coming from the gun
@@ -200,6 +200,7 @@ namespace Content.Client.GameObjects.EntitySystems
             };
 
             _effectSystem.CreateEffect(message);
+
         }
 
         public override void EjectCasing(IEntity? user, IEntity casing, bool playSound = true)
