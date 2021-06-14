@@ -54,7 +54,7 @@ namespace Content.Client.GameObjects.EntitySystems
             return weapon;
         }
 
-        private bool Prediction => !GameTiming.InSimulation || GameTiming.IsFirstTimePredicted;
+        private bool _prediction;
 
         private void GunUpdate(float frameTime)
         {
@@ -106,7 +106,7 @@ namespace Content.Client.GameObjects.EntitySystems
                         break;
                 }
 
-                if (Prediction)
+                if (_prediction)
                 {
                     var kickBack = _firingWeapon.KickBack;
 
@@ -124,6 +124,14 @@ namespace Content.Client.GameObjects.EntitySystems
         public override void Update(float frameTime)
         {
             base.Update(frameTime);
+            _prediction = !GameTiming.InSimulation || !GameTiming.IsFirstTimePredicted;
+            GunUpdate(frameTime);
+        }
+
+        public override void FrameUpdate(float frameTime)
+        {
+            base.FrameUpdate(frameTime);
+            _prediction = true;
             GunUpdate(frameTime);
         }
 
@@ -178,13 +186,13 @@ namespace Content.Client.GameObjects.EntitySystems
 
         protected override void PlayGunSound(IEntity? user, IEntity entity, string? sound, float variation = 0, float volume = 0)
         {
-            if (string.IsNullOrEmpty(sound) || !Prediction) return;
+            if (string.IsNullOrEmpty(sound) || !_prediction) return;
             SoundSystem.Play(Filter.Local(), sound, AudioHelpers.WithVariation(variation).WithVolume(volume));
         }
 
         public override void MuzzleFlash(IEntity? user, SharedGunComponent weapon, Angle angle, TimeSpan currentTime, bool predicted = false)
         {
-            if (!predicted || weapon.MuzzleFlash == null || !Prediction) return;
+            if (!predicted || weapon.MuzzleFlash == null || !_prediction) return;
 
             var deathTime = currentTime + TimeSpan.FromMilliseconds(200);
             // Offset the sprite so it actually looks like it's coming from the gun

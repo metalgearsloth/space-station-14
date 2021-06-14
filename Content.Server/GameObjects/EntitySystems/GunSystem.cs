@@ -272,15 +272,6 @@ namespace Content.Server.GameObjects.EntitySystems
                 return true;
             }
 
-            var session = user.PlayerSession();
-
-            if (session != null &&
-                _inputSystem.GetInputStates(session).GetState(EngineKeyFunctions.Use) !=
-                BoundKeyState.Down)
-            {
-                return true;
-            }
-
             if (!EntityManager.TryGetEntity(message.Gun, out var gun) ||
                 !gun.TryGetComponent(out SharedGunComponent? gunComponent))
             {
@@ -369,8 +360,10 @@ namespace Content.Server.GameObjects.EntitySystems
 
                 gunComp.NextFire =
                     TimeSpan.FromSeconds(Math.Max(gunComp.NextFire.TotalSeconds, currentTime.TotalSeconds));
-                _firing[user.Uid] = 1;
+                _firing[user.Uid] = 0;
             }
+
+            _firing[user.Uid] += 1;
 
             if (_shootQueue.Count == 0)
             {
