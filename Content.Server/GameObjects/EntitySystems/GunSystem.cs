@@ -41,6 +41,8 @@ namespace Content.Server.GameObjects.EntitySystems
         public override void Initialize()
         {
             base.Initialize();
+            // TODO: Temp for debugging
+            Enabled = false;
             _broadphase = Get<SharedBroadPhaseSystem>();
             _effectSystem = Get<EffectSystem>();
             _inputSystem = Get<InputSystem>();
@@ -229,7 +231,7 @@ namespace Content.Server.GameObjects.EntitySystems
         {
             base.Update(frameTime);
 
-            if (_shootQueue.Count == 0) return;
+            if (_shootQueue.Count == 0 || !Enabled) return;
 
             var currentTime = GameTiming.CurTime;
 
@@ -328,6 +330,8 @@ namespace Content.Server.GameObjects.EntitySystems
 
         private void HandleShootMessage(ShootMessage shootMessage, EntitySessionEventArgs session)
         {
+            if (!Enabled) return;
+
             if (shootMessage.Shots == 0)
             {
                 Logger.ErrorS("gun", $"Received 0 shots message from {session.SenderSession}");
@@ -347,11 +351,13 @@ namespace Content.Server.GameObjects.EntitySystems
             }
 
             var currentTime = GameTiming.CurTime;
+            var diff = shootMessage.Time - currentTime;
+            const double clamp = -0.1;
 
-            if (shootMessage.Time < currentTime)
+            if (diff.TotalSeconds < clamp)
             {
                 Logger.WarningS("gun", $"Received past message for shooting from {session}, earliest is {currentTime} and received {shootMessage.Time}");
-                shootMessage.Time = currentTime;
+                shootMessage.Time = TimeSpan.FromSeconds(currentTime.TotalSeconds - clamp);
             }
 
             if (!_firing.ContainsKey(user.Uid))

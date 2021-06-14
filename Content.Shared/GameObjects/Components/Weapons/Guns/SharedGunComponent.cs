@@ -13,6 +13,7 @@ using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization;
 using Robust.Shared.Serialization.Manager.Attributes;
 using Robust.Shared.Serialization.TypeSerializers.Implementations.Custom.Prototype;
+using Robust.Shared.Timing;
 using Robust.Shared.Utility;
 using Robust.Shared.ViewVariables;
 
@@ -263,7 +264,18 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         /// <summary>
         /// Earliest time we can pull another projectile
         /// </summary>
-        public TimeSpan NextFire { get; set; }
+        public TimeSpan NextFire
+        {
+            get => _nextFire;
+            set
+            {
+                if (_nextFire.Equals(value)) return;
+                _nextFire = value;
+                Dirty();
+            }
+        }
+
+        private TimeSpan _nextFire;
 
         /// <summary>
         /// How many times we've fired in the current burst. Useful for tracking single-shot / burst-fire.
@@ -299,6 +311,8 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
                 // This can still work but it just means we can't put the mag back in
                 Logger.ErrorS("gun", $"{Owner} has a magazine with a different type than its allowed types!");
             }
+
+            NextFire = IoCManager.Resolve<IGameTiming>().CurTime;
         }
 
         public void ChangeSelector(GunFireSelector selector)

@@ -21,6 +21,8 @@ namespace Content.Shared.GameObjects.EntitySystems
         [Dependency] protected readonly IPrototypeManager PrototypeManager = default!;
         [Dependency] protected readonly IRobustRandom RobustRandom = default!;
 
+        protected bool Enabled { get; set; } = true;
+
         protected const float EffectDuration = 0.5f;
 
         protected abstract void Cycle(SharedChamberedGunComponent component, IEntity? user = null, bool manual = false);
