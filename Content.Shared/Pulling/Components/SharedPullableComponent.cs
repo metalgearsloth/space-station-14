@@ -13,6 +13,7 @@ using Robust.Shared.Physics;
 using Robust.Shared.Physics.Dynamics.Joints;
 using Robust.Shared.Players;
 using Robust.Shared.Serialization;
+using Robust.Shared.Utility;
 
 namespace Content.Shared.Pulling.Components
 {
@@ -57,6 +58,10 @@ namespace Content.Shared.Pulling.Components
                     var oldPullerPhysics = PullerPhysics;
 
                     _puller = null;
+                    if (_pullJoint != null)
+                        EntitySystem.Get<JointSystem>().RemoveJoint(_pullJoint);
+
+                    _pullJoint = null;
                     Dirty();
                     PullerPhysics = null;
 
@@ -156,7 +161,8 @@ namespace Content.Shared.Pulling.Components
                     var length = Math.Max(union.Size.X, union.Size.Y) * 0.75f;
 
                     _physics.WakeBody();
-                    _pullJoint = pullerPhysics.CreateDistanceJoint(_physics, $"pull-joint-{_physics.Owner.Uid}");
+                    DebugTools.AssertNull(_pullJoint);
+                    _pullJoint = EntitySystem.Get<JointSystem>().CreateDistanceJoint(pullerPhysics, _physics, id: $"pull-joint-{_physics.Owner.Uid}");
                     // _physics.BodyType = BodyType.Kinematic; // TODO: Need to consider their original bodytype
                     _pullJoint.CollideConnected = false;
                     _pullJoint.Length = length * 0.75f;
@@ -259,7 +265,7 @@ namespace Content.Shared.Pulling.Components
 
             if (_physics != null && _pullJoint != null)
             {
-                _physics.RemoveJoint(_pullJoint);
+                EntitySystem.Get<JointSystem>().RemoveJoint(_pullJoint);
             }
 
             _pullJoint = null;
