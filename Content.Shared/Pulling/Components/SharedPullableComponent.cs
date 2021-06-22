@@ -167,6 +167,7 @@ namespace Content.Shared.Pulling.Components
                     _pullJoint.CollideConnected = false;
                     _pullJoint.Length = length * 0.75f;
                     _pullJoint.MaxLength = length;
+                    _pullJoint.Breakpoint = 20000f;
                 }
                 // Code here will not run if pulling a new object was attempted and failed because of the returns from the refactor.
             }

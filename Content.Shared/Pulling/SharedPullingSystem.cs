@@ -14,6 +14,7 @@ using Robust.Shared.Input.Binding;
 using Robust.Shared.Map;
 using Robust.Shared.Maths;
 using Robust.Shared.Physics;
+using Robust.Shared.Physics.Dynamics.Joints;
 using Robust.Shared.Players;
 
 namespace Content.Shared.Pulling
@@ -54,11 +55,17 @@ namespace Content.Shared.Pulling
             SubscribeLocalEvent<PullStoppedMessage>(OnPullStopped);
             SubscribeLocalEvent<MoveEvent>(PullerMoved);
             SubscribeLocalEvent<EntInsertedIntoContainerMessage>(HandleContainerInsert);
+            SubscribeLocalEvent<SharedPullableComponent, Joint.JointBreakMessage>(HandleJointBreak);
 
             CommandBinds.Builder
                 .Bind(ContentKeyFunctions.MovePulledObject, new PointerInputCmdHandler(HandleMovePulledObject))
                 .Bind(ContentKeyFunctions.ReleasePulledObject, InputCmdHandler.FromDelegate(HandleReleasePulledObject))
                 .Register<SharedPullingSystem>();
+        }
+
+        private void HandleJointBreak(EntityUid uid, SharedPullableComponent component, Joint.JointBreakMessage args)
+        {
+            component.TryStopPull();
         }
 
         public override void Update(float frameTime)
