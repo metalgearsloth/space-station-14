@@ -86,6 +86,7 @@ namespace Content.Client.GameObjects.EntitySystems
 
             if (!_firing)
             {
+                // TODO: Set Firing on weapon?
                 _firingWeapon.NextFire = TimeSpan.FromSeconds(Math.Max(_firingWeapon.NextFire.TotalSeconds, currentTime.TotalSeconds));
                 _firing = true;
             }
