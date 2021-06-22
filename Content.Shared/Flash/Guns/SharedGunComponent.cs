@@ -1,14 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using Content.Shared.GameObjects.Components.Weapons.Guns;
 using Content.Shared.GameObjects.EntitySystems;
-using Robust.Shared.Audio;
+using Content.Shared.NetIDs;
 using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
 using Robust.Shared.IoC;
 using Robust.Shared.Log;
 using Robust.Shared.Maths;
-using Robust.Shared.Player;
+using Robust.Shared.Players;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization;
 using Robust.Shared.Serialization.Manager.Attributes;
@@ -17,7 +18,7 @@ using Robust.Shared.Timing;
 using Robust.Shared.Utility;
 using Robust.Shared.ViewVariables;
 
-namespace Content.Shared.GameObjects.Components.Weapons.Guns
+namespace Content.Shared.Flash.Guns
 {
     public interface IGun
     {
@@ -60,13 +61,13 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         public SharedBallisticsAmmoProvider? BallisticsMagazine =>
             Magazine?.Owner.GetComponent<SharedBallisticMagazineComponent>();
 
-        public override void Initialize()
+        protected override void Initialize()
         {
             base.Initialize();
             // DebugTools.Assert(); // TODO: Assert the caliber of us matches any magazines we gots.
             Chamber = Owner.EnsureContainer<ContainerSlot>(nameof(SharedChamberedGunComponent) + "-chamber");
 
-            var ammoProvider = MagazineSlot?.ContainedEntity;
+            var ammoProvider = MagazineSlot.ContainedEntity;
 
             if (ammoProvider != null && Chamber.ContainedEntity == null)
             {
@@ -125,17 +126,36 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
 
         public abstract void TryFeedChamber();
 
+        public override ComponentState GetComponentState(ICommonSession player)
+        {
+            bool? chamber;
+            var chambered = Chamber.ContainedEntity?.GetComponent<SharedAmmoComponent>();
+            if (chambered != null)
+            {
+                chamber = !chambered.Spent;
+            }
+            else
+            {
+                chamber = null;
+            }
+
+            return new ChamberedGunComponentState(Magazine != null, NextFire, chamber, BoltClosed);
+        }
+
         [Serializable, NetSerializable]
         protected sealed class ChamberedGunComponentState : ComponentState
         {
+            public bool HasMagazine { get; }
+
             public TimeSpan NextFire { get; }
 
             public bool? Chamber { get; }
 
             public bool BoltClosed { get; }
 
-            public ChamberedGunComponentState(TimeSpan nextFire, bool? chamber, bool boltClosed) : base(ContentNetIDs.CHAMBERED_GUN)
+            public ChamberedGunComponentState(bool hasMagazine, TimeSpan nextFire, bool? chamber, bool boltClosed) : base(ContentNetIDs.CHAMBERED_GUN)
             {
+                HasMagazine = hasMagazine;
                 NextFire = nextFire;
                 Chamber = chamber;
                 BoltClosed = boltClosed;
@@ -283,7 +303,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         [ViewVariables]
         public int ShotCounter { get; set; }
 
-        public override void Initialize()
+        protected override void Initialize()
         {
             base.Initialize();
             DebugTools.Assert(_magazinePrototype == null || IoCManager.Resolve<IPrototypeManager>().HasIndex<EntityPrototype>(_magazinePrototype));
@@ -366,13 +386,23 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
             // TODO: All the other appearance updates for bolts and shiznit.
         }
 
+        public override ComponentState GetComponentState(ICommonSession player)
+        {
+            return new GunComponentState(
+                Magazine != null,
+                NextFire);
+        }
+
         [Serializable, NetSerializable]
         protected class GunComponentState : ComponentState
         {
+            public bool HasMagazine { get; }
+
             public TimeSpan NextFire { get; }
 
-            public GunComponentState(TimeSpan nextFire) : base(ContentNetIDs.GUN)
+            public GunComponentState(bool hasMagazine, TimeSpan nextFire) : base(ContentNetIDs.GUN)
             {
+                HasMagazine = hasMagazine;
                 NextFire = nextFire;
             }
         }
@@ -456,7 +486,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
 
         private int _currentCylinder;
 
-        public override void Initialize()
+        protected override void Initialize()
         {
             base.Initialize();
             _revolver = new SharedAmmoComponent?[AmmoMax];
@@ -489,7 +519,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
         [DataField("fillPrototype")]
         public string? FillPrototype { get; }
 
-        public override void Initialize()
+        protected override void Initialize()
         {
             base.Initialize();
             if (FillPrototype != null)

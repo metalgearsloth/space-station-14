@@ -1,5 +1,6 @@
 #nullable enable
 using Content.Server.Battery.Components;
+using Content.Server.GameObjects.Components.Power.ApcNetComponents.PowerReceiverUsers;
 using Content.Server.Power.Components;
 using Content.Shared.Interaction;
 using Robust.Shared.GameObjects;

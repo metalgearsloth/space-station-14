@@ -1,5 +1,7 @@
 using System;
+using Content.Shared.Flash.Guns;
 using Content.Shared.GameObjects.EntitySystems;
+using Content.Shared.NetIDs;
 using Robust.Shared.GameObjects;
 using Robust.Shared.IoC;
 using Robust.Shared.Log;
@@ -121,7 +123,7 @@ namespace Content.Shared.GameObjects.Components.Weapons.Guns
             return new AmmoComponentState(Spent);
         }
 
-        public override void Initialize()
+        protected override void Initialize()
         {
             base.Initialize();
             // TODO: Move to a test

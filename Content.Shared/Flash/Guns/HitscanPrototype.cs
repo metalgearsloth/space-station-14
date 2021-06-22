@@ -1,4 +1,5 @@
 using Content.Shared.Damage;
+using Content.Shared.Flash.Guns;
 using Content.Shared.Physics;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization.Manager.Attributes;

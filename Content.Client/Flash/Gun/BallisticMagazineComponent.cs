@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
+using Content.Shared.Flash.Guns;
 using Content.Shared.GameObjects.Components.Weapons.Guns;
 using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
@@ -19,7 +20,7 @@ namespace Content.Client.GameObjects.Components.Weapons.Gun
 
         public int? Magazine { get; private set; }
 
-        public override void Initialize()
+        protected override void Initialize()
         {
             base.Initialize();
             if (Owner.TryGetComponent(out SharedAppearanceComponent? appearanceComponent))

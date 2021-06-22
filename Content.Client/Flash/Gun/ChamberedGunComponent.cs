@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using Content.Shared.Flash.Guns;
 using Content.Shared.GameObjects.Components.Weapons.Guns;
 using Robust.Shared.GameObjects;
 
@@ -9,9 +10,22 @@ namespace Content.Client.GameObjects.Components.Weapons.Gun
     [ComponentReference(typeof(SharedGunComponent))]
     internal sealed class ChamberedGunComponent : SharedChamberedGunComponent
     {
-        public bool? Chamber { get; set; }
+        public bool? Chamber
+        {
+            get => _chamber;
+            set
+            {
+                if (_chamber == value) return;
+                _chamber = value;
+                Dirty();
+            }
+        }
 
-        public override void Initialize()
+        private bool? _chamber;
+
+        // TODO: Make Magazine the ammo counter thingy.
+
+        protected override void Initialize()
         {
             base.Initialize();
             var mag = BallisticsMagazine;
@@ -33,7 +47,6 @@ namespace Content.Client.GameObjects.Components.Weapons.Gun
 
             Owner.EntityManager.EventBus.RaiseLocalEvent(Owner.Uid, new AmmoUpdateEvent(Chamber == true, mag?.AmmoCount, mag?.AmmoMax));
             UpdateAppearance();
-            Dirty();
         }
 
         public override bool CanFire()

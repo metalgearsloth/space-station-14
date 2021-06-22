@@ -1,14 +1,16 @@
 ﻿#nullable enable
 using System;
 using System.Threading.Tasks;
-using Content.Server.GameObjects.Components.GUI;
-using Content.Server.GameObjects.Components.Items.Storage;
-using Content.Shared.GameObjects.Components.Power;
-using Content.Shared.GameObjects.Components.Weapons.Guns;
-using Content.Shared.GameObjects.EntitySystems.ActionBlocker;
-using Content.Shared.GameObjects.Verbs;
-using Content.Shared.Interfaces;
-using Content.Shared.Interfaces.GameObjects.Components;
+using Content.Server.Battery.Components;
+using Content.Server.Hands.Components;
+using Content.Server.Items;
+using Content.Server.Power.Components;
+using Content.Shared.ActionBlocker;
+using Content.Shared.Flash.Guns;
+using Content.Shared.Interaction;
+using Content.Shared.Notification.Managers;
+using Content.Shared.Power;
+using Content.Shared.Verbs;
 using Robust.Server.GameObjects;
 using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
@@ -39,7 +41,7 @@ namespace Content.Server.GameObjects.Components.Power.ApcNetComponents.PowerRece
         [DataField("transferEfficiency")]
         private float _transferEfficiency = 0.85f;
 
-        public override void Initialize()
+        protected override void Initialize()
         {
             base.Initialize();
 
@@ -59,7 +61,7 @@ namespace Content.Server.GameObjects.Components.Power.ApcNetComponents.PowerRece
             }
         }
 
-        public override void OnRemove()
+        protected override void OnRemove()
         {
             _heldBattery = null;
 
@@ -121,7 +123,7 @@ namespace Content.Server.GameObjects.Components.Power.ApcNetComponents.PowerRece
         {
             protected override void GetData(IEntity user, BaseCharger component, VerbData data)
             {
-                if (!ActionBlockerSystem.CanInteract(user))
+                if (!EntitySystem.Get<ActionBlockerSystem>().CanInteract(user))
                 {
                     data.Visibility = VerbVisibility.Invisible;
                     return;
@@ -166,7 +168,7 @@ namespace Content.Server.GameObjects.Components.Power.ApcNetComponents.PowerRece
         {
             protected override void GetData(IEntity user, BaseCharger component, VerbData data)
             {
-                if (!ActionBlockerSystem.CanInteract(user))
+                if (!EntitySystem.Get<ActionBlockerSystem>().CanInteract(user))
                 {
                     data.Visibility = VerbVisibility.Invisible;
                     return;

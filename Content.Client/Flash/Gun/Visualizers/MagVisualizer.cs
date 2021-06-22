@@ -1,5 +1,5 @@
 using Content.Shared.GameObjects.Components.Weapons.Guns;
-using Content.Shared.Utility;
+using Content.Shared.Rounding;
 using Robust.Client.GameObjects;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Serialization.Manager.Attributes;

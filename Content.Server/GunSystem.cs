@@ -2,18 +2,18 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Content.Shared.Audio;
-using Content.Shared.GameObjects.Components.Damage;
-using Content.Shared.GameObjects.Components.Mobs;
-using Content.Shared.GameObjects.Components.Projectiles;
+using Content.Shared.CombatMode;
+using Content.Shared.Damage.Components;
+using Content.Shared.Flash.Guns;
 using Content.Shared.GameObjects.Components.Weapons.Guns;
 using Content.Shared.GameObjects.EntitySystems;
-using Content.Shared.Interfaces.GameObjects.Components;
+using Content.Shared.Interaction;
+using Content.Shared.Projectiles;
 using Robust.Server.GameObjects;
 using Robust.Server.Player;
 using Robust.Shared.Audio;
 using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
-using Robust.Shared.Input;
 using Robust.Shared.Log;
 using Robust.Shared.Maths;
 using Robust.Shared.Physics;
@@ -42,7 +42,7 @@ namespace Content.Server.GameObjects.EntitySystems
         {
             base.Initialize();
             // TODO: Temp for debugging
-            Enabled = false;
+            Enabled = true;
             _broadphase = Get<SharedBroadPhaseSystem>();
             _effectSystem = Get<EffectSystem>();
             _inputSystem = Get<InputSystem>();

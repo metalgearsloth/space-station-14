@@ -1,7 +1,9 @@
 using System;
 using Content.Client.GameObjects.EntitySystems;
-using Content.Client.UserInterface.Stylesheets;
-using Content.Client.Utility;
+using Content.Client.IoC;
+using Content.Client.Items.Components;
+using Content.Client.Resources;
+using Content.Client.Stylesheets;
 using Content.Shared.GameObjects.Components.Weapons.Guns;
 using Robust.Client.Graphics;
 using Robust.Client.UserInterface;

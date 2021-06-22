@@ -1,11 +1,11 @@
 using System;
-using Content.Server.GameObjects.Components.GUI;
-using Content.Server.GameObjects.Components.Items.Storage;
 using Content.Server.GameObjects.Components.Weapon.Gun;
+using Content.Server.Hands.Components;
+using Content.Server.Items;
 using Content.Shared.Audio;
+using Content.Shared.Flash.Guns;
 using Content.Shared.GameObjects.Components.Weapons.Guns;
-using Content.Shared.Interfaces;
-using Content.Shared.Interfaces.GameObjects.Components;
+using Content.Shared.Interaction;
 using Robust.Shared.Audio;
 using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;

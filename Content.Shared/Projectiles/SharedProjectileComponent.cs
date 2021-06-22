@@ -1,11 +1,11 @@
 #nullable enable
 using System;
-using Content.Shared.GameObjects.Components.Weapons.Guns;
+using Content.Shared.Flash.Guns;
+using Content.Shared.NetIDs;
 using Robust.Shared.GameObjects;
-using Robust.Shared.Physics;
 using Robust.Shared.Serialization;
 
-namespace Content.Shared.GameObjects.Components.Projectiles
+namespace Content.Shared.Projectiles
 {
     public abstract class SharedProjectileComponent : Component, IProjectile
     {

@@ -1,6 +1,7 @@
 ﻿#nullable enable
-using Content.Shared.GameObjects.Components.Weapons.Guns;
-using Content.Shared.Interfaces.GameObjects.Components;
+using Content.Server.Battery.Components;
+using Content.Server.PowerCell.Components;
+using Content.Shared.Interaction;
 using Robust.Shared.GameObjects;
 
 namespace Content.Server.GameObjects.Components.Power.ApcNetComponents.PowerReceiverUsers

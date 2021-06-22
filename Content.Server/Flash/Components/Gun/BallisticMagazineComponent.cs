@@ -1,8 +1,9 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
+using Content.Shared.Flash.Guns;
 using Content.Shared.GameObjects;
-using Content.Shared.GameObjects.Components.Projectiles;
 using Content.Shared.GameObjects.Components.Weapons.Guns;
+using Content.Shared.Projectiles;
 using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
 using Robust.Shared.IoC;
@@ -24,7 +25,7 @@ namespace Content.Server.GameObjects.Components.Weapon.Gun
         /// <inheritdoc />
         public override int AmmoCount => UnspawnedCount + AmmoContainer.ContainedEntities.Count;
 
-        public override void Initialize()
+        protected override void Initialize()
         {
             base.Initialize();
             AmmoContainer = Owner.EnsureContainer<Container>("ammo", out var existing);

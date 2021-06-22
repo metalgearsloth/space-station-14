@@ -1,3 +1,4 @@
+using Content.Shared.Flash.Guns;
 using Content.Shared.GameObjects.Components.Weapons.Guns;
 using Robust.Shared.GameObjects;
 

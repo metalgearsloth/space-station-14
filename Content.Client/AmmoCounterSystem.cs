@@ -1,5 +1,6 @@
 using System;
 using Content.Client.GameObjects.Components.Weapons.Gun;
+using Content.Shared.Flash.Guns;
 using Content.Shared.GameObjects.Components.Weapons.Guns;
 using Robust.Client.Animations;
 using Robust.Client.Player;

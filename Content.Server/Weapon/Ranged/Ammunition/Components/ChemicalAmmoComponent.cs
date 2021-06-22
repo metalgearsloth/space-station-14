@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using Content.Server.Chemistry.Components;
-using Content.Server.Weapon.Ranged.Barrels.Components;
 using Robust.Shared.GameObjects;
 
 namespace Content.Server.Weapon.Ranged.Ammunition.Components
@@ -11,6 +10,7 @@ namespace Content.Server.Weapon.Ranged.Ammunition.Components
     {
         public override string Name => "ChemicalAmmo";
 
+        /*
         public override void HandleMessage(ComponentMessage message, IComponent? component)
         {
             base.HandleMessage(message, component);
@@ -51,5 +51,6 @@ namespace Content.Server.Weapon.Ranged.Ammunition.Components
 
             ammoSolutionContainer.RemoveAllSolution();
         }
+        */
     }
 }

@@ -1,11 +1,13 @@
 using System;
-using Content.Client.GameObjects.Components.Items;
+using Content.Client.CombatMode;
 using Content.Client.GameObjects.Components.Weapons.Gun;
+using Content.Client.Hands;
 using Content.Shared.Audio;
-using Content.Shared.GameObjects.Components.Mobs;
-using Content.Shared.GameObjects.Components.Projectiles;
+using Content.Shared.Camera;
+using Content.Shared.Flash.Guns;
 using Content.Shared.GameObjects.Components.Weapons.Guns;
 using Content.Shared.GameObjects.EntitySystems;
+using Content.Shared.Projectiles;
 using Robust.Client.GameObjects;
 using Robust.Client.Graphics;
 using Robust.Client.Input;
@@ -47,8 +49,7 @@ namespace Content.Client.GameObjects.EntitySystems
             if (!entity.TryGetComponent(out HandsComponent? hands))
                 return null;
 
-            var held = hands.ActiveHand;
-            if (held == null || !held.TryGetComponent(out SharedGunComponent? weapon))
+            if (!hands.TryGetActiveHeldEntity(out var held) || !held.TryGetComponent(out SharedGunComponent? weapon))
                 return null;
 
             return weapon;
@@ -132,7 +133,7 @@ namespace Content.Client.GameObjects.EntitySystems
         {
             base.FrameUpdate(frameTime);
             _prediction = true;
-            GunUpdate(frameTime);
+            //GunUpdate(frameTime);
         }
 
         private void StopFiring(TimeSpan currentTime)

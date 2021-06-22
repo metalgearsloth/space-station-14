@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using Content.Shared.Flash.Guns;
 using Content.Shared.GameObjects.Components.Weapons.Guns;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Players;
@@ -11,11 +12,6 @@ namespace Content.Server.GameObjects.Components.Weapon.Gun
     [ComponentReference(typeof(SharedGunComponent))]
     internal sealed class ChamberedGunComponent : SharedChamberedGunComponent
     {
-        public override ComponentState GetComponentState(ICommonSession player)
-        {
-            return new ChamberedGunComponentState(NextFire, Chamber.ContainedEntity != null, BoltClosed);
-        }
-
         /// <summary>
         /// Tries to pop the currently chambered entity.
         /// </summary>

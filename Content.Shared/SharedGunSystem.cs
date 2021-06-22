@@ -1,8 +1,7 @@
 using System;
-using Content.Shared.Audio;
-using Content.Shared.GameObjects.Components.Projectiles;
+using Content.Shared.Flash.Guns;
 using Content.Shared.GameObjects.Components.Weapons.Guns;
-using Robust.Shared.Audio;
+using Content.Shared.Projectiles;
 using Robust.Shared.GameObjects;
 using Robust.Shared.IoC;
 using Robust.Shared.Map;
