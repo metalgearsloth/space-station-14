@@ -60,7 +60,7 @@ namespace Content.Shared.Pulling.Components
 
                     _puller = null;
                     if (_pullJoint != null)
-                        EntitySystem.Get<JointSystem>().RemoveJoint(_pullJoint);
+                        EntitySystem.Get<JointSystem>().RemoveJointDeferred(_pullJoint);
 
                     _pullJoint = null;
                     Dirty();
@@ -272,7 +272,7 @@ namespace Content.Shared.Pulling.Components
 
             if (_physics != null && _pullJoint != null)
             {
-                EntitySystem.Get<JointSystem>().RemoveJoint(_pullJoint);
+                EntitySystem.Get<JointSystem>().RemoveJointDeferred(_pullJoint);
             }
 
             _pullJoint = null;
