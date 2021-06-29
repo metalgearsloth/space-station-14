@@ -74,7 +74,7 @@ namespace Content.Shared.Body.Components
 
         public SharedBodyPartComponent? CenterPart => CenterSlot?.Part;
 
-        public override void Initialize()
+        protected override void Initialize()
         {
             base.Initialize();
 
@@ -99,7 +99,7 @@ namespace Content.Shared.Body.Components
             CalculateSpeed();
         }
 
-        public override void OnRemove()
+        protected override void OnRemove()
         {
             foreach (var slot in SlotIds.Values)
             {
@@ -189,7 +189,7 @@ namespace Content.Shared.Body.Components
             if (part.PartType == BodyPartType.Leg &&
                 GetPartsOfType(BodyPartType.Leg).ToArray().Length == 0)
             {
-                EntitySystem.Get<SharedStandingStateSystem>().Down(Owner);
+                EntitySystem.Get<StandingStateSystem>().Down(Owner);
             }
 
             // creadth: immediately kill entity if last vital part removed

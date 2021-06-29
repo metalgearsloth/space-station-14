@@ -54,7 +54,7 @@ namespace Content.Server.Medical.Components
 
         public bool IsOccupied => _bodyContainer.ContainedEntity != null;
 
-        public override void Initialize()
+        protected override void Initialize()
         {
             base.Initialize();
 
@@ -81,7 +81,7 @@ namespace Content.Server.Medical.Components
             {
                 case RelayMovementEntityMessage msg:
                 {
-                    if (ActionBlockerSystem.CanInteract(msg.Entity))
+                    if (EntitySystem.Get<ActionBlockerSystem>().CanInteract(msg.Entity))
                     {
                         if (_gameTiming.CurTime <
                             _lastInternalOpenAttempt + InternalOpenAttemptDelay)
@@ -210,13 +210,13 @@ namespace Content.Server.Medical.Components
         {
             protected override void GetData(IEntity user, MedicalScannerComponent component, VerbData data)
             {
-                if (!ActionBlockerSystem.CanInteract(user))
+                if (!EntitySystem.Get<ActionBlockerSystem>().CanInteract(user))
                 {
                     data.Visibility = VerbVisibility.Invisible;
                     return;
                 }
 
-                data.Text = Loc.GetString("Enter");
+                data.Text = Loc.GetString("enter-verb-get-data-text");
                 data.Visibility = component.IsOccupied ? VerbVisibility.Invisible : VerbVisibility.Visible;
             }
 
@@ -231,13 +231,13 @@ namespace Content.Server.Medical.Components
         {
             protected override void GetData(IEntity user, MedicalScannerComponent component, VerbData data)
             {
-                if (!ActionBlockerSystem.CanInteract(user))
+                if (!EntitySystem.Get<ActionBlockerSystem>().CanInteract(user))
                 {
                     data.Visibility = VerbVisibility.Invisible;
                     return;
                 }
 
-                data.Text = Loc.GetString("Eject");
+                data.Text = Loc.GetString("eject-verb-get-data-text");
                 data.Visibility = component.IsOccupied ? VerbVisibility.Visible : VerbVisibility.Invisible;
             }
 
