@@ -9,6 +9,7 @@ using Robust.Shared.Maths;
 using Robust.Shared.Physics;
 using Robust.Shared.Physics.Broadphase;
 using Robust.Shared.Physics.Controllers;
+using Robust.Shared.Utility;
 
 namespace Content.Shared.Movement
 {
@@ -81,11 +82,15 @@ namespace Content.Shared.Movement
 
             // Regular movement.
             // Target velocity.
+            // This is relative to the map / grid we're on.
             var total = (walkDir * mover.CurrentWalkSpeed + sprintDir * mover.CurrentSprintSpeed);
+
+            var worldTotal = new Angle(transform.Parent!.WorldRotation.Theta).RotateVec(total);
+            DebugTools.Assert(MathHelper.CloseTo(total.Length, worldTotal.Length));
 
             if (weightless)
             {
-                total *= mobMover.WeightlessStrength;
+                worldTotal *= mobMover.WeightlessStrength;
             }
 
             if (total != Vector2.Zero)
@@ -97,7 +102,7 @@ namespace Content.Shared.Movement
                 HandleFootsteps(mover, mobMover);
             }
 
-            physicsComponent.LinearVelocity = total;
+            physicsComponent.LinearVelocity = worldTotal;
         }
 
         public static bool UseMobMovement(SharedBroadphaseSystem broadPhaseSystem, PhysicsComponent body, IMapManager mapManager)
