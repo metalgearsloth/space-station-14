@@ -117,8 +117,8 @@ namespace Content.Server.Shuttles
         {
             component.BodyType = BodyType.Dynamic;
             component.BodyStatus = BodyStatus.InAir;
-            //component.FixedRotation = false; TODO WHEN ROTATING SHUTTLES FIXED.
-            component.FixedRotation = true;
+            component.FixedRotation = false; // TODO WHEN ROTATING SHUTTLES FIXED.
+            // component.FixedRotation = true;
             component.LinearDamping = 0.05f;
         }
 
