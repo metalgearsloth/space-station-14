@@ -1,7 +1,9 @@
 using Content.Shared.ActionBlocker;
+using Content.Shared.CCVar;
 using Content.Shared.MobState;
 using Content.Shared.Movement.Components;
 using Content.Shared.Pulling.Components;
+using Robust.Shared.Configuration;
 using Robust.Shared.GameObjects;
 using Robust.Shared.IoC;
 using Robust.Shared.Map;
@@ -23,10 +25,14 @@ namespace Content.Shared.Movement
 
         private SharedBroadphaseSystem _broadPhaseSystem = default!;
 
+        private bool _relativeMovement;
+
         public override void Initialize()
         {
             base.Initialize();
             _broadPhaseSystem = EntitySystem.Get<SharedBroadphaseSystem>();
+            var configManager = IoCManager.Resolve<IConfigurationManager>();
+            configManager.OnValueChanged(CCVars.RelativeMovement, value => _relativeMovement = value, true);
         }
 
         /// <summary>
@@ -85,7 +91,17 @@ namespace Content.Shared.Movement
             // This is relative to the map / grid we're on.
             var total = (walkDir * mover.CurrentWalkSpeed + sprintDir * mover.CurrentSprintSpeed);
 
-            var worldTotal = total; // new Angle(transform.Parent!.WorldRotation.Theta).RotateVec(total);
+            Vector2 worldTotal;
+
+            if (_relativeMovement)
+            {
+                worldTotal = new Angle(transform.Parent!.WorldRotation.Theta).RotateVec(total);
+            }
+            else
+            {
+                worldTotal = total;
+            }
+
             DebugTools.Assert(MathHelper.CloseTo(total.Length, worldTotal.Length));
 
             if (weightless)
