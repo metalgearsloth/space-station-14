@@ -85,7 +85,7 @@ namespace Content.Shared.Movement
             // This is relative to the map / grid we're on.
             var total = (walkDir * mover.CurrentWalkSpeed + sprintDir * mover.CurrentSprintSpeed);
 
-            var worldTotal = new Angle(transform.Parent!.WorldRotation.Theta).RotateVec(total);
+            var worldTotal = total; // new Angle(transform.Parent!.WorldRotation.Theta).RotateVec(total);
             DebugTools.Assert(MathHelper.CloseTo(total.Length, worldTotal.Length));
 
             if (weightless)
