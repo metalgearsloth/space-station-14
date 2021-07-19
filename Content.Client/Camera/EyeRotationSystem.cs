@@ -21,7 +21,7 @@ namespace Content.Client.Camera
         [Dependency] private readonly IPlayerManager _playerManager = default!;
 
         // Just for debugging now, though probably better to just make a cvar whenever.
-        private bool _enabled = false;
+        private bool _enabled = true;
 
         /// <summary>
         /// The entity our eye rotation is relative to.
@@ -65,7 +65,7 @@ namespace Content.Client.Camera
                 return;
             }
 
-            var targetRotation = relativeEntity.Transform.WorldRotation;
+            var targetRotation = -relativeEntity.Transform.WorldRotation;
 
             // To avoid disorientation on changes we'll just lerp the eye's rotation to what we want.
             if (_lerping)
