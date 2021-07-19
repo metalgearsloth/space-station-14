@@ -176,7 +176,7 @@ namespace Content.Shared.CCVar
          */
 
         public static readonly CVarDef<bool> RelativeMovement =
-            CVarDef.Create("physics.relative_movement", true);
+            CVarDef.Create("physics.relative_movement", true, CVar.REPLICATED);
 
         public static readonly CVarDef<float> TileFrictionModifier =
             CVarDef.Create("physics.tilefriction", 15.0f);

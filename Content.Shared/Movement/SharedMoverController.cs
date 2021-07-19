@@ -81,7 +81,7 @@ namespace Content.Shared.Movement
 
                 if (!touching)
                 {
-                    transform.LocalRotation = physicsComponent.LinearVelocity.GetDir().ToAngle();
+                    transform.WorldRotation = physicsComponent.LinearVelocity.GetDir().ToAngle();
                     return;
                 }
             }
@@ -113,7 +113,7 @@ namespace Content.Shared.Movement
             {
                 // This should have its event run during island solver soooo
                 transform.DeferUpdates = true;
-                transform.LocalRotation = total.GetDir().ToAngle();
+                transform.WorldRotation = total.GetDir().ToAngle();
                 transform.DeferUpdates = false;
                 HandleFootsteps(mover, mobMover);
             }
