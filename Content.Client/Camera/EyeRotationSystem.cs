@@ -35,6 +35,11 @@ namespace Content.Client.Camera
         /// </summary>
         private const double Tolerance = 0.01;
 
+        /// <summary>
+        /// Max speed the camera can rotate per second, in radians.
+        /// </summary>
+        const double MaxChangePerSecond = Math.PI / 4;
+
         public override void FrameUpdate(float frameTime)
         {
             base.FrameUpdate(frameTime);
@@ -70,7 +75,11 @@ namespace Content.Client.Camera
             // To avoid disorientation on changes we'll just lerp the eye's rotation to what we want.
             if (_lerping)
             {
-                var difference = (_eyeManager.CurrentEye.Rotation - targetRotation).Theta;
+                // In case one thing has a billion rotation (unless we get clamping for rotations in at some stage).
+                var eyeClampedRotation = _eyeManager.CurrentEye.Rotation % MathF.Tau;
+                var targetClampedRotation = targetRotation % MathF.Tau;
+
+                var difference = (eyeClampedRotation - targetClampedRotation);
 
                 if (Math.Abs(difference) < Tolerance)
                 {
@@ -91,24 +100,24 @@ namespace Content.Client.Camera
         /// </summary>
         private void UpdateEyeRotation(float frameTime, double difference)
         {
-            const double MaxChangePerSecond = Math.PI / 2;
+            var frameChange = MaxChangePerSecond * frameTime;
 
             // TODO: Need to play around with different curves for something that feels nice.
-            var change = Math.Min(MaxChangePerSecond * frameTime, difference);
+            var change = Math.Clamp(difference, -frameChange, frameChange);
 
-            _eyeManager.CurrentEye.Rotation += change;
+            _eyeManager.CurrentEye.Rotation -= change;
         }
 
         private void ResetRotation()
         {
             _eyeManager.CurrentEye.Rotation = Angle.Zero;
+            _lerping = false;
         }
 
         private void UpdateRelative(EntityUid uid)
         {
             if (uid == _relativeUid)
             {
-                _lerping = false;
                 return;
             }
 
