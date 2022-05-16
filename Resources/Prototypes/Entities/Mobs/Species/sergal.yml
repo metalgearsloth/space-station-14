@@ -165,9 +165,11 @@
     - map: [ "enum.HumanoidVisualLayers.Tail" ]
       sprite: Mobs/Customization/masking_helpers.rsi
       state: none
+      visible: false
     - map: [ "enum.HumanoidVisualLayers.HeadTop" ]
     - sprite: Mobs/Customization/masking_helpers.rsi
       state: none
+      visible: false
   - type: Markings
     layerPoints:
       Tail:
