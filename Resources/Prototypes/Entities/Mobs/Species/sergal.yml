@@ -1,9 +1,9 @@
 - type: entity
   save: false
-  name: Sergal
+  name: Eltus
   id: MobEltusBase
   description: A miserable pile of secrets.
-  noSpawn: false
+  abstract: true
   components:
   - type: Tag
     tags:
@@ -158,18 +158,18 @@
     - map: [ "enum.HumanoidVisualLayers.Hair" ]
       state: bald
       sprite: Mobs/Customization/human_hair.rsi
-    - map: [ "mask" ]
-    - map: [ "head" ]
-    - map: [ "pocket1" ]
-    - map: [ "pocket2" ]
     - map: [ "enum.HumanoidVisualLayers.Tail" ]
       sprite: Mobs/Customization/masking_helpers.rsi
       state: none
       visible: false
     - map: [ "enum.HumanoidVisualLayers.HeadTop" ]
-    - sprite: Mobs/Customization/masking_helpers.rsi
+      sprite: Mobs/Customization/masking_helpers.rsi
       state: none
       visible: false
+    - map: [ "mask" ]
+    - map: [ "head" ]
+    - map: [ "pocket1" ]
+    - map: [ "pocket2" ]
   - type: Markings
     layerPoints:
       Tail:
