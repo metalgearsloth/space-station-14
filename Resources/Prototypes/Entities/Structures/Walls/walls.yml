@@ -248,8 +248,9 @@
   components:
   - type: Tag
     tags:
-      - Wall
       - RCDDeconstructWhitelist
+      - Ricochet
+      - Wall
   - type: Sprite
     sprite: Structures/Walls/metal.rsi
   - type: Icon

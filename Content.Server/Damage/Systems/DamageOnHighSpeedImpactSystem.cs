@@ -25,7 +25,7 @@ namespace Content.Server.Damage.Systems
             SubscribeLocalEvent<DamageOnHighSpeedImpactComponent, StartCollideEvent>(HandleCollide);
         }
 
-        private void HandleCollide(EntityUid uid, DamageOnHighSpeedImpactComponent component, StartCollideEvent args)
+        private void HandleCollide(EntityUid uid, DamageOnHighSpeedImpactComponent component, ref StartCollideEvent args)
         {
             if (!EntityManager.HasComponent<DamageableComponent>(uid)) return;
 

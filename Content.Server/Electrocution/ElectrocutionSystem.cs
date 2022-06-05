@@ -114,7 +114,7 @@ namespace Content.Server.Electrocution
             }
         }
 
-        private void OnElectrifiedStartCollide(EntityUid uid, ElectrifiedComponent electrified, StartCollideEvent args)
+        private void OnElectrifiedStartCollide(EntityUid uid, ElectrifiedComponent electrified, ref StartCollideEvent args)
         {
             if (!electrified.OnBump)
                 return;

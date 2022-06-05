@@ -57,13 +57,13 @@ namespace Content.Shared.Buckle
             args.Cancel();
         }
 
-        private void PreventCollision(EntityUid uid, SharedBuckleComponent component, PreventCollideEvent args)
+        private void PreventCollision(EntityUid uid, SharedBuckleComponent component, ref PreventCollideEvent args)
         {
-            if (args.BodyB.Owner != component.LastEntityBuckledTo) return;
+            if (args.Cancelled || args.BodyB.Owner != component.LastEntityBuckledTo) return;
 
             if (component.Buckled || component.DontCollide)
             {
-                args.Cancel();
+                args.Cancelled = true;
             }
         }
     }

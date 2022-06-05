@@ -20,7 +20,7 @@ namespace Content.Server.Singularity.EntitySystems
             SubscribeLocalEvent<ParticleProjectileComponent, StartCollideEvent>(HandleParticleCollide);
         }
 
-        private void HandleParticleCollide(EntityUid uid, ParticleProjectileComponent component, StartCollideEvent args)
+        private void HandleParticleCollide(EntityUid uid, ParticleProjectileComponent component, ref StartCollideEvent args)
         {
             if (EntityManager.TryGetComponent<SingularityGeneratorComponent?>(args.OtherFixture.Body.Owner, out var singularityGeneratorComponent))
             {
@@ -38,14 +38,14 @@ namespace Content.Server.Singularity.EntitySystems
             }
         }
 
-        private void HandleGeneratorCollide(EntityUid uid, ContainmentFieldGeneratorComponent component, StartCollideEvent args)
+        private void HandleGeneratorCollide(EntityUid uid, ContainmentFieldGeneratorComponent component, ref StartCollideEvent args)
         {
             if (_tags.HasTag(args.OtherFixture.Body.Owner, "EmitterBolt")) {
                 component.ReceivePower(6);
             }
         }
 
-        private void HandleFieldCollide(EntityUid uid, ContainmentFieldComponent component, StartCollideEvent args)
+        private void HandleFieldCollide(EntityUid uid, ContainmentFieldComponent component, ref StartCollideEvent args)
         {
             if (component.Parent == null)
             {

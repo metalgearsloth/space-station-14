@@ -31,7 +31,7 @@ namespace Content.Server.Chemistry.EntitySystems
                 .EnsureComponentWarn<SolutionContainerManagerComponent>($"{nameof(SolutionInjectOnCollideComponent)} requires a SolutionContainerManager on {component.Owner}!");
         }
 
-        private void HandleInjection(EntityUid uid, SolutionInjectOnCollideComponent component, StartCollideEvent args)
+        private void HandleInjection(EntityUid uid, SolutionInjectOnCollideComponent component, ref StartCollideEvent args)
         {
             var target = args.OtherFixture.Body.Owner;
 

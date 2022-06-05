@@ -182,7 +182,7 @@ public sealed class ClimbSystem : SharedClimbSystem
         return true;
     }
 
-    private void OnClimbEndCollide(EntityUid uid, ClimbingComponent component, EndCollideEvent args)
+    private void OnClimbEndCollide(EntityUid uid, ClimbingComponent component, ref EndCollideEvent args)
     {
         if (args.OurFixture.ID != ClimbingFixtureName
             || !component.IsClimbing

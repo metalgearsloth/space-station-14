@@ -84,7 +84,7 @@ public sealed class StepTriggerSystem : EntitySystem
         return msg.Continue;
     }
 
-    private void HandleCollide(EntityUid uid, StepTriggerComponent component, StartCollideEvent args)
+    private void HandleCollide(EntityUid uid, StepTriggerComponent component, ref StartCollideEvent args)
     {
         var otherUid = args.OtherFixture.Body.Owner;
 

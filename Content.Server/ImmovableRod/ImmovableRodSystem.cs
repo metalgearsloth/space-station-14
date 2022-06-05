@@ -71,7 +71,7 @@ public sealed class ImmovableRodSystem : EntitySystem
         }
     }
 
-    private void OnCollide(EntityUid uid, ImmovableRodComponent component, StartCollideEvent args)
+    private void OnCollide(EntityUid uid, ImmovableRodComponent component, ref StartCollideEvent args)
     {
         var ent = args.OtherFixture.Body.Owner;
 

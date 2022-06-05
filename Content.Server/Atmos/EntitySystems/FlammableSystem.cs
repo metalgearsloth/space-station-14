@@ -48,7 +48,7 @@ namespace Content.Server.Atmos.EntitySystems
             SubscribeLocalEvent<IgniteOnCollideComponent, StartCollideEvent>(IgniteOnCollide);
         }
 
-        private void IgniteOnCollide(EntityUid uid, IgniteOnCollideComponent component, StartCollideEvent args)
+        private void IgniteOnCollide(EntityUid uid, IgniteOnCollideComponent component, ref StartCollideEvent args)
         {
             var otherFixture = args.OtherFixture.Body.Owner;
 
@@ -74,7 +74,7 @@ namespace Content.Server.Atmos.EntitySystems
             args.Handled = true;
         }
 
-        private void OnCollideEvent(EntityUid uid, FlammableComponent flammable, StartCollideEvent args)
+        private void OnCollideEvent(EntityUid uid, FlammableComponent flammable, ref StartCollideEvent args)
         {
             var otherUid = args.OtherFixture.Body.Owner;
             if (!EntityManager.TryGetComponent(otherUid, out FlammableComponent? otherFlammable))

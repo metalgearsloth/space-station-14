@@ -367,6 +367,9 @@
   id: RCDDeconstructWhitelist
 
 - type: Tag
+  id: Ricochet
+
+- type: Tag
   id: RodMetal1
 
 - type: Tag

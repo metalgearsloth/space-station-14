@@ -42,7 +42,7 @@ public sealed class SlowContactsSystem : EntitySystem
         args.ModifySpeed(walkSpeed, sprintSpeed);
     }
 
-    private void OnEntityExit(EntityUid uid, SlowContactsComponent component, EndCollideEvent args)
+    private void OnEntityExit(EntityUid uid, SlowContactsComponent component, ref EndCollideEvent args)
     {
         var otherUid = args.OtherFixture.Body.Owner;
         if (!EntityManager.HasComponent<MovementSpeedModifierComponent>(otherUid)
@@ -57,7 +57,7 @@ public sealed class SlowContactsSystem : EntitySystem
 
     }
 
-    private void OnEntityEnter(EntityUid uid, SlowContactsComponent component, StartCollideEvent args)
+    private void OnEntityEnter(EntityUid uid, SlowContactsComponent component, ref StartCollideEvent args)
     {
         var otherUid = args.OtherFixture.Body.Owner;
         if (!EntityManager.HasComponent<MovementSpeedModifierComponent>(otherUid))

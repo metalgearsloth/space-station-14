@@ -436,15 +436,15 @@ public abstract class SharedDoorSystem : EntitySystem
         }
     }
 
-    private void PreventCollision(EntityUid uid, DoorComponent component, PreventCollideEvent args)
+    private void PreventCollision(EntityUid uid, DoorComponent component, ref PreventCollideEvent args)
     {
-        if (component.CurrentlyCrushing.Contains(args.BodyB.Owner))
+        if (args.Cancelled || component.CurrentlyCrushing.Contains(args.BodyB.Owner))
         {
-            args.Cancel();
+            args.Cancelled = true;
         }
     }
 
-    protected virtual void HandleCollide(EntityUid uid, DoorComponent door, StartCollideEvent args)
+    protected virtual void HandleCollide(EntityUid uid, DoorComponent door, ref StartCollideEvent args)
     {
         // TODO ACCESS READER move access reader to shared and predict door opening/closing
         // Then this can be moved to the shared system without mispredicting.

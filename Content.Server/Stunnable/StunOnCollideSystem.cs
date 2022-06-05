@@ -39,7 +39,7 @@ namespace Content.Server.Stunnable
                     component.WalkSpeedMultiplier, component.RunSpeedMultiplier, status);
             }
         }
-        private void HandleCollide(EntityUid uid, StunOnCollideComponent component, StartCollideEvent args)
+        private void HandleCollide(EntityUid uid, StunOnCollideComponent component, ref StartCollideEvent args)
         {
             if (args.OurFixture.ID != component.FixtureID) return;
 

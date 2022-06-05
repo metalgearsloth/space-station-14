@@ -50,13 +50,13 @@ namespace Content.Shared.Singularity
             SubscribeLocalEvent<SharedSingularityComponent, PreventCollideEvent>(OnPreventCollide);
         }
 
-        protected void OnPreventCollide(EntityUid uid, SharedSingularityComponent component, PreventCollideEvent args)
+        protected void OnPreventCollide(EntityUid uid, SharedSingularityComponent component, ref PreventCollideEvent args)
         {
-            PreventCollide(uid, component, args);
+            PreventCollide(uid, component, ref args);
         }
 
         protected virtual bool PreventCollide(EntityUid uid, SharedSingularityComponent component,
-            PreventCollideEvent args)
+            ref PreventCollideEvent args)
         {
             var otherUid = args.BodyB.Owner;
 
@@ -64,7 +64,7 @@ namespace Content.Shared.Singularity
             if (EntityManager.HasComponent<IMapGridComponent>(otherUid) ||
                 EntityManager.HasComponent<SharedGhostComponent>(otherUid))
             {
-                args.Cancel();
+                args.Cancelled = true;
                 return true;
             }
 
@@ -75,7 +75,7 @@ namespace Content.Shared.Singularity
             {
                 if (component.Level > 4)
                 {
-                    args.Cancel();
+                    args.Cancelled = true;
                 }
 
                 return true;

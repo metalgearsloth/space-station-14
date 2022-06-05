@@ -1,5 +1,5 @@
-using Content.Server.Projectiles.Components;
 using Content.Server.Singularity.Components;
+using Content.Shared.Projectiles;
 using Content.Shared.Singularity.Components;
 using Robust.Server.GameObjects;
 using Robust.Shared.Timing;
@@ -24,12 +24,13 @@ namespace Content.Server.ParticleAccelerator.Components
             }
             physicsComponent.BodyStatus = BodyStatus.InAir;
 
-            if (!_entMan.TryGetComponent<ProjectileComponent?>(Owner, out var projectileComponent))
+            if (!_entMan.TryGetComponent<ProjectileComponent>(Owner, out var projectileComponent))
             {
                 Logger.Error("ParticleProjectile tried firing, but it was spawned without a ProjectileComponent");
                 return;
             }
-            projectileComponent.IgnoreEntity(firer);
+
+            IoCManager.Resolve<IEntitySystemManager>().GetEntitySystem<SharedProjectileSystem>().IgnoreEntity(projectileComponent, firer);
 
             if (!_entMan.TryGetComponent<SinguloFoodComponent?>(Owner, out var singuloFoodComponent))
             {

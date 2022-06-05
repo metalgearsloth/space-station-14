@@ -1,5 +1,6 @@
 using Content.Server.GameTicking;
-using Content.Server.Projectiles.Components;
+using Content.Server.Spawners.Components;
+using Content.Shared.Projectiles;
 using Content.Shared.Sound;
 using Robust.Shared.Map;
 using Robust.Shared.Random;
@@ -81,6 +82,7 @@ namespace Content.Server.StationEvents.Events
 
             Box2? playableArea = null;
             var mapId = EntitySystem.Get<GameTicker>().DefaultMap;
+            var entManager = IoCManager.Resolve<IEntityManager>();
 
             foreach (var grid in _mapManager.GetAllGrids())
             {
@@ -115,8 +117,8 @@ namespace Content.Server.StationEvents.Events
                     // Get a random angular velocity.
                     physics.Mass * ((MaxAngularVelocity - MinAngularVelocity) * _robustRandom.NextFloat() +
                                     MinAngularVelocity));
-                // TODO: God this disgusts me but projectile needs a refactor.
-                IoCManager.Resolve<IEntityManager>().GetComponent<ProjectileComponent>(meteor).TimeLeft = 120f;
+
+                entManager.EnsureComponent<TimedDespawnComponent>(meteor).Lifetime = 120f;
             }
         }
     }

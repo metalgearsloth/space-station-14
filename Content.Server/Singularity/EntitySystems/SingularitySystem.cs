@@ -44,9 +44,9 @@ namespace Content.Server.Singularity.EntitySystems
             _pvs.AddGlobalOverride(uid);
         }
 
-        protected override bool PreventCollide(EntityUid uid, SharedSingularityComponent component, PreventCollideEvent args)
+        protected override bool PreventCollide(EntityUid uid, SharedSingularityComponent component, ref PreventCollideEvent args)
         {
-            if (base.PreventCollide(uid, component, args)) return true;
+            if (args.Cancelled || base.PreventCollide(uid, component, ref args)) return true;
 
             var otherUid = args.BodyB.Owner;
 
@@ -54,12 +54,12 @@ namespace Content.Server.Singularity.EntitySystems
 
             // If it's not cancelled then we'll cancel if we can't immediately destroy it on collision
             if (!CanDestroy(component, otherUid))
-                args.Cancel();
+                args.Cancelled = true;
 
             return true;
         }
 
-        private void OnCollide(EntityUid uid, ServerSingularityComponent component, StartCollideEvent args)
+        private void OnCollide(EntityUid uid, ServerSingularityComponent component, ref StartCollideEvent args)
         {
             if (args.OurFixture.ID != "DeleteCircle") return;
 

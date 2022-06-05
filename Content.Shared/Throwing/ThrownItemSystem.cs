@@ -67,7 +67,7 @@ namespace Content.Shared.Throwing
             _fixtures.TryCreateFixture(physicsComponent, throwingFixture, manager: fixturesComponent);
         }
 
-        private void HandleCollision(EntityUid uid, ThrownItemComponent component, StartCollideEvent args)
+        private void HandleCollision(EntityUid uid, ThrownItemComponent component, ref StartCollideEvent args)
         {
             if (args.OtherFixture.Hard == false)
                 return;
@@ -79,11 +79,11 @@ namespace Content.Shared.Throwing
             ThrowCollideInteraction(thrower, args.OurFixture.Body, otherBody);
         }
 
-        private void PreventCollision(EntityUid uid, ThrownItemComponent component, PreventCollideEvent args)
+        private void PreventCollision(EntityUid uid, ThrownItemComponent component, ref PreventCollideEvent args)
         {
-            if (args.BodyB.Owner == component.Thrower)
+            if (args.Cancelled || args.BodyB.Owner == component.Thrower)
             {
-                args.Cancel();
+                args.Cancelled = true;
             }
         }
 

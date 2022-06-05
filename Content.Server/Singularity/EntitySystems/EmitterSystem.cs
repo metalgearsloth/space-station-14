@@ -2,13 +2,13 @@ using System.Threading;
 using Content.Server.Administration.Logs;
 using Content.Server.Power.Components;
 using Content.Server.Power.EntitySystems;
-using Content.Server.Projectiles.Components;
 using Content.Server.Singularity.Components;
 using Content.Server.Storage.Components;
 using Content.Shared.Audio;
 using Content.Shared.Database;
 using Content.Shared.Interaction;
 using Content.Shared.Popups;
+using Content.Shared.Projectiles;
 using Content.Shared.Singularity.Components;
 using JetBrains.Annotations;
 using Robust.Shared.Audio;
@@ -181,13 +181,13 @@ namespace Content.Server.Singularity.EntitySystems
 
             physicsComponent.BodyStatus = BodyStatus.InAir;
 
-            if (!EntityManager.TryGetComponent<ProjectileComponent?>(projectile, out var projectileComponent))
+            if (!EntityManager.TryGetComponent<ProjectileComponent>(projectile, out var projectileComponent))
             {
                 Logger.Error("Emitter tried firing a bolt, but it was spawned without a ProjectileComponent");
                 return;
             }
 
-            projectileComponent.IgnoreEntity(component.Owner);
+            IoCManager.Resolve<IEntitySystemManager>().GetEntitySystem<SharedProjectileSystem>().IgnoreEntity(projectileComponent, component.Owner);
 
             physicsComponent
                 .LinearVelocity = EntityManager.GetComponent<TransformComponent>(component.Owner).WorldRotation.ToWorldVec() * 20f;

@@ -415,7 +415,7 @@ namespace Content.Server.Shuttles.EntitySystems
             }
         }
 
-        private void OnStartCollide(EntityUid uid, ThrusterComponent component, StartCollideEvent args)
+        private void OnStartCollide(EntityUid uid, ThrusterComponent component, ref StartCollideEvent args)
         {
             if (args.OurFixture.ID != BurnFixture) return;
 
@@ -423,7 +423,7 @@ namespace Content.Server.Shuttles.EntitySystems
             component.Colliding.Add((args.OtherFixture.Body).Owner);
         }
 
-        private void OnEndCollide(EntityUid uid, ThrusterComponent component, EndCollideEvent args)
+        private void OnEndCollide(EntityUid uid, ThrusterComponent component, ref EndCollideEvent args)
         {
             if (args.OurFixture.ID != BurnFixture) return;
 

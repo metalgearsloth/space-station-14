@@ -28,21 +28,23 @@ namespace Content.Shared.Disposal
             SubscribeLocalEvent<SharedDisposalUnitComponent, CanDragDropOnEvent>(OnCanDragDropOn);
         }
 
-        private void OnPreventCollide(EntityUid uid, SharedDisposalUnitComponent component, PreventCollideEvent args)
+        private void OnPreventCollide(EntityUid uid, SharedDisposalUnitComponent component, ref PreventCollideEvent args)
         {
+            if (args.Cancelled) return;
+
             var otherBody = args.BodyB.Owner;
 
             // Items dropped shouldn't collide but items thrown should
             if (EntityManager.HasComponent<SharedItemComponent>(otherBody) &&
                 !EntityManager.HasComponent<ThrownItemComponent>(otherBody))
             {
-                args.Cancel();
+                args.Cancelled = true;
                 return;
             }
 
             if (component.RecentlyEjected.Contains(otherBody))
             {
-                args.Cancel();
+                args.Cancelled = true;
             }
         }
 

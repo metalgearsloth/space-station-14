@@ -27,7 +27,7 @@ namespace Content.Server.Chemistry.EntitySystems
             SubscribeLocalEvent<VaporComponent, StartCollideEvent>(HandleCollide);
         }
 
-        private void HandleCollide(EntityUid uid, VaporComponent component, StartCollideEvent args)
+        private void HandleCollide(EntityUid uid, VaporComponent component, ref StartCollideEvent args)
         {
             if (!EntityManager.TryGetComponent(uid, out SolutionContainerManagerComponent? contents)) return;
 

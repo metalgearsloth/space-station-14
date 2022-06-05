@@ -15,7 +15,7 @@ public sealed class SpaceGarbageSystem : EntitySystem
         SubscribeLocalEvent<SpaceGarbageComponent, StartCollideEvent>(OnCollide);
     }
 
-    private void OnCollide(EntityUid uid, SpaceGarbageComponent component, StartCollideEvent args)
+    private void OnCollide(EntityUid uid, SpaceGarbageComponent component, ref StartCollideEvent args)
     {
         var ourXform = Transform(args.OurFixture.Body.Owner);
         var otherXform = Transform(args.OtherFixture.Body.Owner);
