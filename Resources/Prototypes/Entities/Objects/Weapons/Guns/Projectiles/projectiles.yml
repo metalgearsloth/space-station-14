@@ -180,6 +180,8 @@
     damage:
       types:
         Heat: 20
+  - type: TimedSpawn
+    lifetime: 3
   - type: Tag
     tags:
     - EmitterBolt

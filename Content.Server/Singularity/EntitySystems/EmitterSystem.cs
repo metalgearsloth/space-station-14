@@ -1,5 +1,6 @@
 using System.Threading;
 using Content.Server.Administration.Logs;
+using Content.Server.Popups;
 using Content.Server.Power.Components;
 using Content.Server.Power.EntitySystems;
 using Content.Server.Projectiles.Components;
@@ -16,6 +17,7 @@ using Robust.Shared.Physics;
 using Robust.Shared.Player;
 using Robust.Shared.Random;
 using Robust.Shared.Utility;
+using YamlDotNet.Core;
 using Timer = Robust.Shared.Timing.Timer;
 
 namespace Content.Server.Singularity.EntitySystems
@@ -25,6 +27,7 @@ namespace Content.Server.Singularity.EntitySystems
     {
         [Dependency] private readonly IRobustRandom _random = default!;
         [Dependency] private readonly IAdminLogManager _adminLogger = default!;
+        [Dependency] private readonly PopupSystem _popup = default!;
 
         public override void Initialize()
         {
@@ -32,6 +35,15 @@ namespace Content.Server.Singularity.EntitySystems
 
             SubscribeLocalEvent<EmitterComponent, PowerConsumerReceivedChanged>(ReceivedChanged);
             SubscribeLocalEvent<EmitterComponent, InteractHandEvent>(OnInteractHand);
+            SubscribeLocalEvent<EmitterComponent, AnchorStateChangedEvent>(OnAnchorChange);
+        }
+
+        private void OnAnchorChange(EntityUid uid, EmitterComponent component, ref AnchorStateChangedEvent args)
+        {
+            if (!args.Anchored)
+            {
+                UpdateAppearance(component, EmitterVisualState.Off);
+            }
         }
 
         private void OnInteractHand(EntityUid uid, EmitterComponent component, InteractHandEvent args)
@@ -91,7 +103,7 @@ namespace Content.Server.Singularity.EntitySystems
             component.IsOn = false;
             if (TryComp<PowerConsumerComponent>(component.Owner, out var powerConsumer)) powerConsumer.DrawRate = 0;
             PowerOff(component);
-            UpdateAppearance(component);
+            UpdateAppearance(component, EmitterVisualState.Off);
         }
 
         public void SwitchOn(EmitterComponent component)
@@ -100,126 +112,23 @@ namespace Content.Server.Singularity.EntitySystems
             if (TryComp<PowerConsumerComponent>(component.Owner, out var powerConsumer)) powerConsumer.DrawRate = component.PowerUseActive;
             // Do not directly PowerOn().
             // OnReceivedPowerChanged will get fired due to DrawRate change which will turn it on.
-            UpdateAppearance(component);
+            UpdateAppearance(component, EmitterVisualState.On);
         }
 
         public void PowerOff(EmitterComponent component)
         {
-            if (!component.IsPowered)
-            {
-                return;
-            }
-
-            component.IsPowered = false;
-
-            // Must be set while emitter powered.
-            DebugTools.AssertNotNull(component.TimerCancel);
-            component.TimerCancel?.Cancel();
-
-            UpdateAppearance(component);
+            UpdateAppearance(component, EmitterVisualState.Underpowered);
         }
 
         public void PowerOn(EmitterComponent component)
         {
-            if (component.IsPowered)
-            {
-                return;
-            }
-
-            component.IsPowered = true;
-
-            component.FireShotCounter = 0;
-            component.TimerCancel = new CancellationTokenSource();
-
-            Timer.Spawn(component.FireBurstDelayMax, () => ShotTimerCallback(component), component.TimerCancel.Token);
-
-            UpdateAppearance(component);
+            UpdateAppearance(component, EmitterVisualState.On);
         }
 
-        private void ShotTimerCallback(EmitterComponent component)
-        {
-            if (component.Deleted) return;
-
-            // Any power-off condition should result in the timer for this method being cancelled
-            // and thus not firing
-            DebugTools.Assert(component.IsPowered);
-            DebugTools.Assert(component.IsOn);
-            DebugTools.Assert(TryComp<PowerConsumerComponent>(component.Owner, out var powerConsumer) &&
-                              (powerConsumer.DrawRate <= powerConsumer.ReceivedPower ||
-                               MathHelper.CloseTo(powerConsumer.DrawRate, powerConsumer.ReceivedPower, 0.0001f)));
-
-            Fire(component);
-
-            TimeSpan delay;
-            if (component.FireShotCounter < component.FireBurstSize)
-            {
-                component.FireShotCounter += 1;
-                delay = component.FireInterval;
-            }
-            else
-            {
-                component.FireShotCounter = 0;
-                var diff = component.FireBurstDelayMax - component.FireBurstDelayMin;
-                // TIL you can do TimeSpan * double.
-                delay = component.FireBurstDelayMin + _random.NextFloat() * diff;
-            }
-
-            // Must be set while emitter powered.
-            DebugTools.AssertNotNull(component.TimerCancel);
-            Timer.Spawn(delay, () => ShotTimerCallback(component), component.TimerCancel!.Token);
-        }
-
-        private void Fire(EmitterComponent component)
-        {
-            var projectile = EntityManager.SpawnEntity(component.BoltType, EntityManager.GetComponent<TransformComponent>(component.Owner).Coordinates);
-
-            if (!EntityManager.TryGetComponent<PhysicsComponent?>(projectile, out var physicsComponent))
-            {
-                Logger.Error("Emitter tried firing a bolt, but it was spawned without a PhysicsComponent");
-                return;
-            }
-
-            physicsComponent.BodyStatus = BodyStatus.InAir;
-
-            if (!EntityManager.TryGetComponent<ProjectileComponent?>(projectile, out var projectileComponent))
-            {
-                Logger.Error("Emitter tried firing a bolt, but it was spawned without a ProjectileComponent");
-                return;
-            }
-
-            projectileComponent.IgnoreEntity(component.Owner);
-
-            physicsComponent
-                .LinearVelocity = EntityManager.GetComponent<TransformComponent>(component.Owner).WorldRotation.ToWorldVec() * 20f;
-            EntityManager.GetComponent<TransformComponent>(projectile).WorldRotation = EntityManager.GetComponent<TransformComponent>(component.Owner).WorldRotation;
-
-            // TODO: Move to projectile's code.
-            Timer.Spawn(3000, () => EntityManager.DeleteEntity(projectile));
-
-            SoundSystem.Play(Filter.Pvs(component.Owner), component.FireSound.GetSound(), component.Owner,
-                AudioHelpers.WithVariation(EmitterComponent.Variation).WithVolume(EmitterComponent.Volume).WithMaxDistance(EmitterComponent.Distance));
-        }
-
-        private void UpdateAppearance(EmitterComponent component)
+        private void UpdateAppearance(EmitterComponent component, EmitterVisualState state)
         {
             if (!TryComp<AppearanceComponent>(component.Owner, out var appearanceComponent))
-            {
                 return;
-            }
-
-            EmitterVisualState state;
-            if (component.IsPowered)
-            {
-                state = EmitterVisualState.On;
-            }
-            else if (component.IsOn)
-            {
-                state = EmitterVisualState.Underpowered;
-            }
-            else
-            {
-                state = EmitterVisualState.Off;
-            }
 
             appearanceComponent.SetData(EmitterVisuals.VisualState, state);
         }
