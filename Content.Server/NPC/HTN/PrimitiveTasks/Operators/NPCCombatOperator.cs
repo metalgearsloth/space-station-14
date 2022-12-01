@@ -26,11 +26,6 @@ public abstract class NPCCombatOperator : HTNOperator
     [DataField("keyCoordinates")]
     public string KeyCoordinates = "CombatTargetCoordinates";
 
-    /// <summary>
-    /// Regardless of pathfinding or LOS these are the max we'll check
-    /// </summary>
-    private const int MaxConsideredTargets = 10;
-
     protected virtual bool IsRanged => false;
 
     public override void Initialize(IEntitySystemManager sysManager)
