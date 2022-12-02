@@ -1,7 +1,3 @@
-using Content.Server.NPC.Systems;
-
-namespace Content.Server.NPC.Components;
-
 /// <summary>
 /// Stores data for RVO collision avoidance
 /// </summary>
@@ -35,4 +31,7 @@ public sealed class NPCRVOComponent : Component
 
     [ViewVariables]
     public readonly HashSet<EntityUid> AgentNeighbors = new();
+
+    [ViewVariables]
+    public readonly List<ORCALine> OrcaLines = new();
 }
