@@ -1,3 +1,5 @@
+using Content.Server.NPC.Systems;
+
 /// <summary>
 /// Stores data for RVO collision avoidance
 /// </summary>

@@ -1,4 +1,3 @@
-using System.Linq;
 using Content.Server.NPC.Components;
 using Content.Shared.CCVar;
 using Content.Shared.Movement.Components;
@@ -6,6 +5,7 @@ using Robust.Shared.Collections;
 using Robust.Shared.Configuration;
 using Robust.Shared.Physics;
 using Robust.Shared.Physics.Collision.Shapes;
+using Robust.Shared.Physics.Components;
 
 namespace Content.Server.NPC.Systems;
 
@@ -23,14 +23,12 @@ public sealed partial class NPCSteeringSystem
 
     private void InitializeAvoidance()
     {
-        var configManager = IoCManager.Resolve<IConfigurationManager>();
-        configManager.OnValueChanged(CCVars.NPCCollisionAvoidance, SetCollisionAvoidance);
+        _configManager.OnValueChanged(CCVars.NPCCollisionAvoidance, SetCollisionAvoidance);
     }
 
     private void ShutdownAvoidance()
     {
-        var configManager = IoCManager.Resolve<IConfigurationManager>();
-        configManager.UnsubValueChanged(CCVars.NPCCollisionAvoidance, SetCollisionAvoidance);
+        _configManager.UnsubValueChanged(CCVars.NPCCollisionAvoidance, SetCollisionAvoidance);
     }
 
     private void SetCollisionAvoidance(bool obj)
@@ -65,7 +63,7 @@ public sealed partial class NPCSteeringSystem
 
         if (ObstacleAvoidanceEnabled)
         {
-            foreach (var other in _physics.GetBodiesInRange(mapId, xform.WorldPosition, obstacleRange))
+            foreach (var other in _lookup.GetBodiesInRange(mapId, xform.WorldPosition, obstacleRange))
             {
                 if (!other.CanCollide ||
                     !other.Hard ||
@@ -84,7 +82,7 @@ public sealed partial class NPCSteeringSystem
 
         if (rvo.MaxNeighbors > 0)
         {
-            foreach (var other in _physics.GetBodiesInRange(mapId, xform.WorldPosition, agentRange))
+            foreach (var other in _lookup.GetBodiesInRange(mapId, xform.WorldPosition, agentRange))
             {
                 if (!other.CanCollide ||
                     !other.Hard ||
