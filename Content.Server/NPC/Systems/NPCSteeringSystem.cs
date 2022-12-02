@@ -141,11 +141,15 @@ namespace Content.Server.NPC.Systems
             var npcs = EntityQuery<NPCSteeringComponent, ActiveNPCComponent, InputMoverComponent, TransformComponent>()
                 .ToArray();
 
-            // TODO: Do this in parallel.
-            // Main obstacle is requesting a new path needs to be done synchronously
+            // TODO: Do this in parallel. This will require pathfinder refactor to not use jobqueue.
             foreach (var (steering, _, mover, xform) in npcs)
             {
                 Steer(steering, mover, xform, modifierQuery, bodyQuery, frameTime);
+            }
+
+            if (CollisionAvoidanceEnabled)
+            {
+                CollisionAvoidance(npcs);
             }
         }
 

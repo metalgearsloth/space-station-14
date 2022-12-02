@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using Content.Server.NPC.Components;
 using Content.Shared.CCVar;
 using Content.Shared.Movement.Components;
@@ -43,18 +44,26 @@ public sealed partial class NPCSteeringSystem
         var xformQuery = GetEntityQuery<TransformComponent>();
         var fixturesQuery = GetEntityQuery<FixturesComponent>();
 
-        foreach (var (steering, _, mover, xform) in npcs)
+        Parallel.For(0, npcs.Length, i =>
         {
+            var (steering, _, mover, xform) = npcs[i];
+
             if (!rvoQuery.TryGetComponent(steering.Owner, out var rvo) ||
                 !bodyQuery.TryGetComponent(steering.Owner, out var body))
-                continue;
+                return;
 
-            ComputeNeighbors(mover, rvo, body, xform, xformQuery);
+            ComputeNeighbors(mover, rvo, body, xform, xformQuery, bodyQuery);
             ComputeVelocity(mover, rvo, body, xform, xformQuery, fixturesQuery);
-        }
+        });
     }
 
-    private void ComputeNeighbors(InputMoverComponent mover, NPCRVOComponent rvo, PhysicsComponent body, TransformComponent xform, EntityQuery<TransformComponent> xformQuery)
+    private void ComputeNeighbors(
+        InputMoverComponent mover,
+        NPCRVOComponent rvo,
+        PhysicsComponent body,
+        TransformComponent xform,
+        EntityQuery<TransformComponent> xformQuery,
+        EntityQuery<PhysicsComponent> bodyQuery)
     {
         // Obstacles
         var obstacleRange = rvo.ObstacleTimeHorizon * GetSprintSpeed(mover.Owner) + Radius;
@@ -63,12 +72,11 @@ public sealed partial class NPCSteeringSystem
 
         if (ObstacleAvoidanceEnabled)
         {
-            foreach (var other in _lookup.GetBodiesInRange(mapId, xform.WorldPosition, obstacleRange))
+            foreach (var otherEnt in _lookup.GetEntitiesInRange(mapId, xform.WorldPosition, obstacleRange, LookupFlags.Static))
             {
-                if (!other.CanCollide ||
+                if (!bodyQuery.TryGetComponent(otherEnt, out var other) ||
                     !other.Hard ||
-                    other.BodyType != BodyType.Static ||
-                    other.Owner == mover.Owner ||
+                    otherEnt == mover.Owner ||
                     xformQuery.GetComponent(other.Owner).ParentUid != xform.ParentUid)
                     continue;
 
@@ -82,12 +90,11 @@ public sealed partial class NPCSteeringSystem
 
         if (rvo.MaxNeighbors > 0)
         {
-            foreach (var other in _lookup.GetBodiesInRange(mapId, xform.WorldPosition, agentRange))
+            foreach (var otherEnt in _lookup.GetEntitiesInRange(mapId, xform.WorldPosition, agentRange, LookupFlags.Static))
             {
-                if (!other.CanCollide ||
+                if (!bodyQuery.TryGetComponent(otherEnt, out var other) ||
                     !other.Hard ||
-                    other.BodyType == BodyType.Static ||
-                    other.Owner == mover.Owner ||
+                    otherEnt == mover.Owner ||
                     xformQuery.GetComponent(other.Owner).ParentUid != xform.ParentUid)
                     continue;
 
@@ -145,7 +152,7 @@ public sealed partial class NPCSteeringSystem
         var position = xform.LocalPosition;
 
         var velocity = body.LinearVelocity;
-        var radius = 0.35f;
+        var radius = 0.20f;
 
         // Create ORCA lines for obstacles
         foreach (var obstacleEntity in rvo.ObstacleNeighbors)
@@ -154,7 +161,7 @@ public sealed partial class NPCSteeringSystem
             var fixtureManager = fixturesQuery.GetComponent(obstacleEntity);
             var transform = new Transform(obstacleXform.LocalPosition, obstacleXform.LocalRotation);
 
-            foreach (var (_, fixture) in fixtureManager.Fixtures)
+            foreach (var fixture in fixtureManager.Fixtures.Values)
             {
                 var shape = fixture.Shape;
                 // TODO: The issue is you don't want every obstacle in a poly so look at RVO.
