@@ -52,7 +52,7 @@ public sealed partial class NPCSteeringSystem
                 !bodyQuery.TryGetComponent(steering.Owner, out var body))
                 return;
 
-            ComputeNeighbors(mover, rvo, body, xform, xformQuery, bodyQuery);
+            ComputeNeighbors(mover, rvo, body, steering, xform, xformQuery, bodyQuery);
             ComputeVelocity(mover, rvo, body, xform, xformQuery, fixturesQuery);
         });
     }
@@ -61,6 +61,7 @@ public sealed partial class NPCSteeringSystem
         InputMoverComponent mover,
         NPCRVOComponent rvo,
         PhysicsComponent body,
+        NPCSteeringComponent steering,
         TransformComponent xform,
         EntityQuery<TransformComponent> xformQuery,
         EntityQuery<PhysicsComponent> bodyQuery)
@@ -70,7 +71,7 @@ public sealed partial class NPCSteeringSystem
         rvo.ObstacleNeighbors.Clear();
         var mapId = xform.MapID;
 
-        if (ObstacleAvoidanceEnabled)
+        if (false && ObstacleAvoidanceEnabled)
         {
             foreach (var otherEnt in _lookup.GetEntitiesInRange(mapId, xform.WorldPosition, obstacleRange, LookupFlags.Static))
             {
@@ -90,12 +91,19 @@ public sealed partial class NPCSteeringSystem
 
         if (rvo.MaxNeighbors > 0)
         {
-            foreach (var otherEnt in _lookup.GetEntitiesInRange(mapId, xform.WorldPosition, agentRange, LookupFlags.Static))
+            if (mover.Owner == new EntityUid(17862))
+            {
+
+            }
+
+            foreach (var otherEnt in _lookup.GetEntitiesInRange(mapId, xform.WorldPosition, agentRange, LookupFlags.Dynamic))
             {
                 if (!bodyQuery.TryGetComponent(otherEnt, out var other) ||
                     !other.Hard ||
                     otherEnt == mover.Owner ||
-                    xformQuery.GetComponent(other.Owner).ParentUid != xform.ParentUid)
+                    steering.Coordinates.EntityId == otherEnt ||
+                    xformQuery.GetComponent(other.Owner).ParentUid != xform.ParentUid ||
+                    Vector2.Dot(body.LinearVelocity, other.LinearVelocity) < 0f)
                     continue;
 
                 rvo.AgentNeighbors.Add(other.Owner);
@@ -152,7 +160,7 @@ public sealed partial class NPCSteeringSystem
         var position = xform.LocalPosition;
 
         var velocity = body.LinearVelocity;
-        var radius = 0.35f;
+        var radius = 0.35f / 8f;
         var obstacles = new ValueList<ORCAObstacle>();
 
         // Create ORCA lines for obstacles
