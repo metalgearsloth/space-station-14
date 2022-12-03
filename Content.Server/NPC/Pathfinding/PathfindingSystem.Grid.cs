@@ -50,6 +50,12 @@ public sealed partial class PathfindingSystem
         SubscribeLocalEvent<CollisionChangeEvent>(OnCollisionChange);
         SubscribeLocalEvent<PhysicsBodyTypeChangedEvent>(OnBodyTypeChange);
         SubscribeLocalEvent<MoveEvent>(OnMoveEvent);
+        SubscribeLocalEvent<TileChangedEvent>(OnTileChange);
+    }
+
+    private void OnTileChange(TileChangedEvent ev)
+    {
+        DirtyChunk(ev.Entity, Comp<MapGridComponent>(ev.Entity).GridTileToLocal(ev.NewTile.GridIndices));
     }
 
     private void OnGridPathPause(EntityUid uid, GridPathfindingComponent component, EntityPausedEvent args)

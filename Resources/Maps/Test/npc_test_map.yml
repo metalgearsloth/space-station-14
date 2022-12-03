@@ -152,11 +152,15 @@ entities:
   components:
   - type: MetaData
   - type: Transform
-  - index: 48
+  - index: 2
     type: Map
   - type: PhysicsMap
   - type: Broadphase
   - type: OccluderTree
+  - gravityShakeSound: !type:SoundPathSpecifier
+      path: /Audio/Effects/alert.ogg
+    enabled: True
+    type: Gravity
 - uid: 10
   components:
   - type: MetaData
@@ -197,10 +201,6 @@ entities:
     type: Physics
   - fixtures: []
     type: Fixtures
-  - gravityShakeSound: !type:SoundPathSpecifier
-      path: /Audio/Effects/alert.ogg
-    enabled: True
-    type: Gravity
   - chunkCollection: {}
     type: DecalGrid
   - tiles:
@@ -2027,12 +2027,6 @@ entities:
   type: WallReinforced
   components:
   - pos: 6.5,-5.5
-    parent: 10
-    type: Transform
-- uid: 181
-  type: GravityGenerator
-  components:
-  - pos: 17.5,1.5
     parent: 10
     type: Transform
 - uid: 182
@@ -7122,9 +7116,6 @@ entities:
     type: Physics
   - fixtures: []
     type: Fixtures
-  - gravityShakeSound: !type:SoundPathSpecifier
-      path: /Audio/Effects/alert.ogg
-    type: Gravity
   - chunkCollection: {}
     type: DecalGrid
   - tiles:

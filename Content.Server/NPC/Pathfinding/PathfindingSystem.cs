@@ -228,7 +228,6 @@ namespace Content.Server.NPC.Pathfinding
 
         public async Task<PathResultEvent> GetRandomPath(
             EntityUid entity,
-            float range,
             float maxRange,
             CancellationToken cancelToken,
             int limit = 40,
@@ -246,7 +245,7 @@ namespace Content.Server.NPC.Pathfinding
                 mask = body.CollisionMask;
             }
 
-            var request = new BFSPathRequest(maxRange, limit, start.Coordinates, flags, range, layer, mask, cancelToken);
+            var request = new BFSPathRequest(maxRange, limit, start.Coordinates, flags, layer, mask, cancelToken);
             var path = await GetPath(request);
 
             if (path.Result != PathResult.Path)
@@ -435,6 +434,15 @@ namespace Content.Server.NPC.Pathfinding
             // For now it seems okay and it shouldn't block on 1 NPC anyway.
 
             _pathRequests.Add(request);
+            if (request is AStarPathRequest aStar)
+            {
+                if (aStar.Start.TryDistance(EntityManager, aStar.End, out var distance) && distance < 3f)
+                {
+                    _sawmill.Debug($"Short path cunt");
+                }
+
+                _sawmill.Debug($"Requesting A* path from {request.Start} to {aStar.End}");
+            }
 
             await request.Task;
 

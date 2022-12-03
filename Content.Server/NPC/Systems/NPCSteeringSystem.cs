@@ -158,6 +158,8 @@ namespace Content.Server.NPC.Systems
             if (clear && value.Equals(Vector2.Zero))
             {
                 steering.CurrentPath.Clear();
+                steering.PathfindToken?.Cancel();
+                steering.PathfindToken = null;
             }
 
             component.CurTickSprintMovement = value;
@@ -254,11 +256,6 @@ namespace Content.Server.NPC.Systems
             }
 
             var direction = targetMap.Position - ourMap.Position;
-
-            if (steering.Owner == new EntityUid(15315))
-            {
-
-            }
 
             // Are we in range
             if (direction.Length <= arrivalDistance)
@@ -390,6 +387,7 @@ namespace Content.Server.NPC.Systems
 
             // Prune the first node as it's irrelevant.
             nodes.Dequeue();
+            var count = 1;
 
             while (nodes.TryPeek(out var node))
             {
@@ -404,11 +402,20 @@ namespace Content.Server.NPC.Systems
                     Vector2.Dot(direction, nodeMap.Position - mapCoordinates.Position) < 0f)
                 {
                     nodes.Dequeue();
+                    count++;
                     continue;
                 }
 
                 break;
             }
+
+            if (nodes.Count == 0)
+            {
+                
+            }
+
+            if (count > 1)
+                Logger.DebugS("npc.steering", $"Pruned {count} nodes");
         }
 
         /// <summary>

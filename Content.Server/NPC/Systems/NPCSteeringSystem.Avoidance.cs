@@ -152,7 +152,8 @@ public sealed partial class NPCSteeringSystem
         var position = xform.LocalPosition;
 
         var velocity = body.LinearVelocity;
-        var radius = 0.20f;
+        var radius = 0.35f;
+        var obstacles = new ValueList<ORCAObstacle>();
 
         // Create ORCA lines for obstacles
         foreach (var obstacleEntity in rvo.ObstacleNeighbors)
@@ -164,8 +165,7 @@ public sealed partial class NPCSteeringSystem
             foreach (var fixture in fixtureManager.Fixtures.Values)
             {
                 var shape = fixture.Shape;
-                // TODO: The issue is you don't want every obstacle in a poly so look at RVO.
-                var obstacles = new ValueList<ORCAObstacle>();
+                // TODO: When creating obstacle neighbors look at distSq.
 
                 switch (shape)
                 {
@@ -182,281 +182,281 @@ public sealed partial class NPCSteeringSystem
                     default:
                         continue;
                 }
+            }
+        }
 
-                for (var i = 0; i < obstacles.Count; i++)
+        for (var i = 0; i < obstacles.Count; i++)
+        {
+            var obstacle1 = obstacles[i];
+            var obstacle2 = obstacles[(i + 1) % obstacles.Count];
+
+            Vector2 relativePosition1 = obstacle1.Point - position;
+            Vector2 relativePosition2 = obstacle2.Point - position;
+
+            /*
+             * Check if velocity obstacle of obstacle is already taken care
+             * of by previously constructed obstacle ORCA lines.
+             */
+            bool alreadyCovered = false;
+
+            for (int j = 0; j < rvo.OrcaLines.Count; ++j)
+            {
+                if (Vector2.Determinant(relativePosition1 * invTimeHorizonObst - rvo.OrcaLines[j].Point,
+                        rvo.OrcaLines[j].Direction) - invTimeHorizonObst * radius >= -RVO_EPSILON &&
+                    Vector2.Determinant(relativePosition2 * invTimeHorizonObst - rvo.OrcaLines[j].Point,
+                        rvo.OrcaLines[j].Direction) - invTimeHorizonObst * radius >= -RVO_EPSILON)
                 {
-                    var obstacle1 = obstacles[i];
-                    var obstacle2 = obstacles[(i + 1) % obstacles.Count];
+                    alreadyCovered = true;
 
-                    Vector2 relativePosition1 = obstacle1.Point - position;
-                    Vector2 relativePosition2 = obstacle2.Point - position;
-
-                    /*
-                     * Check if velocity obstacle of obstacle is already taken care
-                     * of by previously constructed obstacle ORCA lines.
-                     */
-                    bool alreadyCovered = false;
-
-                    for (int j = 0; j < rvo.OrcaLines.Count; ++j)
-                    {
-                        if (Vector2.Determinant(relativePosition1 * invTimeHorizonObst - rvo.OrcaLines[j].Point,
-                                rvo.OrcaLines[j].Direction) - invTimeHorizonObst * radius >= -RVO_EPSILON &&
-                            Vector2.Determinant(relativePosition2 * invTimeHorizonObst - rvo.OrcaLines[j].Point,
-                                rvo.OrcaLines[j].Direction) - invTimeHorizonObst * radius >= -RVO_EPSILON)
-                        {
-                            alreadyCovered = true;
-
-                            break;
-                        }
-                    }
-
-                    if (alreadyCovered)
-                    {
-                        continue;
-                    }
-
-                    /* Not yet covered. Check for collisions. */
-                    float distSq1 = relativePosition1.LengthSquared;
-                    float distSq2 = relativePosition2.LengthSquared;
-
-                    float radiusSq = radius * radius;
-
-                    Vector2 obstacleVector = obstacle2.Point - obstacle1.Point;
-                    float s = Vector2.Dot(-relativePosition1, obstacleVector) / obstacleVector.LengthSquared;
-                    float distSqLine = (-relativePosition1 - obstacleVector * s).LengthSquared;
-
-                    ORCALine line = new();
-
-                    if (s < 0.0f && distSq1 <= radiusSq)
-                    {
-                        /* Collision with left vertex. Ignore if non-convex. */
-                        if (obstacle1.Convex)
-                        {
-                            line.Point = new Vector2(0.0f, 0.0f);
-                            line.Direction =
-                                (new Vector2(-relativePosition1.Y, relativePosition1.X)).Normalized;
-                            rvo.OrcaLines.Add(line);
-                        }
-
-                        continue;
-                    }
-                    else if (s > 1.0f && distSq2 <= radiusSq)
-                    {
-                        /*
-                         * Collision with right vertex. Ignore if non-convex or if
-                         * it will be taken care of by neighboring obstacle.
-                         */
-                        if (obstacle2.Convex && Vector2.Determinant(relativePosition2, obstacle2.Direction) >= 0.0f)
-                        {
-                            line.Point = new Vector2(0.0f, 0.0f);
-                            line.Direction =
-                                (new Vector2(-relativePosition2.Y, relativePosition2.X)).Normalized;
-                            rvo.OrcaLines.Add(line);
-                        }
-
-                        continue;
-                    }
-                    else if (s >= 0.0f && s <= 1.0f && distSqLine <= radiusSq)
-                    {
-                        /* Collision with obstacle segment. */
-                        line.Point = new Vector2(0.0f, 0.0f);
-                        line.Direction = -obstacle1.Direction;
-                        rvo.OrcaLines.Add(line);
-
-                        continue;
-                    }
-
-                    /*
-                     * No collision. Compute legs. When obliquely viewed, both legs
-                     * can come from a single vertex. Legs extend cut-off line when
-                     * non-convex vertex.
-                     */
-
-                    Vector2 leftLegDirection, rightLegDirection;
-
-                    if (s < 0.0f && distSqLine <= radiusSq)
-                    {
-                        /*
-                         * Obstacle viewed obliquely so that left vertex
-                         * defines velocity obstacle.
-                         */
-                        if (!obstacle1.Convex)
-                        {
-                            /* Ignore obstacle. */
-                            continue;
-                        }
-
-                        obstacle2 = obstacle1;
-
-                        float leg1 = MathF.Sqrt(distSq1 - radiusSq);
-                        leftLegDirection = new Vector2(relativePosition1.X * leg1 - relativePosition1.Y * radius,
-                            relativePosition1.X * radius + relativePosition1.Y * leg1) / distSq1;
-                        rightLegDirection = new Vector2(relativePosition1.X * leg1 + relativePosition1.Y * radius,
-                            -relativePosition1.X * radius + relativePosition1.Y * leg1) / distSq1;
-                    }
-                    else if (s > 1.0f && distSqLine <= radiusSq)
-                    {
-                        /*
-                         * Obstacle viewed obliquely so that
-                         * right vertex defines velocity obstacle.
-                         */
-                        if (!obstacle2.Convex)
-                        {
-                            /* Ignore obstacle. */
-                            continue;
-                        }
-
-                        obstacle1 = obstacle2;
-
-                        float leg2 = MathF.Sqrt(distSq2 - radiusSq);
-                        leftLegDirection = new Vector2(relativePosition2.X * leg2 - relativePosition2.Y * radius,
-                            relativePosition2.X * radius + relativePosition2.Y * leg2) / distSq2;
-                        rightLegDirection = new Vector2(relativePosition2.X * leg2 + relativePosition2.Y * radius,
-                            -relativePosition2.X * radius + relativePosition2.Y * leg2) / distSq2;
-                    }
-                    else
-                    {
-                        /* Usual situation. */
-                        if (obstacle1.Convex)
-                        {
-                            float leg1 = MathF.Sqrt(distSq1 - radiusSq);
-                            leftLegDirection =
-                                new Vector2(relativePosition1.X * leg1 - relativePosition1.Y * radius,
-                                    relativePosition1.X * radius + relativePosition1.Y * leg1) / distSq1;
-                        }
-                        else
-                        {
-                            /* Left vertex non-convex; left leg extends cut-off line. */
-                            leftLegDirection = -obstacle1.Direction;
-                        }
-
-                        if (obstacle2.Convex)
-                        {
-                            float leg2 = MathF.Sqrt(distSq2 - radiusSq);
-                            rightLegDirection =
-                                new Vector2(relativePosition2.X * leg2 + relativePosition2.Y * radius,
-                                    -relativePosition2.X * radius + relativePosition2.Y * leg2) / distSq2;
-                        }
-                        else
-                        {
-                            /* Right vertex non-convex; right leg extends cut-off line. */
-                            rightLegDirection = obstacle1.Direction;
-                        }
-                    }
-
-                    /*
-                     * Legs can never point into neighboring edge when convex
-                     * vertex, take cutoff-line of neighboring edge instead. If
-                     * velocity projected on "foreign" leg, no constraint is added.
-                     */
-
-                    ORCAObstacle leftNeighbor = i == 0 ? obstacles[^1] : obstacles[i - 1];
-
-                    bool isLeftLegForeign = false;
-                    bool isRightLegForeign = false;
-
-                    if (obstacle1.Convex && Vector2.Determinant(leftLegDirection, -leftNeighbor.Direction) >= 0.0f)
-                    {
-                        /* Left leg points into obstacle. */
-                        leftLegDirection = -leftNeighbor.Direction;
-                        isLeftLegForeign = true;
-                    }
-
-                    if (obstacle2.Convex && Vector2.Determinant(rightLegDirection, obstacle2.Direction) <= 0.0f)
-                    {
-                        /* Right leg points into obstacle. */
-                        rightLegDirection = obstacle2.Direction;
-                        isRightLegForeign = true;
-                    }
-
-                    /* Compute cut-off centers. */
-                    Vector2 leftCutOff = (obstacle1.Point - position) * invTimeHorizonObst;
-                    Vector2 rightCutOff = (obstacle2.Point - position) * invTimeHorizonObst;
-                    Vector2 cutOffVector = rightCutOff - leftCutOff;
-
-                    /* Project current velocity on velocity obstacle. */
-
-                    /* Check if current velocity is projected on cutoff circles. */
-                    float t = obstacle1.Equals(obstacle2)
-                        ? 0.5f
-                        : (Vector2.Dot((velocity - leftCutOff), cutOffVector)) / cutOffVector.LengthSquared;
-
-                    float tLeft = Vector2.Dot((velocity - leftCutOff), leftLegDirection);
-                    float tRight = Vector2.Dot((velocity - rightCutOff), rightLegDirection);
-
-                    if ((t < 0.0f && tLeft < 0.0f) || (obstacle1.Equals(obstacle2) && tLeft < 0.0f && tRight < 0.0f))
-                    {
-                        /* Project on left cut-off circle. */
-                        Vector2 unitW = (velocity - leftCutOff).Normalized;
-
-                        line.Direction = new Vector2(unitW.Y, -unitW.X);
-                        line.Point = leftCutOff + unitW * invTimeHorizonObst * radius;
-                        rvo.OrcaLines.Add(line);
-
-                        continue;
-                    }
-                    else if (t > 1.0f && tRight < 0.0f)
-                    {
-                        /* Project on right cut-off circle. */
-                        Vector2 unitW = (velocity - rightCutOff).Normalized;
-
-                        line.Direction = new Vector2(unitW.Y, -unitW.X);
-                        line.Point = rightCutOff + unitW * radius * invTimeHorizonObst;
-                        rvo.OrcaLines.Add(line);
-
-                        continue;
-                    }
-
-                    /*
-                     * Project on left leg, right leg, or cut-off line, whichever is
-                     * closest to velocity.
-                     */
-                    float distSqCutoff = (t < 0.0f || t > 1.0f || obstacle1.Equals(obstacle2))
-                        ? float.PositiveInfinity
-                        : (velocity - (leftCutOff + cutOffVector * t)).LengthSquared;
-                    float distSqLeft = tLeft < 0.0f
-                        ? float.PositiveInfinity
-                        : (velocity - (leftCutOff + leftLegDirection * tLeft)).LengthSquared;
-                    float distSqRight = tRight < 0.0f
-                        ? float.PositiveInfinity
-                        : (velocity - (rightCutOff + rightLegDirection * tRight)).LengthSquared;
-
-                    if (distSqCutoff <= distSqLeft && distSqCutoff <= distSqRight)
-                    {
-                        /* Project on cut-off line. */
-                        line.Direction = -obstacle1.Direction;
-                        line.Point = leftCutOff + new Vector2(-line.Direction.Y, line.Direction.X) * radius * invTimeHorizonObst;
-                        rvo.OrcaLines.Add(line);
-
-                        continue;
-                    }
-
-                    if (distSqLeft <= distSqRight)
-                    {
-                        /* Project on left leg. */
-                        if (isLeftLegForeign)
-                        {
-                            continue;
-                        }
-
-                        line.Direction = leftLegDirection;
-                        line.Point = leftCutOff + new Vector2(-line.Direction.Y, line.Direction.X) * radius * invTimeHorizonObst;
-                        rvo.OrcaLines.Add(line);
-
-                        continue;
-                    }
-
-                    /* Project on right leg. */
-                    if (isRightLegForeign)
-                    {
-                        continue;
-                    }
-
-                    line.Direction = -rightLegDirection;
-                    line.Point = rightCutOff + new Vector2(-line.Direction.Y, line.Direction.X) * radius * invTimeHorizonObst;
-                    rvo.OrcaLines.Add(line);
+                    break;
                 }
             }
+
+            if (alreadyCovered)
+            {
+                continue;
+            }
+
+            /* Not yet covered. Check for collisions. */
+            float distSq1 = relativePosition1.LengthSquared;
+            float distSq2 = relativePosition2.LengthSquared;
+
+            float radiusSq = radius * radius;
+
+            Vector2 obstacleVector = obstacle2.Point - obstacle1.Point;
+            float s = Vector2.Dot(-relativePosition1, obstacleVector) / obstacleVector.LengthSquared;
+            float distSqLine = (-relativePosition1 - obstacleVector * s).LengthSquared;
+
+            ORCALine line = new();
+
+            if (s < 0.0f && distSq1 <= radiusSq)
+            {
+                /* Collision with left vertex. Ignore if non-convex. */
+                if (obstacle1.Convex)
+                {
+                    line.Point = new Vector2(0.0f, 0.0f);
+                    line.Direction =
+                        (new Vector2(-relativePosition1.Y, relativePosition1.X)).Normalized;
+                    rvo.OrcaLines.Add(line);
+                }
+
+                continue;
+            }
+            else if (s > 1.0f && distSq2 <= radiusSq)
+            {
+                /*
+                 * Collision with right vertex. Ignore if non-convex or if
+                 * it will be taken care of by neighboring obstacle.
+                 */
+                if (obstacle2.Convex && Vector2.Determinant(relativePosition2, obstacle2.Direction) >= 0.0f)
+                {
+                    line.Point = new Vector2(0.0f, 0.0f);
+                    line.Direction =
+                        (new Vector2(-relativePosition2.Y, relativePosition2.X)).Normalized;
+                    rvo.OrcaLines.Add(line);
+                }
+
+                continue;
+            }
+            else if (s >= 0.0f && s <= 1.0f && distSqLine <= radiusSq)
+            {
+                /* Collision with obstacle segment. */
+                line.Point = new Vector2(0.0f, 0.0f);
+                line.Direction = -obstacle1.Direction;
+                rvo.OrcaLines.Add(line);
+
+                continue;
+            }
+
+            /*
+             * No collision. Compute legs. When obliquely viewed, both legs
+             * can come from a single vertex. Legs extend cut-off line when
+             * non-convex vertex.
+             */
+
+            Vector2 leftLegDirection, rightLegDirection;
+
+            if (s < 0.0f && distSqLine <= radiusSq)
+            {
+                /*
+                 * Obstacle viewed obliquely so that left vertex
+                 * defines velocity obstacle.
+                 */
+                if (!obstacle1.Convex)
+                {
+                    /* Ignore obstacle. */
+                    continue;
+                }
+
+                obstacle2 = obstacle1;
+
+                float leg1 = MathF.Sqrt(distSq1 - radiusSq);
+                leftLegDirection = new Vector2(relativePosition1.X * leg1 - relativePosition1.Y * radius,
+                    relativePosition1.X * radius + relativePosition1.Y * leg1) / distSq1;
+                rightLegDirection = new Vector2(relativePosition1.X * leg1 + relativePosition1.Y * radius,
+                    -relativePosition1.X * radius + relativePosition1.Y * leg1) / distSq1;
+            }
+            else if (s > 1.0f && distSqLine <= radiusSq)
+            {
+                /*
+                 * Obstacle viewed obliquely so that
+                 * right vertex defines velocity obstacle.
+                 */
+                if (!obstacle2.Convex)
+                {
+                    /* Ignore obstacle. */
+                    continue;
+                }
+
+                obstacle1 = obstacle2;
+
+                float leg2 = MathF.Sqrt(distSq2 - radiusSq);
+                leftLegDirection = new Vector2(relativePosition2.X * leg2 - relativePosition2.Y * radius,
+                    relativePosition2.X * radius + relativePosition2.Y * leg2) / distSq2;
+                rightLegDirection = new Vector2(relativePosition2.X * leg2 + relativePosition2.Y * radius,
+                    -relativePosition2.X * radius + relativePosition2.Y * leg2) / distSq2;
+            }
+            else
+            {
+                /* Usual situation. */
+                if (obstacle1.Convex)
+                {
+                    float leg1 = MathF.Sqrt(distSq1 - radiusSq);
+                    leftLegDirection =
+                        new Vector2(relativePosition1.X * leg1 - relativePosition1.Y * radius,
+                            relativePosition1.X * radius + relativePosition1.Y * leg1) / distSq1;
+                }
+                else
+                {
+                    /* Left vertex non-convex; left leg extends cut-off line. */
+                    leftLegDirection = -obstacle1.Direction;
+                }
+
+                if (obstacle2.Convex)
+                {
+                    float leg2 = MathF.Sqrt(distSq2 - radiusSq);
+                    rightLegDirection =
+                        new Vector2(relativePosition2.X * leg2 + relativePosition2.Y * radius,
+                            -relativePosition2.X * radius + relativePosition2.Y * leg2) / distSq2;
+                }
+                else
+                {
+                    /* Right vertex non-convex; right leg extends cut-off line. */
+                    rightLegDirection = obstacle1.Direction;
+                }
+            }
+
+            /*
+             * Legs can never point into neighboring edge when convex
+             * vertex, take cutoff-line of neighboring edge instead. If
+             * velocity projected on "foreign" leg, no constraint is added.
+             */
+
+            ORCAObstacle leftNeighbor = i == 0 ? obstacles[^1] : obstacles[i - 1];
+
+            bool isLeftLegForeign = false;
+            bool isRightLegForeign = false;
+
+            if (obstacle1.Convex && Vector2.Determinant(leftLegDirection, -leftNeighbor.Direction) >= 0.0f)
+            {
+                /* Left leg points into obstacle. */
+                leftLegDirection = -leftNeighbor.Direction;
+                isLeftLegForeign = true;
+            }
+
+            if (obstacle2.Convex && Vector2.Determinant(rightLegDirection, obstacle2.Direction) <= 0.0f)
+            {
+                /* Right leg points into obstacle. */
+                rightLegDirection = obstacle2.Direction;
+                isRightLegForeign = true;
+            }
+
+            /* Compute cut-off centers. */
+            Vector2 leftCutOff = (obstacle1.Point - position) * invTimeHorizonObst;
+            Vector2 rightCutOff = (obstacle2.Point - position) * invTimeHorizonObst;
+            Vector2 cutOffVector = rightCutOff - leftCutOff;
+
+            /* Project current velocity on velocity obstacle. */
+
+            /* Check if current velocity is projected on cutoff circles. */
+            float t = obstacle1.Equals(obstacle2)
+                ? 0.5f
+                : (Vector2.Dot((velocity - leftCutOff), cutOffVector)) / cutOffVector.LengthSquared;
+
+            float tLeft = Vector2.Dot((velocity - leftCutOff), leftLegDirection);
+            float tRight = Vector2.Dot((velocity - rightCutOff), rightLegDirection);
+
+            if ((t < 0.0f && tLeft < 0.0f) || (obstacle1.Equals(obstacle2) && tLeft < 0.0f && tRight < 0.0f))
+            {
+                /* Project on left cut-off circle. */
+                Vector2 unitW = (velocity - leftCutOff).Normalized;
+
+                line.Direction = new Vector2(unitW.Y, -unitW.X);
+                line.Point = leftCutOff + unitW * invTimeHorizonObst * radius;
+                rvo.OrcaLines.Add(line);
+
+                continue;
+            }
+            else if (t > 1.0f && tRight < 0.0f)
+            {
+                /* Project on right cut-off circle. */
+                Vector2 unitW = (velocity - rightCutOff).Normalized;
+
+                line.Direction = new Vector2(unitW.Y, -unitW.X);
+                line.Point = rightCutOff + unitW * radius * invTimeHorizonObst;
+                rvo.OrcaLines.Add(line);
+
+                continue;
+            }
+
+            /*
+             * Project on left leg, right leg, or cut-off line, whichever is
+             * closest to velocity.
+             */
+            float distSqCutoff = (t < 0.0f || t > 1.0f || obstacle1.Equals(obstacle2))
+                ? float.PositiveInfinity
+                : (velocity - (leftCutOff + cutOffVector * t)).LengthSquared;
+            float distSqLeft = tLeft < 0.0f
+                ? float.PositiveInfinity
+                : (velocity - (leftCutOff + leftLegDirection * tLeft)).LengthSquared;
+            float distSqRight = tRight < 0.0f
+                ? float.PositiveInfinity
+                : (velocity - (rightCutOff + rightLegDirection * tRight)).LengthSquared;
+
+            if (distSqCutoff <= distSqLeft && distSqCutoff <= distSqRight)
+            {
+                /* Project on cut-off line. */
+                line.Direction = -obstacle1.Direction;
+                line.Point = leftCutOff + new Vector2(-line.Direction.Y, line.Direction.X) * radius * invTimeHorizonObst;
+                rvo.OrcaLines.Add(line);
+
+                continue;
+            }
+
+            if (distSqLeft <= distSqRight)
+            {
+                /* Project on left leg. */
+                if (isLeftLegForeign)
+                {
+                    continue;
+                }
+
+                line.Direction = leftLegDirection;
+                line.Point = leftCutOff + new Vector2(-line.Direction.Y, line.Direction.X) * radius * invTimeHorizonObst;
+                rvo.OrcaLines.Add(line);
+
+                continue;
+            }
+
+            /* Project on right leg. */
+            if (isRightLegForeign)
+            {
+                continue;
+            }
+
+            line.Direction = -rightLegDirection;
+            line.Point = rightCutOff + new Vector2(-line.Direction.Y, line.Direction.X) * radius * invTimeHorizonObst;
+            rvo.OrcaLines.Add(line);
         }
 
         var numObstLines = rvo.OrcaLines.Count;
