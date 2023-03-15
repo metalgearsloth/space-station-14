@@ -30,6 +30,8 @@ namespace Content.Shared.Friction
         private float _frictionModifier;
         private const float DefaultFriction = 0.3f;
 
+        public bool Enabled = true;
+
         public override void Initialize()
         {
             base.Initialize();
@@ -70,6 +72,9 @@ namespace Content.Shared.Friction
         public override void UpdateBeforeMapSolve(bool prediction, PhysicsMapComponent mapComponent, float frameTime)
         {
             base.UpdateBeforeMapSolve(prediction, mapComponent, frameTime);
+
+            if (!Enabled)
+                return;
 
             var frictionQuery = GetEntityQuery<TileFrictionModifierComponent>();
             var xformQuery = GetEntityQuery<TransformComponent>();
