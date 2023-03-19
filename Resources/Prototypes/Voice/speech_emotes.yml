@@ -85,3 +85,8 @@
     - snapping fingers
     - snapped fingers
 
+# Death gasp
+- type: emote
+  id: DeathGasp
+  chatMessages:
+    - seizes up and falls limp, their eyes dead and lifeless

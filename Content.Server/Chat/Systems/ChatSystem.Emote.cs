@@ -71,14 +71,20 @@ public partial class ChatSystem
     /// <param name="hideChat">Whether or not this message should appear in the chat window</param>
     /// <param name="hideGlobalGhostChat">Whether or not this message should appear in the chat window for out-of-range ghosts (which otherwise ignore range restrictions)</param>
     /// <param name="nameOverride">The name to use for the speaking entity. Usually this should just be modified via <see cref="TransformSpeakerNameEvent"/>. If this is set, the event will not get raised.</param>
-    public void TryEmoteWithChat(EntityUid source, EmotePrototype emote, bool hideChat = false,
-        bool hideGlobalGhostChat = false, string? nameOverride = null)
+    /// <param name="checkBlocker">Should we check for actionblocker when emoting</param>
+    public void TryEmoteWithChat(
+        EntityUid source,
+        EmotePrototype emote,
+        bool hideChat = false,
+        bool hideGlobalGhostChat = false,
+        string? nameOverride = null,
+        bool checkBlocker = true)
     {
         // check if proto has valid message for chat
         if (emote.ChatMessages.Count != 0)
         {
             var action = _random.Pick(emote.ChatMessages);
-            SendEntityEmote(source, action, hideChat, hideGlobalGhostChat, nameOverride, false);
+            SendEntityEmote(source, action, hideChat, hideGlobalGhostChat, nameOverride, false, checkBlocker: checkBlocker);
         }
 
         // do the rest of emote event logic here

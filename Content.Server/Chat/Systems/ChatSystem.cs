@@ -405,9 +405,9 @@ public sealed partial class ChatSystem : SharedChatSystem
     }
 
     private void SendEntityEmote(EntityUid source, string action, bool hideChat,
-        bool hideGlobalGhostChat, string? nameOverride, bool checkEmote = true)
+        bool hideGlobalGhostChat, string? nameOverride, bool checkEmote = true, bool checkBlocker = true)
     {
-        if (!_actionBlocker.CanEmote(source)) return;
+        if (checkBlocker && !_actionBlocker.CanEmote(source)) return;
 
         // get the entity's apparent name (if no override provided).
         string name = FormattedMessage.EscapeText(nameOverride ?? Identity.Name(source, EntityManager));
