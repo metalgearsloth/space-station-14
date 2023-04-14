@@ -1,4 +1,4 @@
-{
+﻿{
   "version": 1,
   "license": "CC-BY-SA-3.0",
   "copyright": "Made by brainfood1183 (Github) for ss14",
@@ -18,7 +18,7 @@
       "name": "inhand-right",
       "directions": 4
     },
-	{
+    {
       "name": "e_cutlass_blade",
       "delays": [
         [
@@ -35,15 +35,15 @@
           0.1,
           0.1
         ],
-		[
+        [
           0.1,
           0.1
         ],
-		[
+        [
           0.1,
           0.1
         ],
-		[
+        [
           0.1,
           0.1
         ]
@@ -57,15 +57,15 @@
           0.1,
           0.1
         ],
-		[
+        [
           0.1,
           0.1
         ],
-		[
+        [
           0.1,
           0.1
         ],
-		[
+        [
           0.1,
           0.1
         ]

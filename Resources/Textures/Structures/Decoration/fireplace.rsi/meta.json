@@ -1,4 +1,4 @@
-{
+﻿{
   "version": 1,
   "license": "CC-BY-SA-3.0",
   "copyright": "https://github.com/tgstation/tgstation/commit/6449b65d307312a111deb592e7a1bb4093e085e4",
@@ -8,8 +8,7 @@
   },
   "states": [
     {
-      "name": "fireplace",
-      "directions": 1
+      "name": "fireplace"
     },
     {
       "name": "fireplace_fire4",

@@ -1,4 +1,4 @@
-{
+﻿{
   "version": 1,
   "license": "CC-BY-SA-3.0",
   "copyright": "Taken from tgstation at commit https://github.com/tgstation/tgstation/commit/4f6190e2895e09116663ef282d3ce1d8b35c032e",
@@ -16,38 +16,31 @@
     },
     {
       "name": "equipped-MASK-dog",
-      "directions": 4,
-      "delays": [[1.0], [1.0], [1.0], [1.0]]
+      "directions": 4
     },
     {
       "name": "equipped-MASK-puppy",
-      "directions": 4,
-      "delays": [[1.0], [1.0], [1.0], [1.0]]
+      "directions": 4
     },
     {
       "name": "equipped-MASK-fox",
-      "directions": 4,
-      "delays": [[1.0], [1.0], [1.0], [1.0]]
+      "directions": 4
     },
     {
       "name": "equipped-MASK-cat",
-      "directions": 4,
-      "delays": [[1.0], [1.0], [1.0], [1.0]]
+      "directions": 4
     },
     {
       "name": "equipped-MASK-sloth",
-      "directions": 4,
-      "delays": [[1.0], [1.0], [1.0], [1.0]]
+      "directions": 4
     },
     {
       "name": "equipped-MASK-possum",
-      "directions": 4,
-      "delays": [[1.0], [1.0], [1.0], [1.0]]
+      "directions": 4
     },
     {
       "name": "equipped-MASK-pig",
-      "directions": 4,
-      "delays": [[1.0], [1.0], [1.0], [1.0]]
+      "directions": 4
     },
     {
       "name": "up-equipped-MASK",

@@ -1,4 +1,4 @@
-{
+﻿{
   "version": 1,
   "license": "CC-BY-NC-SA-3.0",
   "copyright": "mirrorcult",
@@ -7,7 +7,7 @@
     "y": 32
   },
   "states": [
-	{
+    {
       "name": "fulltile_overlay"
     },
     {

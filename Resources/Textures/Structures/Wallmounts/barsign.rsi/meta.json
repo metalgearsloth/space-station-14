@@ -1,12 +1,11 @@
-{
+﻿{
   "version": 1,
+  "license": "CC-BY-SA-3.0",
+  "copyright": "https://github.com/tgstation/tgstation/commit/68aade356cf53032f206cb5a887581ac7d166cae",
   "size": {
     "x": 64,
     "y": 32
   },
-  "license": "CC-BY-SA-3.0",
-  "copyright": "https://github.com/vgstation-coders/vgstation13/commit/1fbb5e417d0200fe60c6b628656a371093d2d715",
-  "copyright": "https://github.com/tgstation/tgstation/commit/68aade356cf53032f206cb5a887581ac7d166cae",
   "states": [
     {
       "name": "combocafe",
@@ -159,12 +158,7 @@
       ]
     },
     {
-      "name": "empty",
-      "delays": [
-        [
-          1
-        ]
-      ]
+      "name": "empty"
     },
     {
       "name": "goose",

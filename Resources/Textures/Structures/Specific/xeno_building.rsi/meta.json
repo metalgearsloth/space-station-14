@@ -1,4 +1,4 @@
-{
+﻿{
   "version": 1,
   "license": "CC-BY-SA-3.0",
   "copyright": "https://github.com/tgstation/TerraGov-Marine-Corps/blob/167684df96d25557864152709913e9c6f870564f/icons/Xeno/1x1building.dmi",
@@ -8,20 +8,16 @@
   },
   "states": [
     {
-      "name": "recoverytower",
-      "directions": 1
+      "name": "recoverytower"
     },
     {
-      "name": "frenzytower",
-      "directions": 1
+      "name": "frenzytower"
     },
     {
-      "name": "wardingtower",
-      "directions": 1
+      "name": "wardingtower"
     },
     {
-      "name": "wardingtower-unshaded",
-      "directions": 1
+      "name": "wardingtower-unshaded"
     }
   ]
 }

@@ -1,4 +1,4 @@
-{
+﻿{
   "version": 1,
   "license": "CC-BY-SA-3.0",
   "copyright": "Taken from https://github.com/tgstation/tgstation/commit/788b2576cd9511ced86e74222b6395fd3ef9affe",
@@ -10,7 +10,7 @@
     {
       "name": "spider_web_1"
     },
-	{
+    {
       "name": "spider_web_2"
     }
   ]

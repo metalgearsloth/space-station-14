@@ -1,4 +1,4 @@
-{
+﻿{
   "version": 1,
   "license": "CC-BY-SA-3.0",
   "copyright": "Taken from tgstation at https://github.com/tgstation/tgstation/commit/59f2a4e10e5ba36033c9734ddebfbbdc6157472d, pda-cluwne made by brainfood1183 (github) ss14, pda-brigmed made by PuroSlavKing (Github)",
@@ -183,7 +183,7 @@
     {
       "name": "pda-ert"
     },
-	{
+    {
       "name": "pda-cluwne"
     }
   ]

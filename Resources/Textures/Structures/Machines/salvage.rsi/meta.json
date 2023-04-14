@@ -1,4 +1,4 @@
-{
+﻿{
   "version": 1,
   "license": "CC-BY-SA-3.0",
   "copyright": "Edit by 20kdc using small parts of autolathe from https://github.com/tgstation/tgstation/blob/acb091f9744e9ab7d5a27fb32dd0c03bd019f58c/icons/obj/stationobjs.dmi (may be an earlier version) and tcboss from https://github.com/tgstation/tgstation/blob/e32357e6b0ec0f0a1821d2773f0d1e1d6ce7d494/icons/obj/computer.dmi (may be an earlier version)",
@@ -46,10 +46,22 @@
       "name": "salvage-magnet-ready-blinking",
       "directions": 4,
       "delays": [
-        [ 0.2, 0.2],
-        [ 0.2, 0.2],
-        [ 0.2, 0.2],
-        [ 0.2, 0.2]
+        [
+          0.2,
+          0.2
+        ],
+        [
+          0.2,
+          0.2
+        ],
+        [
+          0.2,
+          0.2
+        ],
+        [
+          0.2,
+          0.2
+        ]
       ],
       "commentary": "Attaching state"
     },
@@ -57,13 +69,24 @@
       "name": "salvage-magnet-unready-blinking",
       "directions": 4,
       "delays": [
-        [ 0.2, 0.2],
-        [ 0.2, 0.2],
-        [ 0.2, 0.2],
-        [ 0.2, 0.2]
+        [
+          0.2,
+          0.2
+        ],
+        [
+          0.2,
+          0.2
+        ],
+        [
+          0.2,
+          0.2
+        ],
+        [
+          0.2,
+          0.2
+        ]
       ],
       "commentary": "Detaching state"
     }
   ]
 }
-

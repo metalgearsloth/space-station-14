@@ -1,4 +1,4 @@
-{
+﻿{
   "version": 1,
   "license": "CC-BY-SA-3.0",
   "copyright": "Taken from tgstation at commit https://github.com/tgstation/tgstation/commit/29c0ed1b000619cb5398ef921000a8d4502ba0b6 and modified by Swept",
@@ -8,27 +8,25 @@
   },
   "states": [
     {
-        "name": "empty",
-        "directions": 1
+      "name": "empty"
     },
     {
-        "name": "wired",
-        "directions": 1
+      "name": "wired"
     },
     {
-        "name": "no-payload",
-        "directions": 1
+      "name": "no-payload"
     },
     {
-        "name": "complete",
-        "directions": 1
+      "name": "complete"
     },
     {
-        "name": "primed",
-        "directions": 1,
-        "delays": [
-            [ 0.2, 0.2 ]
+      "name": "primed",
+      "delays": [
+        [
+          0.2,
+          0.2
         ]
+      ]
     }
   ]
 }

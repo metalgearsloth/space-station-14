@@ -1,4 +1,4 @@
-{
+﻿{
   "version": 1,
   "license": "CC-BY-SA-3.0",
   "copyright": "Taken from tgstation at commit https://github.com/tgstation/tgstation/commit/fc9b91e3cb51b20987aab9630e73ac587bc00f3f",
@@ -14,11 +14,35 @@
       "name": "equipped-HELMET",
       "directions": 4,
       "delays": [
-                [0.2, 0.2, 0.2, 0.2, 0.2],
-                [0.2, 0.2, 0.2, 0.2, 0.2],
-                [0.2, 0.2, 0.2, 0.2, 0.2],
-                [0.2, 0.2, 0.2, 0.2, 0.2]
-            ]
+        [
+          0.2,
+          0.2,
+          0.2,
+          0.2,
+          0.2
+        ],
+        [
+          0.2,
+          0.2,
+          0.2,
+          0.2,
+          0.2
+        ],
+        [
+          0.2,
+          0.2,
+          0.2,
+          0.2,
+          0.2
+        ],
+        [
+          0.2,
+          0.2,
+          0.2,
+          0.2,
+          0.2
+        ]
+      ]
     },
     {
       "name": "inhand-left",

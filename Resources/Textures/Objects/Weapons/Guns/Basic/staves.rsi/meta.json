@@ -1,4 +1,4 @@
-{
+﻿{
   "version": 1,
   "license": "CC-BY-SA-3.0",
   "copyright": "/tg/station at https://github.com/tgstation/tgstation/commit/270acce4f551253d8ac75de19236b8b4be598f7f. edited by mirrorcult to allow layering. Generic unshaded layers added by electro.",
@@ -52,7 +52,7 @@
         ]
       ]
     },
-	{
+    {
       "name": "staff-inhand-left",
       "directions": 4,
       "delays": [
@@ -204,7 +204,7 @@
         ]
       ]
     },
-	{
+    {
       "name": "staff-inhand-right",
       "directions": 4,
       "delays": [
@@ -356,7 +356,7 @@
         ]
       ]
     },
-	{
+    {
       "name": "change",
       "delays": [
         [
@@ -390,7 +390,7 @@
         ]
       ]
     },
-	{
+    {
       "name": "change-inhand-left",
       "directions": 4,
       "delays": [
@@ -454,7 +454,7 @@
         ]
       ]
     },
-	{
+    {
       "name": "change-inhand-right",
       "directions": 4,
       "delays": [

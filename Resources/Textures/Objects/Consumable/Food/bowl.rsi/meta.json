@@ -1,4 +1,4 @@
-{
+﻿{
   "version": 1,
   "license": "CC-BY-SA-3.0",
   "copyright": "Taken from tgstation and modified by Swept at https://github.com/tgstation/tgstation/commit/40d75cc340c63582fb66ce15bf75a36115f6bdaa",
@@ -57,7 +57,6 @@
     },
     {
       "name": "electron",
-      "directions": 1,
       "delays": [
         [
           1.4,

@@ -1,12 +1,12 @@
-{
-  "version":1,
-  "size":{
-    "x":96,
-    "y":96
+﻿{
+  "version": 1,
+  "license": "CC0-1.0",
+  "copyright": "Created by EmoGarbage",
+  "size": {
+    "x": 96,
+    "y": 96
   },
-  "license":"CC0-1.0",
-  "copyright":"Created by EmoGarbage",
-  "states":[
+  "states": [
     {
       "name": "generating",
       "delays": [
@@ -23,7 +23,7 @@
       ]
     },
     {
-      "name":"base"
+      "name": "base"
     },
     {
       "name": "inserting",

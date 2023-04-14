@@ -1,11 +1,11 @@
-{
+﻿{
   "version": 1,
+  "license": "CC-BY-SA-3.0",
+  "copyright": "Created by EmoGarbage, with influence from xeno burrower sprite",
   "size": {
     "x": 32,
     "y": 32
   },
-  "license": "CC-BY-SA-3.0",
-  "copyright": "Created by EmoGarbage, with influence from xeno burrower sprite",
   "states": [
     {
       "name": "icon"
