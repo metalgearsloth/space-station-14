@@ -141,20 +141,12 @@ public sealed class SpawnSalvageMissionJob : Job<bool>
         var landingPadRadius = 24;
         var minDungeonOffset = landingPadRadius + 12;
 
-        var dungeonRotation = _dungeon.GetDungeonRotation(_missionParams.Seed);
-        var dungeonSpawnRotation = new Angle(random.NextDouble() * Math.Tau);
-
-        // If the dungeon were to spawn facing the landing pad then bump the offset a bit
-        // This isn't robust but fine for now.
-        if (Math.Abs((dungeonRotation - dungeonSpawnRotation).Theta) < Math.PI / 2)
-        {
-            minDungeonOffset += 16;
-        }
-
         Dungeon dungeon = default!;
 
         if (config != SalvageMissionType.Mining)
         {
+            var dungeonRotation = _dungeon.GetDungeonRotation(_missionParams.Seed);
+            var dungeonSpawnRotation = new Angle(random.NextDouble() * Math.Tau);
             var maxDungeonOffset = minDungeonOffset + 24;
             var dungeonOffsetDistance = minDungeonOffset + (maxDungeonOffset - minDungeonOffset) * random.NextFloat();
             var dungeonOffset = new Vector2(dungeonOffsetDistance, 0f);
