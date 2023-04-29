@@ -10,6 +10,7 @@ using Robust.Shared.Map;
 using Robust.Shared.Player;
 using Robust.Shared.Players;
 using Robust.Shared.Prototypes;
+using Robust.Shared.Timing;
 using Robust.Shared.Utility;
 
 namespace Content.Client.Popups
@@ -51,6 +52,9 @@ namespace Content.Client.Popups
 
         private void PopupMessage(string message, PopupType type, EntityCoordinates coordinates, EntityUid? entity = null)
         {
+            if (!Timing.IsFirstTimePredicted)
+                return;
+
             var label = new WorldPopupLabel(coordinates)
             {
                 Text = message,
@@ -80,6 +84,9 @@ namespace Content.Client.Popups
 
         public override void PopupCursor(string message, PopupType type = PopupType.Small)
         {
+            if (!Timing.IsFirstTimePredicted)
+                return;
+
             var label = new CursorPopupLabel(_inputManager.MouseScreenPosition)
             {
                 Text = message,

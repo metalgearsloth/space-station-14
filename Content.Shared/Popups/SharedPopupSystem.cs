@@ -2,6 +2,7 @@ using Robust.Shared.Map;
 using Robust.Shared.Player;
 using Robust.Shared.Players;
 using Robust.Shared.Serialization;
+using Robust.Shared.Timing;
 
 namespace Content.Shared.Popups
 {
@@ -10,6 +11,8 @@ namespace Content.Shared.Popups
     /// </summary>
     public abstract class SharedPopupSystem : EntitySystem
     {
+        [Dependency] protected readonly IGameTiming Timing = default!;
+
         /// <summary>
         ///     Shows a popup at the local users' cursor. Does nothing on the server.
         /// </summary>
@@ -82,6 +85,29 @@ namespace Content.Shared.Popups
         ///     if the filtering has to be more specific than simply PVS range based.
         /// </summary>
         public abstract void PopupEntity(string message, EntityUid uid, Filter filter, bool recordReplay, PopupType type = PopupType.Small);
+
+        #region Predicted
+
+        public abstract void PopupCursorPredicted(string message, EntityUid recipient, PopupType type = PopupType.Small);
+
+        /// <summary>
+        /// <see cref="PopupCoordinates(string,Robust.Shared.Map.EntityCoordinates,Content.Shared.Popups.PopupType)"/>
+        /// </summary>
+        public abstract void PopupCoordinatesPredicted(string message, EntityCoordinates coordinates, PopupType type = PopupType.Small);
+
+        /// <summary>
+        /// <see cref="PopupEntity(string,Robust.Shared.GameObjects.EntityUid,Content.Shared.Popups.PopupType)"/>
+        /// </summary>
+        public void PopupEntityPredicted(string message, EntityUid uid, EntityUid recipient,
+            PopupType type = PopupType.Small)
+        {
+            if (!Timing.IsFirstTimePredicted)
+                return;
+
+            PopupEntity(message, uid, recipient, type);
+        }
+
+        #endregion
     }
 
     /// <summary>
