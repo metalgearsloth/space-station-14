@@ -8,6 +8,9 @@ namespace Content.Shared.Weapons.Melee;
 [Serializable, NetSerializable]
 public sealed class DamageEffectEvent : EntityEventArgs
 {
+    public static readonly Color DamageColor = Color.Red;
+    public static readonly Color IndestructibleColor = Color.Yellow;
+
     /// <summary>
     /// Color to play for the damage flash.
     /// </summary>

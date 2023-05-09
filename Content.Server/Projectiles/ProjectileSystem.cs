@@ -1,4 +1,5 @@
 using Content.Server.Administration.Logs;
+using Content.Server.Destructible;
 using Content.Server.Weapons.Ranged.Systems;
 using Content.Shared.Camera;
 using Content.Shared.Damage;
@@ -60,7 +61,8 @@ public sealed class ProjectileSystem : SharedProjectileSystem
         {
             if (modifiedDamage.Total > FixedPoint2.Zero && !deleted)
             {
-                RaiseNetworkEvent(new DamageEffectEvent(Color.Red, new List<EntityUid> {otherEntity}), Filter.Pvs(otherEntity, entityManager: EntityManager));
+                var color = HasComp<DestructibleComponent>(otherEntity) ? DamageEffectEvent.DamageColor : DamageEffectEvent.IndestructibleColor;
+                RaiseNetworkEvent(new DamageEffectEvent(color, new List<EntityUid> {otherEntity}), Filter.Pvs(otherEntity, entityManager: EntityManager));
             }
 
             _adminLogger.Add(LogType.BulletHit,

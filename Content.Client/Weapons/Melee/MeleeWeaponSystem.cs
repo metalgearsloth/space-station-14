@@ -215,7 +215,9 @@ public sealed partial class MeleeWeaponSystem : SharedMeleeWeaponSystem
     {
         // Server never sends the event to us for predictiveeevent.
         if (_timing.IsFirstTimePredicted)
+        {
             RaiseLocalEvent(new DamageEffectEvent(Color.Red, targets));
+        }
     }
 
     protected override bool DoDisarm(EntityUid user, DisarmAttackEvent ev, EntityUid meleeUid, MeleeWeaponComponent component, ICommonSession? session)
