@@ -241,16 +241,14 @@ public sealed class NPCUtilitySystem : EntitySystem
         switch (query)
         {
             case ComponentQuery compQuery:
-                foreach (var ent in _lookup.GetEntitiesInRange(owner, vision))
+                var xform = Transform(owner);
+                var mapPos = xform.MapPosition;
+                _lookup.GetEntitiesInRangeCallback(static uid =>
                 {
-                    foreach (var comp in compQuery.Components.Values)
-                    {
-                        if (!HasComp(ent, comp.Component.GetType()))
-                            continue;
+                    if (uid == owner)
+                        return;
 
-                        entities.Add(ent);
-                    }
-                }
+                }, mapPos.MapId, mapPos.Position, vision);
 
                 break;
             case NearbyHostilesQuery:
