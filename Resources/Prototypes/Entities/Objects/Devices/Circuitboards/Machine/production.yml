@@ -150,11 +150,6 @@
         Amount: 1
         DefaultPrototype: Beaker
         ExamineName: Glass Beaker
-    componentRequirements:
-      DiseaseSwab:
-        Amount: 1
-        DefaultPrototype: DiseaseSwab
-        ExamineName: Swab
 
 - type: entity
   id: ArtifactAnalyzerMachineCircuitboard
