@@ -4,6 +4,7 @@
   name: closet
   description: A standard-issue Nanotrasen storage unit.
   components:
+  - type: MobPushing
   - type: ResistLocker
   - type: Transform
     noRot: true
@@ -46,6 +47,14 @@
         - MachineMask
         layer:
         - MachineLayer
+      push:
+        hard: false
+        shape:
+          !type:PhysShapeAabb
+          bounds: "-0.25,-0.48,0.25,0.48"
+        density: 75
+        layer:
+          - MobLayer
   - type: EntityStorage
   - type: ContainerContainer
     containers:
