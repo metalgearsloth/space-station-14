@@ -115,7 +115,7 @@ public sealed class WeatherSystem : SharedWeatherSystem
                 }
 
                 nearestNode = new EntityCoordinates(entXform.GridUid.Value,
-                    (Vector2) node.GridIndices + (grid.TileSizeHalfVector));
+                    node.GridIndices + grid.TileSizeHalfVector);
                 break;
             }
 

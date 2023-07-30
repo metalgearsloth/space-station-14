@@ -16,12 +16,9 @@ public abstract class SharedWeatherSystem : EntitySystem
     [Dependency] private   readonly ITileDefinitionManager _tileDefManager = default!;
     [Dependency] private   readonly MetaDataSystem _metadata = default!;
 
-    protected ISawmill Sawmill = default!;
-
     public override void Initialize()
     {
         base.Initialize();
-        Sawmill = Logger.GetSawmill("weather");
         SubscribeLocalEvent<WeatherComponent, EntityUnpausedEvent>(OnWeatherUnpaused);
     }
 
@@ -100,13 +97,12 @@ public abstract class SharedWeatherSystem : EntitySystem
             return;
 
         var curTime = Timing.CurTime;
+        var query = EntityQueryEnumerator<WeatherComponent>();
 
-        foreach (var comp in EntityQuery<WeatherComponent>())
+        while (query.MoveNext(out var uid, out var comp))
         {
             if (comp.Weather.Count == 0)
                 continue;
-
-            var uid = comp.Owner;
 
             foreach (var (proto, weather) in comp.Weather)
             {
@@ -124,7 +120,7 @@ public abstract class SharedWeatherSystem : EntitySystem
                 // Admin messed up or the likes.
                 if (!ProtoMan.TryIndex<WeatherPrototype>(proto, out var weatherProto))
                 {
-                    Sawmill.Error($"Unable to find weather prototype for {comp.Weather}, ending!");
+                    Log.Error($"Unable to find weather prototype for {comp.Weather}, ending!");
                     EndWeather(uid, comp, proto);
                     continue;
                 }
