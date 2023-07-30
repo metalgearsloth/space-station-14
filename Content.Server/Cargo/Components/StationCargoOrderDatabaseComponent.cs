@@ -1,6 +1,7 @@
 using Content.Shared.Cargo;
 using Content.Shared.Cargo.Prototypes;
 using Robust.Shared.Serialization.TypeSerializers.Implementations.Custom.Prototype;
+using Robust.Shared.Serialization.TypeSerializers.Implementations.Custom.Prototype.Dictionary;
 
 namespace Content.Server.Cargo.Components;
 
@@ -18,6 +19,12 @@ public sealed class StationCargoOrderDatabaseComponent : Component
 
     [ViewVariables(VVAccess.ReadWrite), DataField("orders")]
     public List<CargoOrderData> Orders = new();
+
+    /// <summary>
+    /// Tracks sold units for cargo categories to apply modifiers over time.
+    /// </summary>
+    [DataField("categorySales", customTypeSerializer:typeof(PrototypeIdDictionarySerializer<int, CargoCategoryPrototype>))]
+    public Dictionary<string, int> CategorySales = new();
 
     /// <summary>
     /// Used to determine unique order IDs

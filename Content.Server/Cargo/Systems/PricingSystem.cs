@@ -82,6 +82,16 @@ public sealed class PricingSystem : EntitySystem
         }
     }
 
+    /// <summary>
+    /// Adds category units sold.
+    /// </summary>
+    private void AddUnitsSold(StationCargoOrderDatabaseComponent component, string category, int units)
+    {
+        var existing = component.CategorySales.GetOrNew(category);
+        existing += units;
+        component.CategorySales[category] = existing;
+    }
+
     private void CalculateMobPrice(EntityUid uid, MobPriceComponent component, ref PriceCalculationEvent args)
     {
         // TODO: Estimated pricing.
@@ -90,7 +100,7 @@ public sealed class PricingSystem : EntitySystem
 
         if (!TryComp<BodyComponent>(uid, out var body) || !TryComp<MobStateComponent>(uid, out var state))
         {
-            Logger.ErrorS("pricing", $"Tried to get the mob price of {ToPrettyString(uid)}, which has no {nameof(BodyComponent)} and no {nameof(MobStateComponent)}.");
+            Log.Error("pricing", $"Tried to get the mob price of {ToPrettyString(uid)}, which has no {nameof(BodyComponent)} and no {nameof(MobStateComponent)}.");
             return;
         }
 
@@ -172,7 +182,7 @@ public sealed class PricingSystem : EntitySystem
     /// This fires off an event to calculate the price.
     /// Calculating the price of an entity that somehow contains itself will likely hang.
     /// </remarks>
-    public double GetPrice(EntityUid uid)
+    public double GetPrice(EntityUid uid, StationCargoOrderDatabaseComponent orderDatabase, bool update = false)
     {
         var ev = new PriceCalculationEvent();
         RaiseLocalEvent(uid, ref ev);
@@ -186,13 +196,22 @@ public sealed class PricingSystem : EntitySystem
         price += GetMaterialsPrice(uid);
         price += GetSolutionsPrice(uid);
 
+        TryComp<StackComponent>(uid, out var stack);
+
         // Can't use static price with stackprice
         var oldPrice = price;
-        price += GetStackPrice(uid);
+        price += GetStackPrice(uid, stack);
 
         if (oldPrice.Equals(price))
         {
             price += GetStaticPrice(uid);
+        }
+
+        // TODO: Need to just copy the categories sold and live update it.
+        // Then the update bool will just apply it at the end if we want it.
+        if (update && TryComp<CargoCategoryComponent>(uid, out var category))
+        {
+            AddUnitsSold(orderDatabase, category.Category, stack?.Count ?? 1);
         }
 
         if (TryComp<ContainerManagerComponent>(uid, out var containers))
@@ -201,7 +220,7 @@ public sealed class PricingSystem : EntitySystem
             {
                 foreach (var ent in container.ContainedEntities)
                 {
-                    price += GetPrice(ent);
+                    price += GetPrice(ent, orderDatabase);
                 }
             }
         }
@@ -218,7 +237,9 @@ public sealed class PricingSystem : EntitySystem
         {
             var matPrice = GetMaterialPrice(composition);
             if (TryComp<StackComponent>(uid, out var stack))
+            {
                 matPrice *= stack.Count;
+            }
 
             price += matPrice;
         }
@@ -272,12 +293,12 @@ public sealed class PricingSystem : EntitySystem
         return price;
     }
 
-    private double GetStackPrice(EntityUid uid)
+    private double GetStackPrice(EntityUid uid, StackComponent? stack = null)
     {
         var price = 0.0;
 
         if (TryComp<StackPriceComponent>(uid, out var stackPrice) &&
-            TryComp<StackComponent>(uid, out var stack) &&
+            Resolve(uid, ref stack, false) &&
             !HasComp<MaterialComponent>(uid)) // don't double count material prices
         {
             price += stack.Count * stackPrice.Price;
@@ -359,6 +380,11 @@ public sealed class PricingSystem : EntitySystem
 [ByRefEvent]
 public record struct PriceCalculationEvent()
 {
+    /// <summary>
+    /// Should we update category units sold (regardless of event handled or not).
+    /// </summary>
+    public bool UpdateCategory = false;
+
     /// <summary>
     /// The total price of the entity.
     /// </summary>
