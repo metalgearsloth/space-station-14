@@ -10,6 +10,9 @@ namespace Content.Shared.Movement.Components;
 [RegisterComponent, NetworkedComponent, AutoGenerateComponentState, Access(typeof(SharedContentEyeSystem))]
 public sealed partial class ContentEyeComponent : Component
 {
+    [DataField("targetPosition"), AutoNetworkedField]
+    public Vector2 TargetPosition = Vector2.Zero;
+
     /// <summary>
     /// Zoom we're lerping to.
     /// </summary>

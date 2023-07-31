@@ -16,7 +16,7 @@ public sealed class ContentEyeSystem : SharedContentEyeSystem
             if (eyeComp.Zoom.Equals(comp.TargetZoom))
                 continue;
 
-            UpdateEye(uid, comp, eyeComp, frameTime);
+            UpdateEyeZoom(uid, comp, eyeComp, frameTime);
         }
     }
 }

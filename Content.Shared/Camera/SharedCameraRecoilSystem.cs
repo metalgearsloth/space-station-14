@@ -51,6 +51,7 @@ public abstract class SharedCameraRecoilSystem : EntitySystem
 
         foreach (var entity in EntityManager.EntityQuery<SharedEyeComponent, CameraRecoilComponent>(true))
         {
+            continue;
             var recoil = entity.Item2;
             var eye = entity.Item1;
             var magnitude = recoil.CurrentKick.Length();
