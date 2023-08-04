@@ -37,16 +37,14 @@ public sealed class TraitorRuleSystem : GameRuleSystem<TraitorRuleComponent>
     [Dependency] private readonly SharedAudioSystem _audioSystem = default!;
     [Dependency] private readonly MindSystem _mindSystem = default!;
 
-    private ISawmill _sawmill = default!;
-
     private int PlayersPerTraitor => _cfg.GetCVar(CCVars.TraitorPlayersPerTraitor);
     private int MaxTraitors => _cfg.GetCVar(CCVars.TraitorMaxTraitors);
+
+    protected override string SawmillName => "preset";
 
     public override void Initialize()
     {
         base.Initialize();
-
-        _sawmill = Logger.GetSawmill("preset");
 
         SubscribeLocalEvent<RoundStartAttemptEvent>(OnStartAttempt);
         SubscribeLocalEvent<RulePlayerJobsAssignedEvent>(OnPlayersSpawned);
@@ -107,7 +105,7 @@ public sealed class TraitorRuleSystem : GameRuleSystem<TraitorRuleComponent>
     {
         if (!component.StartCandidates.Any())
         {
-            _sawmill.Error("Tried to start Traitor mode without any candidates.");
+            Log.Error("Tried to start Traitor mode without any candidates.");
             return;
         }
 
@@ -173,6 +171,7 @@ public sealed class TraitorRuleSystem : GameRuleSystem<TraitorRuleComponent>
         foreach (var player in list)
         {
             var profile = candidates[player];
+
             if (profile.AntagPreferences.Contains(component.TraitorPrototypeId))
             {
                 prefList.Add(player);
@@ -180,7 +179,7 @@ public sealed class TraitorRuleSystem : GameRuleSystem<TraitorRuleComponent>
         }
         if (prefList.Count == 0)
         {
-            _sawmill.Info("Insufficient preferred traitors, picking at random.");
+            Log.Info("Insufficient preferred traitors, picking at random.");
             prefList = list;
         }
         return prefList;
@@ -191,14 +190,14 @@ public sealed class TraitorRuleSystem : GameRuleSystem<TraitorRuleComponent>
         var results = new List<IPlayerSession>(traitorCount);
         if (prefList.Count == 0)
         {
-            _sawmill.Info("Insufficient ready players to fill up with traitors, stopping the selection.");
+            Log.Info("Insufficient ready players to fill up with traitors, stopping the selection.");
             return results;
         }
 
         for (var i = 0; i < traitorCount; i++)
         {
             results.Add(_random.PickAndTake(prefList));
-            _sawmill.Info("Selected a preferred traitor.");
+            Log.Info("Selected a preferred traitor.");
         }
         return results;
     }
@@ -218,12 +217,12 @@ public sealed class TraitorRuleSystem : GameRuleSystem<TraitorRuleComponent>
         var mind = traitor.Data.ContentData()?.Mind;
         if (mind == null)
         {
-            _sawmill.Info("Failed getting mind for picked traitor.");
+            Log.Info("Failed getting mind for picked traitor.");
             return false;
         }
         if (mind.OwnedEntity is not { } entity)
         {
-            Logger.ErrorS("preset", "Mind picked for traitor did not have an attached entity.");
+            Log.Error("Mind picked for traitor did not have an attached entity.");
             return false;
         }
 

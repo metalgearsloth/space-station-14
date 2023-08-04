@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Numerics;
+using Content.Client.GameTicking;
 using Content.Client.Humanoid;
 using Content.Client.Lobby.UI;
 using Content.Client.Message;
@@ -399,7 +400,7 @@ namespace Content.Client.Preferences.UI
                     continue;
                 }
 
-                var selector = new AntagPreferenceSelector(antag);
+                var selector = new AntagPreferenceSelector(antag, entityManager);
                 _antagList.AddChild(selector);
                 _antagPreferences.Add(selector);
 
@@ -1324,6 +1325,9 @@ namespace Content.Client.Preferences.UI
         private sealed class AntagPreferenceSelector : Control
         {
             public AntagPrototype Antag { get; }
+
+            private StripeBack _lock;
+
             private readonly CheckBox _checkBox;
 
             public bool Preference
@@ -1334,7 +1338,7 @@ namespace Content.Client.Preferences.UI
 
             public event Action<bool>? PreferenceChanged;
 
-            public AntagPreferenceSelector(AntagPrototype antag)
+            public AntagPreferenceSelector(AntagPrototype antag, IEntityManager entManager)
             {
                 Antag = antag;
 
@@ -1347,12 +1351,31 @@ namespace Content.Client.Preferences.UI
                     _checkBox.TooltipDelay = 0.2f;
                 }
 
+                _lock = new StripeBack()
+                {
+                    Visible = false,
+                };
+
+                // TODO: Also needs role timer stripeback.
+                var eventBus = entManager.EventBus;
+                var ev = new AntagLockedEvent();
+
+                eventBus.RaiseEvent(EventSource.Local, ref ev);
+
+                if (true || ev.Handled)
+                {
+                    _lock.Visible = true;
+                    _checkBox.Disabled = true;
+                    _lock.ToolTip = ev.Reason;
+                }
+
                 AddChild(new BoxContainer
                 {
                     Orientation = LayoutOrientation.Horizontal,
                     Children =
                     {
-                        _checkBox
+                        _lock,
+                        _checkBox,
                     }
                 });
             }

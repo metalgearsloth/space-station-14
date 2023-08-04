@@ -53,7 +53,6 @@ public sealed class NukeopsRuleSystem : GameRuleSystem<NukeopsRuleComponent>
     [Dependency] private readonly NpcFactionSystem _npcFaction = default!;
     [Dependency] private readonly HumanoidAppearanceSystem _humanoidSystem = default!;
     [Dependency] private readonly StationSpawningSystem _stationSpawningSystem = default!;
-    [Dependency] private readonly StationSystem _stationSystem = default!;
     [Dependency] private readonly RoundEndSystem _roundEndSystem = default!;
     [Dependency] private readonly SharedAudioSystem _audioSystem = default!;
     [Dependency] private readonly MapLoaderSystem _map = default!;
@@ -420,7 +419,7 @@ public sealed class NukeopsRuleSystem : GameRuleSystem<NukeopsRuleComponent>
 
             if (!SpawnMap(uid, nukeops))
             {
-                Logger.InfoS("nukies", "Failed to load map for nukeops");
+                Log.Info("Failed to load map for nukeops");
                 continue;
             }
 
@@ -439,12 +438,14 @@ public sealed class NukeopsRuleSystem : GameRuleSystem<NukeopsRuleComponent>
             // ReSharper disable once ForeachCanBeConvertedToQueryUsingAnotherGetEnumerator
             foreach (var player in everyone)
             {
-                if (!ev.Profiles.ContainsKey(player.UserId))
-                {
+                if (!ev.Profiles.TryGetValue(player.UserId, out var profile))
                     continue;
-                }
 
-                var profile = ev.Profiles[player.UserId];
+                // Skip people with no job prios / antag rolling by staying in lobby.
+                // As of writing traitors and zombies both delay spawns so don't have this problem.
+                if (profile.JobPriorities.Count == 0 || profile.PreferenceUnavailable == PreferenceUnavailableMode.StayInLobby)
+                    continue;
+
                 if (profile.AntagPreferences.Contains(nukeops.OperativeRoleProto))
                 {
                     prefList.Add(player);
@@ -468,6 +469,7 @@ public sealed class NukeopsRuleSystem : GameRuleSystem<NukeopsRuleComponent>
                 // Only one commander, so we do it at the start
                 if (i == 0)
                 {
+                    // TODO: For the love of god stop touching this, just make it generic and do NOT try copying this.
                     if (cmdrPrefList.Count == 0)
                     {
                         if (medPrefList.Count == 0)

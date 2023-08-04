@@ -206,8 +206,11 @@ namespace Content.Server.GameTicking
 
             foreach (var (userId, status) in _playerGameStatuses)
             {
-                if (LobbyEnabled && status != PlayerGameStatus.ReadyToPlay) continue;
-                if (!_playerManager.TryGetSessionById(userId, out var session)) continue;
+                if (LobbyEnabled && status != PlayerGameStatus.ReadyToPlay)
+                    continue;
+
+                if (!_playerManager.TryGetSessionById(userId, out var session))
+                    continue;
 #if DEBUG
                 DebugTools.Assert(_userDb.IsLoadComplete(session), $"Player was readied up but didn't have user DB data loaded yet??");
 #endif
