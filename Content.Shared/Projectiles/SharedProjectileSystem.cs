@@ -27,7 +27,7 @@ namespace Content.Shared.Projectiles
         public override void Initialize()
         {
             base.Initialize();
-            SubscribeLocalEvent<ProjectileComponent, PreventCollideEvent>(PreventCollision);
+            SubscribeLocalEvent<ProjectileComponent, PreventCollideEvent>(OnPreventCollide);
             SubscribeLocalEvent<EmbeddableProjectileComponent, ProjectileCollideEvent>(OnEmbedProjectileCollide);
             SubscribeLocalEvent<EmbeddableProjectileComponent, ThrowDoHitEvent>(OnEmbedThrowDoHit);
             SubscribeLocalEvent<EmbeddableProjectileComponent, ActivateInWorldEvent>(OnEmbedActivate);
@@ -106,7 +106,7 @@ namespace Content.Shared.Projectiles
             }
         }
 
-        private void PreventCollision(EntityUid uid, ProjectileComponent component, ref PreventCollideEvent args)
+        protected virtual void OnPreventCollide(EntityUid uid, ProjectileComponent component, ref PreventCollideEvent args)
         {
             if (component.IgnoreShooter && args.OtherEntity == component.Shooter)
             {

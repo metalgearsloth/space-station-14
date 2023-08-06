@@ -9,6 +9,12 @@ namespace Content.Shared.Weapons.Ranged.Events;
 [Serializable, NetSerializable]
 public sealed class RequestShootEvent : EntityEventArgs
 {
+    /// <summary>
+    /// If the client is mousing over an entity send it in case we want to hit specific entities that would otherwise not collide.
+    /// </summary>
+    public EntityUid? TargetEntity;
+
     public EntityUid Gun;
+
     public EntityCoordinates Coordinates;
 }

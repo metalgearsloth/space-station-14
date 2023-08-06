@@ -133,7 +133,7 @@ public abstract partial class SharedGunSystem : EntitySystem
 
         gun.ShootCoordinates = msg.Coordinates;
         Log.Debug($"Set shoot coordinates to {gun.ShootCoordinates}");
-        AttemptShoot(user.Value, ent, gun);
+        AttemptShoot(user.Value, ent, gun, msg.TargetEntity);
     }
 
     private void OnStopShootRequest(RequestStopShootEvent ev, EntitySessionEventArgs args)
@@ -205,7 +205,7 @@ public abstract partial class SharedGunSystem : EntitySystem
         gun.ShotCounter = 0;
     }
 
-    private void AttemptShoot(EntityUid user, EntityUid gunUid, GunComponent gun)
+    private void AttemptShoot(EntityUid user, EntityUid gunUid, GunComponent gun, EntityUid? targetEnt = null)
     {
         if (gun.FireRate <= 0f)
             return;
@@ -318,7 +318,7 @@ public abstract partial class SharedGunSystem : EntitySystem
         }
 
         // Shoot confirmed - sounds also played here in case it's invalid (e.g. cartridge already spent).
-        Shoot(gunUid, gun, ev.Ammo, fromCoordinates, toCoordinates.Value, out var userImpulse, user, throwItems: attemptEv.ThrowItems);
+        Shoot(gunUid, gun, ev.Ammo, fromCoordinates, toCoordinates.Value, out var userImpulse, user, targetEnt, throwItems: attemptEv.ThrowItems);
         var shotEv = new GunShotEvent(user, ev.Ammo);
         RaiseLocalEvent(gunUid, ref shotEv);
 
@@ -339,10 +339,11 @@ public abstract partial class SharedGunSystem : EntitySystem
         EntityCoordinates toCoordinates,
         out bool userImpulse,
         EntityUid? user = null,
+        EntityUid? targetEnt = null,
         bool throwItems = false)
     {
         var shootable = EnsureComp<AmmoComponent>(ammo);
-        Shoot(gunUid, gun, new List<(EntityUid? Entity, IShootable Shootable)>(1) { (ammo, shootable) }, fromCoordinates, toCoordinates, out userImpulse, user, throwItems);
+        Shoot(gunUid, gun, new List<(EntityUid? Entity, IShootable Shootable)>(1) { (ammo, shootable) }, fromCoordinates, toCoordinates, out userImpulse, user, targetEnt, throwItems);
     }
 
     public abstract void Shoot(
@@ -353,6 +354,7 @@ public abstract partial class SharedGunSystem : EntitySystem
         EntityCoordinates toCoordinates,
         out bool userImpulse,
         EntityUid? user = null,
+        EntityUid? targetEnt = null,
         bool throwItems = false);
 
     protected abstract void Popup(string message, EntityUid? uid, EntityUid? user);

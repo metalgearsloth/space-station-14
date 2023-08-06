@@ -33,7 +33,9 @@
         mask:
         - SmallMobMask #this is so they can go under plastic flaps
         layer:
-        - MachineLayer
+        - Opaque
+        - MidImpassable
+        - LowImpassable
   - type: EntityStorage
     capacity: 500
   - type: PlaceableSurface

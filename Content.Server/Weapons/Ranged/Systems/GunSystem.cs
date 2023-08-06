@@ -24,6 +24,7 @@ using Robust.Shared.Audio;
 using Robust.Shared.Map;
 using Robust.Shared.Physics;
 using Robust.Shared.Physics.Components;
+using Robust.Shared.Physics.Systems;
 using Robust.Shared.Player;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Utility;
@@ -68,8 +69,16 @@ public sealed partial class GunSystem : SharedGunSystem
         args.Price += price * component.UnspawnedCount;
     }
 
-    public override void Shoot(EntityUid gunUid, GunComponent gun, List<(EntityUid? Entity, IShootable Shootable)> ammo,
-        EntityCoordinates fromCoordinates, EntityCoordinates toCoordinates, out bool userImpulse, EntityUid? user = null, bool throwItems = false)
+    public override void Shoot(
+        EntityUid gunUid,
+        GunComponent gun,
+        List<(EntityUid? Entity, IShootable Shootable)> ammo,
+        EntityCoordinates fromCoordinates,
+        EntityCoordinates toCoordinates,
+        out bool userImpulse,
+        EntityUid? user = null,
+        EntityUid? targetEnt = null,
+        bool throwItems = false)
     {
         userImpulse = true;
 
@@ -123,7 +132,7 @@ public sealed partial class GunSystem : SharedGunSystem
             // pneumatic cannon doesn't shoot bullets it just throws them, ignore ammo handling
             if (throwItems && ent != null)
             {
-                ShootOrThrow(ent.Value, mapDirection, gunVelocity, gun, gunUid, user);
+                ShootOrThrow(ent.Value, mapDirection, gunVelocity, gun, gunUid, user, targetEnt);
                 continue;
             }
 
@@ -141,14 +150,14 @@ public sealed partial class GunSystem : SharedGunSystem
                             for (var i = 0; i < cartridge.Count; i++)
                             {
                                 var uid = Spawn(cartridge.Prototype, fromEnt);
-                                ShootOrThrow(uid, angles[i].ToVec(), gunVelocity, gun, gunUid, user);
+                                ShootOrThrow(uid, angles[i].ToVec(), gunVelocity, gun, gunUid, user, targetEnt);
                                 shotProjectiles.Add(uid);
                             }
                         }
                         else
                         {
                             var uid = Spawn(cartridge.Prototype, fromEnt);
-                            ShootOrThrow(uid, mapDirection, gunVelocity, gun, gunUid, user);
+                            ShootOrThrow(uid, mapDirection, gunVelocity, gun, gunUid, user, targetEnt);
                             shotProjectiles.Add(uid);
                         }
 
@@ -181,7 +190,7 @@ public sealed partial class GunSystem : SharedGunSystem
                     shotProjectiles.Add(ent!.Value);
                     MuzzleFlash(gunUid, newAmmo, user);
                     Audio.PlayPredicted(gun.SoundGunshot, gunUid, user);
-                    ShootOrThrow(ent.Value, mapDirection, gunVelocity, gun, gunUid, user);
+                    ShootOrThrow(ent.Value, mapDirection, gunVelocity, gun, gunUid, user, targetEnt);
                     break;
                 case HitscanPrototype hitscan:
 
@@ -276,7 +285,7 @@ public sealed partial class GunSystem : SharedGunSystem
         });
     }
 
-    private void ShootOrThrow(EntityUid uid, Vector2 mapDirection, Vector2 gunVelocity, GunComponent gun, EntityUid gunUid, EntityUid? user)
+    private void ShootOrThrow(EntityUid uid, Vector2 mapDirection, Vector2 gunVelocity, GunComponent gun, EntityUid gunUid, EntityUid? user, EntityUid? targetEnt)
     {
         // Do a throw
         if (!HasComp<ProjectileComponent>(uid))
@@ -287,10 +296,10 @@ public sealed partial class GunSystem : SharedGunSystem
             return;
         }
 
-        ShootProjectile(uid, mapDirection, gunVelocity, gunUid, user, gun.ProjectileSpeed);
+        ShootProjectile(uid, mapDirection, gunVelocity, gunUid, user, targetEnt, gun.ProjectileSpeed);
     }
 
-    public void ShootProjectile(EntityUid uid, Vector2 direction, Vector2 gunVelocity, EntityUid gunUid, EntityUid? user = null, float speed = 20f)
+    public void ShootProjectile(EntityUid uid, Vector2 direction, Vector2 gunVelocity, EntityUid gunUid, EntityUid? user = null, EntityUid? targetEnt = null, float speed = 20f)
     {
         var physics = EnsureComp<PhysicsComponent>(uid);
         Physics.SetBodyStatus(physics, BodyStatus.InAir);
@@ -308,6 +317,32 @@ public sealed partial class GunSystem : SharedGunSystem
         }
 
         TransformSystem.SetWorldRotation(uid, direction.ToWorldAngle());
+
+        if (targetEnt != null)
+        {
+            var projTarget = EnsureComp<ProjectileTargetComponent>(uid);
+            projTarget.Target = targetEnt;
+
+            if (TryComp<PhysicsComponent>(targetEnt, out var targetPhysics) && TryComp(uid, out physics))
+            {
+                var fixture = EntityManager.System<FixtureSystem>().GetFixtureOrNull(uid, projTarget.FixtureID);
+
+                // Guarantee we collide with it regardless?
+                // or uhh that may break ghosts
+                // fuck it maybe just uhh only use it on lowimpassable.
+                if (fixture != null)
+                {
+                    // Only supports 1 fixture but doubt we need more anyway.
+                    // Can't just use physics mask / layer outright due to non-hard fixtures.
+                    projTarget.OriginalCollisionLayer = fixture.CollisionLayer;
+                    projTarget.OriginalCollisionMask = fixture.CollisionMask;
+                    Physics.SetCollisionLayer(uid, fixture, fixture.CollisionLayer | targetPhysics.CollisionMask);
+                    Physics.SetCollisionMask(uid, fixture, fixture.CollisionMask | targetPhysics.CollisionLayer);
+                }
+            }
+
+            Dirty(uid, projTarget);
+        }
     }
 
     /// <summary>

@@ -16,7 +16,7 @@ namespace Content.Shared.Standing
         [Dependency] private readonly SharedPhysicsSystem _physics = default!;
 
         // If StandingCollisionLayer value is ever changed to more than one layer, the logic needs to be edited.
-        private const int StandingCollisionLayer = (int) CollisionGroup.MidImpassable;
+        private const int StandingCollisionLayer = (int) (CollisionGroup.MidImpassable | CollisionGroup.BulletImpassable);
 
         public override void Initialize()
         {
@@ -92,6 +92,7 @@ namespace Content.Shared.Standing
                         continue;
 
                     standingState.ChangedFixtures.Add(key);
+                    // TODO: THIS SHIT IS BROKEN DO NOT MERGE
                     _physics.SetCollisionMask(uid, fixture, fixture.CollisionMask & ~StandingCollisionLayer, manager: fixtureComponent);
                 }
             }
@@ -134,8 +135,8 @@ namespace Content.Shared.Standing
             }
 
             standingState.Standing = true;
-            Dirty(standingState);
-            RaiseLocalEvent(uid, new StoodEvent(), false);
+            Dirty(uid, standingState);
+            RaiseLocalEvent(uid, new StoodEvent());
 
             _appearance.SetData(uid, RotationVisuals.RotationState, RotationState.Vertical, appearance);
 

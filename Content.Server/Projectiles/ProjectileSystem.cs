@@ -9,6 +9,7 @@ using Robust.Server.GameObjects;
 using Robust.Shared.Player;
 using Robust.Shared.Physics.Events;
 using Content.Shared.Effects;
+using Content.Shared.Physics;
 
 namespace Content.Server.Projectiles;
 
@@ -25,11 +26,30 @@ public sealed class ProjectileSystem : SharedProjectileSystem
         SubscribeLocalEvent<ProjectileComponent, StartCollideEvent>(OnStartCollide);
     }
 
+    protected override void OnPreventCollide(EntityUid uid, ProjectileComponent component, ref PreventCollideEvent args)
+    {
+        base.OnPreventCollide(uid, component, ref args);
+
+        if (args.Cancelled || args.OurFixture.ID != ProjectileFixture)
+            return;
+
+        if (TryComp<ProjectileTargetComponent>(uid, out var target) &&
+            args.OtherEntity != target.Target &&
+            (target.OriginalCollisionMask & args.OtherFixture.CollisionLayer) == 0x0 &&
+            (target.OriginalCollisionLayer & args.OtherFixture.CollisionMask) == 0x0)
+        {
+            args.Cancelled = true;
+        }
+    }
+
     private void OnStartCollide(EntityUid uid, ProjectileComponent component, ref StartCollideEvent args)
     {
         // This is so entities that shouldn't get a collision are ignored.
         if (args.OurFixture.ID != ProjectileFixture || !args.OtherFixture.Hard || component.DamagedEntity)
             return;
+
+        var ourLayer = (CollisionGroup) args.OurFixture.CollisionMask;
+        var otheWeh = (CollisionGroup) args.OtherFixture.CollisionLayer;
 
         var otherEntity = args.OtherEntity;
         // it's here so this check is only done once before possible hit
@@ -73,6 +93,8 @@ public sealed class ProjectileSystem : SharedProjectileSystem
 
             if (component.DeleteOnCollide)
             {
+                var otherMask = (CollisionGroup) args.OtherFixture.CollisionMask;
+                var otherLayer = (CollisionGroup) args.OtherFixture.CollisionLayer;
                 QueueDel(uid);
             }
 
