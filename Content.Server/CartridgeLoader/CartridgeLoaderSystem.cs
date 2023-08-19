@@ -42,11 +42,11 @@ public sealed class CartridgeLoaderSystem : SharedCartridgeLoaderSystem
         if (!Resolve(loaderUid, ref loader))
             return;
 
-        state.ActiveUI = loader.ActiveProgram;
+        state.ActiveUI = ToNetEntity(loader.ActiveProgram);
         state.Programs = GetAvailablePrograms(loaderUid, loader);
 
         if (_userInterfaceSystem.TryGetUi(loaderUid, loader.UiKey, out var ui))
-            UserInterfaceSystem.SetUiState(ui, state, session);
+            _userInterfaceSystem.SetUiState(ui, state, session);
     }
 
     /// <summary>
@@ -66,7 +66,7 @@ public sealed class CartridgeLoaderSystem : SharedCartridgeLoaderSystem
             return;
 
         if (_userInterfaceSystem.TryGetUi(loaderUid, loader.UiKey, out var ui))
-            UserInterfaceSystem.SetUiState(ui, state, session);
+            _userInterfaceSystem.SetUiState(ui, state, session);
     }
 
     /// <summary>
@@ -75,20 +75,19 @@ public sealed class CartridgeLoaderSystem : SharedCartridgeLoaderSystem
     /// <param name="uid">The cartridge loaders uid</param>
     /// <param name="loader">The cartridge loader component</param>
     /// <returns>A list of all the available program entity ids</returns>
-    public List<EntityUid> GetAvailablePrograms(EntityUid uid, CartridgeLoaderComponent? loader = default!)
+    public List<NetEntity> GetAvailablePrograms(EntityUid uid, CartridgeLoaderComponent? loader = default!)
     {
         if (!Resolve(uid, ref loader))
-            return new List<EntityUid>();
+            return new List<NetEntity>();
 
         //Don't count a cartridge that has already been installed as available to avoid confusion
         if (loader.CartridgeSlot.HasItem && TryFindInstalled(Prototype(loader.CartridgeSlot.Item!.Value)?.ID, loader, out _))
-            return loader.InstalledPrograms;
+            return ToNetEntityList(loader.InstalledPrograms);
 
-        var available = new List<EntityUid>();
-        available.AddRange(loader.InstalledPrograms);
+        var available = ToNetEntityList(loader.InstalledPrograms);
 
         if (loader.CartridgeSlot.HasItem)
-            available.Add(loader.CartridgeSlot.Item!.Value);
+            available.Add(ToNetEntity(loader.CartridgeSlot.Item!.Value));
 
         return available;
     }
@@ -308,19 +307,21 @@ public sealed class CartridgeLoaderSystem : SharedCartridgeLoaderSystem
 
     private void OnLoaderUiMessage(EntityUid loaderUid, CartridgeLoaderComponent component, CartridgeLoaderUiMessage message)
     {
+        var cartridge = ToEntity(message.CartridgeUid);
+
         switch (message.Action)
         {
             case CartridgeUiMessageAction.Activate:
-                ActivateProgram(loaderUid, message.CartridgeUid, component);
+                ActivateProgram(loaderUid, cartridge, component);
                 break;
             case CartridgeUiMessageAction.Deactivate:
-                DeactivateProgram(loaderUid, message.CartridgeUid, component);
+                DeactivateProgram(loaderUid, cartridge, component);
                 break;
             case CartridgeUiMessageAction.Install:
-                InstallCartridge(loaderUid, message.CartridgeUid, component);
+                InstallCartridge(loaderUid, cartridge, component);
                 break;
             case CartridgeUiMessageAction.Uninstall:
-                UninstallProgram(loaderUid, message.CartridgeUid, component);
+                UninstallProgram(loaderUid, cartridge, component);
                 break;
             case CartridgeUiMessageAction.UIReady:
                 if (component.ActiveProgram.HasValue)
@@ -337,7 +338,7 @@ public sealed class CartridgeLoaderSystem : SharedCartridgeLoaderSystem
     private void OnUiMessage(EntityUid uid, CartridgeLoaderComponent component, CartridgeUiMessage args)
     {
         var cartridgeEvent = args.MessageEvent;
-        cartridgeEvent.LoaderUid = uid;
+        cartridgeEvent.LoaderUid = ToNetEntity(uid);
 
         RelayEvent(component, cartridgeEvent, true);
     }

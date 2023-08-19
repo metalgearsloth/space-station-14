@@ -23,7 +23,12 @@ public partial class SharedBodySystem
         if (!Resolve(parent, ref part, false))
             return null;
 
-        var slot = new OrganSlot(slotId, parent);
+        var slot = new OrganSlot()
+        {
+            Id = slotId,
+            Parent = parent,
+            NetParent = ToNetEntity(parent),
+        };
         part.Organs.Add(slotId, slot);
 
         return slot;
@@ -40,7 +45,7 @@ public partial class SharedBodySystem
 
     private void OnOrganGetState(EntityUid uid, OrganComponent organ, ref ComponentGetState args)
     {
-        args.State = new OrganComponentState(organ.Body, organ.ParentSlot);
+        args.State = new OrganComponentState(ToNetEntity(organ.Body), organ.ParentSlot);
     }
 
     private void OnOrganHandleState(EntityUid uid, OrganComponent organ, ref ComponentHandleState args)
@@ -48,7 +53,7 @@ public partial class SharedBodySystem
         if (args.Current is not OrganComponentState state)
             return;
 
-        organ.Body = state.Body;
+        organ.Body = ToEntity(state.Body);
         organ.ParentSlot = state.Parent;
     }
 
@@ -70,8 +75,8 @@ public partial class SharedBodySystem
         organ.ParentSlot = slot;
         organ.Body = CompOrNull<BodyPartComponent>(slot.Parent)?.Body;
 
-        Dirty(slot.Parent);
-        Dirty(organId.Value);
+        DirtyAllComponents(slot.Parent);
+        Dirty(organId.Value, organ);
 
         if (organ.Body == null)
         {
@@ -84,6 +89,20 @@ public partial class SharedBodySystem
 
         return true;
     }
+
+    public void DirtyAllComponents(EntityUid uid)
+    {
+        // TODO just use containers. Please
+        if (TryComp(uid, out BodyPartComponent? part))
+            Dirty(uid, part);
+
+        if (TryComp(uid, out OrganComponent? organ))
+            Dirty(uid, organ);
+
+        if (TryComp(uid, out BodyComponent? body))
+            Dirty(uid, body);
+    }
+
 
     public bool AddOrganToFirstValidSlot(
         EntityUid? childId,

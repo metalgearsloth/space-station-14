@@ -47,7 +47,7 @@ namespace Content.Client.Actions
 
         public override void Dirty(ActionType action)
         {
-            if (_playerManager.LocalPlayer?.ControlledEntity != action.AttachedEntity)
+            if (_playerManager.LocalPlayer?.ControlledEntity != ToEntity(action.AttachedEntity))
                 return;
 
             base.Dirty(action);
@@ -126,9 +126,6 @@ namespace Content.Client.Actions
 
         public override void AddAction(EntityUid uid, ActionType action, EntityUid? provider, ActionsComponent? comp = null, bool dirty = true)
         {
-            if (GameTiming.ApplyingState && !action.ClientExclusive)
-                return;
-
             if (!Resolve(uid, ref comp, false))
                 return;
 
@@ -193,7 +190,7 @@ namespace Content.Client.Actions
             if (PlayerActions == null || action == null || _playerManager.LocalPlayer?.ControlledEntity is not { Valid: true } user)
                 return;
 
-            if (action.Provider != null && Deleted(action.Provider))
+            if (action.Provider != null && Deleted(ToEntity(action.Provider)))
                 return;
 
             if (action is not InstantAction instantAction)

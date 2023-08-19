@@ -14,7 +14,6 @@ using Content.Shared.CartridgeLoader;
 using Content.Shared.CartridgeLoader.Cartridges;
 using Content.Server.CartridgeLoader;
 using Robust.Shared.Timing;
-using TerraFX.Interop.Windows;
 using Content.Server.Popups;
 using Content.Shared.Database;
 
@@ -104,7 +103,7 @@ public sealed class NewsSystem : EntitySystem
         if (message.Action == NewsReadUiAction.NotificationSwith)
             component.NotificationOn = !component.NotificationOn;
 
-        UpdateReadUi(uid, args.LoaderUid, component);
+        UpdateReadUi(uid, ToEntity(args.LoaderUid), component);
     }
 
     public void OnWriteUiShareMessage(EntityUid uid, NewsWriteComponent component, NewsWriteShareMessage msg)

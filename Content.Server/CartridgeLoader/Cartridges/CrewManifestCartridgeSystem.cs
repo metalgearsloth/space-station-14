@@ -1,9 +1,10 @@
-﻿using Content.Server.CrewManifest;
+using Content.Server.CrewManifest;
 using Content.Server.Station.Systems;
 using Content.Shared.CartridgeLoader;
 using Content.Shared.CartridgeLoader.Cartridges;
 using Content.Shared.CCVar;
 using Robust.Shared.Configuration;
+using Robust.Shared.Prototypes;
 
 namespace Content.Server.CartridgeLoader.Cartridges;
 
@@ -14,6 +15,7 @@ public sealed class CrewManifestCartridgeSystem : EntitySystem
     [Dependency] private readonly CrewManifestSystem _crewManifest = default!;
     [Dependency] private readonly StationSystem _stationSystem = default!;
 
+    [ValidatePrototypeId<EntityPrototype>]
     private const string CartridgePrototypeName = "CrewManifestCartridge";
 
     /// <summary>
@@ -39,7 +41,7 @@ public sealed class CrewManifestCartridgeSystem : EntitySystem
     /// </remarks>
     private void OnUiMessage(EntityUid uid, CrewManifestCartridgeComponent component, CartridgeMessageEvent args)
     {
-        UpdateUiState(uid, args.LoaderUid, component);
+        UpdateUiState(uid, ToEntity(args.LoaderUid), component);
     }
 
     /// <summary>

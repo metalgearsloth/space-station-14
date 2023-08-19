@@ -7,8 +7,8 @@ using Robust.Shared.Serialization.TypeSerializers.Implementations.Custom.Prototy
 
 namespace Content.Shared.Weapons.Ranged.Components;
 
-[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
-public sealed partial class BallisticAmmoProviderComponent : Component
+[RegisterComponent, NetworkedComponent]
+public sealed class BallisticAmmoProviderComponent : Component
 {
     [ViewVariables(VVAccess.ReadWrite), DataField("soundRack")]
     public SoundSpecifier? SoundRack = new SoundPathSpecifier("/Audio/Weapons/Guns/Cock/smg_cock.ogg");
@@ -25,7 +25,6 @@ public sealed partial class BallisticAmmoProviderComponent : Component
     public int Count => UnspawnedCount + Container.ContainedEntities.Count;
 
     [ViewVariables(VVAccess.ReadWrite), DataField("unspawnedCount")]
-    [AutoNetworkedField]
     public int UnspawnedCount;
 
     [ViewVariables(VVAccess.ReadWrite), DataField("whitelist")]
@@ -35,27 +34,15 @@ public sealed partial class BallisticAmmoProviderComponent : Component
 
     // TODO: Make this use stacks when the typeserializer is done.
     [DataField("entities")]
-    [AutoNetworkedField(true)]
     public List<EntityUid> Entities = new();
 
     /// <summary>
-    /// Will the ammoprovider automatically cycle through rounds or does it need doing manually.
+    /// Is the magazine allowed to be manually cycled to eject a cartridge.
     /// </summary>
-    [ViewVariables(VVAccess.ReadWrite), DataField("autoCycle")]
-    public bool AutoCycle = true;
-
-    /// <summary>
-    /// Is the gun ready to shoot; if AutoCycle is true then this will always stay true and not need to be manually done.
-    /// </summary>
-    [ViewVariables(VVAccess.ReadWrite), DataField("cycled")]
-    [AutoNetworkedField]
-    public bool Cycled = true;
-
-    /// <summary>
-    /// Is the magazine allowed to be cycled
-    /// </summary>
+    /// <remarks>
+    /// Set to false for entities like turrets to avoid users being able to cycle them.
+    /// </remarks>
     [ViewVariables(VVAccess.ReadWrite), DataField("cycleable")]
-    [AutoNetworkedField]
     public bool Cycleable = true;
 
     /// <summary>

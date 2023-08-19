@@ -64,7 +64,7 @@ public sealed class CrewManifestSystem : EntitySystem
             return;
         }
 
-        OpenEui(message.Id, sessionCast);
+        OpenEui(ToEntity(message.Id), sessionCast);
     }
 
     // Not a big fan of this one. Rebuilds the crew manifest every time
@@ -72,14 +72,18 @@ public sealed class CrewManifestSystem : EntitySystem
     // wrt the amount of players readied up.
     private void AfterGeneralRecordCreated(AfterGeneralRecordCreatedEvent ev)
     {
-        BuildCrewManifest(ev.Key.OriginStation);
-        UpdateEuis(ev.Key.OriginStation);
+        var origin = ToEntity(ev.Key.OriginStation);
+
+        BuildCrewManifest(origin);
+        UpdateEuis(origin);
     }
 
     private void OnRecordModified(RecordModifiedEvent ev)
     {
-        BuildCrewManifest(ev.Key.OriginStation);
-        UpdateEuis(ev.Key.OriginStation);
+        var origin = ToEntity(ev.Key.OriginStation);
+
+        BuildCrewManifest(origin);
+        UpdateEuis(origin);
     }
 
     private void OnBoundUiClose(EntityUid uid, CrewManifestViewerComponent component, BoundUIClosedEvent ev)
@@ -246,7 +250,7 @@ public sealed class CrewManifestCommand : IConsoleCommand
             return;
         }
 
-        if (!EntityUid.TryParse(args[0], out var uid))
+        if (!NetEntity.TryParse(args[0], out var uidNet) || !_entityManager.TryGetEntity(uidNet, out var uid))
         {
             shell.WriteLine($"{args[0]} is not a valid entity UID.");
             return;

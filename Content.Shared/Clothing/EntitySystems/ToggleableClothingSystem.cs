@@ -97,7 +97,7 @@ public sealed class ToggleableClothingSystem : EntitySystem
 
         var (time, stealth) = _strippable.GetStripTimeModifiers(user, wearer, (float) component.StripDelay.Value.TotalSeconds);
 
-        var args = new DoAfterArgs(user, time, new ToggleClothingDoAfterEvent(), item, wearer, item)
+        var args = new DoAfterArgs(EntityManager, user, time, new ToggleClothingDoAfterEvent(), item, wearer, item)
         {
             BreakOnDamage = true,
             BreakOnTargetMove = true,
@@ -179,8 +179,10 @@ public sealed class ToggleableClothingSystem : EntitySystem
         // automatically be deleted.
 
         // remove action.
-        if (component.ToggleAction?.AttachedEntity != null)
-            _actionsSystem.RemoveAction(component.ToggleAction.AttachedEntity.Value, component.ToggleAction);
+        var actionEnt = ToEntity(component.ToggleAction?.AttachedEntity);
+
+        if (actionEnt != null)
+            _actionsSystem.RemoveAction(actionEnt.Value, component.ToggleAction!);
 
         if (component.ClothingUid != null)
             QueueDel(component.ClothingUid.Value);
@@ -200,8 +202,10 @@ public sealed class ToggleableClothingSystem : EntitySystem
             return;
 
         // remove action.
-        if (toggleComp.ToggleAction?.AttachedEntity != null)
-            _actionsSystem.RemoveAction(toggleComp.ToggleAction.AttachedEntity.Value, toggleComp.ToggleAction);
+        var actionEnt = ToEntity(toggleComp.ToggleAction?.AttachedEntity);
+
+        if (actionEnt != null)
+            _actionsSystem.RemoveAction(actionEnt.Value, toggleComp.ToggleAction!);
 
         RemComp(component.AttachedUid, toggleComp);
     }
@@ -302,7 +306,7 @@ public sealed class ToggleableClothingSystem : EntitySystem
 
         if (component.ToggleAction != null)
         {
-            component.ToggleAction.EntityIcon = component.ClothingUid;
+            component.ToggleAction.EntityIcon = ToNetEntity(component.ClothingUid);
             _actionsSystem.Dirty(component.ToggleAction);
         }
     }

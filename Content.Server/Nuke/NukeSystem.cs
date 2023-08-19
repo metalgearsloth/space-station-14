@@ -291,7 +291,7 @@ public sealed class NukeSystem : EntitySystem
         // play alert sound if time is running out
         if (nuke.RemainingTime <= nuke.AlertSoundTime && !nuke.PlayedAlertSound)
         {
-            nuke.AlertAudioStream = _audio.Play(nuke.AlertSound, Filter.Broadcast(), uid, true);
+            _sound.PlayGlobalOnStation(uid, _audio.GetSound(nuke.AlertSound));
             _sound.StopStationEventMusic(uid, StationEventMusicType.Nuke);
             nuke.PlayedAlertSound = true;
         }
@@ -375,7 +375,7 @@ public sealed class NukeSystem : EntitySystem
             CooldownTime = (int) component.CooldownTime
         };
 
-        UserInterfaceSystem.SetUiState(ui, state);
+        _ui.SetUiState(ui, state);
     }
 
     private void PlayNukeKeypadSound(EntityUid uid, int number, NukeComponent? component = null)
@@ -455,7 +455,12 @@ public sealed class NukeSystem : EntitySystem
         _sound.PlayGlobalOnStation(uid, _audio.GetSound(component.ArmSound));
 
         _itemSlots.SetLock(uid, component.DiskSlot, true);
-        _transform.AnchorEntity(uid, nukeXform);
+        if (!nukeXform.Anchored)
+        {
+            // Admin command shenanigans, just make sure.
+            _transform.AnchorEntity(uid, nukeXform);
+        }
+
         component.Status = NukeStatus.ARMED;
         UpdateUserInterface(uid, component);
     }
@@ -555,7 +560,7 @@ public sealed class NukeSystem : EntitySystem
 
     private void DisarmBombDoafter(EntityUid uid, EntityUid user, NukeComponent nuke)
     {
-        var doAfter = new DoAfterArgs(user, nuke.DisarmDoafterLength, new NukeDisarmDoAfterEvent(), uid, target: uid)
+        var doAfter = new DoAfterArgs(EntityManager, user, nuke.DisarmDoafterLength, new NukeDisarmDoAfterEvent(), uid, target: uid)
         {
             BreakOnDamage = true,
             BreakOnTargetMove = true,

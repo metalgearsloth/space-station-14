@@ -86,6 +86,9 @@ public sealed class HealingSystem : EntitySystem
         // Re-verify that we can heal the damage.
         _stacks.Use(args.Used.Value, 1);
 
+        if (_stacks.GetCount(args.Used.Value) <= 0)
+            dontRepeat = true;
+
         if (uid != args.User)
         {
             _adminLogger.Add(LogType.Healed,
@@ -166,11 +169,8 @@ public sealed class HealingSystem : EntitySystem
             return false;
         }
 
-        if (component.HealingBeginSound != null)
-        {
-            _audio.PlayPvs(component.HealingBeginSound, uid,
+        _audio.PlayPvs(component.HealingBeginSound, uid,
                 AudioHelpers.WithVariation(0.125f, _random).WithVolume(-5f));
-        }
 
         var isNotSelf = user != target;
 
@@ -179,7 +179,7 @@ public sealed class HealingSystem : EntitySystem
             : component.Delay * GetScaledHealingPenalty(user, component);
 
         var doAfterEventArgs =
-            new DoAfterArgs(user, delay, new HealingDoAfterEvent(), target, target: target, used: uid)
+            new DoAfterArgs(EntityManager, user, delay, new HealingDoAfterEvent(), target, target: target, used: uid)
             {
                 //Raise the event on the target if it's not self, otherwise raise it on self.
                 BreakOnUserMove = true,

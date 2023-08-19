@@ -93,18 +93,18 @@ public abstract class ActionType : IEquatable<ActionType>, IComparable, ICloneab
     ///     The entity that enables / provides this action. If the action is innate, this may be the user themselves. If
     ///     this action has no provider (e.g., mapping tools), the this will result in broadcast events.
     /// </summary>
-    public EntityUid? Provider;
+    public NetEntity? Provider;
 
     /// <summary>
     ///     Entity to use for the action icon. Defaults to using <see cref="Provider"/>.
     /// </summary>
-    public EntityUid? EntityIcon
+    public NetEntity? EntityIcon
     {
         get => _entityIcon ?? Provider;
         set => _entityIcon = value;
     }
 
-    private EntityUid? _entityIcon;
+    private NetEntity? _entityIcon;
 
     /// <summary>
     ///     Whether the action system should block this action if the user cannot currently interact. Some spells or
@@ -129,7 +129,7 @@ public abstract class ActionType : IEquatable<ActionType>, IComparable, ICloneab
     ///     What entity, if any, currently has this action in the actions component?
     /// </summary>
     [ViewVariables]
-    public EntityUid? AttachedEntity;
+    public NetEntity? AttachedEntity;
 
     /// <summary>
     ///     Whether or not to automatically add this action to the action bar when it becomes available.
@@ -247,6 +247,19 @@ public abstract class ActionType : IEquatable<ActionType>, IComparable, ICloneab
     public bool Equals(ActionType? other)
     {
         return CompareTo(other) == 0;
+    }
+
+    public static bool operator ==(ActionType? left, ActionType? right)
+    {
+        if (left is null)
+            return right is null;
+
+        return left.Equals(right);
+    }
+
+    public static bool operator !=(ActionType? left, ActionType? right)
+    {
+        return !(left == right);
     }
 
     public override int GetHashCode()

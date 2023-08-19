@@ -95,12 +95,6 @@ public sealed partial class NPCSteeringSystem : SharedNPCSteeringSystem
         _physicsQuery = GetEntityQuery<PhysicsComponent>();
         _xformQuery = GetEntityQuery<TransformComponent>();
 
-#if DEBUG
-        Log.Level = LogLevel.Warning;
-#else
-        Log.Level = LogLevel.Debug;
-#endif
-
         for (var i = 0; i < InterestDirections; i++)
         {
             Directions[i] = new Angle(InterestRadians * i).ToVec();
@@ -274,7 +268,7 @@ public sealed partial class NPCSteeringSystem : SharedNPCSteeringSystem
                 var (uid, steering, mover, _) = npcs[i];
 
                 data.Add(new NPCSteeringDebugData(
-                    uid,
+                    ToNetEntity(uid),
                     mover.CurTickSprintMovement,
                     steering.Interest,
                     steering.Danger,
