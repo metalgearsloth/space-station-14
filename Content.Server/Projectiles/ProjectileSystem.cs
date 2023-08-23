@@ -30,7 +30,7 @@ public sealed class ProjectileSystem : SharedProjectileSystem
     private void OnStartCollide(EntityUid uid, ProjectileComponent component, ref StartCollideEvent args)
     {
         // This is so entities that shouldn't get a collision are ignored.
-        if (args.OurFixture.ID != ProjectileFixture || !args.OtherFixture.Hard || component.DamagedEntity)
+        if (args.OurFixtureId != ProjectileFixture || !args.OtherFixture.Hard || component.DamagedEntity)
             return;
 
         var target = args.OtherEntity;
@@ -78,7 +78,7 @@ public sealed class ProjectileSystem : SharedProjectileSystem
 
         if (component.ImpactEffect != null && TryComp<TransformComponent>(uid, out var xform))
         {
-            RaiseNetworkEvent(new ImpactEffectEvent(component.ImpactEffect, ToNetCoordinates(xform.Coordinates)), Filter.Pvs(xform.Coordinates, entityMan: EntityManager));
+            RaiseNetworkEvent(new ImpactEffectEvent(component.ImpactEffect, GetNetCoordinates(xform.Coordinates)), Filter.Pvs(xform.Coordinates, entityMan: EntityManager));
         }
     }
 }

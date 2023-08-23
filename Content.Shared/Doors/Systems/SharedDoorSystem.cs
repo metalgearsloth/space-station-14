@@ -19,7 +19,7 @@ using Robust.Shared.Timing;
 
 namespace Content.Shared.Doors.Systems;
 
-public abstract class SharedDoorSystem : EntitySystem
+public abstract partial class SharedDoorSystem : EntitySystem
 {
     [Dependency] protected readonly IGameTiming GameTiming = default!;
     [Dependency] protected readonly SharedPhysicsSystem PhysicsSystem = default!;
@@ -101,7 +101,7 @@ public abstract class SharedDoorSystem : EntitySystem
     #region StateManagement
     private void OnGetState(EntityUid uid, DoorComponent door, ref ComponentGetState args)
     {
-        args.State = new DoorComponentState(door, ToNetEntitySet(door.CurrentlyCrushing));
+        args.State = new DoorComponentState(door, GetNetEntitySet(door.CurrentlyCrushing));
     }
 
     private void OnHandleState(EntityUid uid, DoorComponent door, ref ComponentHandleState args)
@@ -110,7 +110,7 @@ public abstract class SharedDoorSystem : EntitySystem
             return;
 
         door.CurrentlyCrushing.Clear();
-        door.CurrentlyCrushing.UnionWith(ToEntitySet(state.CurrentlyCrushing));
+        door.CurrentlyCrushing.UnionWith(GetEntitySet(state.CurrentlyCrushing));
 
         door.State = state.DoorState;
         door.NextStateChange = state.NextStateChange;
@@ -661,7 +661,7 @@ public abstract class SharedDoorSystem : EntitySystem
     protected abstract void PlaySound(EntityUid uid, SoundSpecifier soundSpecifier, AudioParams audioParams, EntityUid? predictingPlayer, bool predicted);
 
     [Serializable, NetSerializable]
-    protected sealed class DoorPryDoAfterEvent : SimpleDoAfterEvent
+    protected sealed partial class DoorPryDoAfterEvent : SimpleDoAfterEvent
     {
     }
 }

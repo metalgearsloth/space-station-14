@@ -20,6 +20,8 @@ using Content.Shared.Eye.Blinding.Components;
 using Robust.Client;
 using static Content.Shared.Interaction.SharedInteractionSystem;
 using static Robust.Client.UserInterface.Controls.BoxContainer;
+using Content.Shared.Interaction.Events;
+using Content.Shared.Item;
 
 namespace Content.Client.Examine
 {
@@ -50,11 +52,26 @@ namespace Content.Client.Examine
 
             SubscribeNetworkEvent<ExamineSystemMessages.ExamineInfoResponseMessage>(OnExamineInfoResponse);
 
+            SubscribeLocalEvent<ItemComponent, DroppedEvent>(OnExaminedItemDropped);
+
             CommandBinds.Builder
                 .Bind(ContentKeyFunctions.ExamineEntity, new PointerInputCmdHandler(HandleExamine, outsidePrediction: true))
                 .Register<ExamineSystem>();
 
             _idCounter = 0;
+        }
+
+        private void OnExaminedItemDropped(EntityUid item, ItemComponent comp, DroppedEvent args)
+        {
+            if (!args.User.Valid)
+                return;
+            if (_playerManager.LocalPlayer == null)
+                return;
+            if (_examineTooltipOpen == null)
+                return;
+
+            if (item == _examinedEntity && args.User == _playerManager.LocalPlayer.ControlledEntity)
+                CloseTooltip();
         }
 
         public override void Update(float frameTime)
@@ -142,7 +159,7 @@ namespace Content.Client.Examine
             // Tooltips coming in from the server generally prioritize
             // opening at the old tooltip rather than the cursor/another entity,
             // since there's probably one open already if it's coming in from the server.
-            var entity = ToEntity(ev.EntityUid);
+            var entity = GetEntity(ev.EntityUid);
 
             OpenTooltip(player.Value, entity, ev.CenterAtCursor, ev.OpenAtOldTooltip, ev.KnowTarget);
             UpdateTooltipInfo(player.Value, entity, ev.Message, ev.Verbs);
@@ -359,7 +376,7 @@ namespace Content.Client.Examine
                     _idCounter += 1;
                 if (_idCounter == int.MaxValue)
                     _idCounter = 0;
-                RaiseNetworkEvent(new ExamineSystemMessages.RequestExamineInfoMessage(ToNetEntity(entity), _idCounter, true));
+                RaiseNetworkEvent(new ExamineSystemMessages.RequestExamineInfoMessage(GetNetEntity(entity), _idCounter, true));
             }
 
             RaiseLocalEvent(entity, new ClientExaminedEvent(entity, playerEnt.Value));

@@ -179,7 +179,7 @@ public sealed class ToggleableClothingSystem : EntitySystem
         // automatically be deleted.
 
         // remove action.
-        var actionEnt = ToEntity(component.ToggleAction?.AttachedEntity);
+        var actionEnt = GetEntity(component.ToggleAction?.AttachedEntity);
 
         if (actionEnt != null)
             _actionsSystem.RemoveAction(actionEnt.Value, component.ToggleAction!);
@@ -202,7 +202,7 @@ public sealed class ToggleableClothingSystem : EntitySystem
             return;
 
         // remove action.
-        var actionEnt = ToEntity(toggleComp.ToggleAction?.AttachedEntity);
+        var actionEnt = GetEntity(toggleComp.ToggleAction?.AttachedEntity);
 
         if (actionEnt != null)
             _actionsSystem.RemoveAction(actionEnt.Value, toggleComp.ToggleAction!);
@@ -306,17 +306,17 @@ public sealed class ToggleableClothingSystem : EntitySystem
 
         if (component.ToggleAction != null)
         {
-            component.ToggleAction.EntityIcon = ToNetEntity(component.ClothingUid);
+            component.ToggleAction.EntityIcon = GetNetEntity(component.ClothingUid);
             _actionsSystem.Dirty(component.ToggleAction);
         }
     }
 }
 
-public sealed class ToggleClothingEvent : InstantActionEvent
+public sealed partial class ToggleClothingEvent : InstantActionEvent
 {
 }
 
 [Serializable, NetSerializable]
-public sealed class ToggleClothingDoAfterEvent : SimpleDoAfterEvent
+public sealed partial class ToggleClothingDoAfterEvent : SimpleDoAfterEvent
 {
 }
