@@ -68,7 +68,7 @@ namespace Content.Server.Traitor.Uplink.Commands
                     return;
                 }
 
-                var eUid = new EntityUid(itemID);
+                var eUid = new EntityUid(itemID, -1);
                 if (!eUid.IsValid() || !entityManager.EntityExists(eUid))
                 {
                     shell.WriteLine(Loc.GetString("shell-invalid-entity-id"));

@@ -287,14 +287,14 @@ public sealed class ToggleableClothingSystem : EntitySystem
         if (component.ToggleAction == null
             && _proto.TryIndex(component.ActionId, out InstantActionPrototype? act))
         {
-            component.ToggleAction = new(act);
+            component.ToggleAction = new InstantAction(act);
         }
 
         if (component.ClothingUid != null && component.ToggleAction != null)
         {
             DebugTools.Assert(Exists(component.ClothingUid), "Toggleable clothing is missing expected entity.");
             DebugTools.Assert(TryComp(component.ClothingUid, out AttachedClothingComponent? comp), "Toggleable clothing is missing an attached component");
-            DebugTools.Assert(comp?.AttachedUid == uid, "Toggleable clothing uid mismatch");
+            DebugTools.Assert(comp.AttachedUid == uid, "Toggleable clothing uid mismatch");
         }
         else
         {

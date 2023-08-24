@@ -186,7 +186,7 @@ public sealed class PrototypeSaveTest
 
         public TestEntityUidContext()
         {
-            SerializerProvider = new();
+            SerializerProvider = new SerializationManager.SerializerProvider();
             SerializerProvider.RegisterSerializer(this);
         }
 
@@ -217,7 +217,7 @@ public sealed class PrototypeSaveTest
             SerializationHookContext hookCtx,
             ISerializationContext? context, ISerializationManager.InstantiationDelegate<EntityUid>? instanceProvider)
         {
-            return EntityUid.Parse(node.Value);
+            return EntityUid.Parse(node.Value, "-1");
         }
     }
 }

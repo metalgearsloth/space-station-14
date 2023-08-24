@@ -39,7 +39,7 @@ namespace Content.Server.Verbs.Commands
             }
             else
             {
-                entityManager.EntityExists(new EntityUid(intPlayerUid));
+                entityManager.EntityExists(new EntityUid(intPlayerUid, -1));
             }
 
             // gets the target entity
@@ -55,7 +55,7 @@ namespace Content.Server.Verbs.Commands
                 return;
             }
 
-            var target = new EntityUid(intUid);
+            var target = new EntityUid(intUid, -1);
             if (!entityManager.EntityExists(target))
             {
                 shell.WriteError(Loc.GetString("list-verbs-command-invalid-target-entity"));

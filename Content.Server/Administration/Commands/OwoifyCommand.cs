@@ -30,12 +30,11 @@ public sealed class OwoifyCommand : IConsoleCommand
             return;
         }
 
-        var eUid = new EntityUid(targetId);
+        var eUid = new EntityUid(targetId, -1);
 
         var meta = entityManager.GetComponent<MetaDataComponent>(eUid);
 
-        var random = IoCManager.Resolve<IRobustRandom>();
-        var owoSys = EntitySystem.Get<OwOAccentSystem>();
+        var owoSys = entityManager.System<OwOAccentSystem>();
 
         meta.EntityName = owoSys.Accentuate(meta.EntityName);
         meta.EntityDescription = owoSys.Accentuate(meta.EntityDescription);

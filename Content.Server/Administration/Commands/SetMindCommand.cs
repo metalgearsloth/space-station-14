@@ -39,7 +39,7 @@ namespace Content.Server.Administration.Commands
 
             var entityManager = IoCManager.Resolve<IEntityManager>();
 
-            var eUid = new EntityUid(entityUid);
+            var eUid = new EntityUid(entityUid, -1);
 
             if (!eUid.IsValid() || !entityManager.EntityExists(eUid))
             {

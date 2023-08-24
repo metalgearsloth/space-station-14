@@ -37,7 +37,7 @@ namespace Content.Server.Administration.Commands
                 return;
             }
 
-            var target = new EntityUid(targetId);
+            var target = new EntityUid(targetId, -1);
 
             if (!target.IsValid() || !_entities.EntityExists(target))
             {

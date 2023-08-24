@@ -41,7 +41,7 @@ namespace Content.Server.Sandbox.Commands
                 return;
             }
 
-            var eUid = new EntityUid(targetId);
+            var eUid = new EntityUid(targetId, -1);
 
             if (!eUid.IsValid() || !entityManager.EntityExists(eUid))
             {

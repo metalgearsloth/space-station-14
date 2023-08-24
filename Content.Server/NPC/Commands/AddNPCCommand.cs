@@ -24,7 +24,7 @@ namespace Content.Server.NPC.Commands
                 return;
             }
 
-            var entId = new EntityUid(int.Parse(args[0]));
+            var entId = new EntityUid(int.Parse(args[0]), -1);
 
             if (!_entities.EntityExists(entId))
             {

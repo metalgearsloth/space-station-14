@@ -14,8 +14,8 @@ namespace Content.Server.Popups
 
         public void Execute(IConsoleShell shell, string argStr, string[] args)
         {
-            var source = EntityUid.Parse(args[0]);
-            var viewer = EntityUid.Parse(args[1]);
+            var source = EntityUid.Parse(args[0], "-1");
+            var viewer = EntityUid.Parse(args[1], "-1");
             var msg = args[2];
 
             source.PopupMessage(viewer, msg);
