@@ -503,7 +503,7 @@ public abstract partial class InteractionTest
     /// <summary>
     /// Assert whether or not the target has the given component.
     /// </summary>
-    protected void AssertComp<T>(bool hasComp = true, NetEntity? target = null)
+    protected void AssertComp<T>(bool hasComp = true, NetEntity? target = null) where T : IComponent
     {
         target ??= Target;
         if (target == null)
