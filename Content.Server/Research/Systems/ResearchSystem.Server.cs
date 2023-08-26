@@ -15,10 +15,16 @@ public sealed partial class ResearchSystem
 
     private void OnServerStartup(EntityUid uid, ResearchServerComponent component, ComponentStartup args)
     {
-        var unusedId = EntityQuery<ResearchServerComponent>(true)
-            .Max(s => s.Id) + 1;
+        var unusedId = 1;
+        var query = AllEntityQuery<ResearchServerComponent>();
+
+        while (query.MoveNext(out var comp))
+        {
+            unusedId = Math.Max(comp.Id + 1, unusedId);
+        }
+
         component.Id = unusedId;
-        Dirty(component);
+        Dirty(uid, component);
     }
 
     private void OnServerShutdown(EntityUid uid, ResearchServerComponent component, ComponentShutdown args)
