@@ -13,6 +13,7 @@
 
 - Flags: DEBUG
   Commands:
+  - arch_trim
   - delete
   - inrangeunoccluded
   - lsgrid
@@ -133,4 +134,3 @@
 - Commands:
   - "|"
   - oldhelp
-  
