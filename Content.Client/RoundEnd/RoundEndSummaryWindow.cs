@@ -125,7 +125,9 @@ namespace Content.Client.RoundEnd
                     VerticalExpand = true,
                 };
 
-                if (_entityManager.HasComponent<SpriteComponent>(_entityManager.GetEntity(playerInfo.PlayerEntityUid))
+                var playerEnt = _entityManager.GetEntity(playerInfo.PlayerEntityUid);
+
+                if (_entityManager.HasComponent<SpriteComponent>(playerEnt))
                 {
                     var spriteView = new SpriteView
                     {
@@ -134,7 +136,7 @@ namespace Content.Client.RoundEnd
                         SetSize = new Vector2(32, 32),
                         VerticalExpand = true,
                     };
-                    spriteView.SetEntity(playerInfo.PlayerEntityUid);
+                    spriteView.SetEntity(playerEnt);
                     hBox.AddChild(spriteView);
                 }
 

@@ -218,7 +218,7 @@ public sealed class ActionButton : Control
             {
                 case ItemActionIconStyle.BigItem:
                     _bigItemSpriteView.Visible = true;
-                    _bigItemSpriteView.SetEntity(entity);
+                    _bigItemSpriteView.SetEntity(entIcon);
                     _smallItemSpriteView.Visible = false;
                     _smallItemSpriteView.SetEntity(null);
                     break;
@@ -226,7 +226,7 @@ public sealed class ActionButton : Control
                     _bigItemSpriteView.Visible = false;
                     _bigItemSpriteView.SetEntity(null);
                     _smallItemSpriteView.Visible = true;
-                    _smallItemSpriteView.SetEntity(entity);
+                    _smallItemSpriteView.SetEntity(entIcon);
                     break;
                 case ItemActionIconStyle.NoItem:
                     _bigItemSpriteView.Visible = false;
