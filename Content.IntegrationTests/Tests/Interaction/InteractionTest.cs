@@ -41,11 +41,11 @@ public abstract partial class InteractionTest
 {
     protected virtual string PlayerPrototype => "InteractionTestMob";
 
-    protected TestPair PairTracker = default!;
-    protected TestMapData MapData => PairTracker.TestMap!;
+    protected TestPair Pair = default!;
+    protected TestMapData MapData => Pair.TestMap!;
 
-    protected RobustIntegrationTest.ServerIntegrationInstance Server => PairTracker.Server;
-    protected RobustIntegrationTest.ClientIntegrationInstance Client => PairTracker.Client;
+    protected RobustIntegrationTest.ServerIntegrationInstance Server => Pair.Server;
+    protected RobustIntegrationTest.ClientIntegrationInstance Client => Pair.Client;
 
     protected MapId MapId => MapData.MapId;
 
@@ -143,7 +143,7 @@ public abstract partial class InteractionTest
     [SetUp]
     public virtual async Task Setup()
     {
-        PairTracker = await PoolManager.GetServerClient(new PoolSettings { Connected = true });
+        Pair = await PoolManager.GetServerClient(new PoolSettings { Connected = true });
 
         // server dependencies
         SEntMan = Server.ResolveDependency<IEntityManager>();
@@ -175,7 +175,7 @@ public abstract partial class InteractionTest
         CLogger = Client.ResolveDependency<ILogManager>().RootSawmill;
 
         // Setup map.
-        await PairTracker.CreateTestMap();
+        await Pair.CreateTestMap();
         PlayerCoords = SEntMan.GetNetCoordinates(MapData.GridCoords.Offset(new Vector2(0.5f, 0.5f)).WithEntityId(MapData.MapUid, Transform, SEntMan));
         TargetCoords = SEntMan.GetNetCoordinates(MapData.GridCoords.Offset(new Vector2(1.5f, 0.5f)).WithEntityId(MapData.MapUid, Transform, SEntMan));
         await SetTile(Plating, grid: MapData.MapGrid);
@@ -229,7 +229,7 @@ public abstract partial class InteractionTest
         });
 
         // Final player asserts/checks.
-        await PairTracker.ReallyBeIdle(5);
+        await Pair.ReallyBeIdle(5);
         Assert.Multiple(() =>
         {
             Assert.That(CEntMan.GetNetEntity(cPlayerMan.LocalPlayer.ControlledEntity), Is.EqualTo(Player));
@@ -241,7 +241,7 @@ public abstract partial class InteractionTest
     public async Task TearDownInternal()
     {
         await Server.WaitPost(() => MapMan.DeleteMap(MapId));
-        await PairTracker.CleanReturnAsync();
+        await Pair.CleanReturnAsync();
         await TearDown();
     }
 
