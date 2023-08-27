@@ -48,7 +48,7 @@ public sealed class FaxSystem : EntitySystem
         // Hooks
         SubscribeLocalEvent<FaxMachineComponent, ComponentInit>(OnComponentInit);
         SubscribeLocalEvent<FaxMachineComponent, MapInitEvent>(OnMapInit);
-        SubscribeLocalEvent<FaxMachineComponent, ComponentRemove>(OnComponentRemove);
+        SubscribeLocalEvent<FaxMachineComponent, ComponentShutdown>(OnComponentShutdown);
 
         SubscribeLocalEvent<FaxMachineComponent, EntInsertedIntoContainerMessage>(OnItemSlotChanged);
         SubscribeLocalEvent<FaxMachineComponent, EntRemovedFromContainerMessage>(OnItemSlotChanged);
@@ -139,7 +139,7 @@ public sealed class FaxSystem : EntitySystem
         UpdateAppearance(uid, component);
     }
 
-    private void OnComponentRemove(EntityUid uid, FaxMachineComponent component, ComponentRemove args)
+    private void OnComponentShutdown(EntityUid uid, FaxMachineComponent component, ComponentShutdown args)
     {
         _itemSlotsSystem.RemoveItemSlot(uid, component.PaperSlot);
     }

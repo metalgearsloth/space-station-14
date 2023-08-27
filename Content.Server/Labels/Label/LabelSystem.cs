@@ -27,7 +27,7 @@ namespace Content.Server.Labels
 
             SubscribeLocalEvent<LabelComponent, ExaminedEvent>(OnExamine);
             SubscribeLocalEvent<PaperLabelComponent, ComponentInit>(OnComponentInit);
-            SubscribeLocalEvent<PaperLabelComponent, ComponentRemove>(OnComponentRemove);
+            SubscribeLocalEvent<PaperLabelComponent, ComponentShutdown>(OnComponentShutdown);
             SubscribeLocalEvent<PaperLabelComponent, EntInsertedIntoContainerMessage>(OnContainerModified);
             SubscribeLocalEvent<PaperLabelComponent, EntRemovedFromContainerMessage>(OnContainerModified);
             SubscribeLocalEvent<PaperLabelComponent, ExaminedEvent>(OnExamined);
@@ -76,7 +76,7 @@ namespace Content.Server.Labels
             _appearance.SetData(uid, PaperLabelVisuals.HasLabel, false, appearance);
         }
 
-        private void OnComponentRemove(EntityUid uid, PaperLabelComponent component, ComponentRemove args)
+        private void OnComponentShutdown(EntityUid uid, PaperLabelComponent component, ComponentShutdown args)
         {
             _itemSlotsSystem.RemoveItemSlot(uid, component.LabelSlot);
         }

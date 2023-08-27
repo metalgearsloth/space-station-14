@@ -22,7 +22,7 @@ namespace Content.Shared.Access.Systems
             _sawmill = _log.GetSawmill(Sawmill);
 
             SubscribeLocalEvent<AccessOverriderComponent, ComponentInit>(OnComponentInit);
-            SubscribeLocalEvent<AccessOverriderComponent, ComponentRemove>(OnComponentRemove);
+            SubscribeLocalEvent<AccessOverriderComponent, ComponentShutdown>(OnComponentShutdown);
             SubscribeLocalEvent<AccessOverriderComponent, ComponentGetState>(OnGetState);
             SubscribeLocalEvent<AccessOverriderComponent, ComponentHandleState>(OnHandleState);
         }
@@ -43,7 +43,7 @@ namespace Content.Shared.Access.Systems
             _itemSlotsSystem.AddItemSlot(uid, AccessOverriderComponent.PrivilegedIdCardSlotId, component.PrivilegedIdSlot);
         }
 
-        private void OnComponentRemove(EntityUid uid, AccessOverriderComponent component, ComponentRemove args)
+        private void OnComponentShutdown(EntityUid uid, AccessOverriderComponent component, ComponentShutdown args)
         {
             _itemSlotsSystem.RemoveItemSlot(uid, component.PrivilegedIdSlot);
         }

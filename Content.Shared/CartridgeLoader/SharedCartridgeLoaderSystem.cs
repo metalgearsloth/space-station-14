@@ -15,7 +15,7 @@ public abstract class SharedCartridgeLoaderSystem : EntitySystem
         base.Initialize();
 
         SubscribeLocalEvent<CartridgeLoaderComponent, ComponentInit>(OnComponentInit);
-        SubscribeLocalEvent<CartridgeLoaderComponent, ComponentRemove>(OnComponentRemove);
+        SubscribeLocalEvent<CartridgeLoaderComponent, ComponentShutdown>(OnComponentShutdown);
 
         SubscribeLocalEvent<CartridgeLoaderComponent, EntInsertedIntoContainerMessage>(OnItemInserted);
         SubscribeLocalEvent<CartridgeLoaderComponent, EntRemovedFromContainerMessage>(OnItemRemoved);
@@ -33,13 +33,13 @@ public abstract class SharedCartridgeLoaderSystem : EntitySystem
     /// <summary>
     /// Marks installed program entities for deletion when the component gets removed
     /// </summary>
-    private void OnComponentRemove(EntityUid uid, CartridgeLoaderComponent loader, ComponentRemove args)
+    private void OnComponentShutdown(EntityUid uid, CartridgeLoaderComponent loader, ComponentShutdown args)
     {
         _itemSlotsSystem.RemoveItemSlot(uid, loader.CartridgeSlot);
 
         foreach (var program in loader.InstalledPrograms)
         {
-               EntityManager.QueueDeleteEntity(program);
+            EntityManager.QueueDeleteEntity(program);
         }
     }
 

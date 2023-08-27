@@ -14,7 +14,7 @@ namespace Content.Shared.PDA
             base.Initialize();
 
             SubscribeLocalEvent<PdaComponent, ComponentInit>(OnComponentInit);
-            SubscribeLocalEvent<PdaComponent, ComponentRemove>(OnComponentRemove);
+            SubscribeLocalEvent<PdaComponent, ComponentShutdown>(OnComponentShutdown);
 
             SubscribeLocalEvent<PdaComponent, EntInsertedIntoContainerMessage>(OnItemInserted);
             SubscribeLocalEvent<PdaComponent, EntRemovedFromContainerMessage>(OnItemRemoved);
@@ -32,7 +32,7 @@ namespace Content.Shared.PDA
             UpdatePdaAppearance(uid, pda);
         }
 
-        private void OnComponentRemove(EntityUid uid, PdaComponent pda, ComponentRemove args)
+        private void OnComponentShutdown(EntityUid uid, PdaComponent pda, ComponentShutdown args)
         {
             ItemSlotsSystem.RemoveItemSlot(uid, pda.IdSlot);
             ItemSlotsSystem.RemoveItemSlot(uid, pda.PenSlot);
