@@ -117,7 +117,10 @@ public sealed class EntityStorageSystem : SharedEntityStorageSystem
     {
         if (args.Container.Owner != component.Storage)
             return;
-        RemComp(uid, component);
+
+        // TODO: I HATE THIS
+        if (MetaData(uid).EntityLifeStage < EntityLifeStage.Terminating)
+            RemComp(uid, component);
     }
 
     #region Gas mix event handlers

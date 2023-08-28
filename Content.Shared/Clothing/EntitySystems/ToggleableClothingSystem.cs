@@ -207,7 +207,9 @@ public sealed class ToggleableClothingSystem : EntitySystem
         if (actionEnt != null)
             _actionsSystem.RemoveAction(actionEnt.Value, toggleComp.ToggleAction!);
 
-        RemComp(component.AttachedUid, toggleComp);
+        // Don't do unnecessary component removal.
+        if (MetaData(component.AttachedUid).EntityLifeStage < EntityLifeStage.Terminating)
+            RemComp(component.AttachedUid, toggleComp);
     }
 
     /// <summary>

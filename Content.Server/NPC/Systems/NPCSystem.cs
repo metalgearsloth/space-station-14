@@ -38,7 +38,7 @@ namespace Content.Server.NPC.Systems
 
         public void OnPlayerNPCAttach(EntityUid uid, HTNComponent component, PlayerAttachedEvent args)
         {
-            SleepNPC(uid, component);
+            SleepNPC(uid, component: component);
         }
 
         public void OnPlayerNPCDetach(EntityUid uid, HTNComponent component, PlayerDetachedEvent args)
@@ -67,7 +67,7 @@ namespace Content.Server.NPC.Systems
 
         public void OnNPCShutdown(EntityUid uid, HTNComponent component, ComponentShutdown args)
         {
-            SleepNPC(uid, component);
+            SleepNPC(uid, true, component: component);
         }
 
         /// <summary>
@@ -106,7 +106,7 @@ namespace Content.Server.NPC.Systems
             EnsureComp<ActiveNPCComponent>(uid);
         }
 
-        public void SleepNPC(EntityUid uid, HTNComponent? component = null)
+        public void SleepNPC(EntityUid uid, bool terminating = false, HTNComponent? component = null)
         {
             if (!Resolve(uid, ref component, false))
             {
@@ -125,8 +125,11 @@ namespace Content.Server.NPC.Systems
                 }
             }
 
-            Log.Debug($"Sleeping {ToPrettyString(uid)}");
-            RemComp<ActiveNPCComponent>(uid);
+            if (terminating)
+            {
+                Log.Debug($"Sleeping {ToPrettyString(uid)}");
+                RemComp<ActiveNPCComponent>(uid);
+            }
         }
 
         /// <inheritdoc />
@@ -154,7 +157,7 @@ namespace Content.Server.NPC.Systems
                     break;
                 case MobState.Critical:
                 case MobState.Dead:
-                    SleepNPC(uid, component);
+                    SleepNPC(uid, component: component);
                     break;
             }
         }
