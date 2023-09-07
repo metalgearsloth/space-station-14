@@ -36,6 +36,11 @@ public sealed partial class MeleeWeaponSystem : SharedMeleeWeaponSystem
 
     private const string MeleeLungeKey = "melee-lunge";
 
+    /// <summary>
+    /// Time mouse has to be held down to start a heavy attack.
+    /// </summary>
+    public const float HeavyBuffer = 0.25f;
+
     public override void Initialize()
     {
         base.Initialize();
@@ -69,13 +74,73 @@ public sealed partial class MeleeWeaponSystem : SharedMeleeWeaponSystem
 
         var useDown = _inputSystem.CmdStates.GetState(EngineKeyFunctions.Use);
         var altDown = _inputSystem.CmdStates.GetState(EngineKeyFunctions.UseSecondary);
+        var mousePos = _eyeManager.PixelToMap(_inputManager.MouseScreenPosition);
+        var coordinates = GetCoordinates(mousePos);
 
-        if (useDown != BoundKeyState.Down && altDown != BoundKeyState.Down)
+        // TODO: https://github.com/space-wizards/space-station-14/pull/10897/commits/359726c81eea4de2cf5b91ee59a69950b3cbdbe2#diff-071e6a3e069ea0d37bf7e2eee5ea79857a4daec38b5b5271be8b7064152cb1ceL107
+
+        // So:
+        // - If right-click is down cancel heavy
+        // - If left-click down continue charging all gucci
+        // - If right-click up (and it was down) then try to do an alt-attack
+        // - If left-click up try to either do a heavy attack (if held long enough) or a light-attack.
+        // - End of a heavy attack should reset the attack cooldown too.
+
+        if (useDown == BoundKeyState.Down)
         {
-            if (weapon.Attacking)
+            if (weapon.ClickStart == null)
+            {
+
+            }
+        }
+
+        if (useDown != BoundKeyState.Down)
+        {
+            // Try to do a heavy attack if possible
+            if (weapon.ClickStart != null)
+            {
+                var heavyTimeRequired = 1f / weapon.AttackRate * weapon.HeavyAttackModifier;
+
+                if ((Timing.CurTime - weapon.ClickStart.Value).TotalSeconds < heavyTimeRequired)
+                {
+                    // nourrrr
+                    RaisePredictiveEvent(new StopAttackEvent(weaponUid));
+                }
+                else
+                {
+                    // Heavy attack
+                    ClientHeavyAttack(entity, coordinates, weaponUid, weapon);
+                }
+            }
+            // Reset attacks
+            else if (weapon.Attacking)
             {
                 RaisePredictiveEvent(new StopAttackEvent(weaponUid));
             }
+            // Light attack
+            else
+            {
+                var attackerPos = Transform(entity).MapPosition;
+
+                if (mousePos.MapId != attackerPos.MapId ||
+                    (attackerPos.Position - mousePos.Position).Length() > weapon.Range)
+                {
+                    return;
+                }
+
+                EntityUid? target = null;
+
+                if (_stateManager.CurrentState is GameplayStateBase screen)
+                {
+                    target = screen.GetClickedEntity(mousePos);
+                }
+
+                RaisePredictiveEvent(new LightAttackEvent(target, weaponUid, coordinates));
+            }
+        }
+        else if (altDown != BoundKeyState.Down)
+        {
+
         }
 
         if (weapon.Attacking || weapon.NextAttack > Timing.CurTime)
@@ -95,22 +160,9 @@ public sealed partial class MeleeWeaponSystem : SharedMeleeWeaponSystem
             return;
         }
 
-        var mousePos = _eyeManager.PixelToMap(_inputManager.MouseScreenPosition);
-
-        if (mousePos.MapId == MapId.Nullspace)
+        if (coordinates == EntityCoordinates.Invalid)
         {
             return;
-        }
-
-        EntityCoordinates coordinates;
-
-        if (MapManager.TryFindGridAt(mousePos, out var gridUid, out _))
-        {
-            coordinates = EntityCoordinates.FromMap(gridUid, mousePos, TransformSystem, EntityManager);
-        }
-        else
-        {
-            coordinates = EntityCoordinates.FromMap(MapManager.GetMapEntityId(mousePos.MapId), mousePos, TransformSystem, EntityManager);
         }
 
         // Heavy attack.
@@ -133,27 +185,27 @@ public sealed partial class MeleeWeaponSystem : SharedMeleeWeaponSystem
             ClientHeavyAttack(entity, coordinates, weaponUid, weapon);
             return;
         }
+    }
 
-        // Light attack
-        if (useDown == BoundKeyState.Down)
+    private EntityCoordinates GetCoordinates(MapCoordinates mousePos)
+    {
+        if (mousePos.MapId == MapId.Nullspace)
         {
-            var attackerPos = Transform(entity).MapPosition;
-
-            if (mousePos.MapId != attackerPos.MapId ||
-                (attackerPos.Position - mousePos.Position).Length() > weapon.Range)
-            {
-                return;
-            }
-
-            EntityUid? target = null;
-
-            if (_stateManager.CurrentState is GameplayStateBase screen)
-            {
-                target = screen.GetClickedEntity(mousePos);
-            }
-
-            RaisePredictiveEvent(new LightAttackEvent(target, weaponUid, coordinates));
+            return EntityCoordinates.Invalid;
         }
+
+        EntityCoordinates coordinates;
+
+        if (MapManager.TryFindGridAt(mousePos, out var gridUid, out _))
+        {
+            coordinates = EntityCoordinates.FromMap(gridUid, mousePos, TransformSystem, EntityManager);
+        }
+        else
+        {
+            coordinates = EntityCoordinates.FromMap(MapManager.GetMapEntityId(mousePos.MapId), mousePos, TransformSystem, EntityManager);
+        }
+
+        return coordinates;
     }
 
     protected override bool InRange(EntityUid user, EntityUid target, float range, ICommonSession? session)

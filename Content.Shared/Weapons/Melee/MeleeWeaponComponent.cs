@@ -62,6 +62,19 @@ public sealed partial class MeleeWeaponComponent : Component
     public bool Attacking = false;
 
     /// <summary>
+    /// When we started holding the mouse for a heavy attack.
+    /// </summary>
+    [ViewVariables(VVAccess.ReadWrite), DataField("heavyAttackStart")]
+    public TimeSpan? ClickStart;
+
+    /// <summary>
+    /// Damage and <see cref="AttackRate"/> modifier for a heavy attack.
+    /// Provides same DPS as click attacks.
+    /// </summary>
+    [ViewVariables(VVAccess.ReadWrite), DataField("heavyAttackModifier")]
+    public float HeavyAttackModifier = 1.5f;
+
+    /// <summary>
     /// Base damage for this weapon. Can be modified via heavy damage or other means.
     /// </summary>
     [DataField("damage", required:true)]
