@@ -29,7 +29,7 @@ public sealed class RunVerbAsCommand : ToolshedCommand
             var runnerNet = runner.Evaluate(ctx);
             var runnerEid = EntityManager.GetEntity(runnerNet);
 
-            if (EntityManager.Deleted(runnerEid) && runnerEid != default)
+            if (EntityManager.Deleted(runnerEid) && runnerEid.IsValid())
                 ctx.ReportError(new DeadEntity(runnerEid));
 
             if (ctx.GetErrors().Any())

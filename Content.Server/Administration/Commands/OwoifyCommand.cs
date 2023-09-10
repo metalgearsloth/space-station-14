@@ -35,8 +35,9 @@ public sealed class OwoifyCommand : IConsoleCommand
         var meta = entityManager.GetComponent<MetaDataComponent>(eUid);
 
         var owoSys = entityManager.System<OwOAccentSystem>();
+        var metaDataSys = entityManager.System<MetaDataSystem>();
 
-        meta.EntityName = owoSys.Accentuate(meta.EntityName);
-        meta.EntityDescription = owoSys.Accentuate(meta.EntityDescription);
+        metaDataSys.SetEntityName(eUid, owoSys.Accentuate(meta.EntityName), meta);
+        metaDataSys.SetEntityDescription(eUid, owoSys.Accentuate(meta.EntityDescription), meta);
     }
 }

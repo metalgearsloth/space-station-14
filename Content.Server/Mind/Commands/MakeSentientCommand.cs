@@ -1,9 +1,8 @@
 using Content.Server.Administration;
-using Content.Server.Mind.Components;
-using Content.Server.NPC.Components;
 using Content.Shared.Administration;
 using Content.Shared.Emoting;
 using Content.Shared.Examine;
+using Content.Shared.Mind.Components;
 using Content.Shared.Movement.Components;
 using Content.Shared.Speech;
 using Robust.Shared.Console;
@@ -39,7 +38,7 @@ namespace Content.Server.Mind.Commands
                 return;
             }
 
-            MakeSentient(entId, _entManager, true, true);
+            MakeSentient(entId.Value, _entManager, true, true);
         }
 
         public static void MakeSentient(EntityUid uid, IEntityManager entityManager, bool allowMovement = true, bool allowSpeech = true)

@@ -110,7 +110,7 @@ public abstract partial class SharedDoorSystem : EntitySystem
             return;
 
         door.CurrentlyCrushing.Clear();
-        door.CurrentlyCrushing.UnionWith(GetEntitySet(state.CurrentlyCrushing));
+        door.CurrentlyCrushing.UnionWith(EnsureEntitySet<DoorComponent>(state.CurrentlyCrushing, uid));
 
         door.State = state.DoorState;
         door.NextStateChange = state.NextStateChange;
@@ -506,9 +506,9 @@ public abstract partial class SharedDoorSystem : EntitySystem
         return AccessType switch
         {
             // Some game modes modify access rules.
-            AccessTypes.AllowAllIdExternal => !isExternal || _accessReaderSystem.IsAllowed(user.Value, access),
+            AccessTypes.AllowAllIdExternal => !isExternal || _accessReaderSystem.IsAllowed(user.Value, uid, access),
             AccessTypes.AllowAllNoExternal => !isExternal,
-            _ => _accessReaderSystem.IsAllowed(user.Value, access)
+            _ => _accessReaderSystem.IsAllowed(user.Value, uid, access)
         };
     }
 

@@ -51,7 +51,7 @@ public sealed class PricingSystem : EntitySystem
 
         foreach (var gid in args)
         {
-            if (!NetEntity.TryParse(gid, out var gridIdNet) || !TryGetEntity(gridIdNet, out var gridId) || !gridId.IsValid())
+            if (!EntityManager.TryParseNetEntity(gid, out var gridId) || !gridId.Value.IsValid())
             {
                 shell.WriteError($"Invalid grid ID \"{gid}\".");
                 continue;
@@ -110,11 +110,13 @@ public sealed class PricingSystem : EntitySystem
 
         foreach (var solution in component.Solutions.Values)
         {
-            foreach (var reagent in solution.Contents)
+            foreach (var (reagent, quantity) in solution.Contents)
             {
-                if (!_prototypeManager.TryIndex<ReagentPrototype>(reagent.ReagentId, out var reagentProto))
+                if (!_prototypeManager.TryIndex<ReagentPrototype>(reagent.Prototype, out var reagentProto))
                     continue;
-                price += (float) reagent.Quantity * reagentProto.PricePerUnit;
+
+                // TODO check ReagentData for price information?
+                price += (float) quantity * reagentProto.PricePerUnit;
             }
         }
 

@@ -47,6 +47,7 @@ namespace Content.IntegrationTests.Tests
             await using var pair = await PoolManager.GetServerClient(new PoolSettings { Connected = true });
             var server = pair.Server;
             var client = pair.Client;
+
             var clientEntManager = client.ResolveDependency<IEntityManager>();
             var serverEntManager = server.ResolveDependency<IEntityManager>();
             var eyeManager = client.ResolveDependency<IEyeManager>();
@@ -55,6 +56,7 @@ namespace Content.IntegrationTests.Tests
             var eye = client.ResolveDependency<IEyeManager>().CurrentEye;
 
             var testMap = await pair.CreateTestMap();
+
             EntityUid serverEnt = default;
 
             await server.WaitPost(() =>

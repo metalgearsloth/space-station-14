@@ -119,14 +119,14 @@ public abstract partial class SharedDoAfterSystem : EntitySystem
             comp.DoAfters.Add(id, newDoAfter);
 
             // Networking yay (if you have an easier way dear god please).
-            newDoAfter.UserPosition = GetCoordinates(newDoAfter.NetUserPosition);
-            newDoAfter.InitialItem = GetEntity(newDoAfter.NetInitialItem);
+            newDoAfter.UserPosition = EnsureCoordinates<DoAfterComponent>(newDoAfter.NetUserPosition, uid);
+            newDoAfter.InitialItem = EnsureEntity<DoAfterComponent>(newDoAfter.NetInitialItem, uid);
 
             var doAfterArgs = newDoAfter.Args;
-            doAfterArgs.Target = GetEntity(doAfterArgs.NetTarget);
-            doAfterArgs.Used = GetEntity(doAfterArgs.NetUsed);
-            doAfterArgs.User = GetEntity(doAfterArgs.NetUser);
-            doAfterArgs.EventTarget = GetEntity(doAfterArgs.NetEventTarget);
+            doAfterArgs.Target = EnsureEntity<DoAfterComponent>(doAfterArgs.NetTarget, uid);
+            doAfterArgs.Used = EnsureEntity<DoAfterComponent>(doAfterArgs.NetUsed, uid);
+            doAfterArgs.User = EnsureEntity<DoAfterComponent>(doAfterArgs.NetUser, uid);
+            doAfterArgs.EventTarget = EnsureEntity<DoAfterComponent>(doAfterArgs.NetEventTarget, uid);
         }
 
         comp.NextId = state.NextId;
@@ -215,11 +215,6 @@ public abstract partial class SharedDoAfterSystem : EntitySystem
         args.NetUsed = GetNetEntity(args.Used);
         args.NetUser = GetNetEntity(args.User);
         args.NetEventTarget = GetNetEntity(args.EventTarget);
-
-        if (!args.User.IsValid())
-        {
-            // Weh
-        }
 
         if (args.BreakOnUserMove || args.BreakOnTargetMove)
             doAfter.UserPosition = Transform(args.User).Coordinates;

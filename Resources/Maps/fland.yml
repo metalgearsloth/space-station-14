@@ -119817,55 +119817,11 @@ entities:
     - pos: 56.48937,-16.046814
       parent: 13329
       type: Transform
-    - toggleAction:
-        sound: null
-        itemIconStyle: BigItem
-        icon:
-          sprite: Objects/Tools/flashlight.rsi
-          state: flashlight
-        iconOn: Objects/Tools/flashlight.rsi/flashlight-on.png
-        iconColor: '#FFFFFFFF'
-        name: action-name-toggle-light
-        description: action-description-toggle-light
-        keywords: []
-        enabled: True
-        useDelay: null
-        charges: null
-        checkCanInteract: True
-        clientExclusive: False
-        priority: 0
-        autoPopulate: True
-        autoRemove: True
-        temporary: False
-        event: !type:ToggleActionEvent {}
-      type: HandheldLight
   - uid: 15528
     components:
     - pos: 56.55187,-16.249939
       parent: 13329
       type: Transform
-    - toggleAction:
-        sound: null
-        itemIconStyle: BigItem
-        icon:
-          sprite: Objects/Tools/flashlight.rsi
-          state: flashlight
-        iconOn: Objects/Tools/flashlight.rsi/flashlight-on.png
-        iconColor: '#FFFFFFFF'
-        name: action-name-toggle-light
-        description: action-description-toggle-light
-        keywords: []
-        enabled: True
-        useDelay: null
-        charges: null
-        checkCanInteract: True
-        clientExclusive: False
-        priority: 0
-        autoPopulate: True
-        autoRemove: True
-        temporary: False
-        event: !type:ToggleActionEvent {}
-      type: HandheldLight
   - uid: 19986
     components:
     - pos: 41.480545,-35.30919
@@ -119911,28 +119867,6 @@ entities:
     - pos: -42.514347,2.6634603
       parent: 13329
       type: Transform
-    - toggleAction:
-        sound: null
-        itemIconStyle: BigItem
-        icon:
-          sprite: Objects/Tools/flashlight.rsi
-          state: flashlight
-        iconOn: Objects/Tools/flashlight.rsi/flashlight-on.png
-        iconColor: '#FFFFFFFF'
-        name: action-name-toggle-light
-        description: action-description-toggle-light
-        keywords: []
-        enabled: True
-        useDelay: null
-        charges: null
-        checkCanInteract: True
-        clientExclusive: False
-        priority: 0
-        autoPopulate: True
-        autoRemove: True
-        temporary: False
-        event: !type:ToggleActionEvent {}
-      type: HandheldLight
   - uid: 32400
     components:
     - pos: 35.394306,-5.3188667
@@ -119982,28 +119916,6 @@ entities:
     - pos: 132.84602,3.5240808
       parent: 13329
       type: Transform
-    - toggleAction:
-        sound: null
-        itemIconStyle: BigItem
-        icon:
-          sprite: Objects/Tools/flashlight.rsi
-          state: flashlight
-        iconOn: Objects/Tools/flashlight.rsi/flashlight-on.png
-        iconColor: '#FFFFFFFF'
-        name: action-name-toggle-light
-        description: action-description-toggle-light
-        keywords: []
-        enabled: True
-        useDelay: null
-        charges: null
-        checkCanInteract: True
-        clientExclusive: False
-        priority: 0
-        autoPopulate: True
-        autoRemove: True
-        temporary: False
-        event: !type:ToggleActionEvent {}
-      type: HandheldLight
 - proto: FloodlightBroken
   entities:
   - uid: 5413
@@ -169910,28 +169822,6 @@ entities:
     - pos: -11.291338,10.87907
       parent: 13329
       type: Transform
-    - toggleAction:
-        sound: null
-        itemIconStyle: BigItem
-        icon:
-          sprite: Objects/Tools/flashlight.rsi
-          state: flashlight
-        iconOn: Objects/Tools/flashlight.rsi/flashlight-on.png
-        iconColor: '#FFFFFFFF'
-        name: action-name-toggle-light
-        description: action-description-toggle-light
-        keywords: []
-        enabled: True
-        useDelay: null
-        charges: null
-        checkCanInteract: True
-        clientExclusive: False
-        priority: 0
-        autoPopulate: True
-        autoRemove: True
-        temporary: False
-        event: !type:ToggleActionEvent {}
-      type: HandheldLight
 - proto: LampGold
   entities:
   - uid: 1144
@@ -169969,28 +169859,6 @@ entities:
     - pos: -21.410488,56.800785
       parent: 13329
       type: Transform
-    - toggleAction:
-        sound: null
-        itemIconStyle: BigItem
-        icon:
-          sprite: Objects/Tools/flashlight.rsi
-          state: flashlight
-        iconOn: Objects/Tools/flashlight.rsi/flashlight-on.png
-        iconColor: '#FFFFFFFF'
-        name: action-name-toggle-light
-        description: action-description-toggle-light
-        keywords: []
-        enabled: True
-        useDelay: null
-        charges: null
-        checkCanInteract: True
-        clientExclusive: False
-        priority: 0
-        autoPopulate: True
-        autoRemove: True
-        temporary: False
-        event: !type:ToggleActionEvent {}
-      type: HandheldLight
   - uid: 10550
     components:
     - pos: 37.57843,20.954947

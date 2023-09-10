@@ -62,7 +62,7 @@ public abstract class SharedJetpackSystem : EntitySystem
         if (args.Current is not JetpackUserComponentState state)
             return;
 
-        component.Jetpack = GetEntity(state.Jetpack);
+        component.Jetpack = EnsureEntity<JetpackUserComponent>(state.Jetpack, uid);
     }
 
     private void OnJetpackUserGetState(EntityUid uid, JetpackUserComponent component, ref ComponentGetState args)
@@ -132,7 +132,7 @@ public abstract class SharedJetpackSystem : EntitySystem
 
     private void OnJetpackGetAction(EntityUid uid, JetpackComponent component, GetItemActionsEvent args)
     {
-        args.Actions.Add(component.ToggleAction);
+        args.AddAction(ref component.ToggleActionEntity, component.ToggleAction);
     }
 
     private bool IsEnabled(EntityUid uid)
@@ -182,7 +182,7 @@ public abstract class SharedJetpackSystem : EntitySystem
         }
 
         Appearance.SetData(uid, JetpackVisuals.Enabled, enabled);
-        Dirty(component);
+        Dirty(uid, component);
     }
 
     public bool IsUserFlying(EntityUid uid)

@@ -51,7 +51,6 @@ namespace Content.Client.Verbs.UI
                     OverrideDirection = Direction.South,
                     SetSize = new Vector2(ElementHeight, ElementHeight),
                 };
-
                 spriteView.SetEntity(entManager.GetEntity(verb.IconEntity.Value));
 
                 Icon.AddChild(spriteView);
