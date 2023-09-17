@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using Content.Server.Power.Pow3r;
 using static Content.Server.Power.Pow3r.PowerState;
 
@@ -45,7 +46,7 @@ namespace Pow3r
             _simStopwatch.Restart();
             _tickDataIdx = (_tickDataIdx + 1) % MaxTickData;
 
-            _solvers[_currentSolver].Tick(frameTime, _state, 1);
+            _solvers[_currentSolver].Tick(frameTime, _state, new ParallelOptions());
 
             // Update tick history.
             foreach (var load in _state.Loads.Values)

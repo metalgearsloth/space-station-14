@@ -1,7 +1,5 @@
-using Pidgin;
 using Robust.Shared.Utility;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using static Content.Server.Power.Pow3r.PowerState;
 
@@ -9,6 +7,8 @@ namespace Content.Server.Power.Pow3r
 {
     public sealed class BatteryRampPegSolver : IPowerSolver
     {
+        private readonly List<(Network Group, PowerState state, float frameTime)> _networkUpdates = new();
+
         private sealed class HeightComparer : Comparer<Network>
         {
             public static HeightComparer Instance { get; } = new();
@@ -21,7 +21,7 @@ namespace Content.Server.Power.Pow3r
             }
         }
 
-        public void Tick(float frameTime, PowerState state, int parallel)
+        public void Tick(float frameTime, PowerState state, ParallelOptions opts)
         {
             ClearLoadsAndSupplies(state);
 
@@ -29,7 +29,8 @@ namespace Content.Server.Power.Pow3r
             DebugTools.Assert(state.GroupedNets.Select(x => x.Count).Sum() == state.Networks.Count);
 
             // Each network height layer can be run in parallel without issues.
-            var opts = new ParallelOptions { MaxDegreeOfParallelism = parallel };
+            _networkUpdates.Clear();
+
             foreach (var group in state.GroupedNets)
             {
                 // Note that many net-layers only have a handful of networks.
@@ -44,7 +45,12 @@ namespace Content.Server.Power.Pow3r
                 // TODO make GroupByNetworkDepth evaluate the TOTAL size of each layer (i.e. loads + chargers +
                 // suppliers + discharger) Then decide based on total layer size whether its worth parallelizing that
                 // layer?
-                Parallel.ForEach(group, opts, net => UpdateNetwork(net, state, frameTime));
+                foreach (var net in group)
+                {
+                    _networkUpdates.Add((net, state, frameTime));
+                }
+
+                Parallel.ForEach(_networkUpdates, opts, UpdateNetwork);
             }
 
             ClearBatteries(state);
@@ -72,8 +78,12 @@ namespace Content.Server.Power.Pow3r
             }
         }
 
-        private void UpdateNetwork(Network network, PowerState state, float frameTime)
+        private void UpdateNetwork((Network network, PowerState state, float frameTime) pState)
         {
+            var network = pState.network;
+            var state = pState.state;
+            var frameTime = pState.frameTime;
+
             // TODO Look at SIMD.
             // a lot of this is performing very basic math on arrays of data objects like batteries
             // this really shouldn't be hard to do.

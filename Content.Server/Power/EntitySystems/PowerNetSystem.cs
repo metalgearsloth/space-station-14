@@ -253,7 +253,7 @@ namespace Content.Server.Power.EntitySystems
             RaiseLocalEvent(new NetworkBatteryPreSync());
 
             // Run power solver.
-            _solver.Tick(frameTime, _powerState, _parMan.ParallelProcessCount);
+            _solver.Tick(frameTime, _powerState, _parMan.Options);
 
             // Synchronize batteries, the other way around.
             RaiseLocalEvent(new NetworkBatteryPostSync());
