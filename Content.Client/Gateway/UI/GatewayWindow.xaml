@@ -4,15 +4,16 @@
                       MinSize="800 360">
     <BoxContainer Orientation="Vertical">
 	    <BoxContainer Orientation="Horizontal">
-	        <Label Name="NextCloseLabel"
-	               Text="{Loc 'gateway-window-portal-closing'}"
+	        <Label Name="CooldownLabel"
+	               Text="{Loc 'gateway-window-cooldown'}"
 	               Margin="5"></Label>
-	        <ProgressBar Name="NextCloseBar"
+	        <ProgressBar Name="CooldownBar"
 	                     HorizontalExpand="True"
 	                     MinValue="0"
 	                     MaxValue="1"
-	                     SetHeight="25"/>
-	        <Label Name="NextCloseText" Text="0" Margin="5"/>
+	                     SetHeight="25"
+                         Value="1"/>
+	        <Label Name="CooldownText" Text="0" Margin="5"/>
 	    </BoxContainer>
 	    <controls:HLine Color="#404040" Thickness="2" Margin="0 5 0 5"/>
 	    <BoxContainer Name="Container"
