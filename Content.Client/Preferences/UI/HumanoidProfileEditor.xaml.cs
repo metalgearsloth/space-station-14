@@ -373,10 +373,13 @@ namespace Content.Client.Preferences.UI
                 IsDirty = true;
             };
 
+
             _jobPriorities = new List<JobPrioritySelector>();
             _jobCategories = new Dictionary<string, BoxContainer>();
             _requirements = IoCManager.Resolve<JobRequirementsManager>();
             _requirements.Updated += UpdateRoleRequirements;
+            var playtime = _requirements.GetRoleTime("Overall");
+            OverallTime.Text = playtime.ToString("dd':'hh':'mm");
             UpdateRoleRequirements();
 
             #endregion Jobs

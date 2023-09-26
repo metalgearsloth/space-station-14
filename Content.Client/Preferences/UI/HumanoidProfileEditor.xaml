@@ -119,6 +119,12 @@
                 <BoxContainer Orientation="Vertical">
                     <!-- Jobs -->
                     <OptionButton Name="CPreferenceUnavailableButton" />
+                    <BoxContainer>
+                        <Label Text="{Loc 'humanoid-profile-overall-time'}"/>
+                        <Control HorizontalExpand="True"/>
+                        <Label Name="OverallTime"/>
+                        <Control SetSize="360 30"/>
+                    </BoxContainer>
                     <ScrollContainer Name="CJobScrollList" VerticalExpand="True">
                         <BoxContainer Name="CJobList" Orientation="Vertical" />
                     </ScrollContainer>
