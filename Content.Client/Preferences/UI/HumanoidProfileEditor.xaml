@@ -123,6 +123,12 @@
                         <BoxContainer Name="CJobList" Orientation="Vertical" />
                     </ScrollContainer>
                 </BoxContainer>
+                <BoxContainer Orientation="Vertical">
+                    <!-- Playtime -->
+                    <ScrollContainer VerticalExpand="True">
+                        <BoxContainer Name="CPlaytimeList" Orientation="Vertical" />
+                    </ScrollContainer>
+                </BoxContainer>
                 <BoxContainer Orientation="Vertical" Margin="10">
                     <!-- Antags -->
                     <ScrollContainer VerticalExpand="True">

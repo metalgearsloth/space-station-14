@@ -57,6 +57,7 @@ namespace Content.Client.Preferences.UI
         private readonly IClientPreferencesManager _preferencesManager;
         private readonly IEntityManager _entMan;
         private readonly IConfigurationManager _configurationManager;
+        private readonly IPrototypeManager _prototypeManager;
         private readonly MarkingManager _markingManager;
         private readonly JobRequirementsManager _requirements;
 
@@ -103,6 +104,16 @@ namespace Content.Client.Preferences.UI
         public HumanoidCharacterProfile? Profile;
         private MarkingSet _markingSet = new(); // storing this here feels iffy but a few things need it this high up
 
+        private enum Tabs : byte
+        {
+            Appearance = 0,
+            Jobs = 1,
+            Playtime = 2,
+            Antags = 3,
+            Traits = 4,
+            Markings = 5,
+        }
+
         public event Action<HumanoidCharacterProfile, int>? OnProfileChanged;
 
         public HumanoidProfileEditor(IClientPreferencesManager preferencesManager, IPrototypeManager prototypeManager,
@@ -132,7 +143,7 @@ namespace Content.Client.Preferences.UI
 
             #region Appearance
 
-            _tabContainer.SetTabTitle(0, Loc.GetString("humanoid-profile-editor-appearance-tab"));
+            _tabContainer.SetTabTitle((int) Tabs.Appearance, Loc.GetString("humanoid-profile-editor-appearance-tab"));
 
             ShowClothes.OnPressed += ToggleClothes;
 
@@ -358,7 +369,7 @@ namespace Content.Client.Preferences.UI
 
             #region Jobs
 
-            _tabContainer.SetTabTitle(1, Loc.GetString("humanoid-profile-editor-jobs-tab"));
+            _tabContainer.SetTabTitle((int) Tabs.Jobs, Loc.GetString("humanoid-profile-editor-jobs-tab"));
 
             _preferenceUnavailableButton.AddItem(
                 Loc.GetString("humanoid-profile-editor-preference-unavailable-stay-in-lobby-button"),
@@ -380,13 +391,15 @@ namespace Content.Client.Preferences.UI
             _jobCategories = new Dictionary<string, BoxContainer>();
             _requirements = IoCManager.Resolve<JobRequirementsManager>();
             _requirements.Updated += UpdateRoleRequirements;
+            _tabContainer.SetTabTitle((int) Tabs.Playtime, Loc.GetString("humanoid-profile-editor-playtime-tab"));
+            UpdatePlaytimeRequirements();
             UpdateRoleRequirements();
 
             #endregion Jobs
 
             #region Antags
 
-            _tabContainer.SetTabTitle(2, Loc.GetString("humanoid-profile-editor-antags-tab"));
+            _tabContainer.SetTabTitle((int) Tabs.Antags, Loc.GetString("humanoid-profile-editor-antags-tab"));
 
             _antagPreferences = new List<AntagPreferenceSelector>();
 
@@ -417,7 +430,7 @@ namespace Content.Client.Preferences.UI
 
             var traits = prototypeManager.EnumeratePrototypes<TraitPrototype>().OrderBy(t => Loc.GetString(t.Name)).ToList();
             _traitPreferences = new List<TraitPreferenceSelector>();
-            _tabContainer.SetTabTitle(3, Loc.GetString("humanoid-profile-editor-traits-tab"));
+            _tabContainer.SetTabTitle((int) Tabs.Traits, Loc.GetString("humanoid-profile-editor-traits-tab"));
 
             if (traits.Count > 0)
             {
@@ -452,7 +465,7 @@ namespace Content.Client.Preferences.UI
             #endregion Save
 
             #region Markings
-            _tabContainer.SetTabTitle(4, Loc.GetString("humanoid-profile-editor-markings-tab"));
+            _tabContainer.SetTabTitle((int) Tabs.Markings, Loc.GetString("humanoid-profile-editor-markings-tab"));
 
             CMarkings.OnMarkingAdded += OnMarkingChange;
             CMarkings.OnMarkingRemoved += OnMarkingChange;
@@ -514,6 +527,46 @@ namespace Content.Client.Preferences.UI
         private void ToggleClothes(BaseButton.ButtonEventArgs obj)
         {
             RebuildSpriteView();
+        }
+
+        private void UpdatePlaytimeRequirements()
+        {
+            CPlaytimeList.DisposeAllChildren();
+            var jobs = _prototypeManager.EnumeratePrototypes<JobPrototype>().ToList();
+            jobs.Sort((x, y) => string.Compare(x.LocalizedName, y.LocalizedName, StringComparison.CurrentCultureIgnoreCase));
+
+            foreach (var job in jobs)
+            {
+                var label = new Label()
+                {
+                    Text = job.LocalizedName
+                };
+
+                var playtime = _requirements.GetRoleTime(job.PlayTimeTracker);
+                var playtimeLabel = new Label
+                {
+                    Text = playtime.ToString("hh':'mm"),
+                    Margin = new Thickness(5, 3, 10, 3),
+                };
+
+                var roleRow = new BoxContainer()
+                {
+                    Orientation = LayoutOrientation.Horizontal,
+                    Children =
+                    {
+                        label,
+                        new Control()
+                        {
+                            HorizontalExpand = true,
+                        },
+                        playtimeLabel
+                    }
+                };
+
+                CPlaytimeList.AddChild(roleRow);
+            }
+
+            CPlaytimeList.InvalidateArrange();
         }
 
         private void UpdateRoleRequirements()
