@@ -1,6 +1,7 @@
 using Content.Server.Chat.Systems;
 using Content.Server.Speech;
 using Content.Server.Speech.Components;
+using Content.Shared.Chat;
 using Robust.Server.GameObjects;
 using static Content.Server.Chat.Systems.ChatSystem;
 

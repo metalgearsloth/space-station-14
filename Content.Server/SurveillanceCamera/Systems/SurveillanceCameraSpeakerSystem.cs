@@ -1,4 +1,5 @@
 using Content.Server.Chat.Systems;
+using Content.Shared.Chat;
 using Content.Shared.Speech;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Random;

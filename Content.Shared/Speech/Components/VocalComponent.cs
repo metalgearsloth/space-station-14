@@ -1,12 +1,12 @@
-using Content.Server.Speech.EntitySystems;
 using Content.Shared.Chat.Prototypes;
 using Content.Shared.Humanoid;
+using Content.Shared.Speech.EntitySystems;
 using Robust.Shared.Audio;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization.TypeSerializers.Implementations.Custom.Prototype;
 using Robust.Shared.Serialization.TypeSerializers.Implementations.Custom.Prototype.Dictionary;
 
-namespace Content.Server.Speech.Components;
+namespace Content.Shared.Speech.Components;
 
 /// <summary>
 ///     Component required for entities to be able to do vocal emotions.

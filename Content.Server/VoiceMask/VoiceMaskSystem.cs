@@ -1,6 +1,7 @@
 using Content.Server.Administration.Logs;
 using Content.Server.Chat.Systems;
 using Content.Server.Popups;
+using Content.Shared.Chat;
 using Content.Shared.Database;
 using Content.Shared.Inventory.Events;
 using Content.Shared.Preferences;
