@@ -7,6 +7,7 @@ import subprocess
 import sys
 import zipfile
 import argparse
+from audio_copy import copy_audio_prototypes
 
 from typing import List, Optional
 
@@ -176,6 +177,7 @@ def build_platform(platform: PlatformReg, skip_build: bool, hybrid_acz: bool) ->
                                  compression=zipfile.ZIP_DEFLATED)
     copy_dir_into_zip(p("RobustToolbox", "bin", "Server", platform.rid, "publish"), "", server_zip, BIN_SKIP_FOLDERS)
     copy_resources(p("Resources"), server_zip)
+    copy_audio_prototypes(p("Resources/Audio"))
     copy_content_assemblies(p("Resources", "Assemblies"), server_zip)
     if hybrid_acz:
         # Hybrid ACZ expects "Content.Client.zip" (as it's not SS14-specific)
