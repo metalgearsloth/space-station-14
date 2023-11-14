@@ -6,7 +6,10 @@ using System.Threading.Tasks;
 using Content.Server.Administration.Managers;
 using Content.Server.Destructible;
 using Content.Server.NPC.Systems;
+using Content.Shared.Access.Components;
 using Content.Shared.Administration;
+using Content.Shared.Climbing.Components;
+using Content.Shared.Doors.Components;
 using Content.Shared.NPC;
 using Robust.Server.Player;
 using Robust.Shared.Enums;
@@ -45,7 +48,16 @@ namespace Content.Server.NPC.Pathfinding
         [Dependency] private readonly EntityLookupSystem _lookup = default!;
         [Dependency] private readonly FixtureSystem _fixtures = default!;
         [Dependency] private readonly NPCSystem _npc = default!;
+        [Dependency] private readonly SharedMapSystem _maps = default!;
         [Dependency] private readonly SharedPhysicsSystem _physics = default!;
+        [Dependency] private readonly SharedTransformSystem _xformSystem = default!;
+
+        private EntityQuery<AccessComponent> _accessQuery;
+        private EntityQuery<ClimbableComponent> _climbableQuery;
+        private EntityQuery<DestructibleComponent> _destructibleQuery;
+        private EntityQuery<DoorComponent> _doorQuery;
+        private EntityQuery<FixturesComponent> _fixturesQuery;
+        private EntityQuery<TransformComponent> _xformQuery;
 
         private readonly Dictionary<ICommonSession, PathfindingDebugMode> _subscribedSessions = new();
 
@@ -65,6 +77,14 @@ namespace Content.Server.NPC.Pathfinding
         public override void Initialize()
         {
             base.Initialize();
+
+            _accessQuery = GetEntityQuery<AccessComponent>();
+            _climbableQuery = GetEntityQuery<ClimbableComponent>();
+            _destructibleQuery = GetEntityQuery<DestructibleComponent>();
+            _doorQuery = GetEntityQuery<DoorComponent>();
+            _fixturesQuery = GetEntityQuery<FixturesComponent>();
+            _xformQuery = GetEntityQuery<TransformComponent>();
+
             _playerManager.PlayerStatusChanged += OnPlayerChange;
             InitializeGrid();
             SubscribeNetworkEvent<RequestPathfindingDebugMessage>(OnBreadcrumbs);
@@ -85,11 +105,9 @@ namespace Content.Server.NPC.Pathfinding
                 MaxDegreeOfParallelism = _parallel.ParallelProcessCount,
             };
 
-            UpdateGrid(options);
             _stopwatch.Restart();
             var amount = Math.Min(PathTickLimit, _pathRequests.Count);
             var results = ArrayPool<PathResult>.Shared.Rent(amount);
-
 
             Parallel.For(0, amount, options, i =>
             {
@@ -191,14 +209,11 @@ namespace Content.Server.NPC.Pathfinding
             gridA.PortalLookup.Add(portal, originA);
             gridB.PortalLookup.Add(portal, originB);
 
-            var chunkA = GetChunk(originA, gridUidA.Value);
-            var chunkB = GetChunk(originB, gridUidB.Value);
-            chunkA.Portals.Add(portal);
-            chunkB.Portals.Add(portal);
+            var tilePortsA = gridA.Portals.GetOrNew(originA);
+            var tilePortsB = gridB.Portals.GetOrNew(originB);
 
-            // TODO: You already have the chunks
-            DirtyChunk(gridUidA.Value, coordsA);
-            DirtyChunk(gridUidB.Value, coordsB);
+            tilePortsA.Add(portal);
+            tilePortsB.Add(portal);
 
             return true;
         }
@@ -221,14 +236,30 @@ namespace Content.Server.NPC.Pathfinding
                 return false;
             }
 
+            if (gridA.PortalLookup.TryGetValue(portal, out var portalData))
+            {
+                if (gridA.Portals.TryGetValue(portalData, out var aPortals))
+                {
+                    aPortals.Remove(portal);
+
+                    if (aPortals.Count == 0)
+                        gridA.Portals.Remove(portalData);
+                }
+            }
+
+            if (gridB.PortalLookup.TryGetValue(portal, out portalData))
+            {
+                if (gridB.Portals.TryGetValue(portalData, out var bPortals))
+                {
+                    bPortals.Remove(portal);
+
+                    if (bPortals.Count == 0)
+                        gridB.Portals.Remove(portalData);
+                }
+            }
+
             gridA.PortalLookup.Remove(portal);
             gridB.PortalLookup.Remove(portal);
-            var chunkA = GetChunk(GetOrigin(portal.CoordinatesA, gridUidA.Value), gridUidA.Value, gridA);
-            var chunkB = GetChunk(GetOrigin(portal.CoordinatesB, gridUidB.Value), gridUidB.Value, gridB);
-            chunkA.Portals.Remove(portal);
-            chunkB.Portals.Remove(portal);
-            DirtyChunk(gridUidA.Value, portal.CoordinatesA);
-            DirtyChunk(gridUidB.Value, portal.CoordinatesB);
 
             return true;
         }
