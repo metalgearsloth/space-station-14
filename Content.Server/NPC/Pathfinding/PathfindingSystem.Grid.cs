@@ -71,6 +71,23 @@ public sealed partial class PathfindingSystem
     }
 
     /// <summary>
+    /// Adds the neighbors for the poly to the neighbors list.
+    /// </summary>
+    public void GetNeighbors(PathPoly poly, List<PathPoly> neighbors)
+    {
+        // Okay so:
+        // Pathfinder calls GetPoly, we gucci
+        // From here we get neighbors by calling this, PathPoly never directly references its neighbors.
+
+
+        // TODO: Pass in graph
+
+
+        // TODO: Need GetPoly and shit to work
+        // From there the graph iteration calls this which returns structs of neighbors.
+    }
+
+    /// <summary>
     /// Gets the polys for the specified tile.
     /// </summary>
     public List<PathPoly> GetPolys(EntityUid gridUid, GridPathfindingComponent pathfinding, MapGridComponent grid, Vector2i tilePos)

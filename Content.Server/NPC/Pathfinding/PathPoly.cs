@@ -3,35 +3,21 @@ using Robust.Shared.Map;
 
 namespace Content.Server.NPC.Pathfinding;
 
-public sealed class PathPoly : IEquatable<PathPoly>
+public record struct PathPoly(EntityUid GraphUid, Vector2i Index, PathfindingData Data)
 {
     [ViewVariables]
-    public readonly EntityUid GraphUid;
+    public readonly EntityUid GraphUid = GraphUid;
 
     [ViewVariables]
-    public readonly Vector2i ChunkOrigin;
+    public readonly Vector2i Index = Index;
 
-    [ViewVariables]
-    public readonly byte TileIndex;
-
-    [ViewVariables]
+    /// <summary>
+    /// Box of this poly on its tile.
+    /// </summary>
     public readonly Box2 Box;
 
     [ViewVariables]
-    public PathfindingData Data;
-
-    [ViewVariables]
-    public readonly HashSet<PathPoly> Neighbors;
-
-    public PathPoly(EntityUid graphUid, Vector2i chunkOrigin, byte tileIndex, Box2 vertices, PathfindingData data, HashSet<PathPoly> neighbors)
-    {
-        GraphUid = graphUid;
-        ChunkOrigin = chunkOrigin;
-        TileIndex = tileIndex;
-        Box = vertices;
-        Data = data;
-        Neighbors = neighbors;
-    }
+    public PathfindingData Data = Data;
 
     public bool IsValid()
     {
@@ -46,29 +32,13 @@ public sealed class PathPoly : IEquatable<PathPoly>
     public bool IsEquivalent(PathPoly other)
     {
         return GraphUid.Equals(other.GraphUid) &&
-               ChunkOrigin.Equals(other.ChunkOrigin) &&
-               TileIndex == other.TileIndex &&
+               Index.Equals(other.Index) &&
                Data.IsEquivalent(other.Data) &&
                Box.Equals(other.Box);
     }
 
-    public bool Equals(PathPoly? other)
-    {
-        return other != null &&
-               GraphUid.Equals(other.GraphUid) &&
-               ChunkOrigin.Equals(other.ChunkOrigin) &&
-               TileIndex == other.TileIndex &&
-               Data.Equals(other.Data) &&
-               Box.Equals(other.Box);
-    }
-
-    public override bool Equals(object? obj)
-    {
-        return ReferenceEquals(this, obj) || obj is PathPoly other && Equals(other);
-    }
-
     public override int GetHashCode()
     {
-        return HashCode.Combine(GraphUid, ChunkOrigin, TileIndex, Box);
+        return HashCode.Combine(GraphUid, Index, Box);
     }
 }

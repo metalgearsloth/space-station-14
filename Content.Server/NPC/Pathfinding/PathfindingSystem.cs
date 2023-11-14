@@ -407,19 +407,18 @@ namespace Content.Server.NPC.Pathfinding
             var gridUid = coordinates.GetGridUid(EntityManager);
 
             if (!TryComp<GridPathfindingComponent>(gridUid, out var comp) ||
-                !TryComp<TransformComponent>(gridUid, out var xform))
+                !_xformQuery.TryGetComponent(gridUid, out var xform))
             {
                 return null;
             }
 
-            var localPos = xform.InvWorldMatrix.Transform(coordinates.ToMapPos(EntityManager));
+            var localPos = _xformSystem.GetInvWorldMatrix(xform).Transform(coordinates.ToMapPos(EntityManager, _xformSystem));
             var origin = GetOrigin(localPos);
-
-            if (!TryGetChunk(origin, comp, out var chunk))
-                return null;
 
             var chunkPos = new Vector2(MathHelper.Mod(localPos.X, ChunkSize), MathHelper.Mod(localPos.Y, ChunkSize));
             var polys = chunk.Polygons[(int) chunkPos.X * ChunkSize + (int) chunkPos.Y];
+
+            // TODO: Get the polys for this tile and just pick it.
 
             foreach (var poly in polys)
             {
@@ -535,7 +534,7 @@ namespace Content.Server.NPC.Pathfinding
             return new DebugPathPoly()
             {
                 GraphUid = GetNetEntity(poly.GraphUid),
-                ChunkOrigin = poly.ChunkOrigin,
+                ChunkOrigin = poly.Index,
                 TileIndex = poly.TileIndex,
                 Box = poly.Box,
                 Data = poly.Data,
