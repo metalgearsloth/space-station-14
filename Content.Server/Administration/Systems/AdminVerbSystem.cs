@@ -226,6 +226,19 @@ namespace Content.Server.Administration.Systems
                     });
                 }
 
+                // Copies the entity to be re-used later
+                args.Verbs.Add(new Verb()
+                {
+                    Text = Loc.GetString("admin-player-actions-copy"),
+                    Category = VerbCategory.Admin,
+                    Act = () =>
+                    {
+                        EntityManager.System<EntityCloningSystem>().Clone(args.Target);
+                    },
+                    ConfirmationPopup = true,
+                    Impact = LogImpact.High,
+                });
+
                 // Admin Logs
                 if (_adminManager.HasAdminFlag(player, AdminFlags.Logs))
                 {

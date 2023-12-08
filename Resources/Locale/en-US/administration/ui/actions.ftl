@@ -10,3 +10,4 @@ admin-player-spawn-failed = Failed to find valid coordinates
 admin-player-actions-clone = Clone
 admin-player-actions-teleport = Teleport To
 admin-player-actions-confirm = Are you sure?
+admin-player-actions-copy = Copy
