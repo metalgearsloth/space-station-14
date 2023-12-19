@@ -1,3 +1,4 @@
+using System.Linq;
 using Content.Client.Audio;
 using Content.Shared.CCVar;
 using Robust.Client.Audio;
@@ -17,15 +18,21 @@ namespace Content.Client.Options.UI.Tabs
     [GenerateTypedNameReferences]
     public sealed partial class AudioTab : Control
     {
+        [Dependency] private readonly IAudioManager _audio = default!;
         [Dependency] private readonly IConfigurationManager _cfg = default!;
-        private readonly IAudioManager _audio;
 
         public AudioTab()
         {
             RobustXamlLoader.Load(this);
             IoCManager.InjectDependencies(this);
 
-            _audio = IoCManager.Resolve<IAudioManager>();
+            foreach (var device in _audio.GetAudioDevices())
+            {
+                AudioDeviceOption.AddItem(device);
+            }
+
+            AudioDeviceOption.OnItemSelected += OnAudioDeviceOption;
+
             LobbyMusicCheckBox.Pressed = _cfg.GetCVar(CCVars.LobbyMusicEnabled);
             RestartSoundsCheckBox.Pressed = _cfg.GetCVar(CCVars.RestartSoundsEnabled);
             EventMusicCheckBox.Pressed = _cfg.GetCVar(CCVars.EventMusicEnabled);
@@ -52,6 +59,7 @@ namespace Content.Client.Options.UI.Tabs
 
         protected override void Dispose(bool disposing)
         {
+            AudioDeviceOption.OnItemSelected -= OnAudioDeviceOption;
             ApplyButton.OnPressed -= OnApplyButtonPressed;
             ResetButton.OnPressed -= OnResetButtonPressed;
             MasterVolumeSlider.OnValueChanged -= OnMasterVolumeSliderChanged;
@@ -109,6 +117,12 @@ namespace Content.Client.Options.UI.Tabs
         private void OnAdminSoundsCheckToggled(BaseButton.ButtonEventArgs args)
         {
             UpdateChanges();
+        }
+
+        private void OnAudioDeviceOption(OptionButton.ItemSelectedEventArgs obj)
+        {
+            _audio.SetAudioDevice(_audio.GetAudioDevices().ToList()[obj.Id]);
+            AudioDeviceOption.SelectId(obj.Id);
         }
 
         private void OnApplyButtonPressed(BaseButton.ButtonEventArgs args)
