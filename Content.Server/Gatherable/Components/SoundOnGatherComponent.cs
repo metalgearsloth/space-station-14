@@ -9,8 +9,8 @@ namespace Content.Server.Gatherable.Components;
 [RegisterComponent, Access(typeof(GatherableSystem))]
 public sealed partial class SoundOnGatherComponent : Component
 {
-    [ViewVariables(VVAccess.ReadWrite), DataField("sound")]
-    public SoundSpecifier Sound = new SoundPathSpecifier("/Audio/Effects/break_stone.ogg")
+    [ViewVariables(VVAccess.ReadWrite), DataField]
+    public SoundSpecifier Sound = new SoundCollectionSpecifier("Rocks")
     {
         Params = AudioParams.Default
             .WithVariation(SharedContentAudioSystem.DefaultVariation)

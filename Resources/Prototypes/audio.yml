@@ -264,3 +264,11 @@
   id: OnMapGrid
   rules:
     - !type:OnMapGridRule
+
+# Miscellaneous sound collections
+- type: soundCollection
+  id: Rocks
+  files:
+  - /Audio/Effects/Rocks/rocks1.ogg
+  - /Audio/Effects/Rocks/rocks2.ogg
+  - /Audio/Effects/Rocks/rocks3.ogg
