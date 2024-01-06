@@ -121,7 +121,22 @@ public sealed class StationSystem : EntitySystem
             ev.Options.Offset += _random.NextVector2(_maxRandomStationOffset);
 
         if (_randomStationRotation)
-            ev.Options.Rotation = _random.NextAngle();
+        {
+            Angle angle;
+
+            if (HasComp<MapGridComponent>(ev.MapUid))
+            {
+                var rand = _random.Next(4);
+                var value = Math.Pow(2, rand);
+                angle = ((DirectionFlag) value).AsDir().ToAngle();
+            }
+            else
+            {
+                angle = _random.NextAngle();
+            }
+
+            ev.Options.Rotation = angle;
+        }
     }
 
     private void OnPostGameMapLoad(PostGameMapLoad ev)

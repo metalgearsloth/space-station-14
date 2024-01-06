@@ -154,8 +154,9 @@ namespace Content.Server.GameTicking
             // Okay I specifically didn't set LoadMap here because this is typically called onto a new map.
             // whereas the command can also be used on an existing map.
             var loadOpts = loadOptions ?? new MapLoadOptions();
+            var targetMapUid = _mapManager.GetMapEntityId(targetMapId);
 
-            var ev = new PreGameMapLoad(targetMapId, map, loadOpts);
+            var ev = new PreGameMapLoad(targetMapUid, targetMapId, map, loadOpts);
             RaiseLocalEvent(ev);
 
             var gridIds = _map.LoadMap(targetMapId, ev.GameMap.MapPath.ToString(), ev.Options);
@@ -661,12 +662,14 @@ namespace Content.Server.GameTicking
     [PublicAPI]
     public sealed class PreGameMapLoad : EntityEventArgs
     {
+        public readonly EntityUid MapUid;
         public readonly MapId Map;
         public GameMapPrototype GameMap;
         public MapLoadOptions Options;
 
-        public PreGameMapLoad(MapId map, GameMapPrototype gameMap, MapLoadOptions options)
+        public PreGameMapLoad(EntityUid mapUid, MapId map, GameMapPrototype gameMap, MapLoadOptions options)
         {
+            MapUid = mapUid;
             Map = map;
             GameMap = gameMap;
             Options = options;
