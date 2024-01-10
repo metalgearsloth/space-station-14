@@ -13,6 +13,8 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
+using Robust.Shared.GameStates;
+using Robust.Shared.Serialization;
 using Dependency = Robust.Shared.IoC.DependencyAttribute;
 
 namespace Content.Shared.Chemistry.EntitySystems;
@@ -64,6 +66,8 @@ public abstract partial class SharedSolutionContainerSystem : EntitySystem
         SubscribeLocalEvent<SolutionComponent, ComponentInit>(OnComponentInit);
         SubscribeLocalEvent<SolutionComponent, ComponentStartup>(OnComponentStartup);
         SubscribeLocalEvent<SolutionComponent, ComponentShutdown>(OnComponentShutdown);
+        SubscribeLocalEvent<SolutionComponent, ComponentGetState>(OnSolutionGetState);
+        SubscribeLocalEvent<SolutionComponent, ComponentHandleState>(OnSolutionHandleState);
 
         SubscribeLocalEvent<SolutionContainerManagerComponent, ComponentInit>(OnComponentInit);
 
@@ -71,6 +75,18 @@ public abstract partial class SharedSolutionContainerSystem : EntitySystem
         SubscribeLocalEvent<ExaminableSolutionComponent, GetVerbsEvent<ExamineVerb>>(OnSolutionExaminableVerb);
     }
 
+    private void OnSolutionGetState(EntityUid uid, SolutionComponent component, ref ComponentGetState args)
+    {
+        args.State = new SolutionComponentState(component.Solution.Clone());
+    }
+
+    private void OnSolutionHandleState(EntityUid uid, SolutionComponent component, ref ComponentHandleState args)
+    {
+        if (args.Current is not SolutionComponentState state)
+            return;
+
+        component.Solution = new Solution(state.Solution);
+    }
 
     /// <summary>
     /// Attempts to resolve a solution associated with an entity.
@@ -870,4 +886,15 @@ public abstract partial class SharedSolutionContainerSystem : EntitySystem
     }
 
     #endregion Event Handlers
+
+    [Serializable, NetSerializable]
+    private sealed class SolutionComponentState : ComponentState
+    {
+        public Solution Solution;
+
+        public SolutionComponentState(Solution solution)
+        {
+            Solution = solution;
+        }
+    }
 }
