@@ -29,6 +29,7 @@ using Robust.Shared.Player;
 using Robust.Shared.Random;
 using System.Linq;
 using System.Numerics;
+using Content.Shared.Body.Components;
 
 namespace Content.Server.Weapons.Melee;
 

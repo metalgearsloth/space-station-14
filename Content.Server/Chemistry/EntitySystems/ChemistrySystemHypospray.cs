@@ -76,7 +76,7 @@ namespace Content.Server.Chemistry.EntitySystems
         {
             var (uid, component) = hypo;
 
-            if (!EligibleEntity(target, _entMan, component))
+            if (!EligibleEntity(target, EntityManager, component))
                 return false;
 
             if (TryComp(uid, out UseDelayComponent? delayComp))
@@ -90,7 +90,7 @@ namespace Content.Server.Chemistry.EntitySystems
 
             if (target == user)
                 msgFormat = "hypospray-component-inject-self-message";
-            else if (EligibleEntity(user, _entMan, component) && _interaction.TryRollClumsy(user, component.ClumsyFailChance))
+            else if (EligibleEntity(user, EntityManager, component) && _interaction.TryRollClumsy(user, component.ClumsyFailChance))
             {
                 msgFormat = "hypospray-component-inject-self-clumsy-message";
                 target = user;
@@ -104,7 +104,7 @@ namespace Content.Server.Chemistry.EntitySystems
 
             if (!_solutionContainers.TryGetInjectableSolution(target.Value, out var targetSoln, out var targetSolution))
             {
-                _popup.PopupCursor(Loc.GetString("hypospray-cant-inject", ("target", Identity.Entity(target.Value, _entMan))), user);
+                _popup.PopupCursor(Loc.GetString("hypospray-cant-inject", ("target", Identity.Entity(target.Value, EntityManager))), user);
                 return false;
             }
 
@@ -145,7 +145,7 @@ namespace Content.Server.Chemistry.EntitySystems
             RaiseLocalEvent(target.Value, ref ev);
 
             // same LogType as syringes...
-            _adminLogger.Add(LogType.ForceFeed, $"{_entMan.ToPrettyString(user):user} injected {_entMan.ToPrettyString(target.Value):target} with a solution {SolutionContainerSystem.ToPrettyString(removedSolution):removedSolution} using a {_entMan.ToPrettyString(uid):using}");
+            _adminLogger.Add(LogType.ForceFeed, $"{EntityManager.ToPrettyString(user):user} injected {EntityManager.ToPrettyString(target.Value):target} with a solution {SolutionContainerSystem.ToPrettyString(removedSolution):removedSolution} using a {EntityManager.ToPrettyString(uid):using}");
 
             return true;
         }

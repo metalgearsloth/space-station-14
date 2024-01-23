@@ -4,6 +4,7 @@ using Content.Server.Chemistry.Containers.EntitySystems;
 using Content.Server.Interaction;
 using Content.Server.Popups;
 using Content.Shared.Chemistry;
+using Content.Shared.Chemistry.EntitySystems;
 using Content.Shared.CombatMode;
 using Content.Shared.DoAfter;
 using Content.Shared.Mobs.Systems;
@@ -11,10 +12,9 @@ using Robust.Shared.Audio.Systems;
 
 namespace Content.Server.Chemistry.EntitySystems;
 
-public sealed partial class ChemistrySystem : EntitySystem
+public sealed partial class ChemistrySystem : SharedChemistrySystem
 {
     [Dependency] private readonly IAdminLogManager _adminLogger = default!;
-    [Dependency] private readonly IEntityManager _entMan = default!;
     [Dependency] private readonly InteractionSystem _interaction = default!;
     [Dependency] private readonly BloodstreamSystem _blood = default!;
     [Dependency] private readonly SharedDoAfterSystem _doAfter = default!;

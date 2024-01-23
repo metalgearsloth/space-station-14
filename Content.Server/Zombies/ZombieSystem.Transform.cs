@@ -15,6 +15,7 @@ using Content.Server.NPC.Systems;
 using Content.Server.Roles;
 using Content.Server.Speech.Components;
 using Content.Server.Temperature.Components;
+using Content.Shared.Body.Components;
 using Content.Shared.CombatMode;
 using Content.Shared.CombatMode.Pacification;
 using Content.Shared.Damage;
@@ -103,7 +104,7 @@ namespace Content.Server.Zombies
             RemComp<BarotraumaComponent>(target);
             RemComp<HungerComponent>(target);
             RemComp<ThirstComponent>(target);
-            RemComp<ReproductiveComponent>(target); 
+            RemComp<ReproductiveComponent>(target);
             RemComp<ReproductivePartnerComponent>(target);
 
             //funny voice
