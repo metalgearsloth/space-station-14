@@ -308,6 +308,9 @@ public sealed class ActionContainerSystem : EntitySystem
         DebugTools.Assert(data.AttachedEntity == null || data.Container != EntityUid.Invalid);
         DebugTools.Assert(data.Container == null || data.Container == uid);
 
+        if (data.AttachedEntity != null)
+            _actions.AddAction(data.AttachedEntity.Value, args.Entity, uid);
+
         data.Container = uid;
         Dirty(uid, component);
 
