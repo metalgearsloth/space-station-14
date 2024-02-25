@@ -1,3 +1,4 @@
+using Content.Shared.Humanoid;
 using Content.Shared.Preferences;
 using Robust.Shared.Prototypes;
 
@@ -17,7 +18,7 @@ namespace Content.Client.Preferences.UI
         private void RandomizeName()
         {
             if (Profile == null) return;
-            var name = HumanoidCharacterProfile.GetName(Profile.Species, Profile.Gender);
+            var name = IoCManager.Resolve<IEntitySystemManager>().GetEntitySystem<NamingSystem>().GetName(Profile.Species, Profile.Gender);
             SetName(name);
             UpdateNameEdit();
         }
