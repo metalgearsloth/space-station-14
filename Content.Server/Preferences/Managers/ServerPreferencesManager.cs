@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Content.Server.Database;
 using Content.Server.Humanoid;
 using Content.Shared.CCVar;
+using Content.Shared.Humanoid;
 using Content.Shared.Humanoid.Prototypes;
 using Content.Shared.Preferences;
 using Content.Shared.Roles;
@@ -22,6 +23,7 @@ namespace Content.Server.Preferences.Managers
     /// </summary>
     public sealed class ServerPreferencesManager : IServerPreferencesManager
     {
+        [Dependency] private readonly IEntityManager _entManager = default!;
         [Dependency] private readonly IServerNetManager _netManager = default!;
         [Dependency] private readonly IConfigurationManager _cfg = default!;
         [Dependency] private readonly IServerDbManager _db = default!;
@@ -99,7 +101,8 @@ namespace Content.Server.Preferences.Managers
 
             var curPrefs = prefsData.Prefs!;
 
-            profile.EnsureValid();
+            // TODO: God this shit is awful, namingsystem needs moving to a manager
+            _entManager.System<SharedHumanoidAppearanceSystem>().EnsureValid(ref profile);
 
             var profiles = new Dictionary<int, ICharacterProfile>(curPrefs.Characters)
             {

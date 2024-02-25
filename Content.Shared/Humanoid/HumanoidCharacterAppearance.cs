@@ -188,54 +188,6 @@ namespace Content.Shared.Humanoid
             return new(color.RByte, color.GByte, color.BByte);
         }
 
-        public static HumanoidCharacterAppearance EnsureValid(HumanoidCharacterAppearance appearance, string species, Sex sex)
-        {
-            var hairStyleId = appearance.HairStyleId;
-            var facialHairStyleId = appearance.FacialHairStyleId;
-
-            var hairColor = ClampColor(appearance.HairColor);
-            var facialHairColor = ClampColor(appearance.FacialHairColor);
-            var eyeColor = ClampColor(appearance.EyeColor);
-
-            var proto = IoCManager.Resolve<IPrototypeManager>();
-            var markingManager = IoCManager.Resolve<MarkingManager>();
-
-            if (!markingManager.MarkingsByCategory(MarkingCategories.Hair).ContainsKey(hairStyleId))
-            {
-                hairStyleId = HairStyles.DefaultHairStyle;
-            }
-
-            if (!markingManager.MarkingsByCategory(MarkingCategories.FacialHair).ContainsKey(facialHairStyleId))
-            {
-                facialHairStyleId = HairStyles.DefaultFacialHairStyle;
-            }
-
-            var markingSet = new MarkingSet();
-            var skinColor = appearance.SkinColor;
-            if (proto.TryIndex(species, out SpeciesPrototype? speciesProto))
-            {
-                markingSet = new MarkingSet(appearance.Markings, speciesProto.MarkingPoints, markingManager, proto);
-                markingSet.EnsureValid(markingManager);
-
-                if (!Humanoid.SkinColor.VerifySkinColor(speciesProto.SkinColoration, skinColor))
-                {
-                    skinColor = Humanoid.SkinColor.ValidSkinTone(speciesProto.SkinColoration, skinColor);
-                }
-
-                markingSet.EnsureSpecies(species, skinColor, markingManager);
-                markingSet.EnsureSexes(sex, markingManager);
-            }
-
-            return new HumanoidCharacterAppearance(
-                hairStyleId,
-                hairColor,
-                facialHairStyleId,
-                facialHairColor,
-                eyeColor,
-                skinColor,
-                markingSet.GetForwardEnumerator().ToList());
-        }
-
         public bool MemberwiseEquals(ICharacterAppearance maybeOther)
         {
             if (maybeOther is not HumanoidCharacterAppearance other) return false;

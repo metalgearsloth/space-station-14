@@ -1,19 +1,12 @@
 using System.Linq;
-using System.Globalization;
-using System.Text.RegularExpressions;
-using Content.Shared.CCVar;
 using Content.Shared.GameTicking;
 using Content.Shared.Humanoid;
 using Content.Shared.Humanoid.Prototypes;
-using Content.Shared.Random.Helpers;
-using Content.Shared.Roles;
-using Content.Shared.Traits;
-using Robust.Shared.Configuration;
+using JetBrains.Annotations;
 using Robust.Shared.Enums;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Random;
 using Robust.Shared.Serialization;
-using Robust.Shared.Utility;
 
 namespace Content.Shared.Preferences
 {
@@ -131,6 +124,7 @@ namespace Content.Shared.Preferences
         /// </summary>
         /// <param name="species">The species to use in this default profile. The default species is <see cref="SharedHumanoidAppearanceSystem.DefaultSpecies"/>.</param>
         /// <returns>Humanoid character profile with default settings.</returns>
+        [Pure]
         public static HumanoidCharacterProfile DefaultWithSpecies(string species = SharedHumanoidAppearanceSystem.DefaultSpecies)
         {
             return new(
@@ -154,6 +148,7 @@ namespace Content.Shared.Preferences
         }
 
         // TODO: This should eventually not be a visual change only.
+        [Pure]
         public static HumanoidCharacterProfile Random(HashSet<string>? ignoredSpecies = null)
         {
             var prototypeManager = IoCManager.Resolve<IPrototypeManager>();
@@ -168,6 +163,7 @@ namespace Content.Shared.Preferences
             return RandomWithSpecies(species);
         }
 
+        [Pure]
         public static HumanoidCharacterProfile RandomWithSpecies(string species = SharedHumanoidAppearanceSystem.DefaultSpecies)
         {
             var prototypeManager = IoCManager.Resolve<IPrototypeManager>();
@@ -193,7 +189,7 @@ namespace Content.Shared.Preferences
                     break;
             }
 
-            var name = GetName(species, gender);
+            var name = IoCManager.Resolve<IEntitySystemManager>().GetEntitySystem<NamingSystem>().GetName(species, gender);
 
             return new HumanoidCharacterProfile(name, "", species, age, sex, gender, HumanoidCharacterAppearance.Random(species, sex), ClothingPreference.Jumpsuit, BackpackPreference.Backpack, SpawnPriorityPreference.None,
                 new Dictionary<string, JobPriority>
@@ -227,59 +223,73 @@ namespace Content.Shared.Preferences
         public IReadOnlyList<string> TraitPreferences => _traitPreferences;
         public PreferenceUnavailableMode PreferenceUnavailable { get; private set; }
 
+        [Pure]
         public HumanoidCharacterProfile WithName(string name)
         {
             return new(this) { Name = name };
         }
 
+        [Pure]
         public HumanoidCharacterProfile WithFlavorText(string flavorText)
         {
             return new(this) { FlavorText = flavorText };
         }
 
+        [Pure]
         public HumanoidCharacterProfile WithAge(int age)
         {
             return new(this) { Age = age };
         }
 
+        [Pure]
         public HumanoidCharacterProfile WithSex(Sex sex)
         {
             return new(this) { Sex = sex };
         }
 
+        [Pure]
         public HumanoidCharacterProfile WithGender(Gender gender)
         {
             return new(this) { Gender = gender };
         }
 
+        [Pure]
         public HumanoidCharacterProfile WithSpecies(string species)
         {
             return new(this) { Species = species };
         }
 
-
+        [Pure]
         public HumanoidCharacterProfile WithCharacterAppearance(HumanoidCharacterAppearance appearance)
         {
             return new(this) { Appearance = appearance };
         }
 
+        [Pure]
         public HumanoidCharacterProfile WithClothingPreference(ClothingPreference clothing)
         {
             return new(this) { Clothing = clothing };
         }
+
+        [Pure]
         public HumanoidCharacterProfile WithBackpackPreference(BackpackPreference backpack)
         {
             return new(this) { Backpack = backpack };
         }
+
+        [Pure]
         public HumanoidCharacterProfile WithSpawnPriorityPreference(SpawnPriorityPreference spawnPriority)
         {
             return new(this) { SpawnPriority = spawnPriority };
         }
+
+        [Pure]
         public HumanoidCharacterProfile WithJobPriorities(IEnumerable<KeyValuePair<string, JobPriority>> jobPriorities)
         {
             return new(this, new Dictionary<string, JobPriority>(jobPriorities), _antagPreferences, _traitPreferences);
         }
 
+        [Pure]
         public HumanoidCharacterProfile WithJobPriority(string jobId, JobPriority priority)
         {
             var dictionary = new Dictionary<string, JobPriority>(_jobPriorities);
@@ -294,16 +304,25 @@ namespace Content.Shared.Preferences
             return new(this, dictionary, _antagPreferences, _traitPreferences);
         }
 
+        [Pure]
         public HumanoidCharacterProfile WithPreferenceUnavailable(PreferenceUnavailableMode mode)
         {
             return new(this) { PreferenceUnavailable = mode };
         }
 
+        [Pure]
         public HumanoidCharacterProfile WithAntagPreferences(IEnumerable<string> antagPreferences)
         {
             return new(this, _jobPriorities, new List<string>(antagPreferences), _traitPreferences);
         }
 
+        [Pure]
+        public HumanoidCharacterProfile WithTraitPreferences(IEnumerable<string> traits)
+        {
+            return new(this, _jobPriorities, _antagPreferences, new List<string>(traits));
+        }
+
+        [Pure]
         public HumanoidCharacterProfile WithAntagPreference(string antagId, bool pref)
         {
             var list = new List<string>(_antagPreferences);
@@ -324,6 +343,7 @@ namespace Content.Shared.Preferences
             return new(this, _jobPriorities, list, _traitPreferences);
         }
 
+        [Pure]
         public HumanoidCharacterProfile WithTraitPreference(string traitId, bool pref)
         {
             var list = new List<string>(_traitPreferences);
@@ -370,174 +390,6 @@ namespace Content.Shared.Preferences
             if (!_traitPreferences.SequenceEqual(other._traitPreferences)) return false;
             return Appearance.MemberwiseEquals(other.Appearance);
         }
-
-        public void EnsureValid()
-        {
-            var prototypeManager = IoCManager.Resolve<IPrototypeManager>();
-
-            if (!prototypeManager.TryIndex<SpeciesPrototype>(Species, out var speciesPrototype) || speciesPrototype.RoundStart == false)
-            {
-                Species = SharedHumanoidAppearanceSystem.DefaultSpecies;
-                speciesPrototype = prototypeManager.Index<SpeciesPrototype>(Species);
-            }
-
-            var sex = Sex switch
-            {
-                Sex.Male => Sex.Male,
-                Sex.Female => Sex.Female,
-                Sex.Unsexed => Sex.Unsexed,
-                _ => Sex.Male // Invalid enum values.
-            };
-
-            // ensure the species can be that sex and their age fits the founds
-            var age = Age;
-            if (speciesPrototype != null)
-            {
-                if (!speciesPrototype.Sexes.Contains(sex))
-                {
-                    sex = speciesPrototype.Sexes[0];
-                }
-                age = Math.Clamp(Age, speciesPrototype.MinAge, speciesPrototype.MaxAge);
-            }
-
-            var gender = Gender switch
-            {
-                Gender.Epicene => Gender.Epicene,
-                Gender.Female => Gender.Female,
-                Gender.Male => Gender.Male,
-                Gender.Neuter => Gender.Neuter,
-                _ => Gender.Epicene // Invalid enum values.
-            };
-
-            string name;
-            if (string.IsNullOrEmpty(Name))
-            {
-                name = GetName(Species, gender);
-            }
-            else if (Name.Length > MaxNameLength)
-            {
-                name = Name[..MaxNameLength];
-            }
-            else
-            {
-                name = Name;
-            }
-
-            name = name.Trim();
-
-            var configManager = IoCManager.Resolve<IConfigurationManager>();
-            if (configManager.GetCVar(CCVars.RestrictedNames))
-            {
-                name = Regex.Replace(name, @"[^A-Z,a-z,0-9, -]", string.Empty);
-            }
-
-            if (configManager.GetCVar(CCVars.ICNameCase))
-            {
-                // This regex replaces the first character of the first and last words of the name with their uppercase version
-                name = Regex.Replace(name,
-                @"^(?<word>\w)|\b(?<word>\w)(?=\w*$)",
-                m => m.Groups["word"].Value.ToUpper());
-            }
-
-            if (string.IsNullOrEmpty(name))
-            {
-                name = GetName(Species, gender);
-            }
-
-            string flavortext;
-            if (FlavorText.Length > MaxDescLength)
-            {
-                flavortext = FormattedMessage.RemoveMarkup(FlavorText)[..MaxDescLength];
-            }
-            else
-            {
-                flavortext = FormattedMessage.RemoveMarkup(FlavorText);
-            }
-
-            var appearance = HumanoidCharacterAppearance.EnsureValid(Appearance, Species, Sex);
-
-            var prefsUnavailableMode = PreferenceUnavailable switch
-            {
-                PreferenceUnavailableMode.StayInLobby => PreferenceUnavailableMode.StayInLobby,
-                PreferenceUnavailableMode.SpawnAsOverflow => PreferenceUnavailableMode.SpawnAsOverflow,
-                _ => PreferenceUnavailableMode.StayInLobby // Invalid enum values.
-            };
-
-            var clothing = Clothing switch
-            {
-                ClothingPreference.Jumpsuit => ClothingPreference.Jumpsuit,
-                ClothingPreference.Jumpskirt => ClothingPreference.Jumpskirt,
-                _ => ClothingPreference.Jumpsuit // Invalid enum values.
-            };
-
-            var backpack = Backpack switch
-            {
-                BackpackPreference.Backpack => BackpackPreference.Backpack,
-                BackpackPreference.Satchel => BackpackPreference.Satchel,
-                BackpackPreference.Duffelbag => BackpackPreference.Duffelbag,
-                _ => BackpackPreference.Backpack // Invalid enum values.
-            };
-
-            var spawnPriority = SpawnPriority switch
-            {
-                SpawnPriorityPreference.None => SpawnPriorityPreference.None,
-                SpawnPriorityPreference.Arrivals => SpawnPriorityPreference.Arrivals,
-                SpawnPriorityPreference.Cryosleep => SpawnPriorityPreference.Cryosleep,
-                _ => SpawnPriorityPreference.None // Invalid enum values.
-            };
-
-            var priorities = new Dictionary<string, JobPriority>(JobPriorities
-                .Where(p => prototypeManager.HasIndex<JobPrototype>(p.Key) && p.Value switch
-                {
-                    JobPriority.Never => false, // Drop never since that's assumed default.
-                    JobPriority.Low => true,
-                    JobPriority.Medium => true,
-                    JobPriority.High => true,
-                    _ => false
-                }));
-
-            var antags = AntagPreferences
-                .Where(prototypeManager.HasIndex<AntagPrototype>)
-                .ToList();
-
-            var traits = TraitPreferences
-                         .Where(prototypeManager.HasIndex<TraitPrototype>)
-                         .ToList();
-
-            Name = name;
-            FlavorText = flavortext;
-            Age = age;
-            Sex = sex;
-            Gender = gender;
-            Appearance = appearance;
-            Clothing = clothing;
-            Backpack = backpack;
-            SpawnPriority = spawnPriority;
-
-            _jobPriorities.Clear();
-
-            foreach (var (job, priority) in priorities)
-            {
-                _jobPriorities.Add(job, priority);
-            }
-
-            PreferenceUnavailable = prefsUnavailableMode;
-
-            _antagPreferences.Clear();
-            _antagPreferences.AddRange(antags);
-
-            _traitPreferences.Clear();
-            _traitPreferences.AddRange(traits);
-        }
-
-        // sorry this is kind of weird and duplicated,
-        /// working inside these non entity systems is a bit wack
-        public static string GetName(string species, Gender gender)
-        {
-            var namingSystem = IoCManager.Resolve<IEntitySystemManager>().GetEntitySystem<NamingSystem>();
-            return namingSystem.GetName(species, gender);
-        }
-
         public override bool Equals(object? obj)
         {
             return obj is HumanoidCharacterProfile other && MemberwiseEquals(other);

@@ -1,11 +1,18 @@
 using System.Linq;
+using System.Text.RegularExpressions;
+using Content.Shared.CCVar;
 using Content.Shared.Decals;
 using Content.Shared.Humanoid.Markings;
 using Content.Shared.Humanoid.Prototypes;
 using Content.Shared.Preferences;
+using Content.Shared.Roles;
+using Content.Shared.Traits;
+using Robust.Shared.Configuration;
+using Robust.Shared.Enums;
 using Robust.Shared.GameObjects.Components.Localization;
 using Robust.Shared.Network;
 using Robust.Shared.Prototypes;
+using Robust.Shared.Utility;
 
 namespace Content.Shared.Humanoid;
 
@@ -20,9 +27,11 @@ namespace Content.Shared.Humanoid;
 /// </summary>
 public abstract class SharedHumanoidAppearanceSystem : EntitySystem
 {
+    [Dependency] private readonly IConfigurationManager _cfgManager = default!;
     [Dependency] private readonly INetManager _netManager = default!;
     [Dependency] private readonly IPrototypeManager _prototypeManager = default!;
     [Dependency] private readonly MarkingManager _markingManager = default!;
+    [Dependency] private readonly NamingSystem _naming = default!;
 
     [ValidatePrototypeId<SpeciesPrototype>]
     public const string DefaultSpecies = "Human";
@@ -32,6 +41,199 @@ public abstract class SharedHumanoidAppearanceSystem : EntitySystem
         base.Initialize();
         SubscribeLocalEvent<HumanoidAppearanceComponent, ComponentInit>(OnInit);
     }
+
+    /// <summary>
+    ///     Makes this profile valid so there's no bad data like negative ages.
+    /// </summary>
+    public void EnsureValid(ref HumanoidCharacterProfile profile)
+    {
+        if (!_prototypeManager.TryIndex<SpeciesPrototype>(profile.Species, out var speciesPrototype) || !speciesPrototype.RoundStart)
+        {
+            profile = profile.WithSpecies(DefaultSpecies);
+            speciesPrototype = _prototypeManager.Index<SpeciesPrototype>(profile.Species);
+        }
+
+        var sex = profile.Sex switch
+        {
+            Sex.Male => Sex.Male,
+            Sex.Female => Sex.Female,
+            Sex.Unsexed => Sex.Unsexed,
+            _ => Sex.Male // Invalid enum values.
+        };
+
+        // ensure the species can be that sex and their age fits the founds
+        if (!speciesPrototype.Sexes.Contains(sex))
+        {
+            sex = speciesPrototype.Sexes[0];
+        }
+        var age = Math.Clamp(profile.Age, speciesPrototype.MinAge, speciesPrototype.MaxAge);
+
+        var gender = profile.Gender switch
+        {
+            Gender.Epicene => Gender.Epicene,
+            Gender.Female => Gender.Female,
+            Gender.Male => Gender.Male,
+            Gender.Neuter => Gender.Neuter,
+            _ => Gender.Epicene // Invalid enum values.
+        };
+
+        string name;
+        if (string.IsNullOrEmpty(profile.Name))
+        {
+            name = _naming.GetName(profile.Species, gender);
+        }
+        else if (profile.Name.Length > HumanoidCharacterProfile.MaxNameLength)
+        {
+            name = profile.Name[..HumanoidCharacterProfile.MaxNameLength];
+        }
+        else
+        {
+            name = profile.Name;
+        }
+
+        name = name.Trim();
+
+        if (_cfgManager.GetCVar(CCVars.RestrictedNames))
+        {
+            name = Regex.Replace(name, @"[^A-Z,a-z,0-9, -]", string.Empty);
+        }
+
+        if (_cfgManager.GetCVar(CCVars.ICNameCase))
+        {
+            // This regex replaces the first character of the first and last words of the name with their uppercase version
+            name = Regex.Replace(name,
+            @"^(?<word>\w)|\b(?<word>\w)(?=\w*$)",
+            m => m.Groups["word"].Value.ToUpper());
+        }
+
+        if (string.IsNullOrEmpty(name))
+        {
+            name = _naming.GetName(profile.Species, gender);
+        }
+
+        string flavortext;
+        if (profile.FlavorText.Length > HumanoidCharacterProfile.MaxDescLength)
+        {
+            flavortext = FormattedMessage.RemoveMarkup(profile.FlavorText)[..HumanoidCharacterProfile.MaxDescLength];
+        }
+        else
+        {
+            flavortext = FormattedMessage.RemoveMarkup(profile.FlavorText);
+        }
+
+        var appearance = EnsureValid(profile.Appearance, profile.Species, profile.Sex);
+
+        var prefsUnavailableMode = profile.PreferenceUnavailable switch
+        {
+            PreferenceUnavailableMode.StayInLobby => PreferenceUnavailableMode.StayInLobby,
+            PreferenceUnavailableMode.SpawnAsOverflow => PreferenceUnavailableMode.SpawnAsOverflow,
+            _ => PreferenceUnavailableMode.StayInLobby // Invalid enum values.
+        };
+
+        var clothing = profile.Clothing switch
+        {
+            ClothingPreference.Jumpsuit => ClothingPreference.Jumpsuit,
+            ClothingPreference.Jumpskirt => ClothingPreference.Jumpskirt,
+            _ => ClothingPreference.Jumpsuit // Invalid enum values.
+        };
+
+        var backpack = profile.Backpack switch
+        {
+            BackpackPreference.Backpack => BackpackPreference.Backpack,
+            BackpackPreference.Satchel => BackpackPreference.Satchel,
+            BackpackPreference.Duffelbag => BackpackPreference.Duffelbag,
+            _ => BackpackPreference.Backpack // Invalid enum values.
+        };
+
+        var spawnPriority = profile.SpawnPriority switch
+        {
+            SpawnPriorityPreference.None => SpawnPriorityPreference.None,
+            SpawnPriorityPreference.Arrivals => SpawnPriorityPreference.Arrivals,
+            SpawnPriorityPreference.Cryosleep => SpawnPriorityPreference.Cryosleep,
+            _ => SpawnPriorityPreference.None // Invalid enum values.
+        };
+
+        var priorities = new Dictionary<string, JobPriority>(profile.JobPriorities
+            .Where(p => _prototypeManager.HasIndex<JobPrototype>(p.Key) && p.Value switch
+            {
+                JobPriority.Never => false, // Drop never since that's assumed default.
+                JobPriority.Low => true,
+                JobPriority.Medium => true,
+                JobPriority.High => true,
+                _ => false
+            }));
+
+        var antags = profile.AntagPreferences
+            .Where(_prototypeManager.HasIndex<AntagPrototype>)
+            .ToList();
+
+        var traits = profile.TraitPreferences
+                     .Where(_prototypeManager.HasIndex<TraitPrototype>)
+                     .ToList();
+
+        // Chaining like this makes a whole lot more sense if the thing is a struct.
+        profile = profile
+            .WithName(name)
+            .WithFlavorText(flavortext)
+            .WithAge(age)
+            .WithSex(sex)
+            .WithGender(gender)
+            .WithCharacterAppearance(appearance)
+            .WithClothingPreference(clothing)
+            .WithBackpackPreference(backpack)
+            .WithSpawnPriorityPreference(spawnPriority)
+            .WithJobPriorities(priorities)
+            .WithPreferenceUnavailable(prefsUnavailableMode)
+            .WithAntagPreferences(antags)
+            .WithTraitPreferences(traits);
+
+    }
+
+    private HumanoidCharacterAppearance EnsureValid(HumanoidCharacterAppearance appearance, string species, Sex sex)
+    {
+        var hairStyleId = appearance.HairStyleId;
+        var facialHairStyleId = appearance.FacialHairStyleId;
+
+        var hairColor = HumanoidCharacterAppearance.ClampColor(appearance.HairColor);
+        var facialHairColor = HumanoidCharacterAppearance.ClampColor(appearance.FacialHairColor);
+        var eyeColor = HumanoidCharacterAppearance.ClampColor(appearance.EyeColor);
+
+        if (!_markingManager.MarkingsByCategory(MarkingCategories.Hair).ContainsKey(hairStyleId))
+        {
+            hairStyleId = HairStyles.DefaultHairStyle;
+        }
+
+        if (!_markingManager.MarkingsByCategory(MarkingCategories.FacialHair).ContainsKey(facialHairStyleId))
+        {
+            facialHairStyleId = HairStyles.DefaultFacialHairStyle;
+        }
+
+        var markingSet = new MarkingSet();
+        var skinColor = appearance.SkinColor;
+        if (_prototypeManager.TryIndex(species, out SpeciesPrototype? speciesProto))
+        {
+            markingSet = new MarkingSet(appearance.Markings, speciesProto.MarkingPoints, _markingManager, _prototypeManager);
+            markingSet.EnsureValid(_markingManager);
+
+            if (!SkinColor.VerifySkinColor(speciesProto.SkinColoration, skinColor))
+            {
+                skinColor = SkinColor.ValidSkinTone(speciesProto.SkinColoration, skinColor);
+            }
+
+            markingSet.EnsureSpecies(species, skinColor, _markingManager);
+            markingSet.EnsureSexes(sex, _markingManager);
+        }
+
+        return new HumanoidCharacterAppearance(
+            hairStyleId,
+            hairColor,
+            facialHairStyleId,
+            facialHairColor,
+            eyeColor,
+            skinColor,
+            markingSet.GetForwardEnumerator().ToList());
+    }
+
 
     private void OnInit(EntityUid uid, HumanoidAppearanceComponent humanoid, ComponentInit args)
     {
