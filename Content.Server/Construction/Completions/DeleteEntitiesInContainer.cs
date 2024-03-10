@@ -2,6 +2,7 @@ using System.Linq;
 using Content.Shared.Construction;
 using Robust.Server.Containers;
 using Robust.Shared.Containers;
+using Robust.Shared.Utility;
 
 namespace Content.Server.Construction.Completions
 {
@@ -19,7 +20,7 @@ namespace Content.Server.Construction.Completions
             if (!containerSys.TryGetContainer(uid, Container, out var container))
                 return;
 
-            foreach (var contained in container.ContainedEntities.ToArray())
+            foreach (var contained in container.ContainedEntities.ToValueList())
             {
                 if(containerSys.Remove(contained, container))
                     entityManager.QueueDeleteEntity(contained);

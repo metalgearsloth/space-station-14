@@ -35,6 +35,7 @@ using Robust.Shared.Player;
 using System.Linq;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Timing;
+using Robust.Shared.Utility;
 
 namespace Content.Server.Kitchen.EntitySystems
 {
@@ -422,7 +423,7 @@ namespace Content.Server.Kitchen.EntitySystems
             var reagentDict = new Dictionary<string, FixedPoint2>();
             var malfunctioning = false;
             // TODO use lists of Reagent quantities instead of reagent prototype ids.
-            foreach (var item in component.Storage.ContainedEntities.ToArray())
+            foreach (var item in component.Storage.ContainedEntities.ToValueList())
             {
                 // special behavior when being microwaved ;)
                 var ev = new BeingMicrowavedEvent(uid, user);

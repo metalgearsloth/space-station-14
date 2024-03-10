@@ -195,7 +195,7 @@ public abstract class SharedEntityStorageSystem : EntitySystem
             return;
 
         var uidXform = Transform(uid);
-        var containedArr = component.Contents.ContainedEntities.ToArray();
+        var containedArr = component.Contents.ContainedEntities.ToValueList();
         foreach (var contained in containedArr)
         {
             Remove(contained, uid, component, uidXform);

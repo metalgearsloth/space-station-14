@@ -161,7 +161,7 @@ public sealed class ActionContainerSystem : EntitySystem
         if (!Resolve(from, ref oldContainer) || !Resolve(to, ref newContainer))
             return;
 
-        foreach (var action in oldContainer.Container.ContainedEntities.ToArray())
+        foreach (var action in oldContainer.Container.ContainedEntities.ToValueList())
         {
             TransferAction(action, to, container: newContainer);
         }

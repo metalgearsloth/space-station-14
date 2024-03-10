@@ -3,6 +3,7 @@ using Content.Shared.Construction;
 using JetBrains.Annotations;
 using Robust.Server.Containers;
 using Robust.Shared.Containers;
+using Robust.Shared.Utility;
 
 namespace Content.Server.Construction.Completions
 {
@@ -24,7 +25,7 @@ namespace Content.Server.Construction.Completions
             var from = containerSystem.EnsureContainer<Container>(uid, FromContainer, containerManager);
             var to = containerSystem.EnsureContainer<Container>(uid, ToContainer, containerManager);
 
-            foreach (var contained in from.ContainedEntities.ToArray())
+            foreach (var contained in from.ContainedEntities.ToValueList())
             {
                 if (containerSystem.Remove(contained, from))
                     containerSystem.Insert(contained, to);

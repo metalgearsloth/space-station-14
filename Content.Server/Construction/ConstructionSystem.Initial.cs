@@ -19,6 +19,7 @@ using Content.Shared.Tag;
 using Robust.Shared.Containers;
 using Robust.Shared.Player;
 using Robust.Shared.Timing;
+using Robust.Shared.Utility;
 
 namespace Content.Server.Construction
 {
@@ -131,14 +132,14 @@ namespace Content.Server.Construction
 
             void FailCleanup()
             {
-                foreach (var entity in container.ContainedEntities.ToArray())
+                foreach (var entity in container.ContainedEntities.ToValueList())
                 {
                     _container.Remove(entity, container);
                 }
 
                 foreach (var cont in containers.Values)
                 {
-                    foreach (var entity in cont.ContainedEntities.ToArray())
+                    foreach (var entity in cont.ContainedEntities.ToValueList())
                     {
                         _container.Remove(entity, cont);
                     }
@@ -282,7 +283,7 @@ namespace Content.Server.Construction
             {
                 var newCont = _container.EnsureContainer<Container>(newEntity, name);
 
-                foreach (var entity in cont.ContainedEntities.ToArray())
+                foreach (var entity in cont.ContainedEntities.ToValueList())
                 {
                     _container.Remove(entity, cont, reparent: false, force: true);
                     _container.Insert(entity, newCont);

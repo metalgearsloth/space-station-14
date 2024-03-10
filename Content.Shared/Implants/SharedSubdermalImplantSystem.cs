@@ -8,6 +8,7 @@ using Content.Shared.Tag;
 using JetBrains.Annotations;
 using Robust.Shared.Containers;
 using Robust.Shared.Network;
+using Robust.Shared.Utility;
 
 namespace Content.Shared.Implants;
 
@@ -77,7 +78,7 @@ public abstract class SharedSubdermalImplantSystem : EntitySystem
 
         var entCoords = Transform(component.ImplantedEntity.Value).Coordinates;
 
-        var containedEntites = storageImplant.ContainedEntities.ToArray();
+        var containedEntites = storageImplant.ContainedEntities.ToValueList();
 
         foreach (var entity in containedEntites)
         {

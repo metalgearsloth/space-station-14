@@ -16,6 +16,7 @@ using Robust.Shared.Network;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization;
 using Robust.Shared.Timing;
+using Robust.Shared.Utility;
 using SharedToolSystem = Content.Shared.Tools.Systems.SharedToolSystem;
 
 namespace Content.Shared.Radio.EntitySystems;
@@ -52,7 +53,7 @@ public sealed partial class EncryptionKeySystem : EntitySystem
         if (args.Cancelled)
             return;
 
-        var contained = component.KeyContainer.ContainedEntities.ToArray();
+        var contained = component.KeyContainer.ContainedEntities.ToValueList();
         _container.EmptyContainer(component.KeyContainer, reparent: false);
         foreach (var ent in contained)
         {

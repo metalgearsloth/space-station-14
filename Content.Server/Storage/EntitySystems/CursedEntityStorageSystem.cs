@@ -5,6 +5,7 @@ using Content.Shared.Storage.Components;
 using Robust.Shared.Random;
 using Robust.Shared.Audio.Systems;
 using Robust.Shared.Containers;
+using Robust.Shared.Utility;
 
 namespace Content.Server.Storage.EntitySystems;
 
@@ -44,7 +45,7 @@ public sealed class CursedEntityStorageSystem : EntitySystem
 
         var lockerEnt = _random.Pick(lockers).Owner;
 
-        foreach (var entity in storage.Contents.ContainedEntities.ToArray())
+        foreach (var entity in storage.Contents.ContainedEntities.ToValueList())
         {
             _container.Remove(entity, storage.Contents);
             _entityStorage.AddToContents(entity, lockerEnt);

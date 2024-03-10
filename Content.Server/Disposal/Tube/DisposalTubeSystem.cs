@@ -20,6 +20,7 @@ using Robust.Shared.Physics;
 using Robust.Shared.Physics.Components;
 using Robust.Shared.Random;
 using Robust.Shared.Timing;
+using Robust.Shared.Utility;
 using static Content.Shared.Disposal.Components.SharedDisposalRouterComponent;
 using static Content.Shared.Disposal.Components.SharedDisposalTaggerComponent;
 
@@ -397,7 +398,7 @@ namespace Content.Server.Disposal.Tube
             tube.Connected = false;
 
             var query = GetEntityQuery<DisposalHolderComponent>();
-            foreach (var entity in tube.Contents.ContainedEntities.ToArray())
+            foreach (var entity in tube.Contents.ContainedEntities.ToValueList())
             {
                 if (query.TryGetComponent(entity, out var holder))
                     _disposableSystem.ExitDisposals(entity, holder);
@@ -434,7 +435,7 @@ namespace Content.Server.Disposal.Tube
             var holder = Spawn(DisposalEntryComponent.HolderPrototypeId, xform.MapPosition);
             var holderComponent = Comp<DisposalHolderComponent>(holder);
 
-            foreach (var entity in from.Container.ContainedEntities.ToArray())
+            foreach (var entity in from.Container.ContainedEntities.ToValueList())
             {
                 _disposableSystem.TryInsert(holder, entity, holderComponent);
             }

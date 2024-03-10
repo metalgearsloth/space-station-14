@@ -734,7 +734,7 @@ public sealed class DisposalUnitSystem : SharedDisposalUnitSystem
     /// </summary>
     public void TryEjectContents(EntityUid uid, SharedDisposalUnitComponent component)
     {
-        foreach (var entity in component.Container.ContainedEntities.ToArray())
+        foreach (var entity in component.Container.ContainedEntities.ToValueList())
         {
             Remove(uid, component, entity);
         }

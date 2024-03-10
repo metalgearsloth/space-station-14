@@ -10,6 +10,7 @@ using JetBrains.Annotations;
 using Robust.Shared.Audio;
 using Robust.Shared.Audio.Systems;
 using Robust.Shared.Containers;
+using Robust.Shared.Utility;
 
 namespace Content.Server.Light.EntitySystems;
 
@@ -219,7 +220,7 @@ public sealed class LightReplacerSystem : SharedLightReplacerSystem
             return false;
 
         var insertedBulbs = 0;
-        var storagedEnts = storage.Container.ContainedEntities.ToArray();
+        var storagedEnts = storage.Container.ContainedEntities.ToValueList();
 
         foreach (var ent in storagedEnts)
         {
