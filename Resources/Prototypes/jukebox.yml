@@ -1,0 +1,4 @@
+- type: jukebox
+  id: AtomicAmnesia
+  audio:
+    path: /Audio/Lobby/atomicamnesiammx.ogg

@@ -1,0 +1,18 @@
+- type: entity
+  parent: BaseStructure
+  id: Jukebox
+  name: Jukebox
+  components:
+  # - type: ActivatableUIRequiresPower
+  - type: Jukebox
+  - type: Sprite
+    sprite: Structures/Machines/jukebox.rsi
+    layers:
+    - state: icon
+    - state: icon-unshaded
+  - type: ActivatableUI
+    key: enum.JukeboxUi.Key
+  - type: UserInterface
+    interfaces:
+      - key: enum.JukeboxUi.Key
+        type: JukeboxBoundUserInterface

@@ -1,0 +1,26 @@
+<controls:FancyWindow xmlns:controls="clr-namespace:Content.Client.UserInterface.Controls"
+                      xmlns:controls1="https://spacestation14.io"
+                      Title="{controls1:Loc 'jukebox-title'}">
+    <controls1:BoxContainer Orientation="Vertical" HorizontalExpand="True" VerticalExpand="True">
+        <!-- Playback area -->
+        <controls1:BoxContainer Orientation="Vertical" HorizontalExpand="True">
+            <controls1:BoxContainer Orientation="Horizontal">
+                <controls1:Button Name="Play" Text="{controls1:Loc 'jukebox-play'}"/>
+                <controls1:Button Name="Stop" Text="{controls1:Loc 'jukebox-stop'}"/>
+                <controls1:Button Name="Shuffle" Text="{controls1:Loc 'jukebox-shuffle'}"/>
+            </controls1:BoxContainer>
+            <controls1:Label Name="TrackLabel"/>
+            <controls1:BoxContainer Orientation="Horizontal">
+                <controls1:Slider Name="PlaybackSlider" />
+                <controls1:Label Name="PlaybackLabel" Text="00:00 / 00:00"></controls1:Label>
+            </controls1:BoxContainer>
+        </controls1:BoxContainer>
+        <!-- Audio list -->
+        <controls1:ScrollContainer HScrollEnabled="False"
+                                   VScrollEnabled="True"
+                                   HorizontalExpand="True"
+                                   VerticalExpand="True">
+            <controls1:BoxContainer Orientation="Vertical" Name="MusicList" />
+        </controls1:ScrollContainer>
+    </controls1:BoxContainer>
+</controls:FancyWindow>
