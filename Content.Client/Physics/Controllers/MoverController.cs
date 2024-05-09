@@ -85,6 +85,9 @@ namespace Content.Client.Physics.Controllers
         {
             base.UpdateBeforeSolve(prediction, frameTime);
 
+            if (!_timing.IsFirstTimePredicted)
+                return;
+
             if (_playerManager.LocalEntity is not {Valid: true} player)
                 return;
 

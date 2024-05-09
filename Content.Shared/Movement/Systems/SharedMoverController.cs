@@ -276,6 +276,22 @@ namespace Content.Shared.Movement.Systems
 
             // Ensures that players do not spiiiiiiin
             PhysicsSystem.SetAngularVelocity(physicsUid, 0, body: physicsComponent);
+
+            /*
+             * Okay so uhh physics and transform miigghhhtt need to be session specific? But this is going to have the biggest
+             * fucking overhead you've ever seen and we really need transform deltas for it I guess?
+             * Then uhh InputMover needs a "clientsideAuthoritative" bool that we check when iterating
+             * Then the client method just raises this event and server validates the client can do it.
+             */
+
+            RaisePredictiveEvent(new ClientMovementEvent()
+            {
+                Entity = GetNetEntity(physicsUid),
+                AngularVelocity = 0f,
+                LinearVelocity = velocity,
+                LocalPosition = xform.LocalPosition,
+                LocalRotation = xform.LocalRotation,
+            });
         }
 
         public void LerpRotation(EntityUid uid, InputMoverComponent mover, float frameTime)
