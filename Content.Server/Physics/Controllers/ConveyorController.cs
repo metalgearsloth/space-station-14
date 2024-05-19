@@ -24,18 +24,17 @@ public sealed class ConveyorController : SharedConveyorController
     public override void Initialize()
     {
         UpdatesAfter.Add(typeof(MoverController));
-        SubscribeLocalEvent<ConveyorComponent, ComponentInit>(OnInit);
-        SubscribeLocalEvent<ConveyorComponent, ComponentShutdown>(OnConveyorShutdown);
-
-
         SubscribeLocalEvent<ConveyorComponent, SignalReceivedEvent>(OnSignalReceived);
         SubscribeLocalEvent<ConveyorComponent, PowerChangedEvent>(OnPowerChanged);
 
         base.Initialize();
     }
 
-    private void OnInit(EntityUid uid, ConveyorComponent component, ComponentInit args)
+    protected override void OnConveyorStartup(Entity<ConveyorComponent> ent, ref ComponentStartup args)
     {
+        base.OnConveyorStartup(ent, ref args);
+        var uid = ent.Owner;
+        var component = ent.Comp;
         _signalSystem.EnsureSinkPorts(uid, component.ReversePort, component.ForwardPort, component.OffPort);
 
         if (TryComp<PhysicsComponent>(uid, out var physics))
@@ -50,17 +49,18 @@ public sealed class ConveyorController : SharedConveyorController
         }
     }
 
-    private void OnConveyorShutdown(EntityUid uid, ConveyorComponent component, ComponentShutdown args)
+    protected override void OnConveyorShutdown(Entity<ConveyorComponent> ent, ref ComponentShutdown args)
     {
-        if (MetaData(uid).EntityLifeStage >= EntityLifeStage.Terminating)
+        base.OnConveyorShutdown(ent, ref args);
+
+        // TODO: Need a thing on compshutdown for this.
+        if (MetaData(ent.Owner).EntityLifeStage >= EntityLifeStage.Terminating)
             return;
 
-        RemComp<ActiveConveyorComponent>(uid);
-
-        if (!TryComp<PhysicsComponent>(uid, out var physics))
+        if (!TryComp<PhysicsComponent>(ent, out var physics))
             return;
 
-        _fixtures.DestroyFixture(uid, ConveyorFixture, body: physics);
+        _fixtures.DestroyFixture(ent, ConveyorFixture, body: physics);
     }
 
     private void OnPowerChanged(EntityUid uid, ConveyorComponent component, ref PowerChangedEvent args)

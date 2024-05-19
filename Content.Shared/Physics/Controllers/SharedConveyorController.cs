@@ -9,13 +9,16 @@ using Robust.Shared.Physics.Components;
 using Robust.Shared.Physics.Controllers;
 using Robust.Shared.Physics.Events;
 using Robust.Shared.Physics.Systems;
+using Robust.Shared.Threading;
 
 namespace Content.Shared.Physics.Controllers;
 
 public abstract class SharedConveyorController : VirtualController
 {
     [Dependency] protected readonly IMapManager MapManager = default!;
+    [Dependency] private readonly IParallelManager _parallel = default!;
     [Dependency] protected readonly EntityLookupSystem Lookup = default!;
+    [Dependency] private readonly SharedMapSystem _maps = default!;
     [Dependency] protected readonly SharedPhysicsSystem Physics = default!;
     [Dependency] private readonly SharedGravitySystem _gravity = default!;
 
@@ -23,14 +26,40 @@ public abstract class SharedConveyorController : VirtualController
 
     private static readonly Vector2 _expansion = new Vector2(0.1f, 0.1f);
 
+    private ConveyorJob _job;
+    private readonly HashSet<EntityUid> _conveyed = new();
+
     public override void Initialize()
     {
+        _job = new()
+        {
+            Controller = this,
+            Gravity = _gravity,
+            Lookup = Lookup,
+            Maps = _maps,
+            _gridQuery = GetEntityQuery<MapGridComponent>(),
+            _physicsQuery = GetEntityQuery<PhysicsComponent>(),
+            _xformQuery = GetEntityQuery<TransformComponent>(),
+        };
+
         UpdatesAfter.Add(typeof(SharedMoverController));
 
+        SubscribeLocalEvent<ConveyorComponent, ComponentStartup>(OnConveyorStartup);
+        SubscribeLocalEvent<ConveyorComponent, ComponentShutdown>(OnConveyorShutdown);
         SubscribeLocalEvent<ConveyorComponent, StartCollideEvent>(OnConveyorStartCollide);
         SubscribeLocalEvent<ConveyorComponent, EndCollideEvent>(OnConveyorEndCollide);
 
         base.Initialize();
+    }
+
+    protected virtual void OnConveyorStartup(Entity<ConveyorComponent> ent, ref ComponentStartup args)
+    {
+        _job.Conveyors.Add(ent);
+    }
+
+    protected virtual void OnConveyorShutdown(Entity<ConveyorComponent> ent, ref ComponentShutdown args)
+    {
+        _job.Conveyors.Remove(ent);
     }
 
     private void OnConveyorStartCollide(EntityUid uid, ConveyorComponent component, ref StartCollideEvent args)
@@ -40,71 +69,47 @@ public abstract class SharedConveyorController : VirtualController
         if (args.OtherBody.BodyType == BodyType.Static || component.State == ConveyorState.Off)
             return;
 
-        component.Intersecting.Add(otherUid);
-        EnsureComp<ActiveConveyorComponent>(uid);
+        if (!component.Intersecting.Add(otherUid))
+            return;
+
+        Dirty(uid, component);
     }
 
     private void OnConveyorEndCollide(EntityUid uid, ConveyorComponent component, ref EndCollideEvent args)
     {
-        component.Intersecting.Remove(args.OtherEntity);
+        if (!component.Intersecting.Remove(args.OtherEntity))
+            return;
 
-        if (component.Intersecting.Count == 0)
-            RemComp<ActiveConveyorComponent>(uid);
+        Dirty(uid, component);
     }
 
     public override void UpdateBeforeSolve(bool prediction, float frameTime)
     {
         base.UpdateBeforeSolve(prediction, frameTime);
 
-        var conveyed = new HashSet<EntityUid>();
-        // Don't use it directly in EntityQuery because we may be able to save getcomponents.
-        var xformQuery = GetEntityQuery<TransformComponent>();
-        var bodyQuery = GetEntityQuery<PhysicsComponent>();
-        var query = EntityQueryEnumerator<ActiveConveyorComponent, ConveyorComponent>();
+        _conveyed.Clear();
+        _job.LocalPositions.Clear();
+        _job.Prediction = prediction;
+        _job.FrameTime = frameTime;
+        _parallel.ProcessNow(_job, _job.Conveyors.Count);
 
-        while (query.MoveNext(out var uid, out var _, out var comp))
+        foreach (var (entity, position) in _job.LocalPositions)
         {
-            Convey(uid, comp, xformQuery, bodyQuery, conveyed, frameTime, prediction);
-        }
-    }
-
-    private void Convey(EntityUid uid, ConveyorComponent comp, EntityQuery<TransformComponent> xformQuery, EntityQuery<PhysicsComponent> bodyQuery, HashSet<EntityUid> conveyed, float frameTime, bool prediction)
-    {
-        // Use an event for conveyors to know what needs to run
-        if (!CanRun(comp))
-            return;
-
-        var speed = comp.Speed;
-
-        if (speed <= 0f || !xformQuery.TryGetComponent(uid, out var xform) || xform.GridUid == null)
-            return;
-
-        var conveyorPos = xform.LocalPosition;
-        var conveyorRot = xform.LocalRotation;
-
-        conveyorRot += comp.Angle;
-
-        if (comp.State == ConveyorState.Reverse)
-            conveyorRot += MathF.PI;
-
-        var direction = conveyorRot.ToWorldVec();
-
-        foreach (var (entity, transform, body) in GetEntitiesToMove(comp, xform, xformQuery, bodyQuery))
-        {
-            if (!conveyed.Add(entity) || prediction && !body.Predict)
+            // Parallel will cause a 1-tick delay for some stuff
+            // e.g. if something gets conveyed and turns into a bomb, most of the time it shouldn't be noticeable
+            // and we only need to check deletion.
+            if (Deleted(entity.Owner))
                 continue;
 
-            var localPos = transform.LocalPosition;
-            var itemRelative = conveyorPos - localPos;
+            if (!_conveyed.Add(entity.Owner))
+                continue;
 
-            localPos += Convey(direction, speed, frameTime, itemRelative);
-            transform.LocalPosition = localPos;
+            TransformSystem.SetLocalPosition(entity.Owner, position, entity.Comp2);
 
             // Force it awake for collisionwake reasons.
-            Physics.SetAwake((entity, body), true);
-            Physics.SetSleepTime(body, 0f);
+            Physics.SetAwake((entity, entity.Comp1), true);
+            Physics.SetSleepTime(entity.Comp1, 0f);
         }
-        Dirty(uid, comp);
     }
 
     private static Vector2 Convey(Vector2 direction, float speed, float frameTime, Vector2 itemRelative)
@@ -140,38 +145,96 @@ public abstract class SharedConveyorController : VirtualController
         }
     }
 
-    private IEnumerable<(EntityUid, TransformComponent, PhysicsComponent)> GetEntitiesToMove(
-        ConveyorComponent comp,
-        TransformComponent xform,
-        EntityQuery<TransformComponent> xformQuery,
-        EntityQuery<PhysicsComponent> bodyQuery)
-    {
-        // Check if the thing's centre overlaps the grid tile.
-        var grid = Comp<MapGridComponent>(xform.GridUid!.Value);
-        var tile = grid.GetTileRef(xform.Coordinates);
-        var conveyorBounds = Lookup.GetLocalBounds(tile, grid.TileSize);
-
-        foreach (var entity in comp.Intersecting)
-        {
-            if (!xformQuery.TryGetComponent(entity, out var entityXform) || entityXform.ParentUid != xform.GridUid!.Value)
-                continue;
-
-            if (!bodyQuery.TryGetComponent(entity, out var physics) || physics.BodyType == BodyType.Static || physics.BodyStatus == BodyStatus.InAir || _gravity.IsWeightless(entity, physics, entityXform))
-                continue;
-
-            // Yes there's still going to be the occasional rounding issue where it stops getting conveyed
-            // When you fix the corner issue that will fix this anyway.
-            var gridAABB = new Box2(entityXform.LocalPosition - _expansion, entityXform.LocalPosition + _expansion);
-
-            if (!conveyorBounds.Intersects(gridAABB))
-                continue;
-
-            yield return (entity, entityXform, physics);
-        }
-    }
-
     public bool CanRun(ConveyorComponent component)
     {
-        return component.State != ConveyorState.Off && component.Powered;
+        // Use an event for conveyors to know what needs to run
+        return component.Speed > 0f && component.State != ConveyorState.Off && component.Powered;
+    }
+
+    private record struct ConveyorJob() : IParallelRobustJob
+    {
+        public int BatchSize => 16;
+
+        public SharedConveyorController Controller;
+        public EntityLookupSystem Lookup;
+        public SharedGravitySystem Gravity;
+        public SharedMapSystem Maps;
+
+        public EntityQuery<MapGridComponent> _gridQuery;
+        public EntityQuery<PhysicsComponent> _physicsQuery;
+        public EntityQuery<TransformComponent> _xformQuery;
+
+        public readonly List<Entity<ConveyorComponent>> Conveyors = new();
+        public readonly List<(Entity<PhysicsComponent, TransformComponent>, Vector2)> LocalPositions = new();
+
+        public float FrameTime;
+        public bool Prediction;
+
+        public void Execute(int index)
+        {
+            var conveyor = Conveyors[index];
+            var comp = conveyor.Comp;
+
+            if (comp.Intersecting.Count == 0 || !Controller.CanRun(comp))
+                return;
+
+            if (!_xformQuery.TryGetComponent(conveyor, out var xform) || !_gridQuery.TryComp(xform.GridUid, out var grid))
+                return;
+
+            var speed = comp.Speed;
+            var conveyorPos = xform.LocalPosition;
+            var conveyorRot = xform.LocalRotation;
+
+            conveyorRot += comp.Angle;
+
+            if (comp.State == ConveyorState.Reverse)
+                conveyorRot += MathF.PI;
+
+            var direction = conveyorRot.ToWorldVec();
+
+            foreach (var (entity, transform, body) in GetEntitiesToMove(comp, xform, (xform.GridUid.Value, grid)))
+            {
+                if (Prediction && !body.Predict)
+                    continue;
+
+                var localPos = transform.LocalPosition;
+                var itemRelative = conveyorPos - localPos;
+
+                localPos += Convey(direction, speed, FrameTime, itemRelative);
+
+                lock (LocalPositions)
+                {
+                    LocalPositions.Add(((entity, body, transform), localPos));
+                }
+            }
+        }
+
+        private IEnumerable<(EntityUid, TransformComponent, PhysicsComponent)> GetEntitiesToMove(
+            ConveyorComponent comp,
+            TransformComponent xform,
+            Entity<MapGridComponent> grid)
+        {
+            // Check if the thing's centre overlaps the grid tile.
+            var tile = Maps.GetTileRef(grid.Owner, grid.Comp, xform.Coordinates);
+            var conveyorBounds = Lookup.GetLocalBounds(tile, grid.Comp.TileSize);
+
+            foreach (var entity in comp.Intersecting)
+            {
+                if (!_xformQuery.TryGetComponent(entity, out var entityXform) || entityXform.ParentUid != xform.GridUid!.Value)
+                    continue;
+
+                if (!_physicsQuery.TryGetComponent(entity, out var physics) || physics.BodyType == BodyType.Static || physics.BodyStatus == BodyStatus.InAir || Gravity.IsWeightless(entity, physics, entityXform))
+                    continue;
+
+                // Yes there's still going to be the occasional rounding issue where it stops getting conveyed
+                // When you fix the corner issue that will fix this anyway.
+                var gridAABB = new Box2(entityXform.LocalPosition - _expansion, entityXform.LocalPosition + _expansion);
+
+                if (!conveyorBounds.Intersects(gridAABB))
+                    continue;
+
+                yield return (entity, entityXform, physics);
+            }
+        }
     }
 }
