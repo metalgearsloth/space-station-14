@@ -264,7 +264,7 @@ public sealed partial class ShuttleConsoleSystem : SharedShuttleConsoleSystem
                 new List<ShuttleExclusionObject>());
         }
 
-        if (_ui.HasUi(consoleUid, ShuttleConsoleUiKey.Key))
+        if (_ui.IsUiOpen(consoleUid, ShuttleConsoleUiKey.Key))
         {
             _ui.SetUiState(consoleUid, ShuttleConsoleUiKey.Key, new ShuttleBoundUserInterfaceState(navState, mapState, dockState));
         }
