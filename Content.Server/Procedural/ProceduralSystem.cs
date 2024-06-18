@@ -85,8 +85,6 @@ public sealed partial class ProceduralSystem : EntitySystem
 
                 // Remove chunks that we don't care about (loaded or persisted).
                 toLoadChunks.IntersectWith(chunksInRange);
-
-                toLoadChunks.IntersectWith(meta.LoadedChunks);
                 toLoadChunks.IntersectWith(meta.PersistedChunks);
 
                 foreach (var chunk in toLoadChunks)
@@ -98,7 +96,7 @@ public sealed partial class ProceduralSystem : EntitySystem
                     }
 
                     // Already loading, skip it.
-                    if (meta.LoadingChunks.ContainsKey(chunk))
+                    if (meta.LoadingChunks.ContainsKey(chunk) || meta.LoadedChunks.ContainsKey(chunk))
                         continue;
 
                     var tcs = new CancellationTokenSource();
@@ -109,15 +107,15 @@ public sealed partial class ProceduralSystem : EntitySystem
                 }
 
                 // Jobs should be ordered so we can just chuck them in or out.
-                foreach (var chunk in meta.LoadedChunks)
+                foreach (var origin in meta.LoadedChunks.Keys)
                 {
                     // If it's in range still / persisted / loading / unable to deload for any reason keep it.
-                    if (chunksInRange.Contains(chunk) ||
-                        meta.PersistedChunks.Contains(chunk) ||
+                    if (chunksInRange.Contains(origin) ||
+                        meta.PersistedChunks.Contains(origin) ||
                         (meta.Flags & ProceduralMetaFlags.NoUnload) != 0x0)
                     {
                         // Cancel unloading if something happened but it was inadvertantly added.
-                        if (meta.UnloadingChunks.Remove(chunk, out var token))
+                        if (meta.UnloadingChunks.Remove(origin, out var token))
                         {
                             token.Cancel();
                         }
@@ -130,7 +128,7 @@ public sealed partial class ProceduralSystem : EntitySystem
                     var unloadChunkJob = new UnloadChunkJob(0.002, tcs.Token);
 
                     _proceduralQueue.EnqueueJob(unloadChunkJob);
-                    meta.UnloadingChunks[chunk] = tcs;
+                    meta.UnloadingChunks[origin] = tcs;
                 }
             }
         }

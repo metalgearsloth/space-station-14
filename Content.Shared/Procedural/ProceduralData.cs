@@ -1,4 +1,3 @@
-using System.Linq;
 using Content.Shared.Maps;
 using Content.Shared.Storage;
 using Content.Shared.Whitelist;
@@ -8,13 +7,13 @@ using Robust.Shared.Utility;
 namespace Content.Shared.Procedural;
 
 /// <summary>
-/// Used to set dungeon values for all layers.
+/// Used to set procedural values for shared data.
 /// </summary>
 /// <remarks>
 /// This lets us share data between different dungeon configs without having to repeat entire configs.
 /// </remarks>
 [DataRecord]
-public sealed class DungeonData
+public sealed class ProceduralData
 {
     // I hate this but it also significantly reduces yaml bloat if we add like 10 variations on the same set of layers
     // e.g. science rooms, engi rooms, cargo rooms all under PlanetBase for example.
@@ -23,18 +22,19 @@ public sealed class DungeonData
     // 2 layer prototype, 1 layer with the specified data, 3 layer prototype, 2 layers with specified data, etc.
     // As long as we just keep the code clean over time it won't be bad to maintain.
 
-    public static DungeonData Empty = new();
+    public static ProceduralData Empty = new();
 
-    public Dictionary<DungeonDataKey, Color> Colors = new();
-    public Dictionary<DungeonDataKey, EntProtoId> Entities = new();
-    public Dictionary<DungeonDataKey, ProtoId<EntitySpawnEntryPrototype>> SpawnGroups = new();
-    public Dictionary<DungeonDataKey, ProtoId<ContentTileDefinition>> Tiles = new();
-    public Dictionary<DungeonDataKey, EntityWhitelist> Whitelists = new();
+    public Dictionary<ProceduralDataKey, Color> Colors = new();
+    public Dictionary<ProceduralDataKey, EntProtoId> Entities = new();
+    public Dictionary<ProceduralDataKey, HashSet<Vector2i>> Indices = new();
+    public Dictionary<ProceduralDataKey, ProtoId<EntitySpawnEntryPrototype>> SpawnGroups = new();
+    public Dictionary<ProceduralDataKey, ProtoId<ContentTileDefinition>> Tiles = new();
+    public Dictionary<ProceduralDataKey, EntityWhitelist> Whitelists = new();
 
     /// <summary>
     /// Applies the specified data to this data.
     /// </summary>
-    public void Apply(DungeonData data)
+    public void Apply(ProceduralData data)
     {
         // Copy-paste moment.
         foreach (var color in data.Colors)
@@ -63,9 +63,9 @@ public sealed class DungeonData
         }
     }
 
-    public DungeonData Clone()
+    public ProceduralData Clone()
     {
-        return new DungeonData
+        return new ProceduralData
         {
             // Only shallow clones but won't matter for DungeonJob purposes.
             Colors = Colors.ShallowClone(),
@@ -77,7 +77,7 @@ public sealed class DungeonData
     }
 }
 
-public enum DungeonDataKey : byte
+public enum ProceduralDataKey : byte
 {
     // Colors
     Decals,
@@ -87,6 +87,13 @@ public enum DungeonDataKey : byte
     CornerWalls,
     Junction,
     Walls,
+
+    // Indices
+
+    /// <summary>
+    /// Tiles that shouldn't be re-used across layers.
+    /// </summary>
+    ReservedTiles,
 
     // SpawnGroups
     CornerClutter,

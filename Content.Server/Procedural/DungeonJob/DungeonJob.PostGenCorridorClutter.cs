@@ -12,7 +12,7 @@ public sealed partial class DungeonJob
     /// <summary>
     /// <see cref="CorridorClutterPostGen"/>
     /// </summary>
-    private async Task PostGen(CorridorClutterPostGen gen, DungeonData data, Dungeon dungeon, HashSet<Vector2i> reservedTiles, Random random)
+    private async Task PostGen(CorridorClutterPostGen gen, ProceduralData data, Dungeon dungeon, HashSet<Vector2i> reservedTiles, Random random)
     {
         var physicsQuery = _entManager.GetEntityQuery<PhysicsComponent>();
         var count = (int) Math.Ceiling(dungeon.CorridorTiles.Count * gen.Chance);

@@ -1,6 +1,8 @@
 using System.Numerics;
 using System.Threading;
+using Content.Shared.Decals;
 using Content.Shared.Procedural;
+using Robust.Shared.Map;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization.TypeSerializers.Implementations.Custom;
 
@@ -20,7 +22,7 @@ public sealed partial class ProceduralPrototype : IPrototype
     /// This is overwritten by <see cref="ProceduralMetaLayer"/> data.
     /// </summary>
     [DataField]
-    public DungeonData Data = new();
+    public ProceduralData Data = new();
 
     [DataField]
     public List<ProceduralMetaLayer> Layers = new();
@@ -87,7 +89,7 @@ public sealed partial class ProceduralComponent : Component
     /// Data for this meta-layer.
     /// </summary>
     [DataField]
-    public DungeonData Data = new();
+    public ProceduralData Data = new();
 }
 
 
@@ -138,7 +140,7 @@ public sealed class ProceduralMetaLayer()
     /// Chunks that are currently loaded.
     /// </summary>
     [DataField]
-    public HashSet<Vector2i> LoadedChunks = new();
+    public Dictionary<Vector2i, ProceduralMetaChunk> LoadedChunks = new();
 
     /// <summary>
     /// Chunks that have been modified and need to persist.
@@ -150,6 +152,18 @@ public sealed class ProceduralMetaLayer()
     /// Chunks that are no longer in range and are pending unload.
     /// </summary>
     public Dictionary<Vector2i, CancellationTokenSource> UnloadingChunks = new();
+}
+
+/// <summary>
+/// Contains the prototypes and setup data for a meta chunk. Used to check if anything has changed.
+/// </summary>
+public record struct ProceduralMetaChunkData()
+{
+    public List<(Vector2i Index, Tile Tile)> Tiles = new();
+
+    public List<(EntityCoordinates Coordinates, Decal Decal)> Decals = new();
+
+    public List<(EntityCoordinates Coordinates, EntityPrototype Entity)> Entities = new();
 }
 
 [Flags]

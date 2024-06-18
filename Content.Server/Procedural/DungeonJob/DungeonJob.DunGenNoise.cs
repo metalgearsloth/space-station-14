@@ -14,7 +14,7 @@ public sealed partial class DungeonJob
     /// <summary>
     /// <see cref="NoiseDunGen"/>
     /// </summary>
-    private async Task<Dungeon> GenerateNoiseDungeon(Vector2i position, DungeonData data, NoiseDunGen dungen, HashSet<Vector2i> reservedTiles, int seed)
+    private async Task<Dungeon> GenerateNoiseDungeon(Vector2i position, ProceduralData data, NoiseDunGen dungen, HashSet<Vector2i> reservedTiles, int seed)
     {
         var rand = new Random(seed);
         var tiles = new List<(Vector2i, Tile)>();

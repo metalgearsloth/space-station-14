@@ -14,10 +14,10 @@ public sealed partial class DungeonJob
     /// <summary>
     /// <see cref="PrefabDunGen"/>
     /// </summary>
-    private async Task<Dungeon> GeneratePrefabDungeon(Vector2i position, DungeonData data, PrefabDunGen prefab, HashSet<Vector2i> reservedTiles, int seed)
+    private async Task<Dungeon> GeneratePrefabDungeon(Vector2i position, ProceduralData data, PrefabDunGen prefab, HashSet<Vector2i> reservedTiles, int seed)
     {
-        if (!data.Tiles.TryGetValue(DungeonDataKey.FallbackTile, out var tileProto) ||
-            !data.Whitelists.TryGetValue(DungeonDataKey.Rooms, out var roomWhitelist))
+        if (!data.Tiles.TryGetValue(ProceduralDataKey.FallbackTile, out var tileProto) ||
+            !data.Whitelists.TryGetValue(ProceduralDataKey.Rooms, out var roomWhitelist))
         {
             LogDataError(typeof(PrefabDunGen));
             return Dungeon.Empty;

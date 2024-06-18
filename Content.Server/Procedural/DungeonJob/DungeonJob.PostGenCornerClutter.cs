@@ -12,9 +12,9 @@ public sealed partial class DungeonJob
     /// <summary>
     /// <see cref="CornerClutterPostGen"/>
     /// </summary>
-    private async Task PostGen(CornerClutterPostGen gen, DungeonData data, Dungeon dungeon, HashSet<Vector2i> reservedTiles, Random random)
+    private async Task PostGen(CornerClutterPostGen gen, ProceduralData data, Dungeon dungeon, HashSet<Vector2i> reservedTiles, Random random)
     {
-        if (!data.SpawnGroups.TryGetValue(DungeonDataKey.CornerClutter, out var corner))
+        if (!data.SpawnGroups.TryGetValue(ProceduralDataKey.CornerClutter, out var corner))
         {
             _sawmill.Error(Environment.StackTrace);
             return;

@@ -12,10 +12,10 @@ public sealed partial class DungeonJob
     /// <summary>
     /// <see cref="JunctionPostGen"/>
     /// </summary>
-    private async Task PostGen(JunctionPostGen gen, DungeonData data, Dungeon dungeon, HashSet<Vector2i> reservedTiles, Random random)
+    private async Task PostGen(JunctionPostGen gen, ProceduralData data, Dungeon dungeon, HashSet<Vector2i> reservedTiles, Random random)
     {
-        if (!data.Tiles.TryGetValue(DungeonDataKey.FallbackTile, out var tileProto) ||
-            !data.SpawnGroups.TryGetValue(DungeonDataKey.Junction, out var junctionProto))
+        if (!data.Tiles.TryGetValue(ProceduralDataKey.FallbackTile, out var tileProto) ||
+            !data.SpawnGroups.TryGetValue(ProceduralDataKey.Junction, out var junctionProto))
         {
             _sawmill.Error($"Dungeon data keys are missing for {nameof(gen)}");
             return;

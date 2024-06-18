@@ -12,7 +12,7 @@ public sealed partial class DungeonJob
     /// <see cref="FillGridDunGen"/>
     /// </summary>
     private async Task GenerateFillDungeon(Vector2i position,
-        DungeonData data,
+        ProceduralData data,
         FillGridDunGen dungen,
         HashSet<Vector2i> reservedTiles,
         int seed)

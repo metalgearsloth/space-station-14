@@ -24,10 +24,10 @@ public sealed partial class DungeonJob
     /// <summary>
     /// <see cref="ExternalWindowPostGen"/>
     /// </summary>
-    private async Task PostGen(ExternalWindowPostGen gen, DungeonData data, Dungeon dungeon, HashSet<Vector2i> reservedTiles, Random random)
+    private async Task PostGen(ExternalWindowPostGen gen, ProceduralData data, Dungeon dungeon, HashSet<Vector2i> reservedTiles, Random random)
     {
-        if (!data.Tiles.TryGetValue(DungeonDataKey.FallbackTile, out var tileProto) ||
-            !data.SpawnGroups.TryGetValue(DungeonDataKey.Window, out var windowGroup))
+        if (!data.Tiles.TryGetValue(ProceduralDataKey.FallbackTile, out var tileProto) ||
+            !data.SpawnGroups.TryGetValue(ProceduralDataKey.Window, out var windowGroup))
         {
             _sawmill.Error($"Unable to get dungeon data for {nameof(gen)}");
             return;

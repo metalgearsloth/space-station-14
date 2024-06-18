@@ -11,16 +11,16 @@ public sealed partial class DungeonJob
     /// <summary>
     /// <see cref="WallMountPostGen"/>
     /// </summary>
-    private async Task PostGen(WallMountPostGen gen, DungeonData data, Dungeon dungeon, HashSet<Vector2i> reservedTiles, Random random)
+    private async Task PostGen(WallMountPostGen gen, ProceduralData data, Dungeon dungeon, HashSet<Vector2i> reservedTiles, Random random)
     {
-        if (!data.Tiles.TryGetValue(DungeonDataKey.FallbackTile, out var tileProto))
+        if (!data.Tiles.TryGetValue(ProceduralDataKey.FallbackTile, out var tileProto))
         {
             _sawmill.Error($"Tried to run {nameof(WallMountPostGen)} without any dungeon data set which is unsupported");
             return;
         }
 
         var tileDef = _prototype.Index(tileProto);
-        data.SpawnGroups.TryGetValue(DungeonDataKey.WallMounts, out var spawnProto);
+        data.SpawnGroups.TryGetValue(ProceduralDataKey.WallMounts, out var spawnProto);
 
         var checkedTiles = new HashSet<Vector2i>();
         var allExterior = new HashSet<Vector2i>(dungeon.CorridorExteriorTiles);

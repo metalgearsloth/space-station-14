@@ -13,7 +13,7 @@ public sealed partial class DungeonJob
     /// <summary>
     /// <see cref="BiomePostGen"/>
     /// </summary>
-    private async Task PostGen(BiomePostGen postGen, DungeonData data, Dungeon dungeon, HashSet<Vector2i> reservedTiles, Random random)
+    private async Task PostGen(BiomePostGen postGen, ProceduralData data, Dungeon dungeon, HashSet<Vector2i> reservedTiles, Random random)
     {
         if (_entManager.TryGetComponent(_gridUid, out BiomeComponent? biomeComp))
             return;

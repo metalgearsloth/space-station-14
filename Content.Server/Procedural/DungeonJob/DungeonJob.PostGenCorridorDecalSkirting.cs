@@ -13,9 +13,9 @@ public sealed partial class DungeonJob
     /// <summary>
     /// <see cref="CorridorDecalSkirtingPostGen"/>
     /// </summary>
-    private async Task PostGen(CorridorDecalSkirtingPostGen decks, DungeonData data, Dungeon dungeon, HashSet<Vector2i> reservedTiles, Random random)
+    private async Task PostGen(CorridorDecalSkirtingPostGen decks, ProceduralData data, Dungeon dungeon, HashSet<Vector2i> reservedTiles, Random random)
     {
-        if (!data.Colors.TryGetValue(DungeonDataKey.Decals, out var color))
+        if (!data.Colors.TryGetValue(ProceduralDataKey.Decals, out var color))
         {
             _sawmill.Error(Environment.StackTrace);
         }

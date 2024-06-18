@@ -12,10 +12,10 @@ public sealed partial class DungeonJob
     /// <summary>
     /// <see cref="DungeonEntrancePostGen"/>
     /// </summary>
-    private async Task PostGen(DungeonEntrancePostGen gen, DungeonData data, Dungeon dungeon, HashSet<Vector2i> reservedTiles, Random random)
+    private async Task PostGen(DungeonEntrancePostGen gen, ProceduralData data, Dungeon dungeon, HashSet<Vector2i> reservedTiles, Random random)
     {
-        if (!data.Tiles.TryGetValue(DungeonDataKey.FallbackTile, out var tileProto) ||
-            !data.SpawnGroups.TryGetValue(DungeonDataKey.Entrance, out var entrance))
+        if (!data.Tiles.TryGetValue(ProceduralDataKey.FallbackTile, out var tileProto) ||
+            !data.SpawnGroups.TryGetValue(ProceduralDataKey.Entrance, out var entrance))
         {
             LogDataError(typeof(DungeonEntrancePostGen));
             return;

@@ -15,7 +15,7 @@ public sealed partial class DungeonJob
     /// <summary>
     /// <see cref="BiomeMarkerLayerPostGen"/>
     /// </summary>
-    private async Task PostGen(BiomeMarkerLayerPostGen postGen, DungeonData data, Dungeon dungeon, HashSet<Vector2i> reservedTiles, Random random)
+    private async Task PostGen(BiomeMarkerLayerPostGen postGen, ProceduralData data, Dungeon dungeon, HashSet<Vector2i> reservedTiles, Random random)
     {
         if (!_entManager.TryGetComponent(_gridUid, out BiomeComponent? biomeComp))
             return;

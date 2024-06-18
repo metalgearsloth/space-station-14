@@ -14,9 +14,9 @@ public sealed partial class DungeonJob
     /// <summary>
     /// <see cref="WormCorridorPostGen"/>
     /// </summary>
-    private async Task PostGen(WormCorridorPostGen gen, DungeonData data, Dungeon dungeon, HashSet<Vector2i> reservedTiles, Random random)
+    private async Task PostGen(WormCorridorPostGen gen, ProceduralData data, Dungeon dungeon, HashSet<Vector2i> reservedTiles, Random random)
     {
-        if (!data.Tiles.TryGetValue(DungeonDataKey.FallbackTile, out var tileProto) || !_prototype.TryIndex(tileProto, out var tileDef))
+        if (!data.Tiles.TryGetValue(ProceduralDataKey.FallbackTile, out var tileProto) || !_prototype.TryIndex(tileProto, out var tileDef))
         {
             _sawmill.Error($"Tried to run {nameof(WormCorridorPostGen)} without any dungeon data set which is unsupported");
             return;

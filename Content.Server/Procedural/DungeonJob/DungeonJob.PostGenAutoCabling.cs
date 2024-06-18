@@ -12,9 +12,9 @@ public sealed partial class DungeonJob
     /// <summary>
     /// <see cref="AutoCablingPostGen"/>
     /// </summary>
-    private async Task PostGen(AutoCablingPostGen gen, DungeonData data, Dungeon dungeon, HashSet<Vector2i> reservedTiles, Random random)
+    private async Task PostGen(AutoCablingPostGen gen, ProceduralData data, Dungeon dungeon, HashSet<Vector2i> reservedTiles, Random random)
     {
-        if (!data.Entities.TryGetValue(DungeonDataKey.Cabling, out var ent))
+        if (!data.Entities.TryGetValue(ProceduralDataKey.Cabling, out var ent))
         {
             LogDataError(typeof(AutoCablingPostGen));
             return;

@@ -12,9 +12,9 @@ public sealed partial class DungeonJob
     /// <summary>
     /// <see cref="CorridorPostGen"/>
     /// </summary>
-    private async Task PostGen(CorridorPostGen gen, DungeonData data, Dungeon dungeon, HashSet<Vector2i> reservedTiles, Random random)
+    private async Task PostGen(CorridorPostGen gen, ProceduralData data, Dungeon dungeon, HashSet<Vector2i> reservedTiles, Random random)
     {
-        if (!data.Tiles.TryGetValue(DungeonDataKey.FallbackTile, out var tileProto))
+        if (!data.Tiles.TryGetValue(ProceduralDataKey.FallbackTile, out var tileProto))
         {
             LogDataError(typeof(CorridorPostGen));
             return;

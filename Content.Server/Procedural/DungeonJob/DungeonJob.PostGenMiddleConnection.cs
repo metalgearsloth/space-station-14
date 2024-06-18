@@ -13,17 +13,17 @@ public sealed partial class DungeonJob
     /// <summary>
     /// <see cref="MiddleConnectionPostGen"/>
     /// </summary>
-    private async Task PostGen(MiddleConnectionPostGen gen, DungeonData data, Dungeon dungeon, HashSet<Vector2i> reservedTiles, Random random)
+    private async Task PostGen(MiddleConnectionPostGen gen, ProceduralData data, Dungeon dungeon, HashSet<Vector2i> reservedTiles, Random random)
     {
-        if (!data.Tiles.TryGetValue(DungeonDataKey.FallbackTile, out var tileProto) ||
-            !data.SpawnGroups.TryGetValue(DungeonDataKey.Entrance, out var entranceProto) ||
+        if (!data.Tiles.TryGetValue(ProceduralDataKey.FallbackTile, out var tileProto) ||
+            !data.SpawnGroups.TryGetValue(ProceduralDataKey.Entrance, out var entranceProto) ||
             !_prototype.TryIndex(entranceProto, out var entrance))
         {
             _sawmill.Error($"Tried to run {nameof(MiddleConnectionPostGen)} without any dungeon data set which is unsupported");
             return;
         }
 
-        data.SpawnGroups.TryGetValue(DungeonDataKey.EntranceFlank, out var flankProto);
+        data.SpawnGroups.TryGetValue(ProceduralDataKey.EntranceFlank, out var flankProto);
         _prototype.TryIndex(flankProto, out var flank);
 
         // Grab all of the room bounds

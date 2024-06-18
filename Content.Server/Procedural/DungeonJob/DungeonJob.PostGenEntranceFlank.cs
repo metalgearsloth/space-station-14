@@ -13,10 +13,10 @@ public sealed partial class DungeonJob
     /// <summary>
     /// <see cref="EntranceFlankPostGen"/>
     /// </summary>
-    private async Task PostGen(EntranceFlankPostGen gen, DungeonData data, Dungeon dungeon, HashSet<Vector2i> reservedTiles, Random random)
+    private async Task PostGen(EntranceFlankPostGen gen, ProceduralData data, Dungeon dungeon, HashSet<Vector2i> reservedTiles, Random random)
     {
-        if (!data.Tiles.TryGetValue(DungeonDataKey.FallbackTile, out var tileProto) ||
-            !data.SpawnGroups.TryGetValue(DungeonDataKey.EntranceFlank, out var flankProto))
+        if (!data.Tiles.TryGetValue(ProceduralDataKey.FallbackTile, out var tileProto) ||
+            !data.SpawnGroups.TryGetValue(ProceduralDataKey.EntranceFlank, out var flankProto))
         {
             _sawmill.Error($"Unable to get dungeon data for {nameof(gen)}");
             return;
