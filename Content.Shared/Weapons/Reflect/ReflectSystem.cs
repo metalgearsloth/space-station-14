@@ -1,20 +1,17 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using Content.Shared.Administration.Logs;
-using Content.Shared.Alert;
 using Content.Shared.Audio;
-using Content.Shared.Damage.Components;
 using Content.Shared.Database;
-using Content.Shared.Gravity;
 using Content.Shared.Hands;
 using Content.Shared.Inventory;
 using Content.Shared.Inventory.Events;
 using Content.Shared.Item.ItemToggle.Components;
 using Content.Shared.Popups;
 using Content.Shared.Projectiles;
-using Content.Shared.Standing;
 using Content.Shared.Weapons.Ranged.Components;
 using Content.Shared.Weapons.Ranged.Events;
+using Robust.Shared.Audio;
 using Robust.Shared.Audio.Systems;
 using Robust.Shared.Network;
 using Robust.Shared.Physics.Components;
@@ -38,9 +35,6 @@ public sealed class ReflectSystem : EntitySystem
     [Dependency] private readonly SharedAudioSystem _audio = default!;
     [Dependency] private readonly SharedTransformSystem _transform = default!;
     [Dependency] private readonly InventorySystem _inventorySystem = default!;
-    [Dependency] private readonly SharedGravitySystem _gravity = default!;
-    [Dependency] private readonly StandingStateSystem _standing = default!;
-    [Dependency] private readonly AlertsSystem _alerts = default!;
 
     [ValidatePrototypeId<AlertPrototype>]
     private const string DeflectingAlert = "Deflecting";
@@ -163,6 +157,7 @@ public sealed class ReflectSystem : EntitySystem
         // If this dice roll fails, the shot isn't deflected
         if (!_random.Prob(GetReflectChance(reflector)))
             return false;
+        }
 
         // Below handles what happens after being deflected.
         var rotation = _random.NextAngle(-reflector.Comp.Spread / 2, reflector.Comp.Spread / 2).Opposite();
@@ -322,8 +317,6 @@ public sealed class ReflectSystem : EntitySystem
                 continue;
 
             EnsureComp<ReflectUserComponent>(user);
-            EnableAlert(user);
-
             return;
         }
 
