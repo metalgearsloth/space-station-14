@@ -16,15 +16,6 @@
         Slash: 15
     soundHit:
         path: /Audio/Weapons/bladeslice.ogg
-  - type: Reflect
-    enabled: true
-    # Design intent: a robust captain or tot can sacrifice movement to make the most of this weapon, but they have to
-    # really restrict themselves to walking speed or less.
-    reflectProb: 0.5
-    velocityBeforeNotMaxProb: 1.0
-    velocityBeforeMinProb: 3.0
-    minReflectProb: 0.1
-    spread: 90
   - type: Item
     size: Normal
     sprite: Objects/Weapons/Melee/captain_sabre.rsi
