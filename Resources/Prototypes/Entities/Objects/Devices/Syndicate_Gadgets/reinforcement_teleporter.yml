@@ -23,14 +23,6 @@
 
 - type: entity
   parent: ReinforcementRadioSyndicate
-  id: ReinforcementRadioSyndicateNukeops # Reinforcement radio exclusive to nukeops uplink
-  suffix: NukeOps
-  components:
-  - type: GhostRoleMobSpawner
-    prototype: MobHumanSyndicateAgentNukeops
-
-- type: entity
-  parent: ReinforcementRadioSyndicate
   id: ReinforcementRadioSyndicateAncestor
   name: syndicate genetic ancestor reinforcement radio
   description: Calls in a specially trained ancestor of your choosing to assist you.
