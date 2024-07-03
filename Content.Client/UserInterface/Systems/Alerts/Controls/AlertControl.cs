@@ -107,8 +107,7 @@ namespace Content.Client.UserInterface.Systems.Alerts.Controls
 
         private void SetupIcon()
         {
-            if (!_entityManager.Deleted(_spriteViewEntity))
-                _entityManager.QueueDeleteEntity(_spriteViewEntity);
+            _entityManager.TryQueueDeleteEntity(_spriteViewEntity);
 
             _spriteViewEntity = _entityManager.Spawn(Alert.AlertViewEntity);
             if (_entityManager.TryGetComponent<SpriteComponent>(_spriteViewEntity, out var sprite))
@@ -130,17 +129,7 @@ namespace Content.Client.UserInterface.Systems.Alerts.Controls
         protected override void ExitedTree()
         {
             base.ExitedTree();
-
-            if (!_entityManager.Deleted(_spriteViewEntity))
-                _entityManager.QueueDeleteEntity(_spriteViewEntity);
-        }
-
-        protected override void Dispose(bool disposing)
-        {
-            base.Dispose(disposing);
-
-            if (!_entityManager.Deleted(_spriteViewEntity))
-                _entityManager.QueueDeleteEntity(_spriteViewEntity);
+            _entityManager.TryQueueDeleteEntity(_spriteViewEntity);
         }
     }
 

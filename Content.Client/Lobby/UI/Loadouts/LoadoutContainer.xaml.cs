@@ -16,7 +16,9 @@ public sealed partial class LoadoutContainer : BoxContainer
     [Dependency] private readonly IEntityManager _entManager = default!;
     [Dependency] private readonly IPrototypeManager _protoManager = default!;
 
-    private readonly EntityUid? _entity;
+    private ProtoId<LoadoutPrototype> _proto;
+
+    private EntityUid? _entity;
 
     public Button Select => SelectButton;
 
@@ -34,7 +36,14 @@ public sealed partial class LoadoutContainer : BoxContainer
             SelectButton.TooltipSupplier = _ => tooltip;
         }
 
-        if (_protoManager.TryIndex(proto, out var loadProto))
+        _proto = proto;
+    }
+
+    protected override void EnteredTree()
+    {
+        base.EnteredTree();
+
+        if (_protoManager.TryIndex(_proto, out var loadProto))
         {
             var ent = _entManager.System<LoadoutSystem>().GetFirstOrNull(loadProto);
 
@@ -48,6 +57,13 @@ public sealed partial class LoadoutContainer : BoxContainer
                 TooltipSupplier = _ => spriteTooltip;
             }
         }
+    }
+
+    protected override void ExitedTree()
+    {
+        base.ExitedTree();
+
+        _entManager.TryQueueDeleteEntity(_entity);
     }
 
     protected override void Dispose(bool disposing)
