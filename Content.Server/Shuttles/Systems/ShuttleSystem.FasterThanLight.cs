@@ -719,7 +719,8 @@ public sealed partial class ShuttleSystem
         if (!Resolve(targetCoordinates.EntityId, ref targetXform) ||
             targetXform.MapUid == null ||
             !targetXform.MapUid.Value.IsValid() ||
-            !Resolve(shuttleUid, ref xform))
+            !Resolve(shuttleUid, ref xform) ||
+            !TryComp(shuttleUid, out MapGridComponent? shuttleGrid))
         {
             return false;
         }
@@ -727,7 +728,7 @@ public sealed partial class ShuttleSystem
         // We essentially expand the Box2 of the target area until nothing else is added then we know it's valid.
         // Can't just get an AABB of every grid as we may spawn very far away.
         var nearbyGrids = new HashSet<EntityUid>();
-        var shuttleAABB = Comp<MapGridComponent>(shuttleUid).LocalAABB;
+        var shuttleAABB = shuttleGrid.LocalAABB;
 
         // Start with small point.
         // If our target pos is offset we mot even intersect our target's AABB so we don't include it.
@@ -824,14 +825,6 @@ public sealed partial class ShuttleSystem
             spawnPos = _transform.GetWorldPosition(targetXform);
         }
 
-        var offset = Vector2.Zero;
-
-        // Offset it because transform does not correspond to AABB position.
-        if (TryComp(shuttleUid, out MapGridComponent? shuttleGrid))
-        {
-            offset = -shuttleGrid.LocalAABB.Center;
-        }
-
         if (!HasComp<MapComponent>(targetXform.GridUid))
         {
             angle = _random.NextAngle();
@@ -840,6 +833,9 @@ public sealed partial class ShuttleSystem
         {
             angle = Angle.Zero;
         }
+
+        // Offset it because transform does not correspond to AABB position.
+        var offset= -shuttleGrid.LocalAABB.Center;
 
         // Rotate our localcenter around so we spawn exactly where we "think" we should (center of grid on the dot).
         var transform = new Transform(spawnPos, angle);
