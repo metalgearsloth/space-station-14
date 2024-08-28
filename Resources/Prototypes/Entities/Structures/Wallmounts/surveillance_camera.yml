@@ -20,6 +20,8 @@
         hard: false
         mask:
         - GhostImpassable
+  - type: VisualizerCollide
+    fixture: light
   - type: LightOnCollide
   - type: PointLight
     enabled: false
@@ -56,6 +58,9 @@
     layers:
       - map: [ "enum.SurveillanceCameraVisualsKey.Layer" ]
         state: camera
+        cycle: true
+      - state: camera_in_use
+        visible: false
         cycle: true
   - type: Appearance
   - type: SurveillanceCameraVisuals

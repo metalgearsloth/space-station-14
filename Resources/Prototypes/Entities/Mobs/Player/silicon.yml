@@ -290,6 +290,16 @@
   noSpawn: true
   suffix: DO NOT MAP
   components:
+  - type: Fixtures
+    fixtures:
+      cameraTrigger:
+        shape:
+          !type:PhysShapeCircle
+          radius: 0.35
+        density: 80
+        hard: false
+        layer:
+        - GhostImpassable
   - type: Eye
     pvsScale: 1.5
   - type: Visibility
