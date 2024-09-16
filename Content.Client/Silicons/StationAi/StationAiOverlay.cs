@@ -1,11 +1,14 @@
 using System.Numerics;
+using Content.Shared.Physics;
 using Content.Shared.Silicons.StationAi;
 using Robust.Client.Graphics;
 using Robust.Client.Player;
 using Robust.Shared.Enums;
 using Robust.Shared.Map.Components;
 using Robust.Shared.Physics;
+using Robust.Shared.Physics.Systems;
 using Robust.Shared.Prototypes;
+using Robust.Shared.Random;
 using Robust.Shared.Timing;
 
 namespace Content.Client.Silicons.StationAi;
@@ -58,7 +61,7 @@ public sealed class StationAiOverlay : Overlay
         var invMatrix = args.Viewport.GetWorldToLocalMatrix();
         _accumulator -= (float) _timing.FrameTime.TotalSeconds;
 
-        if (grid != null && broadphase != null)
+        if (grid != null && broadphase != null && playerEnt != null && playerXform != null)
         {
             var lookups = _entManager.System<EntityLookupSystem>();
             var xforms = _entManager.System<SharedTransformSystem>();
@@ -70,8 +73,10 @@ public sealed class StationAiOverlay : Overlay
                 _entManager.System<StationAiVisionSystem>().GetView((gridUid, broadphase, grid), worldBounds, _visibleTiles);
             }
 
+            var playerMatrix = Matrix3x2.CreateTranslation(xforms.GetWorldPosition(playerXform));
             var gridMatrix = xforms.GetWorldMatrix(gridUid);
             var matty =  Matrix3x2.Multiply(gridMatrix, invMatrix);
+            var matty2 =  Matrix3x2.Multiply(playerMatrix, invMatrix);
 
             // Draw visible tiles to stencil
             worldHandle.RenderInRenderTarget(_stencilTexture!, () =>
@@ -90,10 +95,22 @@ public sealed class StationAiOverlay : Overlay
             worldHandle.RenderInRenderTarget(_staticTexture!,
             () =>
             {
-                worldHandle.SetTransform(invMatrix);
-                var shader = _proto.Index<ShaderPrototype>("CameraStatic").Instance();
-                worldHandle.UseShader(shader);
-                worldHandle.DrawRect(worldBounds, Color.White);
+                worldHandle.SetTransform(matty2);
+                const int Iterations = 100;
+                var dotSize = 0.05f;
+                var change = new Angle(Math.Tau / Iterations);
+                var playerPos = playerMatrix.Position();
+                var lastDirection = IoCManager.Resolve<IRobustRandom>().NextAngle();
+
+                for (var i = 0; i < Iterations; i++)
+                {
+                    lastDirection += change;
+
+                    var distance = _entManager.System<SharedPhysicsSystem>()
+                        .IntersectRayPenetration(playerXform.MapID, new CollisionRay(playerPos, lastDirection.ToVec(), (int) CollisionGroup.Impassable), 25f, ignoredEnt: playerEnt);
+
+                    worldHandle.DrawRect(Box2.CenteredAround(lastDirection.ToVec() * distance, new Vector2(dotSize, dotSize)), Color.LimeGreen);
+                }
             },
             Color.Black);
         }
