@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Numerics;
 using Content.Shared.Physics;
 using Content.Shared.Silicons.StationAi;
@@ -31,6 +32,8 @@ public sealed class StationAiOverlay : Overlay
     private float _updateRate = 1f / 30f;
     private float _accumulator;
 
+    private List<Vector2> _lidarPoints = new();
+
     public StationAiOverlay()
     {
         IoCManager.InjectDependencies(this);
@@ -53,6 +56,12 @@ public sealed class StationAiOverlay : Overlay
         var worldBounds = args.WorldBounds;
 
         var playerEnt = _player.LocalEntity;
+
+        if (_entManager.TryGetComponent<EyeComponent>(playerEnt, out var horse) && horse.Target != null)
+        {
+            playerEnt = horse.Target;
+        }
+
         _entManager.TryGetComponent(playerEnt, out TransformComponent? playerXform);
         var gridUid = playerXform?.GridUid ?? EntityUid.Invalid;
         _entManager.TryGetComponent(gridUid, out MapGridComponent? grid);
@@ -68,7 +77,6 @@ public sealed class StationAiOverlay : Overlay
 
             if (_accumulator <= 0f)
             {
-                _accumulator = MathF.Max(0f, _accumulator + _updateRate);
                 _visibleTiles.Clear();
                 _entManager.System<StationAiVisionSystem>().GetView((gridUid, broadphase, grid), worldBounds, _visibleTiles);
             }
@@ -95,21 +103,39 @@ public sealed class StationAiOverlay : Overlay
             worldHandle.RenderInRenderTarget(_staticTexture!,
             () =>
             {
-                worldHandle.SetTransform(matty2);
-                const int Iterations = 100;
-                var dotSize = 0.05f;
-                var change = new Angle(Math.Tau / Iterations);
-                var playerPos = playerMatrix.Position();
-                var lastDirection = IoCManager.Resolve<IRobustRandom>().NextAngle();
+                worldHandle.SetTransform(invMatrix);
 
-                for (var i = 0; i < Iterations; i++)
+                if (_accumulator <= 0)
                 {
-                    lastDirection += change;
+                    _lidarPoints.Clear();
+                    const int Iterations = 100;
+                    var change = new Angle(Math.Tau / Iterations);
+                    var playerPos = playerMatrix.Translation;
+                    var lastDirection = Angle.Zero;
 
-                    var distance = _entManager.System<SharedPhysicsSystem>()
-                        .IntersectRayPenetration(playerXform.MapID, new CollisionRay(playerPos, lastDirection.ToVec(), (int) CollisionGroup.Impassable), 25f, ignoredEnt: playerEnt);
+                    for (var i = 0; i < Iterations; i++)
+                    {
+                        lastDirection += change;
 
-                    worldHandle.DrawRect(Box2.CenteredAround(lastDirection.ToVec() * distance, new Vector2(dotSize, dotSize)), Color.LimeGreen);
+                        var result = _entManager.System<RayCastSystem>()
+                            .CastRayClosest(playerXform.MapID, playerPos, lastDirection.ToVec() * 25f, new QueryFilter()
+                            {
+                                MaskBits = (int) CollisionGroup.Impassable,
+                                IsIgnored = uid => uid == playerEnt,
+                            });
+
+                        if (result.Hit)
+                        {
+                            _lidarPoints.Add(result.Results.First().Point);
+                        }
+                    }
+                }
+
+                var dotSize = 0.05f;
+
+                foreach (var point in _lidarPoints)
+                {
+                    worldHandle.DrawRect(Box2.CenteredAround(point, new Vector2(dotSize, dotSize)), Color.LimeGreen);
                 }
             },
             Color.Black);
@@ -128,6 +154,11 @@ public sealed class StationAiOverlay : Overlay
                 worldHandle.SetTransform(Matrix3x2.Identity);
                 worldHandle.DrawRect(worldBounds, Color.Black);
             }, Color.Black);
+        }
+
+        if (_accumulator <= 0f)
+        {
+            _accumulator = MathF.Max(0f, _accumulator + _updateRate);
         }
 
         // Use the lighting as a mask
