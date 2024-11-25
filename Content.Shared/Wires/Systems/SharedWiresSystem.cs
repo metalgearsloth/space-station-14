@@ -1,7 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
-using Content.Server.Wires;
 using Content.Shared.Administration.Logs;
 using Content.Shared.Construction;
 using Content.Shared.DoAfter;
@@ -17,13 +16,15 @@ using Robust.Shared.Audio.Systems;
 using Robust.Shared.Player;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Random;
+using Robust.Shared.Serialization;
+using WiresComponent = Content.Shared.Wires.Components.WiresComponent;
 
 namespace Content.Shared.Wires;
 
 public abstract partial class SharedWiresSystem : EntitySystem
 {
-    [Dependency] private   readonly IPrototypeManager _protoMan = default!;
-    [Dependency] protected readonly IRobustRandom _random = default!;
+    [Dependency] protected readonly IPrototypeManager ProtoMan = default!;
+    [Dependency] protected readonly IRobustRandom Random = default!;
     [Dependency] protected readonly ISharedAdminLogManager AdminLogger = default!;
     [Dependency] private   readonly ActivatableUISystem _activatableUI = default!;
     [Dependency] protected readonly SharedAppearanceSystem Appearance = default!;
@@ -67,60 +68,6 @@ public abstract partial class SharedWiresSystem : EntitySystem
     private void OnBoltChanged(Entity<WiresComponent> ent, ref DoorBoltChangedEvent args)
     {
         UpdateUserInterface(ent.Owner, ent.Comp);
-    }
-
-    private List<Wire>? CreateWireSet(EntityUid uid, WireLayout? layout, List<IWireAction> wires, int dummyWires)
-    {
-        if (wires.Count == 0)
-            return null;
-
-        List<WireColor> colors =
-            new((WireColor[]) Enum.GetValues(typeof(WireColor)));
-
-        List<WireLetter> letters =
-            new((WireLetter[]) Enum.GetValues(typeof(WireLetter)));
-
-
-        var wireSet = new List<Wire>();
-        for (var i = 0; i < wires.Count; i++)
-        {
-            wireSet.Add(CreateWire(uid, wires[i], i, layout, colors, letters));
-        }
-
-        for (var i = 1; i <= dummyWires; i++)
-        {
-            wireSet.Add(CreateWire(uid, null, wires.Count + i, layout, colors, letters));
-        }
-
-        return wireSet;
-    }
-
-    private Wire CreateWire(EntityUid uid, IWireAction? action, int position, WireLayout? layout, List<WireColor> colors, List<WireLetter> letters)
-    {
-        WireLetter letter;
-        WireColor color;
-
-        if (layout != null
-            && layout.Specifications.TryGetValue(position, out var spec))
-        {
-            color = spec.Color;
-            letter = spec.Letter;
-            colors.Remove(color);
-            letters.Remove(letter);
-        }
-        else
-        {
-            color = colors.Count == 0 ? WireColor.Red : _random.PickAndTake(colors);
-            letter = letters.Count == 0 ? WireLetter.α : _random.PickAndTake(letters);
-        }
-
-        return new Wire(
-            uid,
-            false,
-            color,
-            letter,
-            position,
-            action);
     }
 
     #region DoAfters
@@ -366,12 +313,12 @@ public abstract partial class SharedWiresSystem : EntitySystem
         Span<char> data = stackalloc char[9];
         data[4] = '-';
 
-        if (_random.Prob(0.01f))
+        if (Random.Prob(0.01f))
         {
             for (var i = 0; i < 4; i++)
             {
                 // Cyrillic Letters
-                data[i] = (char) _random.Next(0x0410, 0x0430);
+                data[i] = (char) Random.Next(0x0410, 0x0430);
             }
         }
         else
@@ -379,14 +326,14 @@ public abstract partial class SharedWiresSystem : EntitySystem
             for (var i = 0; i < 4; i++)
             {
                 // Letters
-                data[i] = (char) _random.Next(0x41, 0x5B);
+                data[i] = (char) Random.Next(0x41, 0x5B);
             }
         }
 
         for (var i = 5; i < 9; i++)
         {
             // Digits
-            data[i] = (char) _random.Next(0x30, 0x3A);
+            data[i] = (char) Random.Next(0x30, 0x3A);
         }
 
         wires.SerialNumber = new string(data);
@@ -711,50 +658,48 @@ public abstract partial class SharedWiresSystem : EntitySystem
     #endregion
 }
 
-public sealed class Wire
+[DataDefinition, Serializable, NetSerializable]
+public sealed partial class Wire
 {
-    /// <summary>
-    /// The entity that registered the wire.
-    /// </summary>
-    public EntityUid Owner { get; }
-
     /// <summary>
     /// Whether the wire is cut.
     /// </summary>
-    public bool IsCut { get; set; }
+    [DataField]
+    public bool IsCut;
 
     /// <summary>
     /// Used in client-server communication to identify a wire without telling the client what the wire does.
     /// </summary>
-    [ViewVariables]
-    public int Id { get; set; }
+    [DataField]
+    public int Id;
 
     /// <summary>
     /// The original position of this wire in the prototype.
     /// </summary>
-    [ViewVariables]
-    public int OriginalPosition { get; set; }
+    [DataField]
+    public int OriginalPosition;
 
     /// <summary>
     /// The color of the wire.
     /// </summary>
-    [ViewVariables]
-    public WireColor Color { get; }
+    [DataField]
+    public WireColor Color;
 
     /// <summary>
     /// The greek letter shown below the wire.
     /// </summary>
-    [ViewVariables]
-    public WireLetter Letter { get; }
+    [DataField]
+    public WireLetter Letter;
 
     /// <summary>
     ///     The action that this wire performs when mended, cut or puled. This also determines the status lights that this wire adds.
     /// </summary>
+    // NOOP on client.
+    [field: NonSerialized]
     public IWireAction? Action { get; set; }
 
-    public Wire(EntityUid owner, bool isCut, WireColor color, WireLetter letter, int position, IWireAction? action)
+    public Wire(bool isCut, WireColor color, WireLetter letter, int position, IWireAction? action)
     {
-        Owner = owner;
         IsCut = isCut;
         Color = color;
         OriginalPosition = position;
@@ -791,30 +736,26 @@ public sealed class TimedWireEvent : EntityEventArgs
     }
 }
 
-public sealed class WireLayout
+[DataDefinition, Serializable, NetSerializable]
+public sealed partial class WireLayout
 {
     // why is this an <int, WireData>?
     // List<T>.Insert panics,
     // and I needed a uniquer key for wires
     // which allows me to have a unified identifier
-    [ViewVariables] public IReadOnlyDictionary<int, WireData> Specifications { get; }
+    [DataField]
+    public Dictionary<int, WireData> Specifications;
 
-    public WireLayout(IReadOnlyDictionary<int, WireData> specifications)
+    public WireLayout(Dictionary<int, WireData> specifications)
     {
         Specifications = specifications;
     }
 
-    public sealed class WireData
+    [DataRecord, Serializable, NetSerializable]
+    public readonly record struct WireData(WireLetter Letter, WireColor Color, int Position)
     {
-        public WireLetter Letter { get; }
-        public WireColor Color { get; }
-        public int Position { get; }
-
-        public WireData(WireLetter letter, WireColor color, int position)
-        {
-            Letter = letter;
-            Color = color;
-            Position = position;
-        }
+        public readonly WireLetter Letter = Letter;
+        public readonly WireColor Color = Color;
+        public readonly int Position = Position;
     }
 }

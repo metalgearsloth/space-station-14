@@ -1,6 +1,11 @@
+using System.Diagnostics.CodeAnalysis;
 using Content.Server.Construction;
 using Content.Server.Construction.Components;
 using Content.Shared.Wires;
+using Content.Shared.Wires.Components;
+using JetBrains.Annotations;
+using Robust.Shared.Map;
+using Robust.Shared.Random;
 
 namespace Content.Server.Wires;
 
@@ -11,10 +16,10 @@ public sealed class WiresSystem : SharedWiresSystem
     public override void Initialize()
     {
         base.Initialize();
-        SubscribeLocalEvent<WiresComponent, MapInitEvent>(OnMapInit);
+        SubscribeLocalEvent<Shared.Wires.Components.WiresComponent, MapInitEvent>(OnMapInit);
     }
 
-    private void OnMapInit(EntityUid uid, WiresComponent component, MapInitEvent args)
+    private void OnMapInit(EntityUid uid, Shared.Wires.Components.WiresComponent component, MapInitEvent args)
     {
         if (!string.IsNullOrEmpty(component.LayoutId))
             SetOrCreateWireLayout(uid, component);
@@ -23,7 +28,7 @@ public sealed class WiresSystem : SharedWiresSystem
             GenerateSerialNumber(uid, component);
 
         if (component.WireSeed == 0)
-            component.WireSeed = _random.Next(1, int.MaxValue);
+            component.WireSeed = Random.Next(1, int.MaxValue);
 
         // Update the construction graph to make sure that it starts on the node specified by WiresPanelSecurityComponent
         if (TryComp<WiresPanelSecurityComponent>(uid, out var wiresPanelSecurity) &&
@@ -51,7 +56,7 @@ public sealed class WiresSystem : SharedWiresSystem
         List<IWireAction> wireActions = new();
         var dummyWires = 0;
 
-        if (!_protoMan.TryIndex(wires.LayoutId, out WireLayoutPrototype? layoutPrototype))
+        if (!ProtoMan.TryIndex(wires.LayoutId, out WireLayoutPrototype? layoutPrototype))
         {
             return;
         }
@@ -65,7 +70,7 @@ public sealed class WiresSystem : SharedWiresSystem
 
         // does the prototype have a parent (and are the wires empty?) if so, we just create
         // a new layout based on that
-        foreach (var parentLayout in _protoMan.EnumerateParents<WireLayoutPrototype>(wires.LayoutId))
+        foreach (var parentLayout in ProtoMan.EnumerateParents<WireLayoutPrototype>(wires.LayoutId))
         {
             if (parentLayout.Wires != null)
             {
@@ -109,13 +114,9 @@ public sealed class WiresSystem : SharedWiresSystem
                     continue;
 
                 var wireType = wire.Action.GetType();
-                if (types.ContainsKey(wireType))
+                if (!types.TryAdd(wireType, 1))
                 {
                     types[wireType] += 1;
-                }
-                else
-                {
-                    types.Add(wireType, 1);
                 }
 
                 // don't care about the result, this should've
@@ -131,7 +132,7 @@ public sealed class WiresSystem : SharedWiresSystem
             {
                 enumeratedList.Add((i, wireSet[i]));
             }
-            _random.Shuffle(enumeratedList);
+            Random.Shuffle(enumeratedList);
 
             for (var i = 0; i < enumeratedList.Count; i++)
             {
@@ -157,5 +158,85 @@ public sealed class WiresSystem : SharedWiresSystem
                 AddLayout(wires.LayoutId, new WireLayout(data));
             }
         }
+    }
+
+    private List<Wire>? CreateWireSet(EntityUid uid, WireLayout? layout, List<IWireAction> wires, int dummyWires)
+    {
+        if (wires.Count == 0)
+            return null;
+
+        List<WireColor> colors =
+            new((WireColor[]) Enum.GetValues(typeof(WireColor)));
+
+        List<WireLetter> letters =
+            new((WireLetter[]) Enum.GetValues(typeof(WireLetter)));
+
+
+        var wireSet = new List<Wire>();
+        for (var i = 0; i < wires.Count; i++)
+        {
+            wireSet.Add(CreateWire(wires[i], i, layout, colors, letters));
+        }
+
+        for (var i = 1; i <= dummyWires; i++)
+        {
+            wireSet.Add(CreateWire(null, wires.Count + i, layout, colors, letters));
+        }
+
+        return wireSet;
+    }
+
+    private Wire CreateWire(IWireAction? action, int position, WireLayout? layout, List<WireColor> colors, List<WireLetter> letters)
+    {
+        WireLetter letter;
+        WireColor color;
+
+        if (layout != null
+            && layout.Specifications.TryGetValue(position, out var spec))
+        {
+            color = spec.Color;
+            letter = spec.Letter;
+            colors.Remove(color);
+            letters.Remove(letter);
+        }
+        else
+        {
+            color = colors.Count == 0 ? WireColor.Red : Random.PickAndTake(colors);
+            letter = letters.Count == 0 ? WireLetter.α : Random.PickAndTake(letters);
+        }
+
+        return new Wire(
+            false,
+            color,
+            letter,
+            position,
+            action);
+    }
+
+    private bool TryGetLayout(string id, [NotNullWhen(true)] out WireLayout? layout)
+    {
+        return GetLayout().Comp.Layouts.TryGetValue(id, out layout);
+    }
+
+    private void AddLayout(string id, WireLayout layout)
+    {
+        var roundLayout = GetLayout();
+
+        roundLayout.Comp.Layouts.Add(id, layout);
+    }
+
+    [Pure]
+    private Entity<WireLayoutComponent> GetLayout()
+    {
+        // Something something singleton compsTM, though some people have been opposed to them.
+        var query = AllEntityQuery<WireLayoutComponent>();
+
+        while (query.MoveNext(out var uid, out var comp))
+        {
+            return (uid, comp);
+        }
+
+        var entUid = Spawn(null, EntityCoordinates.Invalid);
+        return (entUid, AddComp<WireLayoutComponent>(entUid));
     }
 }

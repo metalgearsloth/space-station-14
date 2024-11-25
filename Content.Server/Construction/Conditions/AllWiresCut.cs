@@ -2,6 +2,7 @@
 using Content.Shared.Construction;
 using Content.Shared.Examine;
 using JetBrains.Annotations;
+using WiresComponent = Content.Shared.Wires.Components.WiresComponent;
 
 namespace Content.Server.Construction.Conditions
 {

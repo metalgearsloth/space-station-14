@@ -18,7 +18,7 @@ public sealed partial class CutWireOnMapInitSystem : EntitySystem
 
     private void OnMapInit(Entity<CutWireOnMapInitComponent> entity, ref MapInitEvent args)
     {
-        if (TryComp<WiresComponent>(entity, out var panel) && panel.WiresList.Count > 0)
+        if (TryComp<Shared.Wires.Components.WiresComponent>(entity, out var panel) && panel.WiresList.Count > 0)
         {
             // Pick a random wire
             var targetWire = _random.Pick(panel.WiresList);

@@ -9,5 +9,5 @@ namespace Content.Shared.Wires.Components;
 public sealed partial class WireLayoutComponent : Component
 {
     [DataField, AutoNetworkedField]
-    public readonly Dictionary<string, WireLayout> Layouts = new();
+    public Dictionary<string, WireLayout> Layouts = new();
 }

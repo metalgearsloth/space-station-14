@@ -1,41 +1,42 @@
 using Robust.Shared.Audio;
+using Robust.Shared.GameStates;
 using Robust.Shared.Prototypes;
 
-namespace Content.Server.Wires;
+namespace Content.Shared.Wires.Components;
 
-[RegisterComponent]
+[RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
 public sealed partial class WiresComponent : Component
 {
     /// <summary>
     ///     The name of this entity's internal board.
     /// </summary>
     [DataField]
-    public LocId BoardName { get; set; } = "wires-board-name-default";
+    public LocId BoardName = "wires-board-name-default";
 
     /// <summary>
     ///     The layout ID of this entity's wires.
     /// </summary>
     [DataField(required: true)]
-    public ProtoId<WireLayoutPrototype> LayoutId { get; set; } = default!;
+    public ProtoId<WireLayoutPrototype> LayoutId;
 
     /// <summary>
     ///     The serial number of this board. Randomly generated upon start,
     ///     does not need to be set.
     /// </summary>
-    [ViewVariables]
-    public string? SerialNumber { get; set; }
+    [DataField, AutoNetworkedField]
+    public string? SerialNumber;
 
     /// <summary>
     ///     The seed that dictates the wires appearance, as well as
     ///     the status ordering on the UI client side.
     /// </summary>
-    [ViewVariables]
-    public int WireSeed { get; set; }
+    [DataField, AutoNetworkedField]
+    public int WireSeed;
 
     /// <summary>
     ///     The list of wires currently active on this entity.
     /// </summary>
-    [ViewVariables]
+    [DataField, AutoNetworkedField]
     public List<Wire> WiresList { get; set; } = new();
 
     /// <summary>
