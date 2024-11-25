@@ -1,26 +1,14 @@
-using Content.Shared.Administration.Logs;
 using Content.Shared.Database;
 using Content.Shared.Examine;
 using Content.Shared.Interaction;
-using Content.Shared.Tools.Components;
-using Content.Shared.Tools.Systems;
 using Content.Shared.UserInterface;
-using Robust.Shared.Audio.Systems;
 
 namespace Content.Shared.Wires;
 
-public abstract class SharedWiresSystem : EntitySystem
+public abstract partial class SharedWiresSystem
 {
-    [Dependency] protected readonly ISharedAdminLogManager AdminLogger = default!;
-    [Dependency] private readonly ActivatableUISystem _activatableUI = default!;
-    [Dependency] protected readonly SharedAppearanceSystem Appearance = default!;
-    [Dependency] protected readonly SharedAudioSystem Audio = default!;
-    [Dependency] protected readonly SharedToolSystem Tool = default!;
-
-    public override void Initialize()
+    private void InitializePanel()
     {
-        base.Initialize();
-
         SubscribeLocalEvent<WiresPanelComponent, ComponentStartup>(OnStartup);
         SubscribeLocalEvent<WiresPanelComponent, WirePanelDoAfterEvent>(OnPanelDoAfter);
         SubscribeLocalEvent<WiresPanelComponent, InteractUsingEvent>(OnInteractUsing);
@@ -48,15 +36,6 @@ public abstract class SharedWiresSystem : EntitySystem
         var sound = panel.Open ? panel.ScrewdriverOpenSound : panel.ScrewdriverCloseSound;
         Audio.PlayPredicted(sound, uid, args.User);
         args.Handled = true;
-    }
-
-    public bool CanWireAct(Entity<ToolComponent?> ent)
-    {
-        if (!Resolve(ent.Owner, ref ent.Comp, false))
-            return false;
-
-        return Tool.HasQuality(ent.Owner, SharedToolSystem.CutQuality, tool: ent.Comp) ||
-               Tool.HasQuality(ent.Owner, SharedToolSystem.PulseQuality, tool: ent.Comp);
     }
 
     private void OnInteractUsing(Entity<WiresPanelComponent> ent, ref InteractUsingEvent args)
@@ -180,6 +159,7 @@ public abstract class SharedWiresSystem : EntitySystem
         _activatableUI.CloseAll(uid);
     }
 }
+
 
 /// <summary>
 /// Raised directed on a tool to try and override panel visibility.
