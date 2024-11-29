@@ -18,14 +18,10 @@ namespace Content.Shared.Doors
     /// <summary>
     /// Raised when the door's bolt status was changed.
     /// </summary>
-    public sealed class DoorBoltsChangedEvent : EntityEventArgs
+    [ByRefEvent]
+    public record struct DoorBoltsChangedEvent(bool BoltsDown)
     {
-        public readonly bool BoltsDown;
-
-        public DoorBoltsChangedEvent(bool boltsDown)
-        {
-            BoltsDown = boltsDown;
-        }
+        public readonly bool BoltsDown = BoltsDown;
     }
 
     /// <summary>

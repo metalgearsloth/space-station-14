@@ -75,7 +75,14 @@ public abstract class SharedAirlockSystem : EntitySystem
     {
         // If unbolted, reset the auto close timer
         if (!args.BoltsDown)
+        {
             UpdateAutoClose(uid, component);
+        }
+        else if (component.AutoClose)
+        {
+            component.AutoClose = false;
+            Dirty(uid, component);
+        }
     }
 
     private void OnBeforeDoorOpened(EntityUid uid, AirlockComponent component, BeforeDoorOpenedEvent args)

@@ -80,6 +80,17 @@ public abstract partial class SharedDoorSystem : EntitySystem
 
         SubscribeLocalEvent<DoorComponent, OnAttemptEmagEvent>(OnAttemptEmag);
         SubscribeLocalEvent<DoorComponent, GotEmaggedEvent>(OnEmagged);
+
+        SubscribeLocalEvent<DoorComponent, DoorBoltsChangedEvent>(OnDoorBolted);
+    }
+
+    private void OnDoorBolted(Entity<DoorComponent> ent, ref DoorBoltsChangedEvent args)
+    {
+        if (args.BoltsDown)
+        {
+            ent.Comp.NextStateChange = null;
+            Dirty(ent);
+        }
     }
 
     protected virtual void OnComponentInit(Entity<DoorComponent> ent, ref ComponentInit args)
