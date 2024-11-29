@@ -2,6 +2,7 @@ using Content.Shared.Administration.Logs;
 using Content.Shared.Database;
 using Content.Shared.Examine;
 using Content.Shared.Interaction;
+using Content.Shared.Tools.Components;
 using Content.Shared.Tools.Systems;
 using Content.Shared.UserInterface;
 using Robust.Shared.Audio.Systems;
@@ -32,6 +33,15 @@ public abstract class SharedWiresSystem : EntitySystem
     private void OnStartup(Entity<WiresPanelComponent> ent, ref ComponentStartup args)
     {
         UpdateAppearance(ent, ent);
+    }
+
+    public bool CanWireAct(Entity<ToolComponent?> ent)
+    {
+        if (!Resolve(ent.Owner, ref ent.Comp, false))
+            return false;
+
+        return Tool.HasQuality(ent.Owner, SharedToolSystem.CutQuality, tool: ent.Comp) ||
+               Tool.HasQuality(ent.Owner, SharedToolSystem.PulseQuality, tool: ent.Comp);
     }
 
     private void OnPanelDoAfter(EntityUid uid, WiresPanelComponent panel, WirePanelDoAfterEvent args)

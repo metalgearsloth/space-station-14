@@ -92,6 +92,12 @@ public abstract partial class SharedDoorSystem
         if (ent.Comp.BoltsDown == value)
             return false;
 
+        var attempt = new AttemptDoorBoltsChangedEvent(value);
+        RaiseLocalEvent(ent.Owner, ref attempt);
+
+        if (attempt.Cancelled)
+            return false;
+
         ent.Comp.BoltsDown = value;
         Dirty(ent, ent.Comp);
         UpdateBoltLightStatus(ent);
@@ -103,7 +109,7 @@ public abstract partial class SharedDoorSystem
         var sound = value ? ent.Comp.BoltDownSound : ent.Comp.BoltUpSound;
         if (predicted)
             Audio.PlayPredicted(sound, ent, user: user);
-        else
+        else if (_net.IsServer)
             Audio.PlayPvs(sound, ent);
         return true;
     }

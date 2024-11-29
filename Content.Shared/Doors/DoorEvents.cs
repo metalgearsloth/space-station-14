@@ -16,6 +16,16 @@ namespace Content.Shared.Doors
     }
 
     /// <summary>
+    /// Raised when attempting to change the door's bolt status.
+    /// </summary>
+    [ByRefEvent]
+    public record struct AttemptDoorBoltsChangedEvent(bool BoltsDown)
+    {
+        public readonly bool BoltsDown = BoltsDown;
+        public bool Cancelled;
+    }
+
+    /// <summary>
     /// Raised when the door's bolt status was changed.
     /// </summary>
     [ByRefEvent]

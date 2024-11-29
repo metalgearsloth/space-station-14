@@ -46,6 +46,7 @@ public abstract partial class SharedDoorSystem : EntitySystem
     [Dependency] private readonly SharedMapSystem _mapSystem = default!;
     [Dependency] private readonly SharedPowerReceiverSystem _powerReceiver = default!;
 
+    private static readonly TimeSpan CloseCheckTime = TimeSpan.FromSeconds(1);
 
     [ValidatePrototypeId<TagPrototype>]
     public const string DoorBumpTag = "DoorBumpOpener";
@@ -153,6 +154,8 @@ public abstract partial class SharedDoorSystem : EntitySystem
     {
         if (!SetState(uid, DoorState.Emagging, door))
             return;
+
+        args.Repeatable = true;
         Audio.PlayPredicted(door.SparkSound, uid, args.UserUid, AudioParams.Default.WithVolume(8));
         args.Handled = true;
     }
@@ -378,8 +381,6 @@ public abstract partial class SharedDoorSystem : EntitySystem
         if (!Resolve(uid, ref door))
             return;
 
-        var lastState = door.State;
-
         if (!SetState(uid, DoorState.Opening, door))
             return;
 
@@ -387,9 +388,6 @@ public abstract partial class SharedDoorSystem : EntitySystem
             Audio.PlayPredicted(door.OpenSound, uid, user, AudioParams.Default.WithVolume(-5));
         else if (_net.IsServer)
             Audio.PlayPvs(door.OpenSound, uid, AudioParams.Default.WithVolume(-5));
-
-        if (lastState == DoorState.Emagging && TryComp<DoorBoltComponent>(uid, out var doorBoltComponent))
-            SetBoltsDown((uid, doorBoltComponent), !doorBoltComponent.BoltsDown, user, true);
     }
 
     /// <summary>
@@ -702,6 +700,8 @@ public abstract partial class SharedDoorSystem : EntitySystem
         if (door.State != DoorState.Open && door.State != DoorState.Closed)
             return;
 
+        Dirty(uid, door);
+
         // Is this trying to prevent an update? (e.g., cancel an auto-close)
         if (delay == null || delay.Value <= TimeSpan.Zero)
         {
@@ -711,8 +711,6 @@ public abstract partial class SharedDoorSystem : EntitySystem
         }
 
         door.NextStateChange = GameTiming.CurTime + delay.Value;
-        Dirty(uid, door);
-
         _activeDoors.Add((uid, door));
     }
 
@@ -808,7 +806,7 @@ public abstract partial class SharedDoorSystem : EntitySystem
                 if (!TryClose(ent, door))
                 {
                     // The door failed to close (blocked?). Try again in one second.
-                    door.NextStateChange = time + TimeSpan.FromSeconds(1);
+                    door.NextStateChange = time + CloseCheckTime;
                 }
                 break;
 
