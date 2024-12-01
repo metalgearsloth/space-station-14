@@ -113,12 +113,16 @@ public abstract class SharedAirlockSystem : EntitySystem
         // If unbolted, reset the auto close timer
         if (!args.BoltsDown)
         {
+            component.AutoClose = true;
+            Dirty(uid, component);
             UpdateAutoClose(uid, component);
         }
         else if (component.AutoClose)
         {
             component.AutoClose = false;
             Dirty(uid, component);
+            // Stop state changes
+            DoorSystem.SetNextStateChange(uid, null, door);
         }
     }
 
@@ -165,7 +169,7 @@ public abstract class SharedAirlockSystem : EntitySystem
         if (autoev.Cancelled)
             return;
 
-        DoorSystem.SetNextStateChange(uid, airlock.AutoCloseDelay * airlock.AutoCloseDelayModifier);
+        DoorSystem.SetNextStateChange(uid, airlock.AutoCloseDelay * airlock.AutoCloseDelayModifier, door);
     }
 
     private void OnBeforePry(EntityUid uid, AirlockComponent component, ref BeforePryEvent args)
