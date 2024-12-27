@@ -26,7 +26,6 @@ namespace Content.Client.Decals
             _overlayManager.AddOverlay(_overlay);
 
             SubscribeLocalEvent<DecalGridComponent, ComponentHandleState>(OnHandleState);
-            SubscribeNetworkEvent<DecalChunkUpdateEvent>(OnChunkUpdate);
         }
 
         public void ToggleOverlay()
@@ -39,6 +38,14 @@ namespace Content.Client.Decals
             {
                 _overlayManager.AddOverlay(_overlay);
             }
+        }
+
+        protected override void DirtyChunk(EntityUid id, Vector2i chunkIndices, DecalChunk chunk)
+        {
+            if (!TryComp(id, out DecalGridComponent? decalGrid))
+                return;
+
+            Dirty(id, decalGrid);
         }
 
         public override void Shutdown()
@@ -95,42 +102,6 @@ namespace Content.Client.Decals
                 UpdateChunks(gridUid, gridComp, modifiedChunks);
         }
 
-        private void OnChunkUpdate(DecalChunkUpdateEvent ev)
-        {
-            foreach (var (netGrid, updatedGridChunks) in ev.Data)
-            {
-                if (updatedGridChunks.Count == 0)
-                    continue;
-
-                var gridId = GetEntity(netGrid);
-
-                if (!TryComp(gridId, out DecalGridComponent? gridComp))
-                {
-                    Log.Error($"Received decal information for an entity without a decal component: {ToPrettyString(gridId)}");
-                    continue;
-                }
-
-                UpdateChunks(gridId, gridComp, updatedGridChunks);
-            }
-
-            // Now we'll cull old chunks out of range as the server will send them to us anyway.
-            foreach (var (netGrid, chunks) in ev.RemovedChunks)
-            {
-                if (chunks.Count == 0)
-                    continue;
-
-                var gridId = GetEntity(netGrid);
-
-                if (!TryComp(gridId, out DecalGridComponent? gridComp))
-                {
-                    Log.Error($"Received decal information for an entity without a decal component: {ToPrettyString(gridId)}");
-                    continue;
-                }
-
-                RemoveChunks(gridId, gridComp, chunks);
-            }
-        }
-
         private void UpdateChunks(EntityUid gridId, DecalGridComponent gridComp, Dictionary<Vector2i, DecalChunk> updatedGridChunks)
         {
             var chunkCollection = gridComp.ChunkCollection.ChunkCollection;
@@ -150,7 +121,7 @@ namespace Content.Client.Decals
                     }
                 }
 
-                chunkCollection[indices] = newChunkData;
+                chunkCollection[indices] = new(newChunkData);
 
                 foreach (var (uid, decal) in newChunkData.Decals)
                 {

@@ -105,7 +105,7 @@ public abstract class SharedCrayonSystem : EntitySystem
         if (component.DeleteEmpty && component.Charges <= 0)
             UseUpCrayon(uid, args.User);
         else
-            _uiSystem.ServerSendUiMessage(uid, CrayonUiKey.Key, new CrayonUsedMessage(component.SelectedState));
+            _uiSystem.ClientReceiveUiMessage(uid, CrayonUiKey.Key, new CrayonUsedMessage(component.SelectedState));
     }
 
     private void OnCrayonUse(EntityUid uid, CrayonComponent component, UseInHandEvent args)
