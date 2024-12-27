@@ -1,10 +1,13 @@
 using System.Collections;
 using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
+using Content.Shared.Maps;
 using Robust.Shared.GameStates;
 using Robust.Shared.Map;
+using Robust.Shared.Map.Components;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization;
+using Robust.Shared.Utility;
 using static Content.Shared.Decals.DecalGridComponent;
 
 namespace Content.Shared.Decals
@@ -12,7 +15,8 @@ namespace Content.Shared.Decals
     public abstract class SharedDecalSystem : EntitySystem
     {
         [Dependency] protected readonly IPrototypeManager PrototypeManager = default!;
-        [Dependency] protected readonly IMapManager MapManager = default!;
+        [Dependency] protected readonly ITileDefinitionManager TileDefMan = default!;
+        [Dependency] protected readonly SharedMapSystem MapSystem = default!;
 
         protected bool PvsEnabled;
 
@@ -81,6 +85,41 @@ namespace Content.Shared.Decals
         }
 
         protected virtual void DirtyChunk(EntityUid id, Vector2i chunkIndices, DecalChunk chunk) {}
+
+        public bool TryAddDecal(string id, EntityCoordinates coordinates, out uint decalId, Color? color = null, Angle? rotation = null, int zIndex = 0, bool cleanable = false)
+        {
+            rotation ??= Angle.Zero;
+            var decal = new Decal(coordinates.Position, id, color, rotation.Value, zIndex, cleanable);
+
+            return TryAddDecal(decal, coordinates, out decalId);
+        }
+
+        public bool TryAddDecal(Decal decal, EntityCoordinates coordinates, out uint decalId)
+        {
+            decalId = 0;
+
+            if (!PrototypeManager.HasIndex<DecalPrototype>(decal.Id))
+                return false;
+
+            var gridId = coordinates.GetGridUid(EntityManager);
+            if (!TryComp(gridId, out MapGridComponent? grid))
+                return false;
+
+            if (MapSystem.GetTileRef(gridId.Value, grid, coordinates).IsSpace(TileDefMan))
+                return false;
+
+            if (!TryComp(gridId, out DecalGridComponent? comp))
+                return false;
+
+            decalId = comp.ChunkCollection.NextDecalId++;
+            var chunkIndices = GetChunkIndices(decal.Coordinates);
+            var chunk = comp.ChunkCollection.ChunkCollection.GetOrNew(chunkIndices);
+            chunk.Decals[decalId] = decal;
+            comp.DecalIndex[decalId] = chunkIndices;
+            DirtyChunk(gridId.Value, chunkIndices, chunk);
+
+            return true;
+        }
 
         // internal, so that client/predicted code doesn't accidentally remove decals. There is a public server-side function.
         protected bool RemoveDecalInternal(EntityUid gridId, uint decalId, [NotNullWhen(true)] out Decal? removed, DecalGridComponent? component = null)

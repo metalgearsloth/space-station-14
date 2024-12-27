@@ -17,20 +17,7 @@ public sealed class CrayonSystem : SharedCrayonSystem
     public override void Initialize()
     {
         base.Initialize();
-        SubscribeLocalEvent<CrayonComponent, ComponentHandleState>(OnCrayonHandleState);
         Subs.ItemStatus<CrayonComponent>(ent => new StatusControl(ent));
-    }
-
-    private static void OnCrayonHandleState(EntityUid uid, CrayonComponent component, ref ComponentHandleState args)
-    {
-        if (args.Current is not CrayonComponentState state) return;
-
-        component.Color = state.Color;
-        component.SelectedState = state.State;
-        component.Charges = state.Charges;
-        component.Capacity = state.Capacity;
-
-        component.UIUpdateNeeded = true;
     }
 
     private sealed class StatusControl : Control
@@ -43,20 +30,13 @@ public sealed class CrayonSystem : SharedCrayonSystem
             _parent = parent;
             _label = new RichTextLabel { StyleClasses = { StyleNano.StyleClassItemStatus } };
             AddChild(_label);
-
-            parent.UIUpdateNeeded = true;
         }
 
         protected override void FrameUpdate(FrameEventArgs args)
         {
             base.FrameUpdate(args);
+            // TODO: Just refresh statefully
 
-            if (!_parent.UIUpdateNeeded)
-            {
-                return;
-            }
-
-            _parent.UIUpdateNeeded = false;
             _label.SetMarkup(Robust.Shared.Localization.Loc.GetString("crayon-drawing-label",
                 ("color",_parent.Color),
                 ("state",_parent.SelectedState),

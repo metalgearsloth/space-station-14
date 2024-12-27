@@ -27,8 +27,6 @@ public sealed class RequiresTileSystem : EntitySystem
             return;
 
         var anchored = _maps.GetAnchoredEntitiesEnumerator(ev.Entity, grid, ev.NewTile.GridIndices);
-        if (anchored.Equals(AnchoredEntitiesEnumerator.Empty))
-            return;
 
         while (anchored.MoveNext(out var ent))
         {

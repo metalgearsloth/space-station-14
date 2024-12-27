@@ -29,13 +29,11 @@ namespace Content.Server.Decals
     {
         [Dependency] private readonly IPlayerManager _playerManager = default!;
         [Dependency] private readonly IAdminManager _adminManager = default!;
-        [Dependency] private readonly ITileDefinitionManager _tileDefMan = default!;
         [Dependency] private readonly IParallelManager _parMan = default!;
         [Dependency] private readonly ChunkingSystem _chunking = default!;
         [Dependency] private readonly IConfigurationManager _conf = default!;
         [Dependency] private readonly IGameTiming _timing = default!;
         [Dependency] private readonly IAdminLogManager _adminLogger = default!;
-        [Dependency] private readonly SharedMapSystem _mapSystem = default!;
 
         private readonly Dictionary<NetEntity, HashSet<Vector2i>> _dirtyChunks = new();
         private readonly Dictionary<ICommonSession, Dictionary<NetEntity, HashSet<Vector2i>>> _previousSentChunks = new();
@@ -106,7 +104,7 @@ namespace Content.Server.Decals
                 return;
 
             // Transfer decals over to the new grid.
-            var enumerator = _mapSystem.GetAllTilesEnumerator(ev.Grid, Comp<MapGridComponent>(ev.Grid));
+            var enumerator = MapSystem.GetAllTilesEnumerator(ev.Grid, Comp<MapGridComponent>(ev.Grid));
 
             var oldChunkCollection = oldComp.ChunkCollection.ChunkCollection;
             var chunkCollection = newComp.ChunkCollection.ChunkCollection;
@@ -157,16 +155,17 @@ namespace Content.Server.Decals
             _playerManager.PlayerStatusChanged -= OnPlayerStatusChanged;
         }
 
+        private HashSet<uint> _toDelete = new();
+
         private void OnTileChanged(ref TileChangedEvent args)
         {
-            if (!args.NewTile.IsSpace(_tileDefMan))
+            if (!args.NewTile.IsSpace(TileDefMan))
                 return;
 
             if (!TryComp(args.Entity, out DecalGridComponent? grid))
                 return;
 
             var indices = GetChunkIndices(args.NewTile.GridIndices);
-            var toDelete = new HashSet<uint>();
             if (!grid.ChunkCollection.ChunkCollection.TryGetValue(indices, out var chunk))
                 return;
 
@@ -175,18 +174,20 @@ namespace Content.Server.Decals
                 if (new Vector2((int) Math.Floor(decal.Coordinates.X), (int) Math.Floor(decal.Coordinates.Y)) ==
                     args.NewTile.GridIndices)
                 {
-                    toDelete.Add(uid);
+                    _toDelete.Add(uid);
                 }
             }
 
-            if (toDelete.Count == 0)
+            if (_toDelete.Count == 0)
                 return;
 
-            foreach (var decalId in toDelete)
+            foreach (var decalId in _toDelete)
             {
                 grid.DecalIndex.Remove(decalId);
                 chunk.Decals.Remove(decalId);
             }
+
+            _toDelete.Clear();
 
             DirtyChunk(args.Entity, indices, chunk);
             if (chunk.Decals.Count == 0)
@@ -276,44 +277,8 @@ namespace Content.Server.Decals
         {
             var id = GetNetEntity(uid);
             chunk.LastModified = _timing.CurTick;
-            if(!_dirtyChunks.ContainsKey(id))
-                _dirtyChunks[id] = new HashSet<Vector2i>();
-            _dirtyChunks[id].Add(chunkIndices);
-        }
 
-        public bool TryAddDecal(string id, EntityCoordinates coordinates, out uint decalId, Color? color = null, Angle? rotation = null, int zIndex = 0, bool cleanable = false)
-        {
-            rotation ??= Angle.Zero;
-            var decal = new Decal(coordinates.Position, id, color, rotation.Value, zIndex, cleanable);
-
-            return TryAddDecal(decal, coordinates, out decalId);
-        }
-
-        public bool TryAddDecal(Decal decal, EntityCoordinates coordinates, out uint decalId)
-        {
-            decalId = 0;
-
-            if (!PrototypeManager.HasIndex<DecalPrototype>(decal.Id))
-                return false;
-
-            var gridId = coordinates.GetGridUid(EntityManager);
-            if (!TryComp(gridId, out MapGridComponent? grid))
-                return false;
-
-            if (_mapSystem.GetTileRef(gridId.Value, grid, coordinates).IsSpace(_tileDefMan))
-                return false;
-
-            if (!TryComp(gridId, out DecalGridComponent? comp))
-                return false;
-
-            decalId = comp.ChunkCollection.NextDecalId++;
-            var chunkIndices = GetChunkIndices(decal.Coordinates);
-            var chunk = comp.ChunkCollection.ChunkCollection.GetOrNew(chunkIndices);
-            chunk.Decals[decalId] = decal;
-            comp.DecalIndex[decalId] = chunkIndices;
-            DirtyChunk(gridId.Value, chunkIndices, chunk);
-
-            return true;
+            _dirtyChunks.GetOrNew(id).Add(chunkIndices);
         }
 
         public override bool RemoveDecal(EntityUid gridId, uint decalId, DecalGridComponent? component = null)

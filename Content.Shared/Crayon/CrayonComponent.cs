@@ -1,31 +1,46 @@
+using Robust.Shared.Audio;
 using Robust.Shared.GameStates;
 using Robust.Shared.Serialization;
 
 namespace Content.Shared.Crayon
 {
-
     /// <summary>
     /// Component holding the state of a crayon-like component
     /// </summary>
-    [NetworkedComponent, ComponentProtoName("Crayon"), Access(typeof(SharedCrayonSystem))]
-    public abstract partial class SharedCrayonComponent : Component
+    [RegisterComponent, NetworkedComponent, AutoGenerateComponentState, Access(typeof(SharedCrayonSystem))]
+    public sealed partial class CrayonComponent : Component
     {
         /// <summary>
         /// The ID of currently selected decal prototype that will be placed when the crayon is used
         /// </summary>
-        public string SelectedState { get; set; } = string.Empty;
+        [DataField, AutoNetworkedField]
+        public string SelectedState = string.Empty;
 
         /// <summary>
         /// Color with which the crayon will draw
         /// </summary>
-        [DataField("color")]
+        [DataField, AutoNetworkedField]
         public Color Color;
 
-        [Serializable, NetSerializable]
-        public enum CrayonUiKey : byte
-        {
-            Key,
-        }
+        [DataField] public SoundSpecifier? UseSound;
+
+        [DataField]
+        public bool SelectableColor;
+
+        [DataField, AutoNetworkedField]
+        public int Charges;
+
+        [DataField, AutoNetworkedField]
+        public int Capacity = 30;
+
+        [DataField]
+        public bool DeleteEmpty = true;
+    }
+
+    [Serializable, NetSerializable]
+    public enum CrayonUiKey : byte
+    {
+        Key,
     }
 
     /// <summary>
@@ -67,26 +82,6 @@ namespace Content.Shared.Crayon
         public CrayonUsedMessage(string drawn)
         {
             DrawnDecal = drawn;
-        }
-    }
-
-    /// <summary>
-    /// Component state, describes how many charges are left in the crayon in the near-hand UI
-    /// </summary>
-    [Serializable, NetSerializable]
-    public sealed class CrayonComponentState : ComponentState
-    {
-        public readonly Color Color;
-        public readonly string State;
-        public readonly int Charges;
-        public readonly int Capacity;
-
-        public CrayonComponentState(Color color, string state, int charges, int capacity)
-        {
-            Color = color;
-            State = state;
-            Charges = charges;
-            Capacity = capacity;
         }
     }
 
