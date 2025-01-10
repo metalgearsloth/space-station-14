@@ -3,13 +3,13 @@ using Robust.Shared.Serialization;
 namespace Content.Shared.Atmos.Monitor.Components;
 
 [Serializable, NetSerializable]
-public enum SharedAirAlarmInterfaceKey
+public enum SharedAirAlarmInterfaceKey : byte
 {
     Key
 }
 
 [Serializable, NetSerializable]
-public enum AirAlarmMode
+public enum AirAlarmMode : byte
 {
     None,
     Filtering,
@@ -19,7 +19,7 @@ public enum AirAlarmMode
 }
 
 [Serializable, NetSerializable]
-public enum AirAlarmWireStatus
+public enum AirAlarmWireStatus : byte
 {
     Power,
     Access,

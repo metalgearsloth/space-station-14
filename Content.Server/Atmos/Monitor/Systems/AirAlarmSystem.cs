@@ -22,6 +22,7 @@ using Content.Shared.Wires;
 using Robust.Server.GameObjects;
 using Robust.Shared.Player;
 using System.Linq;
+using Content.Shared.Atmos.Monitor.Systems;
 
 namespace Content.Server.Atmos.Monitor.Systems;
 
@@ -34,7 +35,7 @@ namespace Content.Server.Atmos.Monitor.Systems;
 // data key. In response, a packet will be transmitted
 // with the response type as its command, and the
 // response data in its data key.
-public sealed class AirAlarmSystem : EntitySystem
+public sealed class AirAlarmSystem : SharedAirAlarmSystem
 {
     [Dependency] private readonly AccessReaderSystem _access = default!;
     [Dependency] private readonly AtmosAlarmableSystem _atmosAlarmable = default!;
@@ -43,7 +44,9 @@ public sealed class AirAlarmSystem : EntitySystem
     [Dependency] private readonly DeviceLinkSystem _deviceLink = default!;
     [Dependency] private readonly DeviceListSystem _deviceList = default!;
     [Dependency] private readonly PopupSystem _popup = default!;
-    [Dependency] private readonly UserInterfaceSystem _ui = default!;
+
+    // List of active user interfaces.
+    private readonly HashSet<EntityUid> _activeUserInterfaces = new();
 
     #region Device Network API
 
@@ -68,7 +71,7 @@ public sealed class AirAlarmSystem : EntitySystem
     /// <summary>
     ///     Broadcast a sync packet to an air alarm's local network.
     /// </summary>
-    private void SyncAllDevices(EntityUid uid)
+    protected override void SyncAllDevices(EntityUid uid)
     {
         _atmosDevNet.Sync(uid, null);
     }
@@ -163,7 +166,6 @@ public sealed class AirAlarmSystem : EntitySystem
         SubscribeLocalEvent<AirAlarmComponent, ComponentInit>(OnInit);
         SubscribeLocalEvent<AirAlarmComponent, MapInitEvent>(OnMapInit);
         SubscribeLocalEvent<AirAlarmComponent, ComponentShutdown>(OnShutdown);
-        SubscribeLocalEvent<AirAlarmComponent, ActivateInWorldEvent>(OnActivate);
 
         Subs.BuiEvents<AirAlarmComponent>(SharedAirAlarmInterfaceKey.Key, subs =>
         {
@@ -236,26 +238,6 @@ public sealed class AirAlarmSystem : EntitySystem
     private void OnShutdown(EntityUid uid, AirAlarmComponent component, ComponentShutdown args)
     {
         _activeUserInterfaces.Remove(uid);
-    }
-
-    private void OnActivate(EntityUid uid, AirAlarmComponent component, ActivateInWorldEvent args)
-    {
-        if (!args.Complex)
-            return;
-
-        if (TryComp<WiresPanelComponent>(uid, out var panel) && panel.Open)
-        {
-            args.Handled = false;
-            return;
-        }
-
-        if (!this.IsPowered(uid, EntityManager))
-            return;
-
-        _ui.OpenUi(uid, SharedAirAlarmInterfaceKey.Key, args.User);
-        AddActiveInterface(uid);
-        SyncAllDevices(uid);
-        UpdateUI(uid, component);
     }
 
     private void OnResyncAll(EntityUid uid, AirAlarmComponent component, AirAlarmResyncAllDevicesMessage args)
@@ -440,6 +422,10 @@ public sealed class AirAlarmSystem : EntitySystem
         // alarm mode executors
         if (!uiOnly)
         {
+            // TODO: Switch statement here
+            // Execute code
+            // No need for factory
+
             var newMode = AirAlarmModeFactory.ModeToExecutor(mode);
             if (newMode != null)
             {
@@ -537,13 +523,10 @@ public sealed class AirAlarmSystem : EntitySystem
 
     #region UI
 
-    // List of active user interfaces.
-    private readonly HashSet<EntityUid> _activeUserInterfaces = new();
-
     /// <summary>
     ///     Adds an active interface to be updated.
     /// </summary>
-    private void AddActiveInterface(EntityUid uid)
+    protected override void AddActiveInterface(EntityUid uid)
     {
         _activeUserInterfaces.Add(uid);
     }
@@ -595,6 +578,11 @@ public sealed class AirAlarmSystem : EntitySystem
         percentage = data.Select(kvp => kvp.Value).Sum() / alarm.SensorData.Values.Select(v => v.TotalMoles).Sum();
 
         return averageMol;
+    }
+
+    protected override void SharedUpdateUI(EntityUid uid, AirAlarmComponent? alarm = null)
+    {
+        UpdateUI(uid, alarm, null, null);
     }
 
     public void UpdateUI(EntityUid uid, AirAlarmComponent? alarm = null, DeviceNetworkComponent? devNet = null, AtmosAlarmableComponent? alarmable = null)

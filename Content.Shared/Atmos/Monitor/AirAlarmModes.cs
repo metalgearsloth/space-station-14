@@ -1,11 +1,8 @@
-using Content.Server.Atmos.Monitor.Components;
-using Content.Server.Atmos.Monitor.Systems;
-using Content.Server.DeviceNetwork.Systems;
-using Content.Shared.Atmos;
 using Content.Shared.Atmos.Monitor.Components;
+using Content.Shared.Atmos.Monitor.Systems;
 using Content.Shared.Atmos.Piping.Unary.Components;
 
-namespace Content.Server.Atmos.Monitor;
+namespace Content.Shared.Atmos.Monitor;
 
 /// <summary>
 ///     This is an interface that air alarm modes use
@@ -81,8 +78,8 @@ public sealed class AirAlarmModeFactory
 public abstract class AirAlarmModeExecutor : IAirAlarmMode
 {
     [Dependency] public readonly IEntityManager EntityManager = default!;
-    public readonly DeviceNetworkSystem DeviceNetworkSystem;
-    public readonly AirAlarmSystem AirAlarmSystem;
+    public readonly SharedDeviceNetworkSystem DeviceNetworkSystem;
+    public readonly SharedAirAlarmSystem AirAlarmSystem;
 
     public abstract void Execute(EntityUid uid);
 
@@ -90,8 +87,8 @@ public abstract class AirAlarmModeExecutor : IAirAlarmMode
     {
         IoCManager.InjectDependencies(this);
 
-        DeviceNetworkSystem = EntityManager.System<DeviceNetworkSystem>();
-        AirAlarmSystem = EntityManager.System<AirAlarmSystem>();
+        DeviceNetworkSystem = EntityManager.System<SharedDeviceNetworkSystem>();
+        AirAlarmSystem = EntityManager.System<SharedAirAlarmSystem>();
     }
 }
 
