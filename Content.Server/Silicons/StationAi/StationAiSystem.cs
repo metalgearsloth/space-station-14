@@ -32,9 +32,8 @@ public sealed class StationAiSystem : SharedStationAiSystem
 
     private void OnExpandICChatRecipients(ExpandICChatRecipientsEvent ev)
     {
-        var xformQuery = GetEntityQuery<TransformComponent>();
         var sourceXform = Transform(ev.Source);
-        var sourcePos = _xforms.GetWorldPosition(sourceXform, xformQuery);
+        var sourcePos = _xforms.GetWorldPosition(sourceXform);
 
         // This function ensures that chat popups appear on camera views that have connected microphones.
         var query = EntityManager.EntityQueryEnumerator<StationAiCoreComponent, TransformComponent>();
@@ -52,7 +51,7 @@ public sealed class StationAiSystem : SharedStationAiSystem
 
             var range = (xform.MapID != sourceXform.MapID)
                 ? -1
-                : (sourcePos - _xforms.GetWorldPosition(xform, xformQuery)).Length();
+                : (sourcePos - _xforms.GetWorldPosition(xform)).Length();
 
             if (range < 0 || range > ev.VoiceRange)
                 continue;
