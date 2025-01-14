@@ -5,7 +5,6 @@ using Robust.Shared.Audio;
 using Robust.Shared.Containers;
 using Robust.Shared.GameStates;
 using Robust.Shared.Map;
-using Robust.Shared.Player;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Serialization;
 
@@ -66,8 +65,18 @@ namespace Content.Shared.Storage
         [DataField]
         public TimeSpan OpenUiCooldown = TimeSpan.Zero;
 
+        /// <summary>
+        /// Can insert stuff by clicking the storage entity with it.
+        /// </summary>
         [DataField]
-        public bool ClickInsert = true; // Can insert stuff by clicking the storage entity with it
+        public bool ClickInsert = true;
+
+        /// <summary>
+        /// Open the storage window when pressing E.
+        /// When false you can still open the inventory using verbs.
+        /// </summary>
+        [DataField]
+        public bool OpenOnActivate = true;
 
         /// <summary>
         /// How many entities area pickup can pickup at once.
@@ -124,6 +133,14 @@ namespace Content.Shared.Storage
         [DataField, ViewVariables(VVAccess.ReadWrite)]
         public StorageDefaultOrientation? DefaultStorageOrientation;
 
+        /// <summary>
+        /// If true, sets StackVisuals.Hide to true when the container is closed
+        /// Used in cases where there are sprites that are shown when the container is open but not
+        /// when it is closed
+        /// </summary>
+        [DataField]
+        public bool HideStackVisualsWhenClosed = true;
+
         [Serializable, NetSerializable]
         public enum StorageUiKey : byte
         {
@@ -159,20 +176,6 @@ namespace Content.Shared.Storage
             ItemEnt = itemEnt;
             StorageEnt = storageEnt;
             Location = location;
-        }
-    }
-
-    [Serializable, NetSerializable]
-    public sealed class StorageRemoveItemEvent : EntityEventArgs
-    {
-        public readonly NetEntity ItemEnt;
-
-        public readonly NetEntity StorageEnt;
-
-        public StorageRemoveItemEvent(NetEntity itemEnt, NetEntity storageEnt)
-        {
-            ItemEnt = itemEnt;
-            StorageEnt = storageEnt;
         }
     }
 
@@ -227,6 +230,12 @@ namespace Content.Shared.Storage
             EntityAngles = entityAngles;
         }
     }
+
+    [ByRefEvent]
+    public record struct StorageInteractAttemptEvent(bool Silent, bool Cancelled = false);
+
+    [ByRefEvent]
+    public record struct StorageInteractUsingAttemptEvent(bool Cancelled = false);
 
     [NetSerializable]
     [Serializable]

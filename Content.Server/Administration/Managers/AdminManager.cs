@@ -7,6 +7,7 @@ using Content.Server.Database;
 using Content.Server.Players;
 using Content.Shared.Administration;
 using Content.Shared.CCVar;
+using Content.Shared.Info;
 using Content.Shared.Players;
 using Robust.Server.Console;
 using Robust.Server.Player;
@@ -408,6 +409,17 @@ namespace Content.Server.Administration.Managers
 
         private async Task<(AdminData dat, int? rankId, bool specialLogin)?> LoadAdminData(ICommonSession session)
         {
+            var result = await LoadAdminDataCore(session);
+
+            // Make sure admin didn't disconnect while data was loading.
+            if (session.Status != SessionStatus.InGame)
+                return null;
+
+            return result;
+        }
+
+        private async Task<(AdminData dat, int? rankId, bool specialLogin)?> LoadAdminDataCore(ICommonSession session)
+        {
             var promoteHost = IsLocal(session) && _cfg.GetCVar(CCVars.ConsoleLoginLocal)
                               || _promotedPlayers.Contains(session.UserId)
                               || session.Name == _cfg.GetCVar(CCVars.ConsoleLoginHostUser);
@@ -457,7 +469,7 @@ namespace Content.Server.Administration.Managers
                     Flags = flags
                 };
 
-                if (dbData.Title != null)
+                if (dbData.Title != null  && _cfg.GetCVar(CCVars.AdminUseCustomNamesAdminRank))
                 {
                     data.Title = dbData.Title;
                 }
@@ -657,7 +669,7 @@ public record struct CommandPermissionsUnassignedError(CommandSpec Command) : IC
 {
     public FormattedMessage DescribeInner()
     {
-        return FormattedMessage.FromMarkup($"The command {Command.FullName()} is missing permission flags and cannot be executed.");
+        return FormattedMessage.FromMarkupOrThrow($"The command {Command.FullName()} is missing permission flags and cannot be executed.");
     }
 
     public string? Expression { get; set; }
@@ -670,7 +682,7 @@ public record struct NoPermissionError(CommandSpec Command) : IConError
 {
     public FormattedMessage DescribeInner()
     {
-        return FormattedMessage.FromMarkup($"You do not have permission to execute {Command.FullName()}");
+        return FormattedMessage.FromMarkupOrThrow($"You do not have permission to execute {Command.FullName()}");
     }
 
     public string? Expression { get; set; }

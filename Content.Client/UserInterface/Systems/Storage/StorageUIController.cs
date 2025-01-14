@@ -307,22 +307,17 @@ public sealed class StorageUIController : UIController, IOnSystemChanged<Storage
                     _entity.GetNetEntity(storageEnt),
                     new ItemStorageLocation(DraggingRotation, position)));
             }
-            else
-            {
-                _entity.RaisePredictiveEvent(new StorageRemoveItemEvent(
-                    _entity.GetNetEntity(draggingGhost.Entity),
-                    _entity.GetNetEntity(storageEnt)));
-            }
 
+            _menuDragHelper.EndDrag();
             _container?.BuildItemPieces();
         }
         else //if we just clicked, then take it out of the bag.
         {
+            _menuDragHelper.EndDrag();
             _entity.RaisePredictiveEvent(new StorageInteractWithItemEvent(
                 _entity.GetNetEntity(control.Entity),
                 _entity.GetNetEntity(storageEnt)));
         }
-        _menuDragHelper.EndDrag();
         args.Handle();
     }
 
