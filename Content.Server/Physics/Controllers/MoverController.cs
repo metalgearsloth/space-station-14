@@ -30,6 +30,12 @@ public sealed class MoverController : SharedMoverController
         SubscribeLocalEvent<InputMoverComponent, PlayerDetachedEvent>(OnPlayerDetached);
     }
 
+    protected override void MoveMob(Entity<PhysicsComponent, TransformComponent> entity, Vector2 frameVelocity, Angle localRotation)
+    {
+        // NOOP on server unless it's an NPC.
+        return;
+    }
+
     private void OnRelayPlayerAttached(Entity<RelayInputMoverComponent> entity, ref PlayerAttachedEvent args)
     {
         if (MoverQuery.TryGetComponent(entity.Comp.RelayEntity, out var inputMover))
@@ -57,10 +63,9 @@ public sealed class MoverController : SharedMoverController
         return true;
     }
 
-    public override void UpdateBeforeSolve(bool prediction, float frameTime)
+    public override void Update(float frameTime)
     {
-        base.UpdateBeforeSolve(prediction, frameTime);
-
+        base.Update(frameTime);
         var inputQueryEnumerator = AllEntityQuery<InputMoverComponent>();
 
         while (inputQueryEnumerator.MoveNext(out var uid, out var mover))

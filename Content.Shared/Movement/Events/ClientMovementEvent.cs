@@ -9,11 +9,6 @@ namespace Content.Shared.Movement.Events;
 [Serializable, NetSerializable]
 public sealed class ClientMovementEvent : EntityEventArgs
 {
-    public NetEntity Entity;
-
     public Vector2 LocalPosition;
     public Angle LocalRotation;
-
-    public Vector2 LinearVelocity;
-    public float AngularVelocity;
 }

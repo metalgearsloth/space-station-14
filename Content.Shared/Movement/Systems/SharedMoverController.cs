@@ -89,6 +89,8 @@ public abstract partial class SharedMoverController : VirtualController
         FootstepModifierQuery = GetEntityQuery<FootstepModifierComponent>();
         MapGridQuery = GetEntityQuery<MapGridComponent>();
 
+        SubscribeAllEvent<ClientMovementEvent>(OnClientMovement);
+
         InitializeInput();
         InitializeRelay();
         Subs.CVar(_configManager, CCVars.RelativeMovement, value => _relativeMovement = value, true);
@@ -241,6 +243,7 @@ public abstract partial class SharedMoverController : VirtualController
 
         var minimumFrictionSpeed = moveSpeedComponent?.MinimumFrictionSpeed ?? MovementSpeedModifierComponent.DefaultMinimumFrictionSpeed;
         Friction(minimumFrictionSpeed, frameTime, friction, ref velocity);
+        var localRotation = xform.LocalRotation;
 
         if (worldTotal != Vector2.Zero)
         {
@@ -249,7 +252,7 @@ public abstract partial class SharedMoverController : VirtualController
                 // TODO apparently this results in a duplicate move event because "This should have its event run during
                 // island solver"??. So maybe SetRotation needs an argument to avoid raising an event?
                 var worldRot = _transform.GetWorldRotation(xform);
-                _transform.SetLocalRotation(xform, xform.LocalRotation + worldTotal.ToWorldAngle() - worldRot);
+                localRotation = xform.LocalRotation + worldTotal.ToWorldAngle() - worldRot;
             }
 
             if (!weightless && MobMoverQuery.TryGetComponent(uid, out var mobMover) &&
@@ -278,10 +281,37 @@ public abstract partial class SharedMoverController : VirtualController
         if (!weightless || touching)
             Accelerate(ref velocity, in worldTotal, accel, frameTime);
 
-        PhysicsSystem.SetLinearVelocity(physicsUid, velocity, body: physicsComponent);
+        // No change.
+        if (velocity.Equals(Vector2.Zero) && localRotation.Equals(xform.LocalRotation))
+            return;
 
-        // Ensures that players do not spiiiiiiin
-        PhysicsSystem.SetAngularVelocity(physicsUid, 0, body: physicsComponent);
+        MoveMob((physicsUid, physicsComponent, xform), velocity * frameTime, localRotation);
+    }
+
+    /// <summary>
+    /// Handles moving a mob the requested distance.
+    /// </summary>
+    protected abstract void MoveMob(Entity<PhysicsComponent, TransformComponent> entity, Vector2 frameVelocity, Angle localRotation);
+
+    protected void MoveClient(Entity<TransformComponent> entity, Vector2 localPosition, Angle localRotation)
+    {
+        // TODO:
+        // - Shapecast for movement on client
+        // - Push out of overlap
+        // - Validate speed
+        // - FrameUpdates (all of the above but NO net event)
+
+        TransformSystem.SetLocalPositionRotation(entity.Owner, localPosition, localRotation);
+    }
+
+    protected void OnClientMovement(ClientMovementEvent msg, EntitySessionEventArgs args)
+    {
+        var entity = args.SenderSession.AttachedEntity;
+
+        if (entity == null || !XformQuery.TryComp(entity, out var xform))
+            return;
+
+        MoveClient((entity.Value, xform), msg.LocalPosition, msg.LocalRotation);
     }
 
     public void LerpRotation(EntityUid uid, InputMoverComponent mover, float frameTime)

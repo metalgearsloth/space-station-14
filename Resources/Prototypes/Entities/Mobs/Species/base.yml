@@ -84,13 +84,14 @@
       60: 0.7
       80: 0.5
   - type: Fixtures
-    fixtures: # TODO: This needs a second fixture just for mob collisions.
+    fixtures:
       fix1:
         shape:
           !type:PhysShapeCircle
           radius: 0.35
         density: 185
         restitution: 0.0
+        hard: true
         mask:
         - MobMask
         layer:

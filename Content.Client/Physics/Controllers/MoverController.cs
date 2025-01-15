@@ -1,6 +1,8 @@
+using System.Numerics;
 using Content.Shared.Alert;
 using Content.Shared.CCVar;
 using Content.Shared.Movement.Components;
+using Content.Shared.Movement.Events;
 using Content.Shared.Movement.Pulling.Components;
 using Content.Shared.Movement.Systems;
 using Robust.Client.GameObjects;
@@ -31,6 +33,27 @@ public sealed class MoverController : SharedMoverController
         SubscribeLocalEvent<InputMoverComponent, UpdateIsPredictedEvent>(OnUpdatePredicted);
         SubscribeLocalEvent<MovementRelayTargetComponent, UpdateIsPredictedEvent>(OnUpdateRelayTargetPredicted);
         SubscribeLocalEvent<PullableComponent, UpdateIsPredictedEvent>(OnUpdatePullablePredicted);
+    }
+
+    protected override void MoveMob(Entity<PhysicsComponent, TransformComponent> entity, Vector2 frameVelocity, Angle localRotation)
+    {
+        if (frameVelocity.Equals(Vector2.Zero))
+            return;
+
+        var xform = entity.Comp2;
+        var targetPosition = xform.LocalPosition + frameVelocity;
+        // xform.ActivelyLerping = false;
+
+        // MoveClient((entity, xform), targetPosition, localRotation);
+
+        if (Timing.IsFirstTimePredicted)
+        {
+            RaisePredictiveEvent(new ClientMovementEvent()
+            {
+                LocalPosition = targetPosition,
+                LocalRotation = localRotation,
+            });
+        }
     }
 
     private void OnUpdatePredicted(Entity<InputMoverComponent> entity, ref UpdateIsPredictedEvent args)
@@ -86,9 +109,9 @@ public sealed class MoverController : SharedMoverController
         SetMoveInput(entity, MoveButtons.None);
     }
 
-    public override void UpdateBeforeSolve(bool prediction, float frameTime)
+    public override void Update(float frameTime)
     {
-        base.UpdateBeforeSolve(prediction, frameTime);
+        base.Update(frameTime);
 
         if (_playerManager.LocalEntity is not {Valid: true} player)
             return;
