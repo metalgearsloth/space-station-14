@@ -35,24 +35,27 @@ public sealed class MoverController : SharedMoverController
         SubscribeLocalEvent<PullableComponent, UpdateIsPredictedEvent>(OnUpdatePullablePredicted);
     }
 
-    protected override void MoveMob(Entity<PhysicsComponent, TransformComponent> entity, Vector2 frameVelocity, Angle localRotation)
+    protected override void MoveMob(Entity<PhysicsComponent, TransformComponent> entity, Vector2 frameVelocity, Angle localRotation, bool frameUpdate)
     {
-        if (frameVelocity.Equals(Vector2.Zero))
+        if (frameVelocity.Equals(Vector2.Zero) || !Timing.IsFirstTimePredicted)
             return;
 
         var xform = entity.Comp2;
         var targetPosition = xform.LocalPosition + frameVelocity;
-        // xform.ActivelyLerping = false;
+        // TODO: FrameUpdates also need to run this code.
+        // - Mob moving slower than it should, check if we can just run update again with network event
 
-        // MoveClient((entity, xform), targetPosition, localRotation);
-
-        if (Timing.IsFirstTimePredicted)
+        if (Timing.InSimulation)
         {
             RaisePredictiveEvent(new ClientMovementEvent()
             {
                 LocalPosition = targetPosition,
                 LocalRotation = localRotation,
             });
+        }
+        else
+        {
+            // MoveClient((entity.Owner, xform), targetPosition, localRotation);
         }
     }
 
@@ -109,20 +112,30 @@ public sealed class MoverController : SharedMoverController
         SetMoveInput(entity, MoveButtons.None);
     }
 
-    public override void Update(float frameTime)
+    private void UpdateMobMovement(float frameTime, bool frameUpdate)
     {
-        base.Update(frameTime);
-
         if (_playerManager.LocalEntity is not {Valid: true} player)
             return;
 
         if (RelayQuery.TryGetComponent(player, out var relayMover))
-            HandleClientsideMovement(relayMover.RelayEntity, frameTime);
+            HandleClientsideMovement(relayMover.RelayEntity, frameTime, frameUpdate);
 
-        HandleClientsideMovement(player, frameTime);
+        HandleClientsideMovement(player, frameTime, frameUpdate);
     }
 
-    private void HandleClientsideMovement(EntityUid player, float frameTime)
+    public override void FrameUpdate(float frameTime)
+    {
+        base.FrameUpdate(frameTime);
+        // UpdateMobMovement(frameTime, true);
+    }
+
+    public override void Update(float frameTime)
+    {
+        base.Update(frameTime);
+        UpdateMobMovement(frameTime, false);
+    }
+
+    private void HandleClientsideMovement(EntityUid player, float frameTime, bool frameUpdate)
     {
         if (!MoverQuery.TryGetComponent(player, out var mover) ||
             !XformQuery.TryGetComponent(player, out var xform))
@@ -156,7 +169,8 @@ public sealed class MoverController : SharedMoverController
             physicsUid,
             body,
             xformMover,
-            frameTime);
+            frameTime,
+            frameUpdate);
     }
 
     protected override bool CanSound()

@@ -104,10 +104,16 @@ public abstract partial class SharedMoverController : VirtualController
         ShutdownInput();
     }
 
-    public override void UpdateAfterSolve(bool prediction, float frameTime)
+    public override void FrameUpdate(float frameTime)
     {
-        base.UpdateAfterSolve(prediction, frameTime);
         UsedMobMovement.Clear();
+        base.FrameUpdate(frameTime);
+    }
+
+    public override void Update(float frameTime)
+    {
+        UsedMobMovement.Clear();
+        base.Update(frameTime);
     }
 
     /// <summary>
@@ -119,7 +125,8 @@ public abstract partial class SharedMoverController : VirtualController
         EntityUid physicsUid,
         PhysicsComponent physicsComponent,
         TransformComponent xform,
-        float frameTime)
+        float frameTime,
+        bool frameUpdate)
     {
         var canMove = mover.CanMove;
         if (RelayTargetQuery.TryGetComponent(uid, out var relayTarget))
@@ -157,12 +164,12 @@ public abstract partial class SharedMoverController : VirtualController
             return;
         }
 
-
         UsedMobMovement[uid] = true;
         // Specifically don't use mover.Owner because that may be different to the actual physics body being moved.
         var weightless = _gravity.IsWeightless(physicsUid, physicsComponent, xform);
         var (walkDir, sprintDir) = GetVelocityInput(mover);
         var touching = false;
+        MobMoverComponent? mobMover = null;
 
         // Handle wall-pushes.
         if (weightless)
@@ -177,7 +184,7 @@ public abstract partial class SharedMoverController : VirtualController
                 // No gravity: is our entity touching anything?
                 touching = ev.CanMove;
 
-                if (!touching && TryComp<MobMoverComponent>(uid, out var mobMover))
+                if (!touching && MobMoverQuery.TryComp(uid, out mobMover))
                     touching |= IsAroundCollider(PhysicsSystem, xform, mobMover, physicsUid, physicsComponent);
             }
         }
@@ -204,10 +211,7 @@ public abstract partial class SharedMoverController : VirtualController
 
         var total = walkDir * walkSpeed + sprintDir * sprintSpeed;
 
-        var parentRotation = GetParentGridAngle(mover);
-        var worldTotal = _relativeMovement ? parentRotation.RotateVec(total) : total;
-
-        DebugTools.Assert(MathHelper.CloseToPercent(total.Length(), worldTotal.Length()));
+        DebugTools.Assert(MathHelper.CloseToPercent(total.Length(), total.Length()));
 
         var velocity = physicsComponent.LinearVelocity;
         float friction;
@@ -218,7 +222,7 @@ public abstract partial class SharedMoverController : VirtualController
         {
             if (gridComp == null && !MapGridQuery.HasComp(xform.GridUid))
                 friction = moveSpeedComponent?.OffGridFriction ?? MovementSpeedModifierComponent.DefaultOffGridFriction;
-            else if (worldTotal != Vector2.Zero && touching)
+            else if (total != Vector2.Zero && touching)
                 friction = moveSpeedComponent?.WeightlessFriction ?? MovementSpeedModifierComponent.DefaultWeightlessFriction;
             else
                 friction = moveSpeedComponent?.WeightlessFrictionNoInput ?? MovementSpeedModifierComponent.DefaultWeightlessFrictionNoInput;
@@ -228,7 +232,7 @@ public abstract partial class SharedMoverController : VirtualController
         }
         else
         {
-            if (worldTotal != Vector2.Zero || moveSpeedComponent?.FrictionNoInput == null)
+            if (total != Vector2.Zero || moveSpeedComponent?.FrictionNoInput == null)
             {
                 friction = tileDef?.MobFriction ?? moveSpeedComponent?.Friction ?? MovementSpeedModifierComponent.DefaultFriction;
             }
@@ -241,65 +245,82 @@ public abstract partial class SharedMoverController : VirtualController
             accel = tileDef?.MobAcceleration ?? moveSpeedComponent?.Acceleration ?? MovementSpeedModifierComponent.DefaultAcceleration;
         }
 
-        var minimumFrictionSpeed = moveSpeedComponent?.MinimumFrictionSpeed ?? MovementSpeedModifierComponent.DefaultMinimumFrictionSpeed;
-        Friction(minimumFrictionSpeed, frameTime, friction, ref velocity);
-        var localRotation = xform.LocalRotation;
-
-        if (worldTotal != Vector2.Zero)
+        // Don't run friction on frame updates
+        if (!frameUpdate)
         {
-            if (!NoRotateQuery.HasComponent(uid))
+            var minimumFrictionSpeed = moveSpeedComponent?.MinimumFrictionSpeed ?? MovementSpeedModifierComponent.DefaultMinimumFrictionSpeed;
+            //Friction(minimumFrictionSpeed, frameTime, friction, ref velocity);
+        }
+
+        var localRotation = xform.LocalRotation;
+        var worldRot = _transform.GetWorldRotation(xform);
+
+        if (total.Equals(Vector2.Zero))
+            return;
+
+        if (!weightless && MobMoverQuery.TryGetComponent(uid, out mobMover) &&
+            TryGetSound(weightless, uid, mover, mobMover, xform, out var sound, tileDef: tileDef))
+        {
+            var soundModifier = mover.Sprinting ? 3.5f : 1.5f;
+
+            var audioParams = sound.Params
+                .WithVolume(sound.Params.Volume + soundModifier)
+                .WithVariation(sound.Params.Variation ?? mobMover.FootstepVariation);
+
+            // If we're a relay target then predict the sound for all relays.
+            if (relayTarget != null)
             {
-                // TODO apparently this results in a duplicate move event because "This should have its event run during
-                // island solver"??. So maybe SetRotation needs an argument to avoid raising an event?
-                var worldRot = _transform.GetWorldRotation(xform);
-                localRotation = xform.LocalRotation + worldTotal.ToWorldAngle() - worldRot;
+                _audio.PlayPredicted(sound, uid, relayTarget.Source, audioParams);
             }
-
-            if (!weightless && MobMoverQuery.TryGetComponent(uid, out var mobMover) &&
-                TryGetSound(weightless, uid, mover, mobMover, xform, out var sound, tileDef: tileDef))
+            else
             {
-                var soundModifier = mover.Sprinting ? 3.5f : 1.5f;
-
-                var audioParams = sound.Params
-                    .WithVolume(sound.Params.Volume + soundModifier)
-                    .WithVariation(sound.Params.Variation ?? mobMover.FootstepVariation);
-
-                // If we're a relay target then predict the sound for all relays.
-                if (relayTarget != null)
-                {
-                    _audio.PlayPredicted(sound, uid, relayTarget.Source, audioParams);
-                }
-                else
-                {
-                    _audio.PlayPredicted(sound, uid, uid, audioParams);
-                }
+                _audio.PlayPredicted(sound, uid, uid, audioParams);
             }
         }
 
-        worldTotal *= weightlessModifier;
+        total *= weightlessModifier;
+        Vector2 localTotal;
+
+        // Get world terms back to local terms.
+        if (_relativeMovement)
+        {
+            var parentRotation = GetParentGridAngle(mover);
+            // TODO: Optimise
+            var localAngle = parentRotation - TransformSystem.GetWorldRotation(xform.ParentUid);
+            localTotal = localAngle.RotateVec(total);
+        }
+        else
+        {
+            localTotal = worldRot.RotateVec(total);
+        }
+
+        // Face the mob in the direction we're moving.
+        if (!NoRotateQuery.HasComponent(uid))
+        {
+            localRotation = localTotal.ToWorldAngle();
+        }
 
         if (!weightless || touching)
-            Accelerate(ref velocity, in worldTotal, accel, frameTime);
+            Accelerate(ref velocity, in localTotal, accel, frameTime);
 
-        // No change.
-        if (velocity.Equals(Vector2.Zero) && localRotation.Equals(xform.LocalRotation))
-            return;
-
-        MoveMob((physicsUid, physicsComponent, xform), velocity * frameTime, localRotation);
+        MoveMob((physicsUid, physicsComponent, xform), localTotal * frameTime, localRotation, frameUpdate);
     }
 
     /// <summary>
     /// Handles moving a mob the requested distance.
     /// </summary>
-    protected abstract void MoveMob(Entity<PhysicsComponent, TransformComponent> entity, Vector2 frameVelocity, Angle localRotation);
+    protected abstract void MoveMob(Entity<PhysicsComponent, TransformComponent> entity, Vector2 frameVelocity, Angle localRotation, bool frameUpdate);
 
     protected void MoveClient(Entity<TransformComponent> entity, Vector2 localPosition, Angle localRotation)
     {
+        var xform = entity.Comp;
+        xform.ActivelyLerping = false;
         // TODO:
-        // - Shapecast for movement on client
-        // - Push out of overlap
-        // - Validate speed
-        // - FrameUpdates (all of the above but NO net event)
+        // - get subtick movement working with 0 friction, seamless
+        // - get it working with friction
+        // - check if we can remove the event / make it update-only
+        // - get collision working
+        // - get pushing working
 
         TransformSystem.SetLocalPositionRotation(entity.Owner, localPosition, localRotation);
     }

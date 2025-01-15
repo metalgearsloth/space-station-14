@@ -30,7 +30,7 @@ public sealed class MoverController : SharedMoverController
         SubscribeLocalEvent<InputMoverComponent, PlayerDetachedEvent>(OnPlayerDetached);
     }
 
-    protected override void MoveMob(Entity<PhysicsComponent, TransformComponent> entity, Vector2 frameVelocity, Angle localRotation)
+    protected override void MoveMob(Entity<PhysicsComponent, TransformComponent> entity, Vector2 frameVelocity, Angle localRotation, bool frameUpdate)
     {
         // NOOP on server unless it's an NPC.
         return;
@@ -65,6 +65,8 @@ public sealed class MoverController : SharedMoverController
 
     public override void Update(float frameTime)
     {
+        // TODO:
+        return;
         base.Update(frameTime);
         var inputQueryEnumerator = AllEntityQuery<InputMoverComponent>();
 
@@ -103,7 +105,8 @@ public sealed class MoverController : SharedMoverController
                 physicsUid,
                 body,
                 xformMover,
-                frameTime);
+                frameTime,
+                false);
         }
 
         HandleShuttleMovement(frameTime);
