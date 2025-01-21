@@ -1,4 +1,3 @@
-using System.Numerics;
 using Content.Shared.Alert;
 using Content.Shared.CCVar;
 using Content.Shared.Movement.Components;
@@ -127,6 +126,15 @@ public sealed class MoverController : SharedMoverController
             return;
         }
 
+        if (Timing.IsFirstTimePredicted && Timing.InPrediction)
+        {
+            RaisePredictiveEvent(new ClientMovementEvent()
+            {
+                Position = xform.LocalPosition,
+                Rotation = xform.LocalRotation,
+            });
+        }
+
         // Server-side should just be handled on its own so we'll just do this shizznit
         HandleMobMovement(
             player,
@@ -135,41 +143,6 @@ public sealed class MoverController : SharedMoverController
             body,
             xformMover,
             frameTime);
-    }
-
-    public override void UpdateAfterSolve(bool prediction, float frameTime)
-    {
-        base.UpdateAfterSolve(prediction, frameTime);
-
-        if (_playerManager.LocalEntity is not {Valid: true} player)
-            return;
-
-        if (!MoverQuery.TryGetComponent(player, out var mover) ||
-            !XformQuery.TryGetComponent(player, out var xform))
-        {
-            return;
-        }
-
-        var xformMover = xform;
-
-        if (mover.ToParent && RelayQuery.HasComponent(xform.ParentUid))
-        {
-            if (!PhysicsQuery.TryGetComponent(xform.ParentUid, out var body) ||
-                !XformQuery.TryGetComponent(xform.ParentUid, out xformMover))
-            {
-                return;
-            }
-        }
-
-        if (Timing.IsFirstTimePredicted &&
-            Timing.InSimulation)
-        {
-            RaiseNetworkEvent(new ClientMovementEvent()
-            {
-                Position = xformMover.LocalPosition,
-                Rotation = xformMover.LocalRotation,
-            });
-        }
     }
 
     protected override bool CanSound()

@@ -12,6 +12,7 @@ using Robust.Shared.Player;
 using DroneConsoleComponent = Content.Server.Shuttles.DroneConsoleComponent;
 using DependencyAttribute = Robust.Shared.IoC.DependencyAttribute;
 using Robust.Shared.Map.Components;
+using Robust.Shared.Physics.Systems;
 
 namespace Content.Server.Physics.Controllers;
 
@@ -31,6 +32,8 @@ public sealed class MoverController : SharedMoverController
         SubscribeLocalEvent<InputMoverComponent, PlayerDetachedEvent>(OnPlayerDetached);
 
         SubscribeNetworkEvent<ClientMovementEvent>(OnClientMove);
+
+        UpdatesBefore.Add(typeof(SharedPhysicsSystem));
     }
 
     private void OnClientMove(ClientMovementEvent msg, EntitySessionEventArgs args)
@@ -82,10 +85,9 @@ public sealed class MoverController : SharedMoverController
         return true;
     }
 
-    public override void UpdateBeforeSolve(bool prediction, float frameTime)
+    public override void Update(float frameTime)
     {
-        base.UpdateBeforeSolve(prediction, frameTime);
-
+        base.Update(frameTime);
         var inputQueryEnumerator = AllEntityQuery<InputMoverComponent>();
 
         while (inputQueryEnumerator.MoveNext(out var uid, out var mover))
