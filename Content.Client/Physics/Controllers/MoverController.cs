@@ -1,9 +1,10 @@
+using System.Numerics;
 using Content.Shared.Alert;
 using Content.Shared.CCVar;
 using Content.Shared.Movement.Components;
+using Content.Shared.Movement.Events;
 using Content.Shared.Movement.Pulling.Components;
 using Content.Shared.Movement.Systems;
-using Robust.Client.GameObjects;
 using Robust.Client.Physics;
 using Robust.Client.Player;
 using Robust.Shared.Configuration;
@@ -86,9 +87,9 @@ public sealed class MoverController : SharedMoverController
         SetMoveInput(entity, MoveButtons.None);
     }
 
-    public override void UpdateBeforeSolve(bool prediction, float frameTime)
+    public override void Update(float frameTime)
     {
-        base.UpdateBeforeSolve(prediction, frameTime);
+        base.Update(frameTime);
 
         if (_playerManager.LocalEntity is not {Valid: true} player)
             return;
@@ -134,6 +135,41 @@ public sealed class MoverController : SharedMoverController
             body,
             xformMover,
             frameTime);
+    }
+
+    public override void UpdateAfterSolve(bool prediction, float frameTime)
+    {
+        base.UpdateAfterSolve(prediction, frameTime);
+
+        if (_playerManager.LocalEntity is not {Valid: true} player)
+            return;
+
+        if (!MoverQuery.TryGetComponent(player, out var mover) ||
+            !XformQuery.TryGetComponent(player, out var xform))
+        {
+            return;
+        }
+
+        var xformMover = xform;
+
+        if (mover.ToParent && RelayQuery.HasComponent(xform.ParentUid))
+        {
+            if (!PhysicsQuery.TryGetComponent(xform.ParentUid, out var body) ||
+                !XformQuery.TryGetComponent(xform.ParentUid, out xformMover))
+            {
+                return;
+            }
+        }
+
+        if (Timing.IsFirstTimePredicted &&
+            Timing.InSimulation)
+        {
+            RaiseNetworkEvent(new ClientMovementEvent()
+            {
+                Position = xformMover.LocalPosition,
+                Rotation = xformMover.LocalRotation,
+            });
+        }
     }
 
     protected override bool CanSound()

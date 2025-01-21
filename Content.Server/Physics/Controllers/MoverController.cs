@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using Content.Server.Shuttles.Components;
 using Content.Server.Shuttles.Systems;
 using Content.Shared.Movement.Components;
+using Content.Shared.Movement.Events;
 using Content.Shared.Movement.Systems;
 using Content.Shared.Shuttles.Components;
 using Content.Shared.Shuttles.Systems;
@@ -28,6 +29,20 @@ public sealed class MoverController : SharedMoverController
         SubscribeLocalEvent<RelayInputMoverComponent, PlayerDetachedEvent>(OnRelayPlayerDetached);
         SubscribeLocalEvent<InputMoverComponent, PlayerAttachedEvent>(OnPlayerAttached);
         SubscribeLocalEvent<InputMoverComponent, PlayerDetachedEvent>(OnPlayerDetached);
+
+        SubscribeNetworkEvent<ClientMovementEvent>(OnClientMove);
+    }
+
+    private void OnClientMove(ClientMovementEvent msg, EntitySessionEventArgs args)
+    {
+        var player = args.SenderSession.AttachedEntity;
+
+        if (!XformQuery.TryComp(player, out var xform))
+        {
+            return;
+        }
+
+        _xformSystem.SetLocalPositionRotation(player.Value, msg.Position, msg.Rotation, xform);
     }
 
     private void OnRelayPlayerAttached(Entity<RelayInputMoverComponent> entity, ref PlayerAttachedEvent args)
@@ -44,11 +59,21 @@ public sealed class MoverController : SharedMoverController
 
     private void OnPlayerAttached(Entity<InputMoverComponent> entity, ref PlayerAttachedEvent args)
     {
+        if (TryComp(entity.Owner, out PhysicsComponent? physics))
+        {
+            physics.ServerIgnored = true;
+        }
+
         SetMoveInput(entity, MoveButtons.None);
     }
 
     private void OnPlayerDetached(Entity<InputMoverComponent> entity, ref PlayerDetachedEvent args)
     {
+        if (TryComp(entity.Owner, out PhysicsComponent? physics))
+        {
+            physics.ServerIgnored = false;
+        }
+
         SetMoveInput(entity, MoveButtons.None);
     }
 
