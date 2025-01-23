@@ -92,6 +92,7 @@ public abstract partial class SharedMoverController : VirtualController
         MapGridQuery = GetEntityQuery<MapGridComponent>();
 
         SubscribeLocalEvent<PlayerAttachedEvent>(OnPlayerAttached);
+        SubscribeLocalEvent<PlayerDetachedEvent>(OnPlayerDetached);
 
         InitializeInput();
         InitializeRelay();
@@ -102,7 +103,12 @@ public abstract partial class SharedMoverController : VirtualController
 
     private void OnPlayerAttached(PlayerAttachedEvent ev)
     {
-        _owner.SetPlayerOwner(ev.Entity);
+        _owner.SetPlayerOwner(ev.Entity, true);
+    }
+
+    private void OnPlayerDetached(PlayerDetachedEvent ev)
+    {
+        _owner.SetPlayerOwner(ev.Entity, false);
     }
 
     public override void Shutdown()

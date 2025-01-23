@@ -86,9 +86,9 @@ public sealed class MoverController : SharedMoverController
         SetMoveInput(entity, MoveButtons.None);
     }
 
-    public override void Update(float frameTime)
+    public override void UpdateBeforeSolve(bool prediction, float frameTime)
     {
-        base.Update(frameTime);
+        base.UpdateBeforeSolve(prediction, frameTime);
 
         if (_playerManager.LocalEntity is not {Valid: true} player)
             return;

@@ -71,9 +71,9 @@ public sealed class MoverController : SharedMoverController
         return true;
     }
 
-    public override void Update(float frameTime)
+    public override void UpdateBeforeSolve(bool prediction, float frameTime)
     {
-        base.Update(frameTime);
+        base.UpdateBeforeSolve(prediction, frameTime);
         var inputQueryEnumerator = AllEntityQuery<InputMoverComponent>();
 
         while (inputQueryEnumerator.MoveNext(out var uid, out var mover))
