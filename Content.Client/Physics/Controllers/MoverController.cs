@@ -126,15 +126,6 @@ public sealed class MoverController : SharedMoverController
             return;
         }
 
-        if (Timing.IsFirstTimePredicted && Timing.InPrediction)
-        {
-            RaisePredictiveEvent(new ClientMovementEvent()
-            {
-                Position = xform.LocalPosition,
-                Rotation = xform.LocalRotation,
-            });
-        }
-
         // Server-side should just be handled on its own so we'll just do this shizznit
         HandleMobMovement(
             player,

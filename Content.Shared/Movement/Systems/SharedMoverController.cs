@@ -20,6 +20,7 @@ using Robust.Shared.Physics;
 using Robust.Shared.Physics.Components;
 using Robust.Shared.Physics.Controllers;
 using Robust.Shared.Physics.Systems;
+using Robust.Shared.Player;
 using Robust.Shared.Timing;
 using Robust.Shared.Utility;
 using PullableComponent = Content.Shared.Movement.Pulling.Components.PullableComponent;
@@ -44,6 +45,7 @@ public abstract partial class SharedMoverController : VirtualController
     [Dependency] private   readonly SharedMapSystem _mapSystem = default!;
     [Dependency] private   readonly SharedGravitySystem _gravity = default!;
     [Dependency] protected readonly SharedPhysicsSystem Physics = default!;
+    [Dependency] private readonly SharedOwnerTransformSystem _owner = default!;
     [Dependency] private   readonly SharedTransformSystem _transform = default!;
     [Dependency] private   readonly TagSystem _tags = default!;
 
@@ -89,11 +91,18 @@ public abstract partial class SharedMoverController : VirtualController
         FootstepModifierQuery = GetEntityQuery<FootstepModifierComponent>();
         MapGridQuery = GetEntityQuery<MapGridComponent>();
 
+        SubscribeLocalEvent<PlayerAttachedEvent>(OnPlayerAttached);
+
         InitializeInput();
         InitializeRelay();
         Subs.CVar(_configManager, CCVars.RelativeMovement, value => _relativeMovement = value, true);
         Subs.CVar(_configManager, CCVars.StopSpeed, value => _stopSpeed = value, true);
         UpdatesBefore.Add(typeof(TileFrictionController));
+    }
+
+    private void OnPlayerAttached(PlayerAttachedEvent ev)
+    {
+        _owner.SetPlayerOwner(ev.Entity);
     }
 
     public override void Shutdown()

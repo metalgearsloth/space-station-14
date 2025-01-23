@@ -31,21 +31,7 @@ public sealed class MoverController : SharedMoverController
         SubscribeLocalEvent<InputMoverComponent, PlayerAttachedEvent>(OnPlayerAttached);
         SubscribeLocalEvent<InputMoverComponent, PlayerDetachedEvent>(OnPlayerDetached);
 
-        SubscribeNetworkEvent<ClientMovementEvent>(OnClientMove);
-
         UpdatesBefore.Add(typeof(SharedPhysicsSystem));
-    }
-
-    private void OnClientMove(ClientMovementEvent msg, EntitySessionEventArgs args)
-    {
-        var player = args.SenderSession.AttachedEntity;
-
-        if (!XformQuery.TryComp(player, out var xform))
-        {
-            return;
-        }
-
-        _xformSystem.SetLocalPositionRotation(player.Value, msg.Position, msg.Rotation, xform);
     }
 
     private void OnRelayPlayerAttached(Entity<RelayInputMoverComponent> entity, ref PlayerAttachedEvent args)
