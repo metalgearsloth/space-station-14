@@ -91,7 +91,7 @@ public sealed class ActionOnInteractSystem : EntitySystem
                     entAct.Event.Target = args.Target.Value;
                 }
 
-                _actions.PerformAction(args.User, null, entActId, entAct, entAct.Event, _timing.CurTime, false);
+                _actions.PerformAction(args.User, null, entActId, entAct, false);
                 args.Handled = true;
                 return;
             }
@@ -115,7 +115,7 @@ public sealed class ActionOnInteractSystem : EntitySystem
                 entAct.Event.Coords = args.ClickLocation;
             }
 
-            _actions.PerformAction(args.User, null, entActId, entAct, entAct.Event, _timing.CurTime, false);
+            _actions.PerformAction(args.User, null, entActId, entAct, false);
             args.Handled = true;
             return;
         }
@@ -138,7 +138,7 @@ public sealed class ActionOnInteractSystem : EntitySystem
             act.Event.Target = args.ClickLocation;
         }
 
-        _actions.PerformAction(args.User, null, actId, act, act.Event, _timing.CurTime, false);
+        _actions.PerformAction(args.User, null, actId, act, false);
         args.Handled = true;
     }
 

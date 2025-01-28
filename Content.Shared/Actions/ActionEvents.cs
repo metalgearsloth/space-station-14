@@ -1,4 +1,5 @@
 using Content.Shared.Hands;
+using Content.Shared.Hands.Components;
 using Content.Shared.Inventory;
 using Content.Shared.Inventory.Events;
 using Robust.Shared.Map;
@@ -177,7 +178,7 @@ public abstract partial class EntityWorldTargetActionEvent : BaseActionEvent
 ///     system.
 /// </summary>
 [ImplicitDataDefinitionForInheritors]
-public abstract partial class BaseActionEvent : HandledEntityEventArgs
+public abstract partial class BaseActionEvent
 {
     /// <summary>
     ///     The user performing the action.
@@ -189,8 +190,74 @@ public abstract partial class BaseActionEvent : HandledEntityEventArgs
     /// </summary>
     public Entity<BaseActionComponent> Action;
 
+    [DataField]
+    public ActionEventTarget EventTarget = ActionEventTarget.Action;
+
     /// <summary>
     /// Should we toggle the action entity?
     /// </summary>
     public bool Toggle;
+
+    public ActionResult Result = ActionResult.Pending;
+
+    public bool Handled
+    {
+        get => Result is ActionResult.Handled or ActionResult.Cancelled;
+        set
+        {
+            if (value == Handled)
+                return;
+
+            Result = value ? ActionResult.Handled : ActionResult.Pending;
+        }
+    }
+}
+
+/// <summary>
+/// Specifies the target of an action.
+/// </summary>
+public record struct ActionTarget
+{
+    public EntityCoordinates Coordinates;
+    public EntityUid? Target;
+}
+
+/// <summary>
+/// Where to raise the action event on.
+/// </summary>
+[Flags]
+public enum ActionEventTarget : byte
+{
+    None = 0,
+
+    /// <summary>
+    /// Raised against the action itself.
+    /// </summary>
+    Action = 1 << 0,
+
+    /// <summary>
+    /// Raised against the action's performer.
+    /// </summary>
+    User = 1 << 1,
+}
+
+/// <summary>
+/// Flag for action events to indicate what should occur.
+/// </summary>
+public enum ActionResult : byte
+{
+    /// <summary>
+    /// This action event has not been handled yet.
+    /// </summary>
+    Pending,
+
+    /// <summary>
+    /// No further events should continue and the action has not been handled.
+    /// </summary>
+    Cancelled,
+
+    /// <summary>
+    /// This action event has been handled and we should proceed to the next event.
+    /// </summary>
+    Handled,
 }

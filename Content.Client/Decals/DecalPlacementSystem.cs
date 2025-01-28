@@ -162,7 +162,10 @@ public sealed class DecalPlacementSystem : EntitySystem
             CheckCanAccess = false,
             CheckCanInteract = false,
             Range = -1,
-            Event = actionEvent,
+            Events = new ()
+            {
+                actionEvent,
+            },
             IconColor = _decalColor,
         });
 

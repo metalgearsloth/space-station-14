@@ -254,7 +254,7 @@ public sealed class ActionUIController : UIController, IOnStateChanged<GameplayS
                 action.Event.Target = entity;
             }
 
-            _actionsSystem.PerformAction(user, actionComp, actionId, action, action.Event, _timing.CurTime);
+            _actionsSystem.PerformAction(user, actionComp, actionId, action, action.Event);
         }
         else
             EntityManager.RaisePredictiveEvent(new RequestPerformActionEvent(EntityManager.GetNetEntity(actionId), EntityManager.GetNetEntity(args.EntityUid)));

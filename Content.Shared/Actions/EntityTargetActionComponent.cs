@@ -10,15 +10,6 @@ namespace Content.Shared.Actions;
 [RegisterComponent, NetworkedComponent]
 public sealed partial class EntityTargetActionComponent : BaseTargetActionComponent
 {
-    public override BaseActionEvent? BaseEvent => Event;
-
-    /// <summary>
-    ///     The local-event to raise when this action is performed.
-    /// </summary>
-    [DataField("event")]
-    [NonSerialized]
-    public EntityTargetActionEvent? Event;
-
     /// <summary>
     /// Determines which entities are valid targets for this action.
     /// </summary>

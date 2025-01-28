@@ -431,8 +431,6 @@ public abstract class SharedActionsSystem : EntitySystem
         if (action is { Charges: < 1, RenewCharges: true })
             ResetCharges(actionEnt, true, true);
 
-        BaseActionEvent? performEvent = null;
-
         if (action.CheckConsciousness && !_actionBlockerSystem.CanConsciouslyPerformAction(user))
             return;
 
@@ -457,13 +455,6 @@ public abstract class SharedActionsSystem : EntitySystem
                 _adminLogger.Add(LogType.Action,
                     $"{ToPrettyString(user):user} is performing the {name:action} action (provided by {ToPrettyString(action.Container ?? user):provider}) targeted at {ToPrettyString(entityTarget):target}.");
 
-                if (entityAction.Event != null)
-                {
-                    entityAction.Event.Target = entityTarget;
-                    Dirty(actionEnt, entityAction);
-                    performEvent = entityAction.Event;
-                }
-
                 break;
             case WorldTargetActionComponent worldAction:
                 if (ev.EntityCoordinatesTarget is not { } netCoordinatesTarget)
@@ -480,13 +471,6 @@ public abstract class SharedActionsSystem : EntitySystem
 
                 _adminLogger.Add(LogType.Action,
                     $"{ToPrettyString(user):user} is performing the {name:action} action (provided by {ToPrettyString(action.Container ?? user):provider}) targeted at {entityCoordinatesTarget:target}.");
-
-                if (worldAction.Event != null)
-                {
-                    worldAction.Event.Target = entityCoordinatesTarget;
-                    Dirty(actionEnt, worldAction);
-                    performEvent = worldAction.Event;
-                }
 
                 break;
             case EntityWorldTargetActionComponent entityWorldAction:
@@ -508,13 +492,6 @@ public abstract class SharedActionsSystem : EntitySystem
                 _adminLogger.Add(LogType.Action,
                     $"{ToPrettyString(user):user} is performing the {name:action} action (provided by {ToPrettyString(action.Container ?? user):provider}) targeted at {ToPrettyString(actionEntity):target} {actionCoords:target}.");
 
-                if (entityWorldAction.Event != null)
-                {
-                    entityWorldAction.Event.Entity = actionEntity;
-                    entityWorldAction.Event.Coords = actionCoords;
-                    Dirty(actionEnt, entityWorldAction);
-                    performEvent = entityWorldAction.Event;
-                }
                 break;
             }
             case InstantActionComponent instantAction:
@@ -524,12 +501,11 @@ public abstract class SharedActionsSystem : EntitySystem
                 _adminLogger.Add(LogType.Action,
                     $"{ToPrettyString(user):user} is performing the {name:action} action provided by {ToPrettyString(action.Container ?? user):provider}.");
 
-                performEvent = instantAction.Event;
                 break;
         }
 
         // All checks passed. Perform the action!
-        PerformAction(user, component, actionEnt, action, performEvent, curTime);
+        PerformAction(user, component, actionEnt, action);
     }
 
     public bool ValidateEntityTarget(EntityUid user, EntityUid target, Entity<EntityTargetActionComponent> actionEnt)
@@ -655,10 +631,12 @@ public abstract class SharedActionsSystem : EntitySystem
         return !ev.Cancelled;
     }
 
-    public void PerformAction(EntityUid performer, ActionsComponent? component, EntityUid actionId, BaseActionComponent action, BaseActionEvent? actionEvent, TimeSpan curTime, bool predicted = true)
+    public void PerformAction(EntityUid performer,
+        ActionsComponent? component,
+        EntityUid actionId,
+        BaseActionComponent action,
+        bool predicted = true)
     {
-        var handled = false;
-
         var toggledBefore = action.Toggled;
 
         // Note that attached entity and attached container are allowed to be null here.
@@ -668,26 +646,35 @@ public abstract class SharedActionsSystem : EntitySystem
             return;
         }
 
-        if (actionEvent != null)
+        var toggle = false;
+
+        foreach (var actionEv in action.Events)
         {
+            // Reset event state.
             // This here is required because of client-side prediction (RaisePredictiveEvent results in event re-use).
-            actionEvent.Handled = false;
-            var target = performer;
-            actionEvent.Performer = performer;
-            actionEvent.Action = (actionId, action);
+            actionEv.Result = ActionResult.Pending;
+            actionEv.Performer = performer;
+            actionEv.Action = (actionId, action);
 
-            if (!action.RaiseOnUser && action.Container != null && !HasComp<MindComponent>(action.Container))
-                target = action.Container.Value;
+            // IDK why this is checking mindcomponent but it scares me.
+            if ((actionEv.EventTarget & ActionEventTarget.Action) == ActionEventTarget.Action && action.Container != null && !HasComp<MindComponent>(action.Container))
+            {
+                RaiseLocalEvent(action.Container.Value, (object) actionEv, broadcast: true);
+            }
 
-            RaiseLocalEvent(target, (object) actionEvent, broadcast: true);
-            handled = actionEvent.Handled;
+            if ((actionEv.EventTarget & ActionEventTarget.User) == ActionEventTarget.User)
+            {
+                RaiseLocalEvent(performer, (object) actionEv, broadcast: true);
+            }
+
+            if (actionEv.Result == ActionResult.Cancelled)
+                return;
+
+            toggle |= actionEv.Toggle;
         }
 
-        if (!handled)
-            return; // no interaction occurred.
-
         // play sound, reduce charges, start cooldown, and mark as dirty (if required).
-        if (actionEvent?.Toggle == true)
+        if (toggle)
         {
             action.Toggled = !action.Toggled;
         }
@@ -705,6 +692,8 @@ public abstract class SharedActionsSystem : EntitySystem
         }
 
         action.Cooldown = null;
+        var curTime = GameTiming.CurTime;
+
         if (action is { UseDelay: not null, Charges: null or < 1 })
         {
             dirty = true;
@@ -1026,7 +1015,7 @@ public abstract class SharedActionsSystem : EntitySystem
         RaiseLocalEvent(ent.Owner, ref ev);
         var target = ev.Target ?? ent.Owner;
 
-        args.Handled = true;
+        args.Result = ActionResult.Handled;
         args.Toggle = true;
 
         if (!args.Action.Comp.Toggled)
@@ -1044,7 +1033,7 @@ public abstract class SharedActionsSystem : EntitySystem
         if (args.Handled)
             return;
 
-        args.Handled = true;
+        args.Result = ActionResult.Handled;
         args.Toggle = true;
         var target = ent.Owner;
 

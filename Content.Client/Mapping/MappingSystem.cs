@@ -83,7 +83,10 @@ public sealed partial class MappingSystem : EntitySystem
             {
                 ClientExclusive = true,
                 CheckCanInteract = false,
-                Event = actionEvent,
+                Events = new()
+                {
+                    actionEvent
+                },
                 Icon = tileIcon
             };
 
@@ -95,7 +98,10 @@ public sealed partial class MappingSystem : EntitySystem
             {
                 ClientExclusive = true,
                 CheckCanInteract = false,
-                Event = actionEvent,
+                Events = new()
+                {
+                    actionEvent
+                },
                 Icon = _deleteIcon,
             };
 
