@@ -1,5 +1,4 @@
 using Content.Server.NPC.NuPc;
-using JetBrains.Annotations;
 using Robust.Shared.Collections;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Random;
@@ -70,7 +69,7 @@ public sealed class ActuationSystem : EntitySystem
         if (current?.Status != NpcBehaviorState.Running)
         {
             // Regular behavior selection
-            foreach (var behavior in component.Behaviors)
+            foreach (var behavior in component.BehaviorGroups)
             {
                 if (!_protoManager.TryIndex(behavior, out var groupProto))
                     continue;
@@ -85,12 +84,13 @@ public sealed class ActuationSystem : EntitySystem
             var newBehavior = GetBestBehavior(current, ref behaviors);
 
             // If it's the same behavior don't re-select.
-            if (newBehavior.ID != component.CurrentBehavior?.Behavior)
+            if (newBehavior.ID == component.CurrentBehavior?.Behavior)
             {
-                // Shutdown old & start new.
+                return;
             }
-        }
 
+            // Shutdown old & start new.
+        }
     }
 
     private void UpdateBehavior(NpcRunningBehavior? behavior)
@@ -160,7 +160,14 @@ public sealed class ActuationSystem : EntitySystem
     /// </remarks>
     private float GetScore(NpcBehaviorPrototype behavior)
     {
+        var score = 0f;
 
+        foreach (var scorer in behavior.Scorers)
+        {
+            // TODO: Get score
+        }
+
+        return score;
     }
 
     private void GetBehaviorOptions(NpcBehaviorGroupPrototype group, ref ValueList<ProtoId<NpcBehaviorPrototype>> behaviors)
@@ -260,40 +267,20 @@ public sealed partial class NpcBehaviorPrototype : IPrototype
 
     // Scoring
     [DataField(required: true)]
-    public List<INpcScore> Score = new();
+    public List<INpcScore> Scorers = new();
 
     /// <summary>
-    /// The list of actions to run for this behavior.
+    /// The list of components to run for this behavior.
     /// </summary>
+    /// // TODO: Just need compname list
     [DataField(required: true)]
-    public List<INpcAction> Sequence = new();
-}
-
-[DataRecord]
-public record struct NpcMoveTo : INpcAction
-{
-
-}
-
-[DataRecord]
-public record struct NpcMelee : INpcAction
-{
-
+    public List<string> Sequence = new();
 }
 
 /// <summary>
 /// Precondition for running a behavior / group.
 /// </summary>
 public interface INpcPrecondition
-{
-
-}
-
-/// <summary>
-/// Action inside of a sequence tree, e.g. moveto, attack, eat, etc.
-/// These wrap another component which handles the underlying actions independently.
-/// </summary>
-public interface INpcAction
 {
 
 }

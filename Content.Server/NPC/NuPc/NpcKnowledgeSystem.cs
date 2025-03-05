@@ -124,7 +124,6 @@ public sealed class NpcKnowledgeSystem : SharedNpcKnowledgeSystem
         var query = EntityQueryEnumerator<NpcKnowledgeComponent>();
         var curTime = _timing.CurTime;
 
-
         // Setup knowledge update.
         _npcs.Clear();
 
@@ -395,7 +394,7 @@ public sealed partial class NuPcComponent : Component
     /// Available behaviors this NPC can select from. Not ordered.
     /// </summary>
     [DataField(required: true)]
-    public List<ProtoId<NpcBehaviorGroupPrototype>> Behaviors = new();
+    public List<ProtoId<NpcBehaviorGroupPrototype>> BehaviorGroups = new();
 
     /// <summary>
     /// The behavior currently running.
