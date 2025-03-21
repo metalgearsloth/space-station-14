@@ -169,16 +169,19 @@ namespace Content.Shared.Movement.Systems
             }
 
             // If we updated parent then cancel the accumulator and force it now.
-            if (!TryUpdateRelative(mover, XformQuery.GetComponent(uid)) && mover.TargetRelativeRotation.Equals(Angle.Zero))
+            if (!TryUpdateRelative((uid, mover, XformQuery.GetComponent(uid))) && mover.TargetRelativeRotation.Equals(Angle.Zero))
                 return;
 
+            // Already dirtied in TryUpdateRelative
             mover.LerpTarget = TimeSpan.Zero;
             mover.TargetRelativeRotation = Angle.Zero;
-            Dirty(uid, mover);
         }
 
-        private bool TryUpdateRelative(InputMoverComponent mover, TransformComponent xform)
+        private bool TryUpdateRelative(Entity<InputMoverComponent, TransformComponent> entity)
         {
+            var mover = entity.Comp1;
+            var xform = entity.Comp2;
+
             var relative = xform.GridUid;
             relative ??= xform.MapUid;
 
@@ -224,6 +227,7 @@ namespace Content.Shared.Movement.Systems
 
             mover.RelativeEntity = relative;
             mover.TargetRelativeRotation = targetRotation;
+            Dirty(entity.Owner, mover);
             return true;
         }
 
