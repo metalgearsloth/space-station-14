@@ -1524,10 +1524,13 @@ public abstract class SharedStorageSystem : EntitySystem
         if (playerSession.AttachedEntity is not { Valid: true } playerEnt || !Exists(playerEnt))
             return;
 
-        if (!_inventory.TryGetSlotEntity(playerEnt, slot, out var storageEnt))
+        if (!_inventory.TryGetSlotEntity(playerEnt, slot, out var storageEnt) || !TryComp(storageEnt, out StorageComponent? storage))
             return;
 
-        if (!ActionBlocker.CanInteract(playerEnt, storageEnt))
+        if (!CanInteract(playerEnt, (storageEnt.Value, storage)))
+            return;
+
+        if (UseDelay.IsDelayed(storageEnt.Value, id: OpenUiUseDelayID))
             return;
 
         if (!UI.IsUiOpen(storageEnt.Value, StorageComponent.StorageUiKey.Key, playerEnt))

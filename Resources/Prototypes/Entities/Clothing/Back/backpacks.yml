@@ -27,7 +27,9 @@
         type: StorageBoundUserInterface
   # to prevent bag open/honk spam
   - type: UseDelay
-    delay: 0.5
+    delays:
+      storage:
+        length: 0.25
   - type: ExplosionResistance
     damageCoefficient: 0.9
 

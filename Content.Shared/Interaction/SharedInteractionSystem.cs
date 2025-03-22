@@ -1138,7 +1138,7 @@ namespace Content.Shared.Interaction
                 if (!activateMsg.WasLogged)
                     _adminLogger.Add(LogType.InteractActivate, LogImpact.Low, $"{ToPrettyString(user):user} activated {ToPrettyString(used):used}");
 
-                if (delayComponent != null)
+                if (delayComponent != null && activateMsg.ApplyDelay)
                     _useDelay.TryResetDelay(used, component: delayComponent);
                 return true;
             }

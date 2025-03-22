@@ -28,6 +28,11 @@ public sealed class ActivateInWorldEvent : HandledEntityEventArgs, ITargetedInte
     /// </summary>
     public bool WasLogged { get; set; }
 
+    /// <summary>
+    /// Should we apply the default UseDelay.
+    /// </summary>
+    public bool ApplyDelay = true;
+
     public ActivateInWorldEvent(EntityUid user, EntityUid target, bool complex)
     {
         User = user;
@@ -56,6 +61,8 @@ public sealed class UserActivateInWorldEvent : HandledEntityEventArgs, ITargeted
     ///     Whether or not <see cref="User"/> can perform complex interactions or only basic ones.
     /// </summary>
     public bool Complex;
+
+    public bool ApplyDelay;
 
     public UserActivateInWorldEvent(EntityUid user, EntityUid target, bool complex)
     {
