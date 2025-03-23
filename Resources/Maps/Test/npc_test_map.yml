@@ -17,7 +17,6 @@ entities:
     - type: OccluderTree
     - type: LoadedMap
     - type: GridTree
-    - type: MovedGrids
   - uid: 10
     components:
     - type: MetaData

@@ -47,7 +47,6 @@ entities:
     - type: Transform
     - type: Map
     - type: GridTree
-    - type: MovedGrids
     - type: Broadphase
     - type: OccluderTree
 - proto: SpawnPointLatejoin

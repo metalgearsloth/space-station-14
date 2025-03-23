@@ -108,7 +108,6 @@ entities:
     - type: LoadedMap
     - type: SpreaderGrid
     - type: GridTree
-    - type: MovedGrids
     - type: GridPathfinding
     - type: DecalGrid
       chunkCollection:

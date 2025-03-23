@@ -1631,7 +1631,6 @@ entities:
     - type: Transform
     - type: Map
     - type: GridTree
-    - type: MovedGrids
     - type: FTLDestination
       whitelist:
         tags:
