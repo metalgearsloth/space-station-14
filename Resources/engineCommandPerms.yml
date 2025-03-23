@@ -13,6 +13,7 @@
 
 - Flags: DEBUG
   Commands:
+  - boxstack
   - delete
   - inrangeunoccluded
   - lsgrid
