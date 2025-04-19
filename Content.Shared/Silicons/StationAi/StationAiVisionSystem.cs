@@ -277,7 +277,7 @@ public sealed class StationAiVisionSystem : EntitySystem
     /// <summary>
     /// Gets the relevant vision seeds for later.
     /// </summary>
-    private record struct SeedJob() : IRobustJob
+    private record struct SeedJob() : RobustJob
     {
         public required StationAiVisionSystem System;
 
