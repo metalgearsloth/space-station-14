@@ -35,6 +35,9 @@ public interface INewBiomeLayer
 [RegisterComponent]
 public sealed partial class NewBiomeComponent : Component
 {
+    [DataField]
+    public bool Enabled = true;
+
     /// <summary>
     /// Is there currently a job that's loading.
     /// </summary>
@@ -53,25 +56,10 @@ public sealed partial class NewBiomeComponent : Component
     /// Data that is currently loaded.
     /// </summary>
     [DataField]
-    public Dictionary<string, Dictionary<Vector2i, BiomeLoadedData>> LoadedData = new();
+    public Dictionary<string, Dictionary<Vector2i, DungeonLoadedData>> LoadedData = new();
 
     /// <summary>
     /// Bounds loaded by players for this tick.
     /// </summary>
     public List<Box2i> LoadedBounds = new();
-}
-
-[DataDefinition]
-public sealed partial class BiomeLoadedData
-{
-    public static readonly BiomeLoadedData Empty = new();
-
-    [DataField]
-    public HashSet<EntityUid>? LoadedEntities;
-
-    [DataField]
-    public List<uint>? LoadedDecals;
-
-    [DataField]
-    public bool LoadedTiles;
 }
