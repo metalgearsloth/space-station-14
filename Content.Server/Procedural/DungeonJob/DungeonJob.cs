@@ -235,7 +235,7 @@ public sealed partial class DungeonJob : Job<DungeonLoadedData>
                 dungeons.AddRange(await GenerateExteriorDungen(position, exterior, reservedTiles, random));
                 break;
             case FillGridDunGen fill:
-                dungeons.Add(await GenerateFillDunGen(fill, data, reservedTiles));
+                await GenerateFillDunGen(fill, data, dungeons[^1], reservedTiles);
                 break;
             case JunctionDunGen junc:
                 await PostGen(junc, data, dungeons[^1], reservedTiles, random);
@@ -335,6 +335,11 @@ public sealed partial class DungeonJob : Job<DungeonLoadedData>
         _dungeonLoadedData.Decals.Add(localPosition, id);
     }
 
+    private void AddLoadedDecal(Vector2 localPosition, ProtoId<DecalPrototype> decal)
+    {
+        throw new NotImplementedException();
+    }
+
     private EntityUid AddLoadedEntity(EntProtoId proto, Vector2 localPosition)
     {
         // TODO: Load it here.
@@ -347,6 +352,11 @@ public sealed partial class DungeonJob : Job<DungeonLoadedData>
         // TODO: Load it here.
 
         _dungeonLoadedData.Tiles.Add(localTile, tile);
+    }
+
+    private void AddLoadedTile(Vector2i localTile, ProtoId<ContentTileDefinition> tileId)
+    {
+        throw new NotImplementedException();
     }
 
     #endregion

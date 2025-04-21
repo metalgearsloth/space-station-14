@@ -181,25 +181,13 @@ public sealed class SpawnSalvageMissionJob : Job<bool>
         var dungeons = await WaitAsyncTask(_dungeon.GenerateDungeonAsync(dungeonConfig, mapUid, grid, (Vector2i) dungeonOffset,
             _missionParams.Seed));
 
-        var dungeon = dungeons.First();
-
         // Aborty
-        if (dungeon.Rooms.Count == 0)
+        if (dungeons.Entities.Count == 0)
         {
             return false;
         }
 
         expedition.DungeonLocation = dungeonOffset;
-
-        List<Vector2i> reservedTiles = new();
-
-        foreach (var tile in _map.GetTilesIntersecting(mapUid, grid, new Circle(Vector2.Zero, landingPadRadius), false))
-        {
-            if (!_biome.TryGetBiomeTile(mapUid, grid, tile.GridIndices, out _))
-                continue;
-
-            reservedTiles.Add(tile.GridIndices);
-        }
 
         var budgetEntries = new List<IBudgetEntry>();
 

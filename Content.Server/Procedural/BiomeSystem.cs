@@ -18,7 +18,7 @@ using Robust.Shared.Utility;
 
 namespace Content.Server.Parallax;
 
-public sealed partial class NewBiomeSystem : EntitySystem
+public sealed partial class BiomeSystem : EntitySystem
 {
     /*
      * Handles loading in biomes around players.
@@ -43,14 +43,16 @@ public sealed partial class NewBiomeSystem : EntitySystem
     private float LoadTime => (float) _biomeQueue.MaxTime;
 
     private EntityQuery<GhostComponent> _ghostQuery;
-    private EntityQuery<NewBiomeComponent> _biomeQuery;
+    private EntityQuery<BiomeComponent> _biomeQuery;
 
     public override void Initialize()
     {
         base.Initialize();
         _biomeQueue = new JobQueue(float.MaxValue);
         _ghostQuery = GetEntityQuery<GhostComponent>();
-        _biomeQuery = GetEntityQuery<NewBiomeComponent>();
+        _biomeQuery = GetEntityQuery<BiomeComponent>();
+
+        SubscribeLocalEvent<BiomeComponent, MapInitEvent>(OnBiomeMapInit);
 
         Subs.CVar(_cfgManager, CCVars.BiomeLoadRange, OnLoadRange);
         Subs.CVar(_cfgManager, CCVars.BiomeLoadTime, OnLoadTime, true);
@@ -72,11 +74,17 @@ public sealed partial class NewBiomeSystem : EntitySystem
         _loadRange = obj;
     }
 
+    private void OnBiomeMapInit(Entity<BiomeComponent> ent, ref MapInitEvent args)
+    {
+        if (ent.Comp.Template == null)
+            return;
+    }
+
     public override void Update(float frameTime)
     {
         base.Update(frameTime);
 
-        var query = AllEntityQuery<NewBiomeComponent>();
+        var query = AllEntityQuery<BiomeComponent>();
 
         while (query.MoveNext(out var biome))
         {
@@ -132,7 +140,7 @@ public sealed partial class NewBiomeSystem : EntitySystem
 
     private void UnloadChunks()
     {
-        var query = AllEntityQuery<NewBiomeComponent>();
+        var query = AllEntityQuery<BiomeComponent>();
         var toUnloadLayers = new Dictionary<string, ValueList<Vector2i>>();
 
         while (query.MoveNext(out var bUid, out var biome))
@@ -180,7 +188,7 @@ public sealed partial class NewBiomeSystem : EntitySystem
             // Queue up unloads.
             var job = new BiomeUnloadJob(LoadTime);
             job.Layers = toUnloadLayers;
-            job.Biome = new Entity<NewBiomeComponent>(bUid, biome);
+            job.Biome = new Entity<BiomeComponent>(bUid, biome);
             job.System = this;
 
             _biomeQueue.EnqueueJob(job);
@@ -191,7 +199,7 @@ public sealed partial class NewBiomeSystem : EntitySystem
     /// <summary>
     /// Gets the full bounds to be loaded. Considers layer dependencies where they may have different chunk sizes.
     /// </summary>
-    private Box2i GetFullBounds(NewBiomeComponent component, Box2i bounds)
+    private Box2i GetFullBounds(BiomeComponent component, Box2i bounds)
     {
         var baseBounds = bounds;
 
@@ -247,7 +255,7 @@ public sealed partial class NewBiomeSystem : EntitySystem
     /// <remarks>
     /// Useful for a chunk layer to determine what layers below it require what area to be loaded.
     /// </remarks>
-    public Box2i GetLayerBounds(NewBiomeMetaLayer layer, Box2i layerBounds)
+    public Box2i GetLayerBounds(BiomeMetaLayer layer, Box2i layerBounds)
     {
         var chunkSize = (Vector2) layer.Size;
 
@@ -263,14 +271,14 @@ public sealed partial class NewBiomeSystem : EntitySystem
 
  public sealed class BiomeLoadJob : Job<bool>
     {
-        private NewBiomeSystem System = default!;
+        private BiomeSystem System = default!;
 
         public Entity<MapGridComponent> Grid;
 
         /// <summary>
         /// Biome that is getting loaded.
         /// </summary>
-        public NewBiomeComponent Biome = default!;
+        public BiomeComponent Biome = default!;
 
         public BiomeLoadJob(double maxTime, CancellationToken cancellation = default) : base(maxTime, cancellation)
         {
@@ -298,7 +306,7 @@ public sealed partial class NewBiomeSystem : EntitySystem
             return true;
         }
 
-        private async Task LoadLayer(string layerId, NewBiomeMetaLayer layer, Box2i parentBounds)
+        private async Task LoadLayer(string layerId, BiomeMetaLayer layer, Box2i parentBounds)
         {
             var loadBounds = System.GetLayerBounds(layer, parentBounds);
 
@@ -347,9 +355,9 @@ public sealed partial class NewBiomeSystem : EntitySystem
 
     public sealed class BiomeUnloadJob : Job<bool>
     {
-        public NewBiomeSystem System = default!;
+        public BiomeSystem System = default!;
 
-        public Entity<NewBiomeComponent> Biome;
+        public Entity<BiomeComponent> Biome;
         public Dictionary<string, ValueList<Vector2i>> Layers = new();
 
         public BiomeUnloadJob(double maxTime, CancellationToken cancellation = default) : base(maxTime, cancellation)

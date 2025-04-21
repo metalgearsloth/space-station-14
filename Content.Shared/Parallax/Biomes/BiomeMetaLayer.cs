@@ -4,10 +4,10 @@ using Robust.Shared.Prototypes;
 namespace Content.Shared.Parallax.Biomes;
 
 /// <summary>
-/// A layer inside of <see cref="NewBiomeComponent"/>
+/// A layer inside of <see cref="BiomeComponent"/>
 /// </summary>
 [DataRecord]
-public sealed record NewBiomeMetaLayer
+public sealed record BiomeMetaLayer
 {
     /// <summary>
     /// Chunk dimensions for this meta layer.
@@ -27,13 +27,8 @@ public sealed record NewBiomeMetaLayer
     public ProtoId<DungeonConfigPrototype> Dungeon = new();
 }
 
-public interface INewBiomeLayer
-{
-
-}
-
 [RegisterComponent]
-public sealed partial class NewBiomeComponent : Component
+public sealed partial class BiomeComponent : Component
 {
     [DataField]
     public bool Enabled = true;
@@ -50,13 +45,19 @@ public sealed partial class NewBiomeComponent : Component
     /// Layer key and associated data.
     /// </summary>
     [DataField(required: true)]
-    public Dictionary<string, NewBiomeMetaLayer> Layers = new();
+    public Dictionary<string, BiomeMetaLayer> Layers = new();
 
     /// <summary>
     /// Data that is currently loaded.
     /// </summary>
     [DataField]
     public Dictionary<string, Dictionary<Vector2i, DungeonLoadedData>> LoadedData = new();
+
+    /// <summary>
+    /// Template for MapInit.
+    /// </summary>
+    [DataField]
+    public BiomeTemplatePrototype? Template;
 
     /// <summary>
     /// Bounds loaded by players for this tick.

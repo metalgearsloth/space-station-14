@@ -2,9 +2,15 @@
 - type: biomeTemplate
   id: Continental
   layers:
-    - !type:BiomeMetaLayer
+    terrain:
+      dungeon: ContinentalTerrain
+
+- type: dungeon
+  id: ContinentalTerrain
+  layers:
+    - !type:SampleMetaLayer
       template: Lava
-    - !type:BiomeMetaLayer
+    - !type:SampleMetaLayer
       template: Caves
       threshold: -0.5
       noise:
@@ -13,7 +19,7 @@
         fractalType: FBm
         octaves: 2
         lacunarity: 2
-    - !type:BiomeMetaLayer
+    - !type:SampleMetaLayer
       template: Grasslands
       threshold: 0
       noise:
@@ -22,7 +28,7 @@
         fractalType: FBm
         octaves: 2
         lacunarity: 2
-    - !type:BiomeMetaLayer
+    - !type:SampleMetaLayer
       template: Snow
       threshold: 0.5
       noise:
@@ -37,7 +43,14 @@
 - type: biomeTemplate
   id: LowDesert
   layers:
-    - !type:BiomeEntityLayer
+    terrain:
+      dungeon: LowDesertTerrain
+
+- type: dungeon
+  id: LowDesertTerrain
+  layers:
+    # Sparse rocks
+    - !type:SampleEntityLayer
       threshold: 0.95
       noise:
         seed: 0
@@ -47,8 +60,9 @@
         - FloorAsteroidSand
       entities:
         - FloraRockSolid
+
     # Large rock areas
-    - !type:BiomeEntityLayer
+    - !type:SampleEntityLayer
       threshold: -0.20
       noise:
         seed: 0
@@ -63,178 +77,166 @@
         - FloorAsteroidSand
       entities:
         - WallRockSand
-    - !type:BiomeDummyLayer
+    - !type:SampleDummyLayer
       id: Loot
+
     # Fill layer
-    - !type:BiomeTileLayer
+    - !type:SampleTileLayer
       threshold: -1
       tile: FloorAsteroidSand
 
 # Grass
-- type: entity
-  id: BiomeGrasslands
-  components:
-  - type: BiomeMetaLayer
-    layers:
-    - id: Decals
-      dependsOn:
-      - Tile
-      subLayers:
-      # Sparse vegetation
-      - !type:BiomeDecalLayer
-        allowedTiles:
-        - FloorPlanetGrass
-        divisions: 2
-        threshold: -0.50
-        noise:
-          seed: 0
-          noiseType: Cellular
-          frequency: 1
-        decals:
-        - BushDOne
-        - BushDTwo
-        - BushDThree
+- type: biomeTemplate
+  id: Grasslands
+  layers:
+    terrain:
+      dungeon: GrasslandsTerrain
 
-      - !type:BiomeDecalLayer
-        allowedTiles:
-        - FloorPlanetGrass
-        noise:
-          seed: 0
-          noiseType: OpenSimplex2
-          frequency: 1
-        divisions: 1
-        threshold: 0.8
-        decals:
-        - FlowersBROne
-        - FlowersBRTwo
-        - FlowersBRThree
-
-      # Dense vegetation
-      - !type:BiomeDecalLayer
-        allowedTiles:
-        - FloorPlanetGrass
-        divisions: 1
-        threshold: -0.35
-        noise:
-          seed: 0
-          noiseType: Cellular
-          frequency: 0.2
-          fractalType: FBm
-          octaves: 5
-          lacunarity: 2
-          cellularDistanceFunction: Euclidean
-          cellularReturnType: Distance2
-        decals:
-        - BushAOne
-        - BushATwo
-        - BushAThree
-        - BushCOne
-        - BushCTwo
-        - BushCThree
-
-    - id: Trees
-      dependsOn:
-      - Tile
-      subLayers:
-      - !type:BiomeEntityLayer
-        threshold: 0.5
-        noise:
-          seed: 0
-          noiseType: OpenSimplex2
-          fractalType: FBm
-          frequency: 2
-        allowedTiles:
-        - FloorPlanetGrass
-        entities:
-        - FloraTree
-        - FloraTreeLarge
-
-    - id: Rocks
-      dependsOn:
-      - Tile
-      subLayers:
-      - !type:BiomeEntityLayer
-        allowedTiles:
-        - FloorPlanetGrass
-        - FloorPlanetDirt
-        threshold: -0.30
-        noise:
-          seed: 0
-          noiseType: Cellular
-          frequency: 0.05
-          lacunarity: 2
-          fractalType: FBm
-          octaves: 5
-          cellularDistanceFunction: Euclidean
-          cellularReturnType: Distance2
-        entities:
-        - WallRock
-
-    - id: Water
-      dependsOn:
-      - Tile
-      subLayers:
-      - !type:BiomeEntityLayer
-        allowedTiles:
-        - FloorPlanetGrass
-        - FloorPlanetDirt
-        threshold: 0.95
-        noise:
-          seed: 3
-          noiseType: OpenSimplex2
-          frequency: 0.003
-          lacunarity: 1.50
-          fractalType: Ridged
-          octaves: 1
-        entities:
-        - FloorWaterEntity
-
-      # Water sand
-      - !type:BiomeTileLayer
-        tile: FloorPlanetDirt
-        threshold: 0.95
-        noise:
-          seed: 3
-          noiseType: OpenSimplex2
-          frequency: 0.003
-          lacunarity: 1.50
-          fractalType: Ridged
-          octaves: 1
-
-    - id: Tile
-      subLayers:
-      # Fill remainder with dirt.
-      - !type:BiomeTileLayer
-        threshold: -1.0
-        tile: FloorPlanetDirt
-
-      - !type:BiomeTileLayer
-        threshold: -0.90
-        tile: FloorPlanetGrass
-        noise:
-          seed: 0
-          frequency: 0.02
-          fractalType: None
-
-      # Rock formation sand
-      - !type:BiomeTileLayer
-        tile: FloorPlanetDirt
-        threshold: -0.30
-        noise:
-          seed: 0
-          noiseType: Cellular
-          frequency: 0.05
-          lacunarity: 2
-          fractalType: FBm
-          octaves: 5
-          cellularDistanceFunction: Euclidean
-          cellularReturnType: Distance2
+- type: dungeon
+  id: GrasslandsTerrain
+  layers:
+  # Sparse vegetation
+  - !type:SampleDecalLayer
+    allowedTiles:
+    - FloorPlanetGrass
+    divisions: 2
+    threshold: -0.50
+    noise:
+      seed: 0
+      noiseType: Cellular
+      frequency: 1
+    decals:
+    - BushDOne
+    - BushDTwo
+    - BushDThree
+  - !type:SampleDecalLayer
+    allowedTiles:
+    - FloorPlanetGrass
+    noise:
+      seed: 0
+      noiseType: OpenSimplex2
+      frequency: 1
+    divisions: 1
+    threshold: 0.8
+    decals:
+    - FlowersBROne
+    - FlowersBRTwo
+    - FlowersBRThree
+  # Dense vegetation
+  - !type:SampleDecalLayer
+    allowedTiles:
+    - FloorPlanetGrass
+    divisions: 1
+    threshold: -0.35
+    noise:
+      seed: 0
+      noiseType: Cellular
+      frequency: 0.2
+      fractalType: FBm
+      octaves: 5
+      lacunarity: 2
+      cellularDistanceFunction: Euclidean
+      cellularReturnType: Distance2
+    decals:
+    - BushAOne
+    - BushATwo
+    - BushAThree
+    - BushCOne
+    - BushCTwo
+    - BushCThree
+  - !type:SampleEntityLayer
+    threshold: 0.5
+    noise:
+      seed: 0
+      noiseType: OpenSimplex2
+      fractalType: FBm
+      frequency: 2
+    allowedTiles:
+    - FloorPlanetGrass
+    entities:
+    - FloraTree
+    - FloraTreeLarge
+  # Rock formations
+  - !type:SampleEntityLayer
+    allowedTiles:
+    - FloorPlanetGrass
+    - FloorPlanetDirt
+    threshold: -0.30
+    noise:
+      seed: 0
+      noiseType: Cellular
+      frequency: 0.05
+      lacunarity: 2
+      fractalType: FBm
+      octaves: 5
+      cellularDistanceFunction: Euclidean
+      cellularReturnType: Distance2
+    entities:
+    - WallRock
+  - !type:SampleDummyLayer
+    id: Loot
+  # Water
+  - !type:SampleEntityLayer
+    allowedTiles:
+    - FloorPlanetGrass
+    - FloorPlanetDirt
+    threshold: 0.95
+    noise:
+      seed: 3
+      noiseType: OpenSimplex2
+      frequency: 0.003
+      lacunarity: 1.50
+      fractalType: Ridged
+      octaves: 1
+    entities:
+    - FloorWaterEntity
+  # Fill remainder with dirt.
+  - !type:SampleTileLayer
+    threshold: -1.0
+    tile: FloorPlanetDirt
+  - !type:SampleTileLayer
+    threshold: -0.90
+    tile: FloorPlanetGrass
+    noise:
+      seed: 0
+      frequency: 0.02
+      fractalType: None
+  # Water sand
+  - !type:SampleTileLayer
+    tile: FloorPlanetDirt
+    threshold: 0.95
+    noise:
+      seed: 3
+      noiseType: OpenSimplex2
+      frequency: 0.003
+      lacunarity: 1.50
+      fractalType: Ridged
+      octaves: 1
+  # Rock formation sand
+  - !type:SampleTileLayer
+    tile: FloorPlanetDirt
+    threshold: -0.30
+    noise:
+      seed: 0
+      noiseType: Cellular
+      frequency: 0.05
+      lacunarity: 2
+      fractalType: FBm
+      octaves: 5
+      cellularDistanceFunction: Euclidean
+      cellularReturnType: Distance2
 
 # Lava
 - type: biomeTemplate
   id: Lava
   layers:
-    - !type:BiomeEntityLayer
+    terrain:
+      dungeon: LavaTerrain
+
+- type: dungeon
+  id: LavaTerrain
+  layers:
+    - !type:SampleEntityLayer
       threshold: 0.9
       noise:
         frequency: 1
@@ -247,7 +249,7 @@
         - BasaltThree
         - BasaltFour
         - BasaltFive
-    - !type:BiomeDecalLayer
+    - !type:SampleDecalLayer
       allowedTiles:
         - FloorBasalt
       threshold: 0.9
@@ -265,7 +267,7 @@
         - Basalt7
         - Basalt8
         - Basalt9
-    - !type:BiomeEntityLayer
+    - !type:SampleEntityLayer
       threshold: 0.95
       noise:
         seed: 0
@@ -275,7 +277,7 @@
         - FloorBasalt
       entities:
         - FloraRockSolid
-    - !type:BiomeEntityLayer
+    - !type:SampleEntityLayer
       threshold: 0.2
       noise:
         seed: 0
@@ -289,7 +291,7 @@
       entities:
         - FloorLavaEntity
     # Rock formations
-    - !type:BiomeEntityLayer
+    - !type:SampleEntityLayer
       allowedTiles:
         - FloorBasalt
       threshold: -0.30
@@ -304,10 +306,8 @@
         cellularReturnType: Distance2
       entities:
         - WallRockBasalt
-    - !type:BiomeDummyLayer
-      id: Loot
     # Fill basalt
-    - !type:BiomeTileLayer
+    - !type:SampleTileLayer
       threshold: -1
       tile: FloorBasalt
 
@@ -315,8 +315,14 @@
 - type: biomeTemplate
   id: Snow # Similar to Grasslands... but snow
   layers:
+    terrain:
+      dungeon: SnowTerrain
+
+- type: dungeon
+  id: SnowTerrain
+  layers:
     # Sparse vegetation
-    - !type:BiomeDecalLayer
+    - !type:SampleDecalLayer
       allowedTiles:
         - FloorSnow
       divisions: 2
@@ -336,7 +342,7 @@
         - grasssnowc2
         - grasssnowc3
     # Dense, bland grass
-    - !type:BiomeDecalLayer
+    - !type:SampleDecalLayer
       allowedTiles:
         - FloorSnow
       divisions: 1
@@ -366,7 +372,7 @@
         - grasssnow12
         - grasssnow13
     # Little bit of coloured grass
-    - !type:BiomeDecalLayer
+    - !type:SampleDecalLayer
       allowedTiles:
         - FloorSnow
       divisions: 1
@@ -385,7 +391,7 @@
         - bushsnowb3
         - bushsnowb2
         - bushsnowb3
-    - !type:BiomeEntityLayer
+    - !type:SampleEntityLayer
       threshold: 0.5
       noise:
         seed: 0
@@ -397,7 +403,7 @@
       entities:
         - FloraTreeSnow
     # Rock formations
-    - !type:BiomeEntityLayer
+    - !type:SampleEntityLayer
       allowedTiles:
         - FloorSnow
       threshold: -0.30
@@ -413,7 +419,7 @@
       entities:
         - WallRockSnow
     # Ice tiles
-    - !type:BiomeTileLayer
+    - !type:SampleTileLayer
       tile: FloorIce
       threshold: -0.9
       noise:
@@ -426,7 +432,7 @@
         cellularDistanceFunction: Euclidean
         cellularReturnType: Distance2
     # Liquid plasma rivers. Ice moon baby
-    - !type:BiomeEntityLayer
+    - !type:SampleEntityLayer
       allowedTiles:
       - FloorSnow
       - FloorIce
@@ -440,9 +446,7 @@
         octaves: 1
       entities:
       - FloorLiquidPlasmaEntity
-    - !type:BiomeDummyLayer
-      id: Loot
-    - !type:BiomeTileLayer
+    - !type:SampleTileLayer
       threshold: -0.7
       tile: FloorSnow
       noise:
@@ -454,168 +458,182 @@
 - type: biomeTemplate
   id: Shadow
   layers:
-    - !type:BiomeEntityLayer
-      threshold: 0.70
-      noise:
-        frequency: 1
-        seed: 3
-      allowedTiles:
-        - FloorChromite
-      entities:
-        - ShadowBasaltOne
-        - ShadowBasaltTwo
-        - ShadowBasaltThree
-        - ShadowBasaltFour
-        - ShadowBasaltFive
-    - !type:BiomeEntityLayer
-      threshold: 0.97
-      noise:
-        frequency: 1
-        seed: 2
-      allowedTiles:
-        - FloorChromite
-      entities:
-        - CrystalPink
-    - !type:BiomeEntityLayer
-      threshold: 0.97
-      noise:
-        seed: 1
-        noiseType: OpenSimplex2
-        frequency: 1
-      allowedTiles:
-        - FloorChromite
-      entities:
-        - ShadowTree
-    # Rock formations
-    - !type:BiomeEntityLayer
-      threshold: -0.2
-      invert: true
-      noise:
-        seed: 0
-        noiseType: Perlin
-        fractalType: Ridged
-        octaves: 1
-        frequency: 0.1
-        gain: 0
-      allowedTiles:
-        - FloorChromite
-      entities:
-        - WallRockChromite
-    # chasm time
-    - !type:BiomeEntityLayer
-      allowedTiles:
+    terrain:
+      dungeon: ShadowTerrain
+
+- type: dungeon
+  id: ShadowTerrain
+  layers:
+  - !type:SampleEntityLayer
+    threshold: 0.70
+    noise:
+      frequency: 1
+      seed: 3
+    allowedTiles:
       - FloorChromite
-      threshold: 0.2
-      noise:
-        seed: 3
-        frequency: 0.1
-        fractalType: FBm
-        octaves: 5
-        lacunarity: 2
-        gain: 0.4
-      entities:
-      - FloorChromiteChasm
-    - !type:BiomeDummyLayer
-      id: Loot
-    # Fill chromite
-    - !type:BiomeTileLayer
-      threshold: -1
-      tile: FloorChromite
+    entities:
+      - ShadowBasaltOne
+      - ShadowBasaltTwo
+      - ShadowBasaltThree
+      - ShadowBasaltFour
+      - ShadowBasaltFive
+  - !type:SampleEntityLayer
+    threshold: 0.97
+    noise:
+      frequency: 1
+      seed: 2
+    allowedTiles:
+      - FloorChromite
+    entities:
+      - CrystalPink
+  - !type:SampleEntityLayer
+    threshold: 0.97
+    noise:
+      seed: 1
+      noiseType: OpenSimplex2
+      frequency: 1
+    allowedTiles:
+      - FloorChromite
+    entities:
+      - ShadowTree
+  # Rock formations
+  - !type:SampleEntityLayer
+    threshold: -0.2
+    invert: true
+    noise:
+      seed: 0
+      noiseType: Perlin
+      fractalType: Ridged
+      octaves: 1
+      frequency: 0.1
+      gain: 0
+    allowedTiles:
+      - FloorChromite
+    entities:
+      - WallRockChromite
+  # chasm time
+  - !type:SampleEntityLayer
+    allowedTiles:
+    - FloorChromite
+    threshold: 0.2
+    noise:
+      seed: 3
+      frequency: 0.1
+      fractalType: FBm
+      octaves: 5
+      lacunarity: 2
+      gain: 0.4
+    entities:
+    - FloorChromiteChasm
+  # Fill chromite
+  - !type:SampleTileLayer
+    threshold: -1
+    tile: FloorChromite
 
 # Caves
 - type: biomeTemplate
   id: Caves
   layers:
-    - !type:BiomeEntityLayer
-      threshold: 0.85
-      noise:
-        seed: 2
-        noiseType: OpenSimplex2
-        fractalType: PingPong
-      allowedTiles:
-        - FloorAsteroidSand
-      entities:
-        - CrystalGreen
-        - CrystalPink
-        - CrystalOrange
-        - CrystalBlack
-        - CrystalBlue
-        - CrystalYellow
-        - CrystalCyan
-    - !type:BiomeEntityLayer
-      threshold: 0.95
-      noise:
-        seed: 1
-        noiseType: OpenSimplex2
-        frequency: 1
-      allowedTiles:
+    terrain:
+      dungeon: CavesTerrain
+
+- type: dungeon
+  id: CavesTerrain
+  layers:
+  - !type:SampleEntityLayer
+    threshold: 0.85
+    noise:
+      seed: 2
+      noiseType: OpenSimplex2
+      fractalType: PingPong
+    allowedTiles:
       - FloorAsteroidSand
-      entities:
-      - FloraStalagmite
-    - !type:BiomeEntityLayer
-      threshold: -0.5
-      invert: true
-      noise:
-        seed: 0
-        noiseType: Perlin
-        fractalType: Ridged
-        octaves: 1
-        frequency: 0.1
-        gain: 0.5
-      allowedTiles:
-        - FloorAsteroidSand
-      entities:
-        - WallRock
-    - !type:BiomeDummyLayer
-      id: Loot
-    - !type:BiomeTileLayer
-      threshold: -1.0
-      tile: FloorAsteroidSand
+    entities:
+      - CrystalGreen
+      - CrystalPink
+      - CrystalOrange
+      - CrystalBlack
+      - CrystalBlue
+      - CrystalYellow
+      - CrystalCyan
+  - !type:SampleEntityLayer
+    threshold: 0.95
+    noise:
+      seed: 1
+      noiseType: OpenSimplex2
+      frequency: 1
+    allowedTiles:
+    - FloorAsteroidSand
+    entities:
+    - FloraStalagmite
+  - !type:SampleEntityLayer
+    threshold: -0.5
+    invert: true
+    noise:
+      seed: 0
+      noiseType: Perlin
+      fractalType: Ridged
+      octaves: 1
+      frequency: 0.1
+      gain: 0.5
+    allowedTiles:
+      - FloorAsteroidSand
+    entities:
+      - WallRock
+  - !type:SampleTileLayer
+    threshold: -1.0
+    tile: FloorAsteroidSand
 
 # Asteroid
 - type: biomeTemplate
   id: Asteroid
   layers:
-    - !type:BiomeEntityLayer
-      threshold: 0.85
-      noise:
-        seed: 2
-        noiseType: OpenSimplex2
-        fractalType: PingPong
-      allowedTiles:
-        - FloorAsteroidSand
-      entities:
-        - CrystalGreen
-        - CrystalPink
-        - CrystalOrange
-        - CrystalBlack
-        - CrystalBlue
-        - CrystalYellow
-        - CrystalCyan
-    - !type:BiomeEntityLayer
-      threshold: 0.95
-      noise:
-        seed: 1
-        noiseType: OpenSimplex2
-        frequency: 1
-      allowedTiles:
-        - FloorAsteroidSand
-      entities:
-        - FloraStalagmite
-    - !type:BiomeEntityLayer
-      threshold: -0.6
-      invert: true
-      noise:
-        seed: 0
-        noiseType: Perlin
-        fractalType: Ridged
-        octaves: 1
-        frequency: 0.1
-        gain: 0.5
-      allowedTiles:
-        - FloorAsteroidSand
-      entities:
-        - AsteroidRock
-    - !type:BiomeTileLayer
-      threshold: -1.0
-      tile: FloorAsteroidSand
+    terrain:
+      dungeon: AsteroidTerrain
+
+- type: dungeon
+  id: AsteroidTerrain
+  layers:
+  - !type:SampleEntityLayer
+    threshold: 0.85
+    noise:
+      seed: 2
+      noiseType: OpenSimplex2
+      fractalType: PingPong
+    allowedTiles:
+    - FloorAsteroidSand
+    entities:
+    - CrystalGreen
+    - CrystalPink
+    - CrystalOrange
+    - CrystalBlack
+    - CrystalBlue
+    - CrystalYellow
+    - CrystalCyan
+  - !type:SampleEntityLayer
+    threshold: 0.95
+    noise:
+      seed: 1
+      noiseType: OpenSimplex2
+      frequency: 1
+    allowedTiles:
+    - FloorAsteroidSand
+    entities:
+    - FloraStalagmite
+  - !type:SampleEntityLayer
+    threshold: -0.6
+    invert: true
+    noise:
+      seed: 0
+      noiseType: Perlin
+      fractalType: Ridged
+      octaves: 1
+      frequency: 0.1
+      gain: 0.5
+    allowedTiles:
+    - FloorAsteroidSand
+    entities:
+    - AsteroidRock
+  - !type:SampleTileLayer
+    threshold: -1.0
+    tile: FloorAsteroidSand

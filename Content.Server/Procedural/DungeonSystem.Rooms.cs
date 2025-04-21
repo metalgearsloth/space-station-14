@@ -163,7 +163,7 @@ public sealed partial class DungeonSystem
                 }
 
                 _tiles.Add((rounded, tileRef.Tile));
-                loaded?.Tiles.Add(rounded, tileRef);
+                loaded?.Tiles.Add(rounded, tileRef.Tile);
 
                 if (clearExisting)
                 {
@@ -269,13 +269,13 @@ public sealed partial class DungeonSystem
                 var result = _decals.TryAddDecal(
                     decal.Id,
                     new EntityCoordinates(gridUid, position),
-                    out _,
+                    out var did,
                     decal.Color,
                     angle,
                     decal.ZIndex,
                     decal.Cleanable);
 
-                loaded?.Decals.Add(position, decal);
+                loaded?.Decals.Add(position, did);
                 DebugTools.Assert(result);
             }
         }

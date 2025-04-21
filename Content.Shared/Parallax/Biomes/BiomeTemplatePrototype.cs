@@ -1,4 +1,3 @@
-using Content.Shared.Parallax.Biomes.Layers;
 using Robust.Shared.Prototypes;
 
 namespace Content.Shared.Parallax.Biomes;
@@ -11,6 +10,6 @@ public sealed partial class BiomeTemplatePrototype : IPrototype
 {
     [IdDataField] public string ID { get; private set; } = default!;
 
-    [DataField("layers")]
-    public List<IBiomeLayer> Layers = new();
+    [DataField]
+    public Dictionary<string, BiomeMetaLayer> Layers = new();
 }

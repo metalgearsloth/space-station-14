@@ -11,25 +11,23 @@ public sealed partial class DungeonJob
     /// <summary>
     /// <see cref="FillGridDunGen"/>
     /// </summary>
-    private async Task<Dungeon> GenerateFillDunGen(FillGridDunGen fill, DungeonData data, HashSet<Vector2i> reservedTiles)
+    private async Task GenerateFillDunGen(FillGridDunGen fill, DungeonData data, Dungeon dungeon, HashSet<Vector2i> reservedTiles)
     {
         if (!data.Entities.TryGetValue(DungeonDataKey.Fill, out var fillEnt))
         {
             LogDataError(typeof(FillGridDunGen));
-            return Dungeon.Empty;
+            return;
         }
 
-        var roomTiles = new HashSet<Vector2i>();
-        var tiles = _maps.GetAllTilesEnumerator(_gridUid, _grid);
-
-        while (tiles.MoveNext(out var tileRef))
+        foreach (var tile in dungeon.AllTiles)
         {
-            var tile = tileRef.Value.GridIndices;
-
             if (reservedTiles.Contains(tile))
                 continue;
 
-            if (fill.AllowedTiles != null && !fill.AllowedTiles.Contains(((ContentTileDefinition) _tileDefManager[tileRef.Value.Tile.TypeId]).ID))
+            if (!_maps.TryGetTileDef(_grid, tile, out var tileDef))
+                continue;
+
+            if (fill.AllowedTiles != null && !fill.AllowedTiles.Contains(tileDef.ID))
                 continue;
 
             if (!_anchorable.TileFree(_grid, tile, DungeonSystem.CollisionLayer, DungeonSystem.CollisionMask))
@@ -38,17 +36,9 @@ public sealed partial class DungeonJob
             var gridPos = _maps.GridTileToLocal(_gridUid, _grid, tile);
             AddLoadedEntity(fillEnt, gridPos);
 
-            roomTiles.Add(tile);
-
             await SuspendDungeon();
             if (!ValidateResume())
                 break;
         }
-
-        var dungeon = new Dungeon();
-        var room = new DungeonRoom(roomTiles, Vector2.Zero, Box2i.Empty, new HashSet<Vector2i>());
-        dungeon.AddRoom(room);
-
-        return dungeon;
     }
 }
