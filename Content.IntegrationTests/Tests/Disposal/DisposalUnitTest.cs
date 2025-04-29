@@ -13,7 +13,7 @@ using Robust.Shared.Reflection;
 namespace Content.IntegrationTests.Tests.Disposal
 {
     [TestFixture]
-    [TestOf(typeof(DisposalHolderComponent))]
+    [TestOf(typeof(Shared.Disposal.Unit.DisposalHolderComponent))]
     [TestOf(typeof(DisposalEntryComponent))]
     [TestOf(typeof(DisposalUnitComponent))]
     public sealed class DisposalUnitTest

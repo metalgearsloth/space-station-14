@@ -46,11 +46,11 @@ namespace Content.Server.Disposal
                 return;
             }
 
-            if (!_entities.TryGetComponent(id, out DisposalTubeComponent? tube))
+            if (!_entities.TryGetComponent(id, out Shared.Disposal.Tube.DisposalTubeComponent? tube))
             {
                 shell.WriteLine(Loc.GetString("shell-entity-with-uid-lacks-component",
                                               ("uid", id),
-                                              ("componentName", nameof(DisposalTubeComponent))));
+                                              ("componentName", nameof(Shared.Disposal.Tube.DisposalTubeComponent))));
                 return;
             }
 

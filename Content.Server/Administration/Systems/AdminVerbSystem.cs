@@ -501,7 +501,7 @@ namespace Content.Server.Administration.Systems
 
             // Get Disposal tube direction verb
             if (_groupController.CanCommand(player, "tubeconnections") &&
-                EntityManager.TryGetComponent(args.Target, out DisposalTubeComponent? tube))
+                EntityManager.TryGetComponent(args.Target, out Shared.Disposal.Tube.DisposalTubeComponent? tube))
             {
                 Verb verb = new()
                 {

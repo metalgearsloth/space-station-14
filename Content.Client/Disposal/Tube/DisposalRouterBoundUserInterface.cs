@@ -1,6 +1,6 @@
 ﻿using JetBrains.Annotations;
 using Robust.Client.UserInterface;
-using static Content.Shared.Disposal.Components.SharedDisposalRouterComponent;
+using static Content.Shared.Disposal.Mailing.DisposalRouterComponent;
 
 namespace Content.Client.Disposal.Tube
 {

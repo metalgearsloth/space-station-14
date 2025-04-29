@@ -1,10 +1,11 @@
 using Content.Shared.DeviceLinking;
+using Content.Shared.Disposal.Tube;
 using Robust.Shared.Prototypes;
 
 namespace Content.Server.Disposal.Tube;
 
 /// <summary>
-/// Requires <see cref="DisposalJunctionComponent"/> to function.
+/// Requires <see cref="Shared.Disposal.Tube.DisposalJunctionComponent"/> to function.
 /// </summary>
 [RegisterComponent, Access(typeof(DisposalSignalRouterSystem))]
 public sealed partial class DisposalSignalRouterComponent : Component

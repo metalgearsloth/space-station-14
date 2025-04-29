@@ -1,6 +1,6 @@
 ﻿using JetBrains.Annotations;
 using Robust.Client.UserInterface;
-using static Content.Shared.Disposal.Components.SharedDisposalTaggerComponent;
+using static Content.Shared.Disposal.Mailing.SharedDisposalTaggerComponent;
 
 namespace Content.Client.Disposal.Tube
 {

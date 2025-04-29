@@ -16,7 +16,7 @@ public sealed class BeingDisposedSystem : EntitySystem
 
     private void OnGetAir(EntityUid uid, BeingDisposedComponent component, ref AtmosExposedGetAirEvent args)
     {
-        if (TryComp<DisposalHolderComponent>(component.Holder, out var holder))
+        if (TryComp<Shared.Disposal.Unit.DisposalHolderComponent>(component.Holder, out var holder))
         {
             args.Gas = holder.Air;
             args.Handled = true;
@@ -25,7 +25,7 @@ public sealed class BeingDisposedSystem : EntitySystem
 
     private void OnInhaleLocation(EntityUid uid, BeingDisposedComponent component, InhaleLocationEvent args)
     {
-        if (TryComp<DisposalHolderComponent>(component.Holder, out var holder))
+        if (TryComp<Shared.Disposal.Unit.DisposalHolderComponent>(component.Holder, out var holder))
         {
             args.Gas = holder.Air;
         }
@@ -33,7 +33,7 @@ public sealed class BeingDisposedSystem : EntitySystem
 
     private void OnExhaleLocation(EntityUid uid, BeingDisposedComponent component, ExhaleLocationEvent args)
     {
-        if (TryComp<DisposalHolderComponent>(component.Holder, out var holder))
+        if (TryComp<Shared.Disposal.Unit.DisposalHolderComponent>(component.Holder, out var holder))
         {
             args.Gas = holder.Air;
         }
