@@ -562,7 +562,7 @@ public sealed partial class NPCSteeringSystem
          */
 
         // IDK why I didn't do this sooner but blending is a lot better than lastdir for fixing stuttering.
-        const float BlendWeight = 10f;
+        const float BlendWeight = 25f;
         var blendValue = Math.Min(1f, frameTime * BlendWeight);
 
         for (var i = 0; i < InterestDirections; i++)
