@@ -86,7 +86,10 @@ public sealed partial class NPCSteeringComponent : Component
     /// <summary>
     /// Current path we're following to our coordinates.
     /// </summary>
-    [ViewVariables] public Queue<PathPoly> CurrentPath = new();
+    [ViewVariables] public List<PathPoly> CurrentPath = new();
+
+    [ViewVariables]
+    public PathPoly? NextNode => CurrentPath.Count > 0 ? CurrentPath[^2] : null;
 
     /// <summary>
     /// End target that we're trying to move to.
@@ -99,9 +102,10 @@ public sealed partial class NPCSteeringComponent : Component
     [ViewVariables(VVAccess.ReadWrite)] public float Range = 0.2f;
 
     /// <summary>
-    /// How far does the last node in the path need to be before considering re-pathfinding.
+    /// Should we track the target coordinates.
     /// </summary>
-    [ViewVariables(VVAccess.ReadWrite)] public float RepathRange = 1.5f;
+    [DataField]
+    public bool Track = true;
 
     public const int FailedPathLimit = 3;
 

@@ -153,13 +153,9 @@ public sealed partial class MoveToOperator : HTNOperator, IHtnConditionalShutdow
 
         if (blackboard.TryGetValue<PathResultEvent>(PathfindKey, out var result, _entManager))
         {
-            if (blackboard.TryGetValue<EntityCoordinates>(NPCBlackboard.OwnerCoordinates, out var coordinates, _entManager))
-            {
-                var mapCoords = _transform.ToMapCoordinates(coordinates);
-                _steering.PrunePath(uid, mapCoords, _transform.ToMapCoordinates(targetCoordinates).Position - mapCoords.Position, result.Path);
-            }
-
-            comp.CurrentPath = new Queue<PathPoly>(result.Path);
+            result.Path.Reverse();
+            _pathfind.PruneReversedPath(result.Path, _transform.GetMapCoordinates(uid));
+            comp.CurrentPath.AddRange(result.Path);
         }
     }
 

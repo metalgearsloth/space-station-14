@@ -12,6 +12,11 @@ namespace Content.Server.NPC.Pathfinding;
 /// </summary>
 public abstract class PathRequest
 {
+    /// <summary>
+    /// Should we simplify collinear path nodes.
+    /// </summary>
+    public bool Simplify = true;
+
     public EntityCoordinates Start;
 
     public Task<PathResult> Task => Tcs.Task;

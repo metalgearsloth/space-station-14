@@ -1,6 +1,7 @@
 using Content.Shared.Gravity;
 using Content.Shared.Maps;
 using Content.Shared.NPC;
+using Robust.Shared.Map;
 using Robust.Shared.Map.Components;
 using Robust.Shared.Spawners;
 
@@ -89,7 +90,48 @@ public sealed partial class PathfindingSystem
 
     #region Simplifier
 
-    public List<PathPoly> Simplify(List<PathPoly> vertices, float tolerance = 0)
+    /// <summary>
+    /// Prunes a reversed path assuming we might be somewhere along it already.
+    /// </summary>
+    public void PruneReversedPath(List<PathPoly> path, MapCoordinates ourCoords)
+    {
+        var currentCoords = _transform.ToCoordinates(ourCoords);
+        var currentPoly = GetPoly(currentCoords);
+
+        // Go through and prune any nodes we've passed.
+        for (var i = path.Count - 1; i >= 1; i--)
+        {
+            var ourNode = path[i];
+            var nextNode = path[i - 1];
+
+            var ourNodePos = _transform.ToMapCoordinates(ourNode.Coordinates);
+            var nextNodePos = _transform.ToMapCoordinates(nextNode.Coordinates);
+
+            // Only if next node is on our map.
+            // and we're either on it or beyond it.
+            if (nextNodePos.MapId != ourCoords.MapId)
+            {
+                break;
+            }
+
+            // Found our node so just prune the from one and end it.
+            if (currentPoly?.Equals(nextNode) == true)
+            {
+                path.RemoveAt(i);
+                break;
+            }
+
+            if (IsBeyond(ourCoords.Position, ourNodePos.Position, nextNodePos.Position))
+            {
+                path.RemoveAt(i);
+                continue;
+            }
+
+            break;
+        }
+    }
+
+    public List<PathPoly> Simplify(List<PathPoly> vertices, float tolerance = 0.01f)
     {
         // TODO: Needs more work
         if (vertices.Count <= 3)
@@ -103,6 +145,13 @@ public sealed partial class PathfindingSystem
             var prev = vertices[i == 0 ? vertices.Count - 1 : i - 1];
             var current = vertices[i];
             var next = vertices[(i + 1) % vertices.Count];
+
+            // If they have different node flags then leave them.
+            if (prev.Data.Flags != current.Data.Flags ||
+                current.Data.Flags != next.Data.Flags)
+            {
+                continue;
+            }
 
             var prevData = prev.Data;
             var currentData = current.Data;

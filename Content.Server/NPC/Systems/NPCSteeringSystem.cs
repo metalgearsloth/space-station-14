@@ -1,6 +1,8 @@
+using System.Linq;
 using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using Content.Server.Administration.Managers;
 using Content.Server.DoAfter;
 using Content.Server.NPC.Components;
@@ -80,7 +82,7 @@ public sealed partial class NPCSteeringSystem : SharedNPCSteeringSystem
     /// <summary>
     /// Enabled antistuck detection so if an NPC is in the same spot for a while it will re-path.
     /// </summary>
-    public bool AntiStuck = true;
+    public bool AntiStuck = false;
 
     private bool _enabled;
 
@@ -113,9 +115,15 @@ public sealed partial class NPCSteeringSystem : SharedNPCSteeringSystem
         UpdatesBefore.Add(typeof(SharedPhysicsSystem));
         Subs.CVar(_configManager, CCVars.NPCEnabled, SetNPCEnabled, true);
         Subs.CVar(_configManager, CCVars.NPCPathfinding, SetNPCPathfinding, true);
+        Subs.CVar(_configManager, CCVars.NPCAntiStuck, SetNpcAntistuck, true);
 
         SubscribeLocalEvent<NPCSteeringComponent, ComponentShutdown>(OnSteeringShutdown);
         SubscribeNetworkEvent<RequestNPCSteeringDebugEvent>(OnDebugRequest);
+    }
+
+    private void SetNpcAntistuck(bool obj)
+    {
+        AntiStuck = obj;
     }
 
     private void SetNPCEnabled(bool obj)
@@ -249,14 +257,13 @@ public sealed partial class NPCSteeringSystem : SharedNPCSteeringSystem
         {
             MaxDegreeOfParallelism = 1,
         };
-        var curTime = _timing.CurTime;
 
         _activeSteeringCount = 0;
 
         Parallel.For(0, index, options, i =>
         {
             var (uid, steering, mover, xform) = npcs[i];
-            Steer(uid, steering, mover, xform, frameTime, curTime);
+            Steer(uid, steering, mover, xform, frameTime);
         });
 
         ActiveSteeringGauge.Set(_activeSteeringCount);
@@ -309,8 +316,7 @@ public sealed partial class NPCSteeringSystem : SharedNPCSteeringSystem
         NPCSteeringComponent steering,
         InputMoverComponent mover,
         TransformComponent xform,
-        float frameTime,
-        TimeSpan curTime)
+        float frameTime)
     {
         if (Deleted(steering.Coordinates.EntityId))
         {
@@ -358,7 +364,7 @@ public sealed partial class NPCSteeringSystem : SharedNPCSteeringSystem
         // If seek has arrived at the target node for example then immediately re-steer.
         var forceSteer = true;
 
-        if (steering.CanSeek && !TrySeek(uid, mover, steering, body, xform, offsetRot, moveSpeed, interest, frameTime, ref forceSteer))
+        if (steering.CanSeek && !TrySeek(uid, steering, body, xform, offsetRot, moveSpeed, interest, frameTime, ref forceSteer))
         {
             SetDirection(uid, mover, steering, Vector2.Zero);
             return;
@@ -424,28 +430,14 @@ public sealed partial class NPCSteeringSystem : SharedNPCSteeringSystem
     /// <summary>
     /// Get a new job from the pathfindingsystem
     /// </summary>
-    private async void RequestPath(EntityUid uid, NPCSteeringComponent steering, TransformComponent xform, float targetDistance)
+    private async void RequestPath(EntityUid uid, NPCSteeringComponent steering, TransformComponent xform)
     {
         // If we already have a pathfinding request then don't grab another.
         // If we're in range then just beeline them; this can avoid stutter stepping and is an easy way to look nicer.
-        if (steering.Pathfind || targetDistance < steering.RepathRange)
+        if (steering.Pathfind)
             return;
 
         // Short-circuit with no path.
-        var targetPoly = _pathfindingSystem.GetPoly(steering.Coordinates);
-
-        // If this still causes issues future sloth adjust the collision mask.
-        // Thanks past sloth I already realised.
-        if (targetPoly != null &&
-            steering.Coordinates.Position.Equals(Vector2.Zero) &&
-            TryComp<PhysicsComponent>(uid, out var physics) &&
-            _interaction.InRangeUnobstructed(uid, steering.Coordinates.EntityId, range: 30f, (CollisionGroup)physics.CollisionMask))
-        {
-            steering.CurrentPath.Clear();
-            steering.CurrentPath.Enqueue(targetPoly);
-            return;
-        }
-
         steering.PathfindToken = new CancellationTokenSource();
 
         var flags = _pathfindingSystem.GetFlags(uid);
@@ -473,11 +465,13 @@ public sealed partial class NPCSteeringSystem : SharedNPCSteeringSystem
             return;
         }
 
-        var targetPos = _transform.ToMapCoordinates(steering.Coordinates);
+        ResetStuck(steering, xform.Coordinates);
         var ourPos = _transform.GetMapCoordinates(uid, xform: xform);
 
-        PrunePath(uid, ourPos, targetPos.Position - ourPos.Position, result.Path);
-        steering.CurrentPath = new Queue<PathPoly>(result.Path);
+        // Just so we can pop the end elements we'll reverse the path.
+        result.Path.Reverse();
+        _pathfindingSystem.PruneReversedPath(result.Path, ourPos);
+        steering.CurrentPath.AddRange(result.Path);
     }
 
     // TODO: Move these to movercontroller

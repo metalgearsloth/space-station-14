@@ -9,6 +9,8 @@ public sealed partial class CCVars
 
     public static readonly CVarDef<bool> NPCEnabled = CVarDef.Create("npc.enabled", true);
 
+    public static readonly CVarDef<bool> NPCAntiStuck = CVarDef.Create("npc.anti_stuck", true);
+
     /// <summary>
     ///     Should NPCs pathfind when steering. For debug purposes.
     /// </summary>

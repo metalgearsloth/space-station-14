@@ -19,6 +19,9 @@ generator_enabled = false
 [movement]
 mob_pushing = true
 
+[npc]
+anti_stuck = false
+
 [physics]
 # Makes mapping annoying
 grid_splitting = false

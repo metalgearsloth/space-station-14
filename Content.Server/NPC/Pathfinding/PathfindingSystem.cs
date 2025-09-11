@@ -161,6 +161,11 @@ namespace Content.Server.NPC.Pathfinding
                     throw path.Task.Exception;
                 }
 
+                if (path.Simplify && result == PathResult.Path)
+                {
+                    Simplify(path.Polys);
+                }
+
                 switch (result)
                 {
                     case PathResult.Continuing:
