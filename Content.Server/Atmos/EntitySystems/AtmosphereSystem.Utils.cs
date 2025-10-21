@@ -44,7 +44,7 @@ public partial class AtmosphereSystem
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void InvalidateVisuals(
-        Entity<GridAtmosphereComponent, GasTileOverlayComponent, MapGridComponent, TransformComponent> ent,
+        Entity<Shared.Atmos.Components.GridAtmosphereComponent, GasTileOverlayComponent, MapGridComponent, TransformComponent> ent,
         TileAtmosphere tile)
     {
         _gasTileOverlaySystem.Invalidate((ent.Owner, ent.Comp2), tile.GridIndices);
@@ -64,7 +64,7 @@ public partial class AtmosphereSystem
     public readonly record struct AirtightData(AtmosDirection BlockedDirections, bool NoAirWhenBlocked,
         bool FixVacuum);
 
-    private void UpdateAirtightData(EntityUid uid, GridAtmosphereComponent atmos, MapGridComponent grid, TileAtmosphere tile)
+    private void UpdateAirtightData(EntityUid uid, Shared.Atmos.Components.GridAtmosphereComponent atmos, MapGridComponent grid, TileAtmosphere tile)
     {
         var oldBlocked = tile.AirtightData.BlockedDirections;
 

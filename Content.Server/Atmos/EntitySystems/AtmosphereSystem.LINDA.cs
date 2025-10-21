@@ -9,7 +9,7 @@ namespace Content.Server.Atmos.EntitySystems
     public sealed partial class AtmosphereSystem
     {
         private void ProcessCell(
-            Entity<GridAtmosphereComponent, GasTileOverlayComponent, MapGridComponent, TransformComponent> ent,
+            Entity<Shared.Atmos.Components.GridAtmosphereComponent, GasTileOverlayComponent, MapGridComponent, TransformComponent> ent,
             TileAtmosphere tile, int fireCount)
         {
             var gridAtmosphere = ent.Comp1;
@@ -143,7 +143,7 @@ namespace Content.Server.Atmos.EntitySystems
         /// </summary>
         /// <param name="gridAtmosphere">Grid Atmosphere where to get the tile.</param>
         /// <param name="tile">Tile Atmosphere to be activated.</param>
-        private void AddActiveTile(GridAtmosphereComponent gridAtmosphere, TileAtmosphere tile)
+        private void AddActiveTile(Shared.Atmos.Components.GridAtmosphereComponent gridAtmosphere, TileAtmosphere tile)
         {
             if (tile.Air == null || tile.Excited)
                 return;
@@ -158,7 +158,7 @@ namespace Content.Server.Atmos.EntitySystems
         /// <param name="gridAtmosphere">Grid Atmosphere where to get the tile.</param>
         /// <param name="tile">Tile Atmosphere to be deactivated.</param>
         /// <param name="disposeExcitedGroup">Whether to dispose of the tile's <see cref="ExcitedGroup"/></param>
-        private void RemoveActiveTile(GridAtmosphereComponent gridAtmosphere, TileAtmosphere tile, bool disposeExcitedGroup = true)
+        private void RemoveActiveTile(Shared.Atmos.Components.GridAtmosphereComponent gridAtmosphere, TileAtmosphere tile, bool disposeExcitedGroup = true)
         {
             DebugTools.Assert(tile.Excited == gridAtmosphere.ActiveTiles.Contains(tile));
             DebugTools.Assert(tile.Excited || tile.ExcitedGroup == null);

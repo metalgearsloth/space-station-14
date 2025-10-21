@@ -26,7 +26,7 @@ namespace Content.Server.Atmos.Piping.Binary.EntitySystems
 
         private void OnPassiveGateUpdated(EntityUid uid, GasPassiveGateComponent gate, ref AtmosDeviceUpdateEvent args)
         {
-            if (!_nodeContainer.TryGetNodes(uid, gate.InletName, gate.OutletName, out PipeNode? inlet, out PipeNode? outlet))
+            if (!_nodeContainer.TryGetNodes(uid, gate.InletName, gate.OutletName, out Shared.NodeContainer.Nodes.PipeNode? inlet, out Shared.NodeContainer.Nodes.PipeNode? outlet))
                 return;
 
             var n1 = inlet.Air.TotalMoles;

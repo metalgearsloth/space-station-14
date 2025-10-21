@@ -25,7 +25,7 @@ namespace Content.Server.Atmos.EntitySystems
             excitedGroup.Tiles.Remove(tile);
         }
 
-        private void ExcitedGroupMerge(GridAtmosphereComponent gridAtmosphere, ExcitedGroup ourGroup, ExcitedGroup otherGroup)
+        private void ExcitedGroupMerge(Shared.Atmos.Components.GridAtmosphereComponent gridAtmosphere, ExcitedGroup ourGroup, ExcitedGroup otherGroup)
         {
             DebugTools.Assert(!ourGroup.Disposed, "Excited group is disposed!");
             DebugTools.Assert(!otherGroup.Disposed, "Excited group is disposed!");
@@ -67,7 +67,7 @@ namespace Content.Server.Atmos.EntitySystems
         }
 
         private void ExcitedGroupSelfBreakdown(
-            Entity<GridAtmosphereComponent, GasTileOverlayComponent, MapGridComponent, TransformComponent> ent,
+            Entity<Shared.Atmos.Components.GridAtmosphereComponent, GasTileOverlayComponent, MapGridComponent, TransformComponent> ent,
             ExcitedGroup excitedGroup)
         {
             DebugTools.Assert(!excitedGroup.Disposed, "Excited group is disposed!");
@@ -116,7 +116,7 @@ namespace Content.Server.Atmos.EntitySystems
         /// <summary>
         /// This de-activates and removes all tiles in an excited group.
         /// </summary>
-        private void DeactivateGroupTiles(GridAtmosphereComponent gridAtmosphere, ExcitedGroup excitedGroup)
+        private void DeactivateGroupTiles(Shared.Atmos.Components.GridAtmosphereComponent gridAtmosphere, ExcitedGroup excitedGroup)
         {
             foreach (var tile in excitedGroup.Tiles)
             {
@@ -130,7 +130,7 @@ namespace Content.Server.Atmos.EntitySystems
         /// <summary>
         /// This removes an excited group without de-activating its tiles.
         /// </summary>
-        private void ExcitedGroupDispose(GridAtmosphereComponent gridAtmosphere, ExcitedGroup excitedGroup)
+        private void ExcitedGroupDispose(Shared.Atmos.Components.GridAtmosphereComponent gridAtmosphere, ExcitedGroup excitedGroup)
         {
             if (excitedGroup.Disposed)
                 return;

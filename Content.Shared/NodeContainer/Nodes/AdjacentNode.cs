@@ -1,11 +1,15 @@
 using Content.Shared.NodeContainer;
+using Content.Shared.NodeContainer.Nodes;
 using Robust.Shared.Map;
 using Robust.Shared.Map.Components;
 
 namespace Content.Server.NodeContainer.Nodes
 {
+    /// <summary>
+    ///     A <see cref="Node"/> that can reach other <see cref="AdjacentNode"/>s that are directly adjacent to it.
+    /// </summary>
     [DataDefinition]
-    public sealed partial class PortablePipeNode : PipeNode
+    public sealed partial class AdjacentNode : Node
     {
         public override IEnumerable<Node> GetReachableNodes(TransformComponent xform,
             EntityQuery<NodeContainerComponent> nodeQuery,
@@ -18,15 +22,10 @@ namespace Content.Server.NodeContainer.Nodes
 
             var gridIndex = grid.TileIndicesFor(xform.Coordinates);
 
-            foreach (var node in NodeHelpers.GetNodesInTile(nodeQuery, grid, gridIndex))
+            foreach (var (_, node) in NodeHelpers.GetCardinalNeighborNodes(nodeQuery, grid, gridIndex))
             {
-                if (node is PortPipeNode)
+                if (node != this)
                     yield return node;
-            }
-
-            foreach (var node in base.GetReachableNodes(xform, nodeQuery, xformQuery, grid, entMan))
-            {
-                yield return node;
             }
         }
     }

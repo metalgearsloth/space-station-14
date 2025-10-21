@@ -359,11 +359,11 @@ public sealed class TegSystem : EntitySystem
         return (new GasMixture(), δp);
     }
 
-    private (PipeNode inlet, PipeNode outlet) GetPipes(EntityUid uidCirculator)
+    private (Shared.NodeContainer.Nodes.PipeNode inlet, Shared.NodeContainer.Nodes.PipeNode outlet) GetPipes(EntityUid uidCirculator)
     {
         var nodeContainer = _nodeContainerQuery.GetComponent(uidCirculator);
-        var inlet = (PipeNode) nodeContainer.Nodes[NodeNameInlet];
-        var outlet = (PipeNode) nodeContainer.Nodes[NodeNameOutlet];
+        var inlet = (Shared.NodeContainer.Nodes.PipeNode) nodeContainer.Nodes[NodeNameInlet];
+        var outlet = (Shared.NodeContainer.Nodes.PipeNode) nodeContainer.Nodes[NodeNameOutlet];
 
         return (inlet, outlet);
     }

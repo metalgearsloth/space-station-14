@@ -1,10 +1,8 @@
-using Content.Server.NodeContainer;
-using Content.Server.NodeContainer.Nodes;
 using Content.Shared.NodeContainer;
-using Robust.Shared.Map;
+using Content.Shared.NodeContainer.Nodes;
 using Robust.Shared.Map.Components;
 
-namespace Content.Server.Power.Nodes
+namespace Content.Shared.Power.Nodes
 {
     [DataDefinition]
     public sealed partial class CableNode : Node
@@ -38,7 +36,7 @@ namespace Content.Server.Power.Nodes
                     nodeDirs.Add((Direction.Invalid, node));
                 }
 
-                if (node is CableTerminalNode)
+                if (node is Shared.Power.Nodes.CableTerminalNode)
                 {
                     if (dir == Direction.Invalid)
                     {

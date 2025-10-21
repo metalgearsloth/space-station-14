@@ -1,10 +1,8 @@
-using Content.Server.NodeContainer;
-using Content.Server.NodeContainer.Nodes;
 using Content.Shared.NodeContainer;
-using Robust.Shared.Map;
+using Content.Shared.NodeContainer.Nodes;
 using Robust.Shared.Map.Components;
 
-namespace Content.Server.Power.Nodes
+namespace Content.Shared.Power.Nodes
 {
     [DataDefinition]
     public sealed partial class CableTerminalPortNode : Node
@@ -23,7 +21,7 @@ namespace Content.Server.Power.Nodes
             var nodes = NodeHelpers.GetCardinalNeighborNodes(nodeQuery, grid, gridIndex, includeSameTile: false);
             foreach (var (dir, node) in nodes)
             {
-                if (node is CableTerminalNode
+                if (node is Shared.Power.Nodes.CableTerminalNode
                     && dir != Direction.Invalid
                     && xformQuery.GetComponent(node.Owner).LocalRotation.GetCardinalDir().GetOpposite() == dir)
                     yield return node;

@@ -83,8 +83,8 @@ public sealed class GasPressureRegulatorSystem : SharedGasPressureRegulatorSyste
         if (!_nodeContainer.TryGetNodes(ent.Owner,
                 ent.Comp.InletName,
                 ent.Comp.OutletName,
-                out PipeNode? inletPipeNode,
-                out PipeNode? outletPipeNode))
+                out Shared.NodeContainer.Nodes.PipeNode? inletPipeNode,
+                out Shared.NodeContainer.Nodes.PipeNode? outletPipeNode))
         {
             ChangeStatus(false, ent, inletPipeNode, outletPipeNode, 0);
             return;
@@ -173,8 +173,8 @@ public sealed class GasPressureRegulatorSystem : SharedGasPressureRegulatorSyste
     /// <param name="flowRate">Current flow rate of the pressure regulator</param>
     private void ChangeStatus(bool enabled,
         Entity<GasPressureRegulatorComponent> ent,
-        PipeNode? inletNode,
-        PipeNode? outletNode,
+        Shared.NodeContainer.Nodes.PipeNode? inletNode,
+        Shared.NodeContainer.Nodes.PipeNode? outletNode,
         float flowRate)
     {
         // First, set data on the component server-side.

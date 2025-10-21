@@ -1,9 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
-using Content.Server.NodeContainer.NodeGroups;
 using Content.Server.NodeContainer.Nodes;
-using Content.Shared.Examine;
 using Content.Shared.NodeContainer;
-using Content.Shared.NodeContainer.NodeGroups;
+using Content.Shared.NodeContainer.Nodes;
 using JetBrains.Annotations;
 
 namespace Content.Server.NodeContainer.EntitySystems
@@ -28,7 +26,6 @@ namespace Content.Server.NodeContainer.EntitySystems
             SubscribeLocalEvent<NodeContainerComponent, AnchorStateChangedEvent>(OnAnchorStateChanged);
             SubscribeLocalEvent<NodeContainerComponent, ReAnchorEvent>(OnReAnchor);
             SubscribeLocalEvent<NodeContainerComponent, MoveEvent>(OnMoveEvent);
-            SubscribeLocalEvent<NodeContainerComponent, ExaminedEvent>(OnExamine);
 
             _query = GetEntityQuery<NodeContainerComponent>();
         }
@@ -196,32 +193,6 @@ namespace Content.Server.NodeContainer.EntitySystems
 
                 if (rotatableNode.RotateNode(in ev))
                     _nodeGroupSystem.QueueReflood(node);
-            }
-        }
-
-        private void OnExamine(EntityUid uid, NodeContainerComponent component, ExaminedEvent args)
-        {
-            if (!component.Examinable || !args.IsInDetailsRange)
-                return;
-
-            foreach (var node in component.Nodes.Values)
-            {
-                if (node == null) continue;
-                switch (node.NodeGroupID)
-                {
-                    case NodeGroupID.HVPower:
-                        args.PushMarkup(
-                            Loc.GetString("node-container-component-on-examine-details-hvpower"));
-                        break;
-                    case NodeGroupID.MVPower:
-                        args.PushMarkup(
-                            Loc.GetString("node-container-component-on-examine-details-mvpower"));
-                        break;
-                    case NodeGroupID.Apc:
-                        args.PushMarkup(
-                            Loc.GetString("node-container-component-on-examine-details-apc"));
-                        break;
-                }
             }
         }
     }

@@ -37,7 +37,7 @@ namespace Content.Server.Atmos.Piping.EntitySystems
 
             foreach (var node in nodes.Nodes.Values)
             {
-                if (node is not PipeNode pipe)
+                if (node is not Shared.NodeContainer.Nodes.PipeNode pipe)
                     continue;
 
                 if (pipe.Air.Pressure - environment.Pressure > 2 * Atmospherics.OneAtmosphere)
@@ -88,7 +88,7 @@ namespace Content.Server.Atmos.Piping.EntitySystems
 
             foreach (var node in nodes.Nodes.Values)
             {
-                if (node is not PipeNode pipe)
+                if (node is not Shared.NodeContainer.Nodes.PipeNode pipe)
                     continue;
 
                 if (removeFromPipe)

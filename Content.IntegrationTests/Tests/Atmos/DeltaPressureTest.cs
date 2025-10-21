@@ -181,7 +181,7 @@ public sealed class DeltaPressureTest
             await server.WaitPost(() =>
             {
                 var indices = transformSystem.GetGridOrMapTilePosition(dpEnt);
-                var gridAtmosComp = entMan.GetComponent<GridAtmosphereComponent>(grid);
+                var gridAtmosComp = entMan.GetComponent<Shared.Atmos.Components.GridAtmosphereComponent>(grid);
 
                 direction = (AtmosDirection)(1 << i);
                 var offsetIndices = indices.Offset(direction);
@@ -253,7 +253,7 @@ public sealed class DeltaPressureTest
                 Assert.That(atmosphereSystem.IsDeltaPressureEntityInList(grid.Owner, dpEnt), "Entity was not in processing list when it should have been added!");
 
                 var indices = transformSystem.GetGridOrMapTilePosition(dpEnt);
-                var gridAtmosComp = entMan.GetComponent<GridAtmosphereComponent>(grid);
+                var gridAtmosComp = entMan.GetComponent<Shared.Atmos.Components.GridAtmosphereComponent>(grid);
 
                 direction = (AtmosDirection)(1 << i);
                 var offsetIndices = indices.Offset(direction);
@@ -321,7 +321,7 @@ public sealed class DeltaPressureTest
             await server.WaitPost(() =>
             {
                 var indices = transformSystem.GetGridOrMapTilePosition(dpEnt);
-                var gridAtmosComp = entMan.GetComponent<GridAtmosphereComponent>(grid);
+                var gridAtmosComp = entMan.GetComponent<Shared.Atmos.Components.GridAtmosphereComponent>(grid);
 
                 direction = (AtmosDirection)(1 << i);
                 var offsetIndices = indices.Offset(direction);
@@ -388,7 +388,7 @@ public sealed class DeltaPressureTest
                 Assert.That(atmosphereSystem.IsDeltaPressureEntityInList(grid.Owner, dpEnt), "Entity was not in processing list when it should have been added!");
 
                 var indices = transformSystem.GetGridOrMapTilePosition(dpEnt);
-                var gridAtmosComp = entMan.GetComponent<GridAtmosphereComponent>(grid);
+                var gridAtmosComp = entMan.GetComponent<Shared.Atmos.Components.GridAtmosphereComponent>(grid);
 
                 direction = (AtmosDirection)(1 << i);
                 var offsetIndices = indices.Offset(direction);

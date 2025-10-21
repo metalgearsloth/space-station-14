@@ -4,7 +4,7 @@ using Content.Shared.Atmos.Components;
 namespace Content.Server.Atmos.Piping.Components;
 
 /// <summary>
-///     Component for atmos devices which are updated in line with atmos, as part of a <see cref="GridAtmosphereComponent"/>
+///     Component for atmos devices which are updated in line with atmos, as part of a <see cref="Shared.Atmos.Components.GridAtmosphereComponent"/>
 /// </summary>
 [RegisterComponent]
 public sealed partial class AtmosDeviceComponent : Component
@@ -47,7 +47,7 @@ public sealed partial class AtmosDeviceComponent : Component
 /// Use this for atmos devices instead of <see cref="EntitySystem.Update"/>.
 /// </summary>
 [ByRefEvent]
-public readonly struct AtmosDeviceUpdateEvent(float dt, Entity<GridAtmosphereComponent, GasTileOverlayComponent>? grid, Entity<MapAtmosphereComponent?>? map)
+public readonly struct AtmosDeviceUpdateEvent(float dt, Entity<Shared.Atmos.Components.GridAtmosphereComponent, GasTileOverlayComponent>? grid, Entity<MapAtmosphereComponent?>? map)
 {
     /// <summary>
     /// Time elapsed since last update, in seconds. Multiply values used in the update handler
@@ -58,7 +58,7 @@ public readonly struct AtmosDeviceUpdateEvent(float dt, Entity<GridAtmosphereCom
     /// <summary>
     /// The grid that this device is currently on.
     /// </summary>
-    public readonly Entity<GridAtmosphereComponent?, GasTileOverlayComponent?>? Grid = grid == null
+    public readonly Entity<Shared.Atmos.Components.GridAtmosphereComponent?, GasTileOverlayComponent?>? Grid = grid == null
         ? null
         : (grid.Value, grid.Value, grid.Value);
 

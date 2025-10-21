@@ -21,7 +21,7 @@ public sealed partial class AtmosphereSystem
     /// <param name="mapEnt">The optional mapEntity to provide when benchmarking ProcessAtmosDevices.</param>
     /// <returns>True if the processing stage completed, false if the processing stage had to pause processing due to time constraints.</returns>
     public bool RunProcessingStage(
-        Entity<GridAtmosphereComponent, GasTileOverlayComponent, MapGridComponent, TransformComponent> ent,
+        Entity<Shared.Atmos.Components.GridAtmosphereComponent, GasTileOverlayComponent, MapGridComponent, TransformComponent> ent,
         AtmosphereProcessingState state,
         Entity<MapAtmosphereComponent?>? mapEnt = null)
     {

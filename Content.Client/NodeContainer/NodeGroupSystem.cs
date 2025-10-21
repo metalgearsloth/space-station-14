@@ -12,7 +12,7 @@ using Robust.Shared.Map;
 namespace Content.Client.NodeContainer
 {
     [UsedImplicitly]
-    public sealed class NodeGroupSystem : EntitySystem
+    public sealed class NodeGroupSystem : SharedNodeGroupSystem
     {
         [Dependency] private readonly IOverlayManager _overlayManager = default!;
         [Dependency] private readonly EntityLookupSystem _entityLookup = default!;

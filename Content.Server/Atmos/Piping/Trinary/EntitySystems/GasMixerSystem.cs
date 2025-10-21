@@ -56,7 +56,7 @@ namespace Content.Server.Atmos.Piping.Trinary.EntitySystems
             // TODO ATMOS: Cache total moles since it's expensive.
 
             if (!mixer.Enabled
-                || !_nodeContainer.TryGetNodes(uid, mixer.InletOneName, mixer.InletTwoName, mixer.OutletName, out PipeNode? inletOne, out PipeNode? inletTwo, out PipeNode? outlet))
+                || !_nodeContainer.TryGetNodes(uid, mixer.InletOneName, mixer.InletTwoName, mixer.OutletName, out Shared.NodeContainer.Nodes.PipeNode? inletOne, out Shared.NodeContainer.Nodes.PipeNode? inletTwo, out Shared.NodeContainer.Nodes.PipeNode? outlet))
             {
                 _ambientSoundSystem.SetAmbience(uid, false);
                 return;
@@ -212,21 +212,21 @@ namespace Content.Server.Atmos.Piping.Trinary.EntitySystems
             args.GasMixtures ??= new List<(string, GasMixture?)>();
 
             // multiply by volume fraction to make sure to send only the gas inside the analyzed pipe element, not the whole pipe system
-            if (_nodeContainer.TryGetNode(uid, component.InletOneName, out PipeNode? inletOne) && inletOne.Air.Volume != 0f)
+            if (_nodeContainer.TryGetNode(uid, component.InletOneName, out Shared.NodeContainer.Nodes.PipeNode? inletOne) && inletOne.Air.Volume != 0f)
             {
                 var inletOneAirLocal = inletOne.Air.Clone();
                 inletOneAirLocal.Multiply(inletOne.Volume / inletOne.Air.Volume);
                 inletOneAirLocal.Volume = inletOne.Volume;
                 args.GasMixtures.Add(($"{inletOne.CurrentPipeDirection} {Loc.GetString("gas-analyzer-window-text-inlet")}", inletOneAirLocal));
             }
-            if (_nodeContainer.TryGetNode(uid, component.InletTwoName, out PipeNode? inletTwo) && inletTwo.Air.Volume != 0f)
+            if (_nodeContainer.TryGetNode(uid, component.InletTwoName, out Shared.NodeContainer.Nodes.PipeNode? inletTwo) && inletTwo.Air.Volume != 0f)
             {
                 var inletTwoAirLocal = inletTwo.Air.Clone();
                 inletTwoAirLocal.Multiply(inletTwo.Volume / inletTwo.Air.Volume);
                 inletTwoAirLocal.Volume = inletTwo.Volume;
                 args.GasMixtures.Add(($"{inletTwo.CurrentPipeDirection} {Loc.GetString("gas-analyzer-window-text-inlet")}", inletTwoAirLocal));
             }
-            if (_nodeContainer.TryGetNode(uid, component.OutletName, out PipeNode? outlet) && outlet.Air.Volume != 0f)
+            if (_nodeContainer.TryGetNode(uid, component.OutletName, out Shared.NodeContainer.Nodes.PipeNode? outlet) && outlet.Air.Volume != 0f)
             {
                 var outletAirLocal = outlet.Air.Clone();
                 outletAirLocal.Multiply(outlet.Volume / outlet.Air.Volume);

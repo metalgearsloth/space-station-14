@@ -27,7 +27,7 @@ public sealed class GasPowerReceiverSystem : EntitySystem
     {
         var timeDelta = args.dt;
 
-        if (!_nodeContainer.TryGetNode(uid, "pipe", out PipeNode? pipe))
+        if (!_nodeContainer.TryGetNode(uid, "pipe", out Shared.NodeContainer.Nodes.PipeNode? pipe))
             return;
 
         // if we're below the max temperature, then we are simply consuming our target gas

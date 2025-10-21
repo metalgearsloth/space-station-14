@@ -29,7 +29,7 @@ namespace Content.Server.Atmos.Piping.Unary.EntitySystems
             if (environment == null)
                 return;
 
-            if (!_nodeContainer.TryGetNode(uid, vent.InletName, out PipeNode? inlet))
+            if (!_nodeContainer.TryGetNode(uid, vent.InletName, out Shared.NodeContainer.Nodes.PipeNode? inlet))
                 return;
 
             var inletAir = inlet.Air.RemoveRatio(1f);

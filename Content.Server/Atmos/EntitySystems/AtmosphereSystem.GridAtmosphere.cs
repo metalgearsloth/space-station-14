@@ -13,23 +13,23 @@ public sealed partial class AtmosphereSystem
 {
     private void InitializeGridAtmosphere()
     {
-        SubscribeLocalEvent<GridAtmosphereComponent, ComponentInit>(OnGridAtmosphereInit);
-        SubscribeLocalEvent<GridAtmosphereComponent, ComponentStartup>(OnGridAtmosphereStartup);
-        SubscribeLocalEvent<GridAtmosphereComponent, ComponentRemove>(OnAtmosphereRemove);
-        SubscribeLocalEvent<GridAtmosphereComponent, GridSplitEvent>(OnGridSplit);
+        SubscribeLocalEvent<Shared.Atmos.Components.GridAtmosphereComponent, ComponentInit>(OnGridAtmosphereInit);
+        SubscribeLocalEvent<Shared.Atmos.Components.GridAtmosphereComponent, ComponentStartup>(OnGridAtmosphereStartup);
+        SubscribeLocalEvent<Shared.Atmos.Components.GridAtmosphereComponent, ComponentRemove>(OnAtmosphereRemove);
+        SubscribeLocalEvent<Shared.Atmos.Components.GridAtmosphereComponent, GridSplitEvent>(OnGridSplit);
 
         #region Atmos API Subscriptions
 
-        SubscribeLocalEvent<GridAtmosphereComponent, IsSimulatedGridMethodEvent>(GridIsSimulated);
-        SubscribeLocalEvent<GridAtmosphereComponent, GetAllMixturesMethodEvent>(GridGetAllMixtures);
-        SubscribeLocalEvent<GridAtmosphereComponent, ReactTileMethodEvent>(GridReactTile);
-        SubscribeLocalEvent<GridAtmosphereComponent, HotspotExtinguishMethodEvent>(GridHotspotExtinguish);
-        SubscribeLocalEvent<GridAtmosphereComponent, IsHotspotActiveMethodEvent>(GridIsHotspotActive);
+        SubscribeLocalEvent<Shared.Atmos.Components.GridAtmosphereComponent, IsSimulatedGridMethodEvent>(GridIsSimulated);
+        SubscribeLocalEvent<Shared.Atmos.Components.GridAtmosphereComponent, GetAllMixturesMethodEvent>(GridGetAllMixtures);
+        SubscribeLocalEvent<Shared.Atmos.Components.GridAtmosphereComponent, ReactTileMethodEvent>(GridReactTile);
+        SubscribeLocalEvent<Shared.Atmos.Components.GridAtmosphereComponent, HotspotExtinguishMethodEvent>(GridHotspotExtinguish);
+        SubscribeLocalEvent<Shared.Atmos.Components.GridAtmosphereComponent, IsHotspotActiveMethodEvent>(GridIsHotspotActive);
 
         #endregion
     }
 
-    private void OnAtmosphereRemove(EntityUid uid, GridAtmosphereComponent component, ComponentRemove args)
+    private void OnAtmosphereRemove(EntityUid uid, Shared.Atmos.Components.GridAtmosphereComponent component, ComponentRemove args)
     {
         for (var i = 0; i < _currentRunAtmosphere.Count; i++)
         {
@@ -42,7 +42,7 @@ public sealed partial class AtmosphereSystem
         }
     }
 
-    private void OnGridAtmosphereInit(EntityUid uid, GridAtmosphereComponent component, ComponentInit args)
+    private void OnGridAtmosphereInit(EntityUid uid, Shared.Atmos.Components.GridAtmosphereComponent component, ComponentInit args)
     {
         EnsureComp<GasTileOverlayComponent>(uid);
         foreach (var tile in component.Tiles.Values)
@@ -51,7 +51,7 @@ public sealed partial class AtmosphereSystem
         }
     }
 
-    private void OnGridAtmosphereStartup(EntityUid uid, GridAtmosphereComponent component, ComponentStartup args)
+    private void OnGridAtmosphereStartup(EntityUid uid, Shared.Atmos.Components.GridAtmosphereComponent component, ComponentStartup args)
     {
         if (!TryComp(uid, out MapGridComponent? mapGrid))
             return;
@@ -59,7 +59,7 @@ public sealed partial class AtmosphereSystem
         InvalidateAllTiles((uid, mapGrid, component));
     }
 
-    private void OnGridSplit(EntityUid uid, GridAtmosphereComponent originalGridAtmos, ref GridSplitEvent args)
+    private void OnGridSplit(EntityUid uid, Shared.Atmos.Components.GridAtmosphereComponent originalGridAtmos, ref GridSplitEvent args)
     {
         foreach (var newGrid in args.NewGrids)
         {
@@ -68,8 +68,8 @@ public sealed partial class AtmosphereSystem
                 continue;
 
             // If the new split grid has an atmosphere already somehow, use that. Otherwise, add a new one.
-            if (!TryComp(newGrid, out GridAtmosphereComponent? newGridAtmos))
-                newGridAtmos = AddComp<GridAtmosphereComponent>(newGrid);
+            if (!TryComp(newGrid, out Shared.Atmos.Components.GridAtmosphereComponent? newGridAtmos))
+                newGridAtmos = AddComp<Shared.Atmos.Components.GridAtmosphereComponent>(newGrid);
 
             // We assume the tiles on the new grid have the same coordinates as they did on the old grid...
             var enumerator = _mapSystem.GetAllTilesEnumerator(newGrid, mapGrid);
@@ -107,7 +107,7 @@ public sealed partial class AtmosphereSystem
         }
     }
 
-    private void GridIsSimulated(EntityUid uid, GridAtmosphereComponent component, ref IsSimulatedGridMethodEvent args)
+    private void GridIsSimulated(EntityUid uid, Shared.Atmos.Components.GridAtmosphereComponent component, ref IsSimulatedGridMethodEvent args)
     {
         if (args.Handled)
             return;
@@ -116,13 +116,13 @@ public sealed partial class AtmosphereSystem
         args.Handled = true;
     }
 
-    private void GridGetAllMixtures(EntityUid uid, GridAtmosphereComponent component,
+    private void GridGetAllMixtures(EntityUid uid, Shared.Atmos.Components.GridAtmosphereComponent component,
         ref GetAllMixturesMethodEvent args)
     {
         if (args.Handled)
             return;
 
-        IEnumerable<GasMixture> EnumerateMixtures(EntityUid gridUid, GridAtmosphereComponent grid, bool invalidate)
+        IEnumerable<GasMixture> EnumerateMixtures(EntityUid gridUid, Shared.Atmos.Components.GridAtmosphereComponent grid, bool invalidate)
         {
             foreach (var (indices, tile) in grid.Tiles)
             {
@@ -145,7 +145,7 @@ public sealed partial class AtmosphereSystem
         args.Handled = true;
     }
 
-    private void GridReactTile(EntityUid uid, GridAtmosphereComponent component, ref ReactTileMethodEvent args)
+    private void GridReactTile(EntityUid uid, Shared.Atmos.Components.GridAtmosphereComponent component, ref ReactTileMethodEvent args)
     {
         if (args.Handled)
             return;
@@ -161,7 +161,7 @@ public sealed partial class AtmosphereSystem
     /// Update array of adjacent tiles and the adjacency flags.
     /// </summary>
     private void UpdateAdjacentTiles(
-        Entity<GridAtmosphereComponent, GasTileOverlayComponent, MapGridComponent, TransformComponent> ent,
+        Entity<Shared.Atmos.Components.GridAtmosphereComponent, GasTileOverlayComponent, MapGridComponent, TransformComponent> ent,
         TileAtmosphere tile,
         bool activate = false)
     {
@@ -234,7 +234,7 @@ public sealed partial class AtmosphereSystem
         return (air, map.Space);
     }
 
-    private void GridHotspotExtinguish(EntityUid uid, GridAtmosphereComponent component,
+    private void GridHotspotExtinguish(EntityUid uid, Shared.Atmos.Components.GridAtmosphereComponent component,
         ref HotspotExtinguishMethodEvent args)
     {
         if (args.Handled)
@@ -251,7 +251,7 @@ public sealed partial class AtmosphereSystem
         AddActiveTile(component, tile);
     }
 
-    private void GridIsHotspotActive(EntityUid uid, GridAtmosphereComponent component,
+    private void GridIsHotspotActive(EntityUid uid, Shared.Atmos.Components.GridAtmosphereComponent component,
         ref IsHotspotActiveMethodEvent args)
     {
         if (args.Handled)
@@ -313,7 +313,7 @@ public sealed partial class AtmosphereSystem
     /// <summary>
     ///     Repopulates all tiles on a grid atmosphere.
     /// </summary>
-    public void InvalidateAllTiles(Entity<MapGridComponent?, GridAtmosphereComponent?> entity)
+    public void InvalidateAllTiles(Entity<MapGridComponent?, Shared.Atmos.Components.GridAtmosphereComponent?> entity)
     {
         var (uid, grid, atmos) = entity;
         if (!Resolve(uid, ref grid, ref atmos))

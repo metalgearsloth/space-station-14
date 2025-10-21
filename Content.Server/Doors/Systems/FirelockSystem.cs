@@ -128,7 +128,7 @@ namespace Content.Server.Doors.Systems
                 return (false, false);
             }
 
-            if (!HasComp<GridAtmosphereComponent>(xform.ParentUid))
+            if (!HasComp<Shared.Atmos.Components.GridAtmosphereComponent>(xform.ParentUid))
                 return (false, false);
 
             var grid = Comp<MapGridComponent>(xform.ParentUid);

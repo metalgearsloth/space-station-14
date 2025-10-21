@@ -15,6 +15,7 @@ using Content.Server.Administration.Logs;
 using Content.Server.NodeContainer.EntitySystems;
 using Content.Shared.Atmos;
 using Content.Shared.Database;
+using Content.Shared.NodeContainer.NodeGroups;
 using Content.Shared.Power;
 
 namespace Content.Server.Atmos.Portable
@@ -95,7 +96,7 @@ namespace Content.Server.Atmos.Portable
         /// </summary>
         private void OnAnchorChanged(EntityUid uid, PortableScrubberComponent component, ref AnchorStateChangedEvent args)
         {
-            if (!_nodeContainer.TryGetNode(uid, component.PortName, out PipeNode? portableNode))
+            if (!_nodeContainer.TryGetNode(uid, component.PortName, out Shared.NodeContainer.Nodes.PipeNode? portableNode))
                 return;
 
             portableNode.ConnectionsEnabled = (args.Anchored && _gasPortableSystem.FindGasPortIn(Transform(uid).GridUid, Transform(uid).Coordinates, out _));

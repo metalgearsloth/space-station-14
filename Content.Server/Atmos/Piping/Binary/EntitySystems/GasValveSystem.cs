@@ -15,7 +15,7 @@ public sealed class GasValveSystem : SharedGasValveSystem
     {
         base.Set(uid, component, value);
 
-        if (_nodeContainer.TryGetNodes(uid, component.InletName, component.OutletName, out PipeNode? inlet, out PipeNode? outlet))
+        if (_nodeContainer.TryGetNodes(uid, component.InletName, component.OutletName, out Shared.NodeContainer.Nodes.PipeNode? inlet, out Shared.NodeContainer.Nodes.PipeNode? outlet))
         {
             if (component.Open)
             {

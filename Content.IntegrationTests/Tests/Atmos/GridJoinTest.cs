@@ -37,7 +37,7 @@ public sealed class GridJoinTest
             Assert.That(atmosDeviceSystem.IsJoinedOffGrid(canisterEnt));
 
             // Add an atmosphere to the grid
-            entMan.AddComponent<GridAtmosphereComponent>(testMap.Grid);
+            entMan.AddComponent<Shared.Atmos.Components.GridAtmosphereComponent>(testMap.Grid);
 
             // Force AtmosDeviceSystem to update off-grid devices
             // This means the canister is now considered on-grid,

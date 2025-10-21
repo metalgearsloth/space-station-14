@@ -1,10 +1,7 @@
 #nullable enable
-using Content.Server.NodeContainer;
 using Content.Server.NodeContainer.EntitySystems;
-using Content.Server.NodeContainer.Nodes;
 using Content.Server.Power.Components;
 using Content.Server.Power.EntitySystems;
-using Content.Server.Power.Nodes;
 using Content.Shared.Coordinates;
 using Content.Shared.NodeContainer;
 using Robust.Shared.GameObjects;
@@ -1147,7 +1144,7 @@ namespace Content.IntegrationTests.Tests.Power
         }
 
         /// <summary>
-        ///     Test that <see cref="CableTerminalNode"/> correctly isolates two networks.
+        ///     Test that <see cref="Shared.Power.Nodes.CableTerminalNode"/> correctly isolates two networks.
         /// </summary>
         [Test]
         public async Task TestTerminalNodeGroups()
@@ -1158,8 +1155,8 @@ namespace Content.IntegrationTests.Tests.Power
             var entityManager = server.ResolveDependency<IEntityManager>();
             var nodeContainer = entityManager.System<NodeContainerSystem>();
             var mapSys = entityManager.System<SharedMapSystem>();
-            CableNode leftNode = default!;
-            CableNode rightNode = default!;
+            Shared.Power.Nodes.CableNode leftNode = default!;
+            Shared.Power.Nodes.CableNode rightNode = default!;
             Node batteryInput = default!;
             Node batteryOutput = default!;
 
@@ -1185,10 +1182,10 @@ namespace Content.IntegrationTests.Tests.Power
                 var battery = entityManager.SpawnEntity("FullBatteryDummy", grid.Owner.ToCoordinates(0, 2));
                 var batteryNodeContainer = entityManager.GetComponent<NodeContainerComponent>(battery);
 
-                if (nodeContainer.TryGetNode<CableNode>(entityManager.GetComponent<NodeContainerComponent>(leftEnt),
+                if (nodeContainer.TryGetNode<Shared.Power.Nodes.CableNode>(entityManager.GetComponent<NodeContainerComponent>(leftEnt),
                         "power", out var leftN))
                     leftNode = leftN;
-                if (nodeContainer.TryGetNode<CableNode>(entityManager.GetComponent<NodeContainerComponent>(rightEnt),
+                if (nodeContainer.TryGetNode<Shared.Power.Nodes.CableNode>(entityManager.GetComponent<NodeContainerComponent>(rightEnt),
                         "power", out var rightN))
                     rightNode = rightN;
 

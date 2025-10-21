@@ -1,4 +1,5 @@
 using Content.Server.Atmos.EntitySystems;
+using Content.Shared.Atmos.Components;
 using Content.Shared.Damage;
 using Content.Shared.FixedPoint;
 using Content.Shared.Guidebook;
@@ -10,7 +11,7 @@ namespace Content.Server.Atmos.Components;
 /// environment that they reside in.
 ///
 /// Atmospherics.DeltaPressure batch-processes entities with this component in a list on
-/// the grid's <see cref="GridAtmosphereComponent"/>.
+/// the grid's <see cref="Shared.Atmos.Components.GridAtmosphereComponent"/>.
 /// The entities are automatically added and removed from this list, and automatically
 /// added on initialization.
 /// </summary>
@@ -19,7 +20,7 @@ namespace Content.Server.Atmos.Components;
 public sealed partial class DeltaPressureComponent : Component
 {
     /// <summary>
-    /// Whether the entity is currently in the processing list of the grid's <see cref="GridAtmosphereComponent"/>.
+    /// Whether the entity is currently in the processing list of the grid's <see cref="Shared.Atmos.Components.GridAtmosphereComponent"/>.
     /// </summary>
     [DataField(readOnly: true)]
     [ViewVariables(VVAccess.ReadOnly)]

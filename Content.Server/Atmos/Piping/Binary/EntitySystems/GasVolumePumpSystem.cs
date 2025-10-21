@@ -40,7 +40,7 @@ namespace Content.Server.Atmos.Piping.Binary.EntitySystems
         {
             if (!pump.Enabled ||
                 (TryComp<ApcPowerReceiverComponent>(uid, out var power) && !power.Powered) ||
-                !_nodeContainer.TryGetNodes(uid, pump.InletName, pump.OutletName, out PipeNode? inlet, out PipeNode? outlet))
+                !_nodeContainer.TryGetNodes(uid, pump.InletName, pump.OutletName, out Shared.NodeContainer.Nodes.PipeNode? inlet, out Shared.NodeContainer.Nodes.PipeNode? outlet))
             {
                 _ambientSoundSystem.SetAmbience(uid, false);
                 return;

@@ -159,7 +159,7 @@ public sealed class AtmosMonitoringConsoleSystem : SharedAtmosMonitoringConsoleS
         if (!TryComp<MapGridComponent>(gridUid, out var mapGrid))
             return;
 
-        if (!TryComp<GridAtmosphereComponent>(gridUid, out var atmosphere))
+        if (!TryComp<Shared.Atmos.Components.GridAtmosphereComponent>(gridUid, out var atmosphere))
             return;
 
         // The grid must have a NavMapComponent to visualize the map in the UI
@@ -425,7 +425,7 @@ public sealed class AtmosMonitoringConsoleSystem : SharedAtmosMonitoringConsoleS
 
         foreach ((var id, var node) in nodeContainer.Nodes)
         {
-            if (node is not PipeNode { } pipeNode)
+            if (node is not Shared.NodeContainer.Nodes.PipeNode { } pipeNode)
                 continue;
 
             if (!showAbsentConnections && !pipeNode.ReachableNodes.Any(x => x.Owner != uid))
@@ -441,7 +441,7 @@ public sealed class AtmosMonitoringConsoleSystem : SharedAtmosMonitoringConsoleS
         }
     }
 
-    private bool TryGettingFirstPipeNode(EntityUid uid, [NotNullWhen(true)] out PipeNode? pipeNode, [NotNullWhen(true)] out int? netId)
+    private bool TryGettingFirstPipeNode(EntityUid uid, [NotNullWhen(true)] out Shared.NodeContainer.Nodes.PipeNode? pipeNode, [NotNullWhen(true)] out int? netId)
     {
         pipeNode = null;
         netId = null;
@@ -451,9 +451,9 @@ public sealed class AtmosMonitoringConsoleSystem : SharedAtmosMonitoringConsoleS
 
         foreach (var node in nodeContainer.Nodes.Values)
         {
-            if (node is PipeNode)
+            if (node is Shared.NodeContainer.Nodes.PipeNode)
             {
-                pipeNode = (PipeNode)node;
+                pipeNode = (Shared.NodeContainer.Nodes.PipeNode)node;
                 netId = GetPipeNodeNetId(pipeNode);
 
                 return true;
@@ -463,7 +463,7 @@ public sealed class AtmosMonitoringConsoleSystem : SharedAtmosMonitoringConsoleS
         return false;
     }
 
-    private int GetPipeNodeNetId(PipeNode pipeNode)
+    private int GetPipeNodeNetId(Shared.NodeContainer.Nodes.PipeNode pipeNode)
     {
         if (pipeNode.NodeGroup is BaseNodeGroup)
         {

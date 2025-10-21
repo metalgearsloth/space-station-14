@@ -1,7 +1,9 @@
+using Content.Server.Atmos.Components;
 using Content.Shared.Atmos.Components;
 using Content.Shared.Atmos.Prototypes;
 using Content.Shared.Body.Components;
 using Content.Shared.Body.Systems;
+using Content.Shared.NodeContainer.NodeGroups;
 using Robust.Shared.Prototypes;
 
 namespace Content.Shared.Atmos.EntitySystems
@@ -34,5 +36,10 @@ namespace Content.Shared.Atmos.EntitySystems
         public GasPrototype GetGas(Gas gasId) => GasPrototypes[(int) gasId];
 
         public IEnumerable<GasPrototype> Gases => GasPrototypes;
+
+        public bool AddPipeNet(Entity<Components.GridAtmosphereComponent?> grid, PipeNet pipeNet)
+        {
+            return _atmosQuery.Resolve(grid, ref grid.Comp, false) && grid.Comp.PipeNets.Add(pipeNet);
+        }
     }
 }

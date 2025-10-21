@@ -80,7 +80,7 @@ namespace Content.Server.Atmos.Piping.Unary.EntitySystems
                 _ => throw new ArgumentOutOfRangeException()
             };
 
-            if (!vent.Enabled || !_nodeContainer.TryGetNode(uid, nodeName, out PipeNode? pipe))
+            if (!vent.Enabled || !_nodeContainer.TryGetNode(uid, nodeName, out Shared.NodeContainer.Nodes.PipeNode? pipe))
             {
                 return;
             }
@@ -366,7 +366,7 @@ namespace Content.Server.Atmos.Piping.Unary.EntitySystems
                 _ => throw new ArgumentOutOfRangeException()
             };
             // multiply by volume fraction to make sure to send only the gas inside the analyzed pipe element, not the whole pipe system
-            if (_nodeContainer.TryGetNode(uid, nodeName, out PipeNode? pipe) && pipe.Air.Volume != 0f)
+            if (_nodeContainer.TryGetNode(uid, nodeName, out Shared.NodeContainer.Nodes.PipeNode? pipe) && pipe.Air.Volume != 0f)
             {
                 var pipeAirLocal = pipe.Air.Clone();
                 pipeAirLocal.Multiply(pipe.Volume / pipe.Air.Volume);

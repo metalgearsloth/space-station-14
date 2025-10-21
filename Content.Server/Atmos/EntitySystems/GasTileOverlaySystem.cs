@@ -201,7 +201,7 @@ namespace Content.Server.Atmos.EntitySystems
         /// <summary>
         ///     Updates the visuals for a tile on some grid chunk. Returns true if the visuals have changed.
         /// </summary>
-        private bool UpdateChunkTile(GridAtmosphereComponent gridAtmosphere, GasOverlayChunk chunk, Vector2i index)
+        private bool UpdateChunkTile(Shared.Atmos.Components.GridAtmosphereComponent gridAtmosphere, GasOverlayChunk chunk, Vector2i index)
         {
             ref var oldData = ref chunk.TileData[chunk.GetDataIndex(index)];
             if (!gridAtmosphere.Tiles.TryGetValue(index, out var tile))
@@ -274,7 +274,7 @@ namespace Content.Server.Atmos.EntitySystems
         private void UpdateOverlayData()
         {
             // TODO parallelize?
-            var query = AllEntityQuery<GasTileOverlayComponent, GridAtmosphereComponent, MetaDataComponent>();
+            var query = AllEntityQuery<GasTileOverlayComponent, Shared.Atmos.Components.GridAtmosphereComponent, MetaDataComponent>();
             while (query.MoveNext(out var uid, out var overlay, out var gam, out var meta))
             {
                 var changed = false;

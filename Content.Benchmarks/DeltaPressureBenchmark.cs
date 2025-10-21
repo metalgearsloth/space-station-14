@@ -61,7 +61,7 @@ public class DeltaPressureBenchmark
     private ITileDefinitionManager _tileDefMan = default!;
     private AtmosphereSystem _atmospereSystem = default!;
 
-    private Entity<GridAtmosphereComponent, GasTileOverlayComponent, MapGridComponent, TransformComponent>
+    private Entity<Shared.Atmos.Components.GridAtmosphereComponent, GasTileOverlayComponent, MapGridComponent, TransformComponent>
         _testEnt;
 
     [GlobalSetup]
@@ -139,9 +139,9 @@ public class DeltaPressureBenchmark
         await _pair.WaitCommand("fixgridatmos " + mapdata.Grid.Owner, 1);
 
         var uid = mapdata.Grid.Owner;
-        _testEnt = new Entity<GridAtmosphereComponent, GasTileOverlayComponent, MapGridComponent, TransformComponent>(
+        _testEnt = new Entity<Shared.Atmos.Components.GridAtmosphereComponent, GasTileOverlayComponent, MapGridComponent, TransformComponent>(
             uid,
-            _entMan.GetComponent<GridAtmosphereComponent>(uid),
+            _entMan.GetComponent<Shared.Atmos.Components.GridAtmosphereComponent>(uid),
             _entMan.GetComponent<GasTileOverlayComponent>(uid),
             _entMan.GetComponent<MapGridComponent>(uid),
             _entMan.GetComponent<TransformComponent>(uid));

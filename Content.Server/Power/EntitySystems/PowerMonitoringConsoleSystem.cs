@@ -1,8 +1,5 @@
-using Content.Server.NodeContainer;
 using Content.Server.NodeContainer.EntitySystems;
-using Content.Server.NodeContainer.Nodes;
 using Content.Server.Power.Components;
-using Content.Server.Power.Nodes;
 using Content.Server.Power.NodeGroups;
 using Content.Server.StationEvents.Components;
 using Content.Shared.GameTicking.Components;
@@ -383,7 +380,7 @@ internal sealed partial class PowerMonitoringConsoleSystem : SharedPowerMonitori
 
                 if (device.LoadNodes != null)
                 {
-                    var foundNode = nodeContainer.Nodes.FirstOrNull(x => x.Value is CableDeviceNode && (x.Value as CableDeviceNode)?.Enabled == true);
+                    var foundNode = nodeContainer.Nodes.FirstOrNull(x => x.Value is Shared.Power.Nodes.CableDeviceNode && (x.Value as Shared.Power.Nodes.CableDeviceNode)?.Enabled == true);
 
                     if (foundNode != null)
                         loadNodeName = foundNode.Value.Key;

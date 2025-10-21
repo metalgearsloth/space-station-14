@@ -34,7 +34,7 @@ namespace Content.Server.Atmos.Piping.Trinary.EntitySystems
 
         private void OnUpdate(EntityUid uid, PressureControlledValveComponent comp, ref AtmosDeviceUpdateEvent args)
         {
-            if (!_nodeContainer.TryGetNodes(uid, comp.InletName, comp.ControlName, comp.OutletName, out PipeNode? inletNode, out PipeNode? controlNode, out PipeNode? outletNode))
+            if (!_nodeContainer.TryGetNodes(uid, comp.InletName, comp.ControlName, comp.OutletName, out Shared.NodeContainer.Nodes.PipeNode? inletNode, out Shared.NodeContainer.Nodes.PipeNode? controlNode, out Shared.NodeContainer.Nodes.PipeNode? outletNode))
             {
                 _ambientSoundSystem.SetAmbience(uid, false);
                 comp.Enabled = false;
@@ -44,7 +44,7 @@ namespace Content.Server.Atmos.Piping.Trinary.EntitySystems
             // If output is higher than input, flip input/output to enable bidirectional flow.
             if (outletNode.Air.Pressure > inletNode.Air.Pressure)
             {
-                PipeNode temp = outletNode;
+                Shared.NodeContainer.Nodes.PipeNode temp = outletNode;
                 outletNode = inletNode;
                 inletNode = temp;
             }

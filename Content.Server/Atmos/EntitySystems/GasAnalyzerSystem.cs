@@ -206,7 +206,7 @@ public sealed class GasAnalyzerSystem : EntitySystem
                 {
                     foreach (var pair in node.Nodes)
                     {
-                        if (pair.Value is PipeNode pipeNode)
+                        if (pair.Value is Shared.NodeContainer.Nodes.PipeNode pipeNode)
                         {
                             // check if the volume is zero for some reason so we don't divide by zero
                             if (pipeNode.Air.Volume == 0f)

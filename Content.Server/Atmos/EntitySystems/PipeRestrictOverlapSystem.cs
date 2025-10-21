@@ -117,7 +117,7 @@ public sealed class PipeRestrictOverlapSystem : EntitySystem
             foreach (var node in pipe.Comp1.Nodes.Values)
             {
                 // we need to rotate the pipe manually like this because the rotation doesn't update for pipes that are unanchored.
-                if (node is PipeNode pipeNode)
+                if (node is Shared.NodeContainer.Nodes.PipeNode pipeNode)
                     yield return (pipeNode.OriginalPipeDirection.RotatePipeDirection(pipe.Comp2.LocalRotation), pipeNode.CurrentPipeLayer);
             }
         }

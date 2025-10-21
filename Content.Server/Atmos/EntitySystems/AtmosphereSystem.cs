@@ -44,7 +44,7 @@ public sealed partial class AtmosphereSystem : SharedAtmosphereSystem
     private const float ExposedUpdateDelay = 1f;
     private float _exposedTimer = 0f;
 
-    private EntityQuery<GridAtmosphereComponent> _atmosQuery;
+    private EntityQuery<Shared.Atmos.Components.GridAtmosphereComponent> _atmosQuery;
     private EntityQuery<MapAtmosphereComponent> _mapAtmosQuery;
     private EntityQuery<AirtightComponent> _airtightQuery;
     private EntityQuery<FirelockComponent> _firelockQuery;
@@ -65,7 +65,7 @@ public sealed partial class AtmosphereSystem : SharedAtmosphereSystem
         InitializeMap();
 
         _mapAtmosQuery = GetEntityQuery<MapAtmosphereComponent>();
-        _atmosQuery = GetEntityQuery<GridAtmosphereComponent>();
+        _atmosQuery = GetEntityQuery<Shared.Atmos.Components.GridAtmosphereComponent>();
         _airtightQuery = GetEntityQuery<AirtightComponent>();
         _firelockQuery = GetEntityQuery<FirelockComponent>();
 

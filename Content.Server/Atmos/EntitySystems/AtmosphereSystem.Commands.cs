@@ -86,14 +86,14 @@ public sealed partial class AtmosphereSystem
                return;
            }
 
-           if (!TryComp(euid, out GridAtmosphereComponent? gridAtmosphere))
+           if (!TryComp(euid, out Shared.Atmos.Components.GridAtmosphereComponent? gridAtmosphere))
            {
                shell.WriteError($"Grid \"{euid}\" has no atmosphere component, try addatmos.");
                continue;
            }
 
            // Force Invalidate & update air on all tiles
-           Entity<GridAtmosphereComponent, GasTileOverlayComponent, MapGridComponent, TransformComponent> grid =
+           Entity<Shared.Atmos.Components.GridAtmosphereComponent, GasTileOverlayComponent, MapGridComponent, TransformComponent> grid =
                new(euid.Value, gridAtmosphere, Comp<GasTileOverlayComponent>(euid.Value), gridComp, Transform(euid.Value));
 
            RebuildGridTiles(grid);
@@ -124,7 +124,7 @@ public sealed partial class AtmosphereSystem
     /// Clears & re-creates all references to <see cref="TileAtmosphere"/>s stored on a grid.
     /// </summary>
     private void RebuildGridTiles(
-        Entity<GridAtmosphereComponent, GasTileOverlayComponent, MapGridComponent, TransformComponent> ent)
+        Entity<Shared.Atmos.Components.GridAtmosphereComponent, GasTileOverlayComponent, MapGridComponent, TransformComponent> ent)
     {
         foreach (var indices in ent.Comp1.Tiles.Keys)
         {

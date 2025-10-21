@@ -46,7 +46,7 @@ public sealed partial class AtmosPipeLayersSystem : SharedAtmosPipeLayersSystem
         // Update the layer values of all pipe nodes associated with the entity
         foreach (var (id, node) in nodeContainer.Nodes)
         {
-            if (node is not PipeNode { } pipeNode)
+            if (node is not Shared.NodeContainer.Nodes.PipeNode { } pipeNode)
                 continue;
 
             if (pipeNode.CurrentPipeLayer == ent.Comp.CurrentPipeLayer)

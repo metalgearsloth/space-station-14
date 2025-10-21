@@ -1,7 +1,6 @@
 ﻿using Content.Server.NodeContainer.EntitySystems;
 using Content.Server.Popups;
 using Content.Server.Power.Components;
-using Content.Server.Power.Nodes;
 using Content.Shared.NodeContainer;
 using Content.Shared.Power;
 using Content.Shared.Power.Generator;
@@ -61,7 +60,7 @@ public sealed class PowerSwitchableSystem : SharedPowerSwitchableSystem
         var nodeContainer = Comp<NodeContainerComponent>(uid);
         foreach (var cable in comp.Cables)
         {
-            var node = (CableDeviceNode) nodeContainer.Nodes[cable.Node];
+            var node = (Shared.Power.Nodes.CableDeviceNode) nodeContainer.Nodes[cable.Node];
             node.Enabled = cable.Voltage == voltage;
             _nodeGroup.QueueReflood(node);
         }

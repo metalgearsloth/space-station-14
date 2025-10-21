@@ -44,7 +44,7 @@ namespace Content.Server.Atmos.Commands
                 return;
             }
 
-            _entities.AddComponent<GridAtmosphereComponent>(euid.Value);
+            _entities.AddComponent<Shared.Atmos.Components.GridAtmosphereComponent>(euid.Value);
 
             shell.WriteLine($"Added atmosphere to grid {euid}.");
         }

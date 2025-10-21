@@ -14,7 +14,7 @@ public partial class AtmosphereSystem
         SubscribeLocalEvent<MapAtmosphereComponent, ComponentInit>(OnMapStartup);
         SubscribeLocalEvent<MapAtmosphereComponent, ComponentRemove>(OnMapRemove);
         SubscribeLocalEvent<MapAtmosphereComponent, ComponentGetState>(OnMapGetState);
-        SubscribeLocalEvent<GridAtmosphereComponent, EntParentChangedMessage>(OnGridParentChanged);
+        SubscribeLocalEvent<Shared.Atmos.Components.GridAtmosphereComponent, EntParentChangedMessage>(OnGridParentChanged);
     }
 
     private void OnMapStartup(EntityUid uid, MapAtmosphereComponent component, ComponentInit args)
@@ -81,7 +81,7 @@ public partial class AtmosphereSystem
     public void RefreshAllGridMapAtmospheres(EntityUid map)
     {
         DebugTools.Assert(HasComp<MapComponent>(map));
-        var enumerator = AllEntityQuery<GridAtmosphereComponent, TransformComponent>();
+        var enumerator = AllEntityQuery<Shared.Atmos.Components.GridAtmosphereComponent, TransformComponent>();
         while (enumerator.MoveNext(out var grid, out var atmos, out var xform))
         {
             if (xform.MapUid == map)
@@ -92,7 +92,7 @@ public partial class AtmosphereSystem
     /// <summary>
     /// Forces a refresh of all MapAtmosphere tiles on a given grid.
     /// </summary>
-    private void RefreshMapAtmosphereTiles(Entity<GridAtmosphereComponent?> grid)
+    private void RefreshMapAtmosphereTiles(Entity<Shared.Atmos.Components.GridAtmosphereComponent?> grid)
     {
         if (!Resolve(grid.Owner, ref grid.Comp))
             return;
@@ -109,7 +109,7 @@ public partial class AtmosphereSystem
     /// <summary>
     /// Handles updating map-atmospheres when grids move across maps.
     /// </summary>
-    private void OnGridParentChanged(Entity<GridAtmosphereComponent> grid, ref EntParentChangedMessage args)
+    private void OnGridParentChanged(Entity<Shared.Atmos.Components.GridAtmosphereComponent> grid, ref EntParentChangedMessage args)
     {
         // Do nothing if detaching to nullspace
         if (!args.Transform.ParentUid.IsValid())

@@ -1,6 +1,7 @@
 using Content.Server.Atmos.Components;
 using Content.Server.Atmos.EntitySystems;
 using Content.Shared.Atmos;
+using Content.Shared.Atmos.Components;
 using Content.Shared.Maps;
 using Robust.Shared.Map;
 
@@ -124,14 +125,14 @@ namespace Content.Server.Atmos
         public bool NoGridTile;
 
         /// <summary>
-        /// If true, this tile is queued for processing in <see cref="GridAtmosphereComponent.PossiblyDisconnectedTiles"/>
+        /// If true, this tile is queued for processing in <see cref="Shared.Atmos.Components.GridAtmosphereComponent.PossiblyDisconnectedTiles"/>
         /// </summary>
         [ViewVariables]
         public bool TrimQueued;
 
         /// <summary>
         /// Cached information about airtight entities on this tile. This gets updated anytime a tile gets invalidated
-        /// (i.e., gets added to <see cref="GridAtmosphereComponent.InvalidatedCoords"/>).
+        /// (i.e., gets added to <see cref="Shared.Atmos.Components.GridAtmosphereComponent.InvalidatedCoords"/>).
         /// </summary>
         public AtmosphereSystem.AirtightData AirtightData;
 

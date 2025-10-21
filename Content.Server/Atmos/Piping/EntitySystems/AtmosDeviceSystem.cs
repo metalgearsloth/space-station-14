@@ -37,7 +37,7 @@ namespace Content.Server.Atmos.Piping.EntitySystems
         {
             if (ent.Comp.JoinedGrid != null)
             {
-                DebugTools.Assert(HasComp<GridAtmosphereComponent>(ent.Comp.JoinedGrid));
+                DebugTools.Assert(HasComp<Shared.Atmos.Components.GridAtmosphereComponent>(ent.Comp.JoinedGrid));
                 DebugTools.Assert(Transform(ent).GridUid == ent.Comp.JoinedGrid);
                 DebugTools.Assert(ent.Comp.RequireAnchored == Transform(ent).Anchored);
                 return;
@@ -134,7 +134,7 @@ namespace Content.Server.Atmos.Piping.EntitySystems
             foreach (var device in _joinedDevices)
             {
                 var deviceGrid = Transform(device).GridUid;
-                if (HasComp<GridAtmosphereComponent>(deviceGrid))
+                if (HasComp<Shared.Atmos.Components.GridAtmosphereComponent>(deviceGrid))
                 {
                     RejoinAtmosphere(device);
                 }

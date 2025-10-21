@@ -30,7 +30,7 @@ namespace Content.Server.Atmos.EntitySystems
         private int _currentRunAtmosphereIndex;
         private bool _simulationPaused;
 
-        private TileAtmosphere GetOrNewTile(EntityUid owner, GridAtmosphereComponent atmosphere, Vector2i index, bool invalidateNew = true)
+        private TileAtmosphere GetOrNewTile(EntityUid owner, Shared.Atmos.Components.GridAtmosphereComponent atmosphere, Vector2i index, bool invalidateNew = true)
         {
             var tile = atmosphere.Tiles.GetOrNew(index, out var existing);
             if (existing)
@@ -44,7 +44,7 @@ namespace Content.Server.Atmos.EntitySystems
             return tile;
         }
 
-        private readonly List<Entity<GridAtmosphereComponent, GasTileOverlayComponent, MapGridComponent, TransformComponent>> _currentRunAtmosphere = new();
+        private readonly List<Entity<Shared.Atmos.Components.GridAtmosphereComponent, GasTileOverlayComponent, MapGridComponent, TransformComponent>> _currentRunAtmosphere = new();
 
         /// <summary>
         ///     Revalidates all invalid coordinates in a grid atmosphere.
@@ -52,7 +52,7 @@ namespace Content.Server.Atmos.EntitySystems
         /// </summary>
         /// <param name="ent">The grid atmosphere in question.</param>
         /// <returns>Whether the process succeeded or got paused due to time constrains.</returns>
-        private bool ProcessRevalidate(Entity<GridAtmosphereComponent, GasTileOverlayComponent, MapGridComponent, TransformComponent> ent)
+        private bool ProcessRevalidate(Entity<Shared.Atmos.Components.GridAtmosphereComponent, GasTileOverlayComponent, MapGridComponent, TransformComponent> ent)
         {
             if (ent.Comp4.MapUid == null)
             {
@@ -106,7 +106,7 @@ namespace Content.Server.Atmos.EntitySystems
         /// <summary>
         /// This method queued a tile and all of its neighbours up for processing by <see cref="TrimDisconnectedMapTiles"/>.
         /// </summary>
-        public void QueueTileTrim(GridAtmosphereComponent atmos, TileAtmosphere tile)
+        public void QueueTileTrim(Shared.Atmos.Components.GridAtmosphereComponent atmos, TileAtmosphere tile)
         {
             if (!tile.TrimQueued)
             {
@@ -129,12 +129,12 @@ namespace Content.Server.Atmos.EntitySystems
         }
 
         /// <summary>
-        /// Tiles in a <see cref="GridAtmosphereComponent"/> are either grid-tiles, or they they should be are tiles
+        /// Tiles in a <see cref="Shared.Atmos.Components.GridAtmosphereComponent"/> are either grid-tiles, or they they should be are tiles
         /// adjacent to grid-tiles that represent the map's atmosphere. This method trims any map-tiles that are no longer
         /// adjacent to any grid-tiles.
         /// </summary>
         private void TrimDisconnectedMapTiles(
-            Entity<GridAtmosphereComponent, GasTileOverlayComponent, MapGridComponent, TransformComponent> ent)
+            Entity<Shared.Atmos.Components.GridAtmosphereComponent, GasTileOverlayComponent, MapGridComponent, TransformComponent> ent)
         {
             var atmos = ent.Comp1;
 
@@ -170,7 +170,7 @@ namespace Content.Server.Atmos.EntitySystems
         /// tile should be considered "space"
         /// </summary>
         private void UpdateTileData(
-            Entity<GridAtmosphereComponent, GasTileOverlayComponent, MapGridComponent, TransformComponent> ent,
+            Entity<Shared.Atmos.Components.GridAtmosphereComponent, GasTileOverlayComponent, MapGridComponent, TransformComponent> ent,
             MapAtmosphereComponent? mapAtmos,
             TileAtmosphere tile)
         {
@@ -223,7 +223,7 @@ namespace Content.Server.Atmos.EntitySystems
             RemoveMapAtmos(ent.Comp1, tile);
         }
 
-        private void RemoveMapAtmos(GridAtmosphereComponent atmos, TileAtmosphere tile)
+        private void RemoveMapAtmos(Shared.Atmos.Components.GridAtmosphereComponent atmos, TileAtmosphere tile)
         {
             DebugTools.Assert(tile.MapAtmosphere);
             DebugTools.AssertNotNull(tile.Air);
@@ -241,7 +241,7 @@ namespace Content.Server.Atmos.EntitySystems
         /// Check whether a grid-tile should have an air mixture, and give it one if it doesn't already have one.
         /// </summary>
         private void UpdateTileAir(
-            Entity<GridAtmosphereComponent, GasTileOverlayComponent, MapGridComponent, TransformComponent> ent,
+            Entity<Shared.Atmos.Components.GridAtmosphereComponent, GasTileOverlayComponent, MapGridComponent, TransformComponent> ent,
             TileAtmosphere tile,
             float volume)
         {
@@ -290,7 +290,7 @@ namespace Content.Server.Atmos.EntitySystems
             }
         }
 
-        private bool ProcessTileEqualize(Entity<GridAtmosphereComponent, GasTileOverlayComponent, MapGridComponent, TransformComponent> ent)
+        private bool ProcessTileEqualize(Entity<Shared.Atmos.Components.GridAtmosphereComponent, GasTileOverlayComponent, MapGridComponent, TransformComponent> ent)
         {
             var atmosphere = ent.Comp1;
             if (!atmosphere.ProcessingPaused)
@@ -316,7 +316,7 @@ namespace Content.Server.Atmos.EntitySystems
         }
 
         private bool ProcessActiveTiles(
-            Entity<GridAtmosphereComponent, GasTileOverlayComponent, MapGridComponent, TransformComponent> ent)
+            Entity<Shared.Atmos.Components.GridAtmosphereComponent, GasTileOverlayComponent, MapGridComponent, TransformComponent> ent)
         {
             var atmosphere = ent.Comp1;
             if(!atmosphere.ProcessingPaused)
@@ -342,7 +342,7 @@ namespace Content.Server.Atmos.EntitySystems
         }
 
         private bool ProcessExcitedGroups(
-            Entity<GridAtmosphereComponent, GasTileOverlayComponent, MapGridComponent, TransformComponent> ent)
+            Entity<Shared.Atmos.Components.GridAtmosphereComponent, GasTileOverlayComponent, MapGridComponent, TransformComponent> ent)
         {
             var gridAtmosphere = ent.Comp1;
             if (!gridAtmosphere.ProcessingPaused)
@@ -381,7 +381,7 @@ namespace Content.Server.Atmos.EntitySystems
             return true;
         }
 
-        private bool ProcessHighPressureDelta(Entity<GridAtmosphereComponent> ent)
+        private bool ProcessHighPressureDelta(Entity<Shared.Atmos.Components.GridAtmosphereComponent> ent)
         {
             var atmosphere = ent.Comp;
             if (!atmosphere.ProcessingPaused)
@@ -418,7 +418,7 @@ namespace Content.Server.Atmos.EntitySystems
         }
 
         private bool ProcessHotspots(
-            Entity<GridAtmosphereComponent, GasTileOverlayComponent, MapGridComponent, TransformComponent> ent)
+            Entity<Shared.Atmos.Components.GridAtmosphereComponent, GasTileOverlayComponent, MapGridComponent, TransformComponent> ent)
         {
             var atmosphere = ent.Comp1;
             if(!atmosphere.ProcessingPaused)
@@ -443,7 +443,7 @@ namespace Content.Server.Atmos.EntitySystems
             return true;
         }
 
-        private bool ProcessSuperconductivity(GridAtmosphereComponent atmosphere)
+        private bool ProcessSuperconductivity(Shared.Atmos.Components.GridAtmosphereComponent atmosphere)
         {
             if(!atmosphere.ProcessingPaused)
                 QueueRunTiles(atmosphere.CurrentRunTiles, atmosphere.SuperconductivityTiles);
@@ -473,7 +473,7 @@ namespace Content.Server.Atmos.EntitySystems
         /// </summary>
         /// <returns>True if we've finished processing all entities that required processing this run,
         /// otherwise, false.</returns>
-        private bool ProcessDeltaPressure(Entity<GridAtmosphereComponent, GasTileOverlayComponent, MapGridComponent, TransformComponent> ent)
+        private bool ProcessDeltaPressure(Entity<Shared.Atmos.Components.GridAtmosphereComponent, GasTileOverlayComponent, MapGridComponent, TransformComponent> ent)
         {
             var atmosphere = ent.Comp1;
             var count = atmosphere.DeltaPressureEntities.Count;
@@ -527,7 +527,7 @@ namespace Content.Server.Atmos.EntitySystems
             return true;
         }
 
-        private bool ProcessPipeNets(GridAtmosphereComponent atmosphere)
+        private bool ProcessPipeNets(Shared.Atmos.Components.GridAtmosphereComponent atmosphere)
         {
             if (!atmosphere.ProcessingPaused)
             {
@@ -578,7 +578,7 @@ namespace Content.Server.Atmos.EntitySystems
         }
 
         private bool ProcessAtmosDevices(
-            Entity<GridAtmosphereComponent, GasTileOverlayComponent, MapGridComponent, TransformComponent> ent,
+            Entity<Shared.Atmos.Components.GridAtmosphereComponent, GasTileOverlayComponent, MapGridComponent, TransformComponent> ent,
             Entity<MapAtmosphereComponent?> map)
         {
             var atmosphere = ent.Comp1;
@@ -623,7 +623,7 @@ namespace Content.Server.Atmos.EntitySystems
                 _currentRunAtmosphereIndex = 0;
                 _currentRunAtmosphere.Clear();
 
-                var query = EntityQueryEnumerator<GridAtmosphereComponent, GasTileOverlayComponent, MapGridComponent, TransformComponent>();
+                var query = EntityQueryEnumerator<Shared.Atmos.Components.GridAtmosphereComponent, GasTileOverlayComponent, MapGridComponent, TransformComponent>();
                 while (query.MoveNext(out var uid, out var atmos, out var overlay, out var grid, out var xform ))
                 {
                     _currentRunAtmosphere.Add((uid, atmos, overlay, grid, xform));

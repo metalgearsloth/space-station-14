@@ -42,14 +42,14 @@ public sealed partial class AtmosPipeAppearanceSystem : SharedAtmosPipeAppearanc
 
         foreach (var node in container.Nodes.Values)
         {
-            if (node is not PipeNode)
+            if (node is not Shared.NodeContainer.Nodes.PipeNode)
                 continue;
 
             anyPipeNodes = true;
 
             foreach (var connectedNode in node.ReachableNodes)
             {
-                if (connectedNode is PipeNode { } pipeNode)
+                if (connectedNode is Shared.NodeContainer.Nodes.PipeNode { } pipeNode)
                     connected.Add((connectedNode.Owner, pipeNode.CurrentPipeLayer));
             }
         }

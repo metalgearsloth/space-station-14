@@ -1,13 +1,9 @@
 using System.Linq;
-using Content.Server.Atmos;
-using Content.Server.Atmos.EntitySystems;
-using Content.Server.NodeContainer.Nodes;
+using Content.Server.NodeContainer.NodeGroups;
 using Content.Shared.Atmos;
-using Content.Shared.NodeContainer;
-using Content.Shared.NodeContainer.NodeGroups;
-using Robust.Shared.Utility;
+using Content.Shared.Atmos.EntitySystems;
 
-namespace Content.Server.NodeContainer.NodeGroups
+namespace Content.Shared.NodeContainer.NodeGroups
 {
     public interface IPipeNet : INodeGroup, IGasMixtureHolder
     {
@@ -22,7 +18,7 @@ namespace Content.Server.NodeContainer.NodeGroups
     {
         [ViewVariables] public GasMixture Air { get; set; } = new() {Temperature = Atmospherics.T20C};
 
-        [ViewVariables] private AtmosphereSystem? _atmosphereSystem;
+        [ViewVariables] private SharedAtmosphereSystem? _atmosphereSystem;
 
         public EntityUid? Grid { get; private set; }
 
@@ -38,7 +34,7 @@ namespace Content.Server.NodeContainer.NodeGroups
                 return;
             }
 
-            _atmosphereSystem = entMan.EntitySysManager.GetEntitySystem<AtmosphereSystem>();
+            _atmosphereSystem = entMan.EntitySysManager.GetEntitySystem<SharedAtmosphereSystem>();
             _atmosphereSystem.AddPipeNet(Grid.Value, this);
         }
 
@@ -53,7 +49,7 @@ namespace Content.Server.NodeContainer.NodeGroups
 
             foreach (var node in groupNodes)
             {
-                var pipeNode = (PipeNode) node;
+                var pipeNode = (Shared.NodeContainer.Nodes.PipeNode) node;
                 Air.Volume += pipeNode.Volume;
             }
         }
@@ -64,7 +60,7 @@ namespace Content.Server.NodeContainer.NodeGroups
 
             // if the node is simply being removed into a separate group, we do nothing, as gas redistribution will be
             // handled by AfterRemake(). But if it is being deleted, we actually want to remove the gas stored in this node.
-            if (!node.Deleting || node is not PipeNode pipe)
+            if (!node.Deleting || node is not Shared.NodeContainer.Nodes.PipeNode pipe)
                 return;
 
             Air.Multiply(1f - pipe.Volume / Air.Volume);

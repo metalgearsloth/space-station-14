@@ -48,7 +48,7 @@ public sealed class HeatExchangerSystem : EntitySystem
             return;
         }
 
-        if (!_nodeContainer.TryGetNodes(uid, comp.InletName, comp.OutletName, out PipeNode? inlet, out PipeNode? outlet))
+        if (!_nodeContainer.TryGetNodes(uid, comp.InletName, comp.OutletName, out Shared.NodeContainer.Nodes.PipeNode? inlet, out Shared.NodeContainer.Nodes.PipeNode? outlet))
             return;
 
         var dt = args.dt;

@@ -60,7 +60,7 @@ namespace Content.Server.Atmos.Piping.Unary.EntitySystems
             if (!_powerReceiverSystem.IsPowered(uid))
                 return;
 
-            if (!scrubber.Enabled || !_nodeContainer.TryGetNode(uid, scrubber.OutletName, out PipeNode? outlet))
+            if (!scrubber.Enabled || !_nodeContainer.TryGetNode(uid, scrubber.OutletName, out Shared.NodeContainer.Nodes.PipeNode? outlet))
                 return;
 
             if (args.Grid is not {} grid)
@@ -88,7 +88,7 @@ namespace Content.Server.Atmos.Piping.Unary.EntitySystems
         private void OnVentScrubberEnterAtmosphere(EntityUid uid, GasVentScrubberComponent component,
             AtmosDeviceEnabledEvent args) => UpdateState(uid, component);
 
-        private void Scrub(float timeDelta, GasVentScrubberComponent scrubber, GasMixture? tile, PipeNode outlet)
+        private void Scrub(float timeDelta, GasVentScrubberComponent scrubber, GasMixture? tile, Shared.NodeContainer.Nodes.PipeNode outlet)
         {
             Scrub(timeDelta, scrubber.TransferRate*_atmosphereSystem.PumpSpeedup(), scrubber.PumpDirection, scrubber.FilterGases, tile, outlet.Air);
         }

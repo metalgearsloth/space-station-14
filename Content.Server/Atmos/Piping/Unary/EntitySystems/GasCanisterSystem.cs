@@ -10,6 +10,7 @@ using Content.Shared.Atmos.Piping.Unary.Systems;
 using Content.Shared.Cargo;
 using Content.Shared.Database;
 using Content.Shared.NodeContainer;
+using Content.Shared.NodeContainer.NodeGroups;
 using GasCanisterComponent = Content.Shared.Atmos.Piping.Unary.Components.GasCanisterComponent;
 
 namespace Content.Server.Atmos.Piping.Unary.EntitySystems;
@@ -54,7 +55,7 @@ public sealed class GasCanisterSystem : SharedGasCanisterSystem
         var portStatus = false;
         var tankPressure = 0f;
 
-        if (_nodeContainer.TryGetNode(nodeContainer, canister.PortName, out PipeNode? portNode) && portNode.NodeGroup?.Nodes.Count > 1)
+        if (_nodeContainer.TryGetNode(nodeContainer, canister.PortName, out Shared.NodeContainer.Nodes.PipeNode? portNode) && portNode.NodeGroup?.Nodes.Count > 1)
             portStatus = true;
 
         if (canister.GasTankSlot.Item != null)

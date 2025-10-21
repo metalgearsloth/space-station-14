@@ -20,7 +20,7 @@ namespace Content.Server.NodeContainer.EntitySystems
     /// </summary>
     /// <seealso cref="NodeContainerSystem"/>
     [UsedImplicitly]
-    public sealed class NodeGroupSystem : EntitySystem
+    public sealed class NodeGroupSystem : SharedNodeGroupSystem
     {
         [Dependency] private readonly IPlayerManager _playerManager = default!;
         [Dependency] private readonly IAdminManager _adminManager = default!;
@@ -96,7 +96,7 @@ namespace Content.Server.NodeContainer.EntitySystems
                 _visPlayers.Remove(e.Session);
         }
 
-        public void QueueRemakeGroup(BaseNodeGroup group)
+        public override void QueueRemakeGroup(BaseNodeGroup group)
         {
             if (group.Remaking)
                 return;

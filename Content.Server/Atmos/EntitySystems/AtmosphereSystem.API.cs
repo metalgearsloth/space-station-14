@@ -6,6 +6,7 @@ using Content.Server.NodeContainer.NodeGroups;
 using Content.Shared.Atmos;
 using Content.Shared.Atmos.Components;
 using Content.Shared.Atmos.Reactions;
+using Content.Shared.NodeContainer.NodeGroups;
 using JetBrains.Annotations;
 using Robust.Shared.Map.Components;
 using Robust.Shared.Utility;
@@ -24,7 +25,7 @@ public partial class AtmosphereSystem
 
     public GasMixture? GetContainingMixture(
         Entity<TransformComponent?> ent,
-        Entity<GridAtmosphereComponent?, GasTileOverlayComponent?>? grid,
+        Entity<Shared.Atmos.Components.GridAtmosphereComponent?, GasTileOverlayComponent?>? grid,
         Entity<MapAtmosphereComponent?>? map,
         bool ignoreExposed = false,
         bool excite = false)
@@ -79,14 +80,14 @@ public partial class AtmosphereSystem
         return ev.Mixtures!;
     }
 
-    public void InvalidateTile(Entity<GridAtmosphereComponent?> entity, Vector2i tile)
+    public void InvalidateTile(Entity<Shared.Atmos.Components.GridAtmosphereComponent?> entity, Vector2i tile)
     {
         if (_atmosQuery.Resolve(entity.Owner, ref entity.Comp, false))
             entity.Comp.InvalidatedCoords.Add(tile);
     }
 
     public GasMixture?[]? GetTileMixtures(
-        Entity<GridAtmosphereComponent?, GasTileOverlayComponent?>? grid,
+        Entity<Shared.Atmos.Components.GridAtmosphereComponent?, GasTileOverlayComponent?>? grid,
         Entity<MapAtmosphereComponent?>? map,
         List<Vector2i> tiles,
         bool excite = false)
@@ -158,7 +159,7 @@ public partial class AtmosphereSystem
     }
 
     public GasMixture? GetTileMixture(
-        Entity<GridAtmosphereComponent?, GasTileOverlayComponent?>? grid,
+        Entity<Shared.Atmos.Components.GridAtmosphereComponent?, GasTileOverlayComponent?>? grid,
         Entity<MapAtmosphereComponent?>? map,
         Vector2i gridTile,
         bool excite = false)
@@ -203,7 +204,7 @@ public partial class AtmosphereSystem
         return data.BlockedDirections.IsFlagSet(directions);
     }
 
-    public bool IsTileSpace(Entity<GridAtmosphereComponent?>? grid, Entity<MapAtmosphereComponent?>? map, Vector2i tile)
+    public bool IsTileSpace(Entity<Shared.Atmos.Components.GridAtmosphereComponent?>? grid, Entity<MapAtmosphereComponent?>? map, Vector2i tile)
     {
         if (grid is {} gridEnt && _atmosQuery.Resolve(gridEnt, ref gridEnt.Comp, false)
             && gridEnt.Comp.Tiles.TryGetValue(tile, out var tileAtmos))
@@ -219,17 +220,17 @@ public partial class AtmosphereSystem
         return true;
     }
 
-    public bool IsTileMixtureProbablySafe(Entity<GridAtmosphereComponent?>? grid, Entity<MapAtmosphereComponent?> map, Vector2i tile)
+    public bool IsTileMixtureProbablySafe(Entity<Shared.Atmos.Components.GridAtmosphereComponent?>? grid, Entity<MapAtmosphereComponent?> map, Vector2i tile)
     {
         return IsMixtureProbablySafe(GetTileMixture(grid, map, tile));
     }
 
-    public float GetTileHeatCapacity(Entity<GridAtmosphereComponent?>? grid, Entity<MapAtmosphereComponent?> map, Vector2i tile)
+    public float GetTileHeatCapacity(Entity<Shared.Atmos.Components.GridAtmosphereComponent?>? grid, Entity<MapAtmosphereComponent?> map, Vector2i tile)
     {
         return GetHeatCapacity(GetTileMixture(grid, map, tile) ?? GasMixture.SpaceGas);
     }
 
-    public TileMixtureEnumerator GetAdjacentTileMixtures(Entity<GridAtmosphereComponent?> grid, Vector2i tile, bool includeBlocked = false, bool excite = false)
+    public TileMixtureEnumerator GetAdjacentTileMixtures(Entity<Shared.Atmos.Components.GridAtmosphereComponent?> grid, Vector2i tile, bool includeBlocked = false, bool excite = false)
     {
         if (!_atmosQuery.Resolve(grid, ref grid.Comp, false))
             return TileMixtureEnumerator.Empty;
@@ -239,7 +240,7 @@ public partial class AtmosphereSystem
             : new(atmosTile.AdjacentTiles);
     }
 
-    public void HotspotExpose(Entity<GridAtmosphereComponent?> grid, Vector2i tile, float exposedTemperature, float exposedVolume,
+    public void HotspotExpose(Entity<Shared.Atmos.Components.GridAtmosphereComponent?> grid, Vector2i tile, float exposedTemperature, float exposedVolume,
         EntityUid? sparkSourceUid = null, bool soh = false)
     {
         if (!_atmosQuery.Resolve(grid, ref grid.Comp, false))
@@ -274,12 +275,7 @@ public partial class AtmosphereSystem
         return ev.Result;
     }
 
-    public bool AddPipeNet(Entity<GridAtmosphereComponent?> grid, PipeNet pipeNet)
-    {
-        return _atmosQuery.Resolve(grid, ref grid.Comp, false) && grid.Comp.PipeNets.Add(pipeNet);
-    }
-
-    public bool RemovePipeNet(Entity<GridAtmosphereComponent?> grid, PipeNet pipeNet)
+    public bool RemovePipeNet(Entity<Shared.Atmos.Components.GridAtmosphereComponent?> grid, PipeNet pipeNet)
     {
         // Technically this event can be fired even on grids that don't
         // actually have grid atmospheres.
@@ -292,7 +288,7 @@ public partial class AtmosphereSystem
         return _atmosQuery.Resolve(grid, ref grid.Comp, false) && grid.Comp.PipeNets.Remove(pipeNet);
     }
 
-    public bool AddAtmosDevice(Entity<GridAtmosphereComponent?> grid, Entity<AtmosDeviceComponent> device)
+    public bool AddAtmosDevice(Entity<Shared.Atmos.Components.GridAtmosphereComponent?> grid, Entity<AtmosDeviceComponent> device)
     {
         DebugTools.Assert(device.Comp.JoinedGrid == null);
         DebugTools.Assert(Transform(device).GridUid == grid);
@@ -307,7 +303,7 @@ public partial class AtmosphereSystem
         return true;
     }
 
-    public bool RemoveAtmosDevice(Entity<GridAtmosphereComponent?> grid, Entity<AtmosDeviceComponent> device)
+    public bool RemoveAtmosDevice(Entity<Shared.Atmos.Components.GridAtmosphereComponent?> grid, Entity<AtmosDeviceComponent> device)
     {
         DebugTools.Assert(device.Comp.JoinedGrid == grid);
 
@@ -330,7 +326,7 @@ public partial class AtmosphereSystem
     /// <returns>True if the entity was added to the list, false if it could not be added or
     /// if the entity was already present in the list.</returns>
     [PublicAPI]
-    public bool TryAddDeltaPressureEntity(Entity<GridAtmosphereComponent?> grid, Entity<DeltaPressureComponent> ent)
+    public bool TryAddDeltaPressureEntity(Entity<Shared.Atmos.Components.GridAtmosphereComponent?> grid, Entity<DeltaPressureComponent> ent)
     {
         // The entity needs to be part of a grid, and it should be the right one :)
         var xform = Transform(ent);
@@ -373,7 +369,7 @@ public partial class AtmosphereSystem
     /// <returns>True if the entity was removed from the list, false if it could not be removed or
     /// if the entity was not present in the list.</returns>
     [PublicAPI]
-    public bool TryRemoveDeltaPressureEntity(Entity<GridAtmosphereComponent?> grid, Entity<DeltaPressureComponent> ent)
+    public bool TryRemoveDeltaPressureEntity(Entity<Shared.Atmos.Components.GridAtmosphereComponent?> grid, Entity<DeltaPressureComponent> ent)
     {
         if (!_atmosQuery.Resolve(grid, ref grid.Comp, false))
             return false;
@@ -410,7 +406,7 @@ public partial class AtmosphereSystem
     /// <param name="ent">The entity to check.</param>
     /// <returns>True if the entity is part of the processing list, false otherwise.</returns>
     [PublicAPI]
-    public bool IsDeltaPressureEntityInList(Entity<GridAtmosphereComponent?> grid, Entity<DeltaPressureComponent> ent)
+    public bool IsDeltaPressureEntityInList(Entity<Shared.Atmos.Components.GridAtmosphereComponent?> grid, Entity<DeltaPressureComponent> ent)
     {
         // Dict and list must be in sync - deep-fried if we aren't.
         if (!_atmosQuery.Resolve(grid, ref grid.Comp, false))

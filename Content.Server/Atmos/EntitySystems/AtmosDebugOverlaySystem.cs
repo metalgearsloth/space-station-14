@@ -149,7 +149,7 @@ namespace Content.Server.Atmos.EntitySystems
                     if (!Exists(uid))
                         continue;
 
-                    if (!TryComp(uid, out GridAtmosphereComponent? gridAtmos))
+                    if (!TryComp(uid, out Shared.Atmos.Components.GridAtmosphereComponent? gridAtmos))
                         continue;
 
                     var entityTile = _mapSystem.GetTileRef(grid, grid, transform.Coordinates).GridIndices;

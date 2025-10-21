@@ -1,5 +1,6 @@
 using Content.Server.Atmos.Components;
 using Content.Shared.Atmos;
+using Content.Shared.Atmos.Components;
 using Content.Shared.Damage;
 using Robust.Shared.Random;
 using Robust.Shared.Threading;
@@ -17,7 +18,7 @@ public sealed partial class AtmosphereSystem
     private const int DeltaPressurePairCount = Atmospherics.Directions / 2;
 
     /// <summary>
-    /// The length to pre-allocate list/dicts of delta pressure entities on a <see cref="GridAtmosphereComponent"/>.
+    /// The length to pre-allocate list/dicts of delta pressure entities on a <see cref="Shared.Atmos.Components.GridAtmosphereComponent"/>.
     /// </summary>
     public const int DeltaPressurePreAllocateLength = 1000;
 
@@ -25,8 +26,8 @@ public sealed partial class AtmosphereSystem
     /// Processes a singular entity, determining the pressures it's experiencing and applying damage based on that.
     /// </summary>
     /// <param name="ent">The entity to process.</param>
-    /// <param name="gridAtmosComp">The <see cref="GridAtmosphereComponent"/> that belongs to the entity's GridUid.</param>
-    private void ProcessDeltaPressureEntity(Entity<DeltaPressureComponent> ent, GridAtmosphereComponent gridAtmosComp)
+    /// <param name="gridAtmosComp">The <see cref="Shared.Atmos.Components.GridAtmosphereComponent"/> that belongs to the entity's GridUid.</param>
+    private void ProcessDeltaPressureEntity(Entity<DeltaPressureComponent> ent, Shared.Atmos.Components.GridAtmosphereComponent gridAtmosComp)
     {
         if (!_random.Prob(ent.Comp.RandomDamageChance))
             return;
@@ -150,16 +151,16 @@ public sealed partial class AtmosphereSystem
 
     /// <summary>
     /// Packs data into a <see cref="DeltaPressureDamageResult"/> data struct and enqueues it
-    /// into the <see cref="GridAtmosphereComponent.DeltaPressureDamageResults"/> queue for
+    /// into the <see cref="Shared.Atmos.Components.GridAtmosphereComponent.DeltaPressureDamageResults"/> queue for
     /// later processing.
     /// </summary>
     /// <param name="ent">The entity to enqueue if necessary.</param>
-    /// <param name="gridAtmosComp">The <see cref="GridAtmosphereComponent"/>
+    /// <param name="gridAtmosComp">The <see cref="Shared.Atmos.Components.GridAtmosphereComponent"/>
     /// containing the queue.</param>
     /// <param name="pressure">The current absolute pressure being experienced by the entity.</param>
     /// <param name="delta">The current delta pressure being experienced by the entity.</param>
     private static void EnqueueDeltaPressureDamage(Entity<DeltaPressureComponent> ent,
-        GridAtmosphereComponent gridAtmosComp,
+        Shared.Atmos.Components.GridAtmosphereComponent gridAtmosComp,
         float pressure,
         float delta)
     {
@@ -187,7 +188,7 @@ public sealed partial class AtmosphereSystem
     /// <param name="cvarBatchSize">The batch size to use for this job.</param>
     private sealed class DeltaPressureParallelJob(
         AtmosphereSystem system,
-        GridAtmosphereComponent atmosphere,
+        Shared.Atmos.Components.GridAtmosphereComponent atmosphere,
         int startIndex,
         int cvarBatchSize)
         : IParallelRobustJob

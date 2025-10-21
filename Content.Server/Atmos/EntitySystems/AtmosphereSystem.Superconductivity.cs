@@ -6,7 +6,7 @@ namespace Content.Server.Atmos.EntitySystems
 {
     public sealed partial class AtmosphereSystem
     {
-        private void Superconduct(GridAtmosphereComponent gridAtmosphere, TileAtmosphere tile)
+        private void Superconduct(Shared.Atmos.Components.GridAtmosphereComponent gridAtmosphere, TileAtmosphere tile)
         {
             var directions = ConductivityDirections(gridAtmosphere, tile);
 
@@ -34,7 +34,7 @@ namespace Content.Server.Atmos.EntitySystems
             FinishSuperconduction(gridAtmosphere, tile);
         }
 
-        private AtmosDirection ConductivityDirections(GridAtmosphereComponent gridAtmosphere, TileAtmosphere tile)
+        private AtmosDirection ConductivityDirections(Shared.Atmos.Components.GridAtmosphereComponent gridAtmosphere, TileAtmosphere tile)
         {
             if(tile.Air == null)
             {
@@ -47,7 +47,7 @@ namespace Content.Server.Atmos.EntitySystems
             return AtmosDirection.All;
         }
 
-        public bool ConsiderSuperconductivity(GridAtmosphereComponent gridAtmosphere, TileAtmosphere tile)
+        public bool ConsiderSuperconductivity(Shared.Atmos.Components.GridAtmosphereComponent gridAtmosphere, TileAtmosphere tile)
         {
             if (tile.ThermalConductivity == 0f || !Superconduction)
                 return false;
@@ -56,7 +56,7 @@ namespace Content.Server.Atmos.EntitySystems
             return true;
         }
 
-        public bool ConsiderSuperconductivity(GridAtmosphereComponent gridAtmosphere, TileAtmosphere tile, bool starting)
+        public bool ConsiderSuperconductivity(Shared.Atmos.Components.GridAtmosphereComponent gridAtmosphere, TileAtmosphere tile, bool starting)
         {
             if (!Superconduction)
                 return false;
@@ -70,7 +70,7 @@ namespace Content.Server.Atmos.EntitySystems
                    && ConsiderSuperconductivity(gridAtmosphere, tile);
         }
 
-        public void FinishSuperconduction(GridAtmosphereComponent gridAtmosphere, TileAtmosphere tile)
+        public void FinishSuperconduction(Shared.Atmos.Components.GridAtmosphereComponent gridAtmosphere, TileAtmosphere tile)
         {
             // Conduct with air on my tile if I have it
             if (tile.Air != null)
@@ -81,7 +81,7 @@ namespace Content.Server.Atmos.EntitySystems
             FinishSuperconduction(gridAtmosphere, tile, tile.Air?.Temperature ?? tile.Temperature);
         }
 
-        public void FinishSuperconduction(GridAtmosphereComponent gridAtmosphere, TileAtmosphere tile, float temperature)
+        public void FinishSuperconduction(Shared.Atmos.Components.GridAtmosphereComponent gridAtmosphere, TileAtmosphere tile, float temperature)
         {
             // Make sure it's still hot enough to continue conducting.
             if (temperature < Atmospherics.MinimumTemperatureForSuperconduction)
@@ -90,7 +90,7 @@ namespace Content.Server.Atmos.EntitySystems
             }
         }
 
-        public void NeighborConductWithSource(GridAtmosphereComponent gridAtmosphere, TileAtmosphere tile, TileAtmosphere other)
+        public void NeighborConductWithSource(Shared.Atmos.Components.GridAtmosphereComponent gridAtmosphere, TileAtmosphere tile, TileAtmosphere other)
         {
             if (tile.Air == null)
             {

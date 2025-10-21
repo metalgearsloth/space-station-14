@@ -27,7 +27,7 @@ namespace Content.Server.Atmos.EntitySystems
         public SoundSpecifier? HotspotSound { get; private set; } = new SoundCollectionSpecifier(DefaultHotspotSounds);
 
         private void ProcessHotspot(
-            Entity<GridAtmosphereComponent, GasTileOverlayComponent, MapGridComponent, TransformComponent> ent,
+            Entity<Shared.Atmos.Components.GridAtmosphereComponent, GasTileOverlayComponent, MapGridComponent, TransformComponent> ent,
             TileAtmosphere tile)
         {
             var gridAtmosphere = ent.Comp1;
@@ -124,7 +124,7 @@ namespace Content.Server.Atmos.EntitySystems
             // TODO ATMOS Maybe destroy location here?
         }
 
-        private void HotspotExpose(GridAtmosphereComponent gridAtmosphere, TileAtmosphere tile,
+        private void HotspotExpose(Shared.Atmos.Components.GridAtmosphereComponent gridAtmosphere, TileAtmosphere tile,
             float exposedTemperature, float exposedVolume, bool soh = false, EntityUid? sparkSourceUid = null)
         {
             if (tile.Air == null)

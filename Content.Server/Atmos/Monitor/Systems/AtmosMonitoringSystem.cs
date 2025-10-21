@@ -66,7 +66,7 @@ public sealed class AtmosMonitorSystem : EntitySystem
 
     private void OnAtmosDeviceEnterAtmosphere(EntityUid uid, AtmosMonitorComponent atmosMonitor, ref AtmosDeviceEnabledEvent args)
     {
-        if (atmosMonitor.MonitorsPipeNet && _nodeContainerSystem.TryGetNode<PipeNode>(uid, atmosMonitor.NodeNameMonitoredPipe, out var pipeNode))
+        if (atmosMonitor.MonitorsPipeNet && _nodeContainerSystem.TryGetNode<Shared.NodeContainer.Nodes.PipeNode>(uid, atmosMonitor.NodeNameMonitoredPipe, out var pipeNode))
         {
             atmosMonitor.TileGas = pipeNode.Air;
             return;
@@ -238,7 +238,7 @@ public sealed class AtmosMonitorSystem : EntitySystem
             return;
 
         // If monitoring a pipe network, get its most recent gas mixture
-        if (component.MonitorsPipeNet && _nodeContainerSystem.TryGetNode<PipeNode>(uid, component.NodeNameMonitoredPipe, out var pipeNode))
+        if (component.MonitorsPipeNet && _nodeContainerSystem.TryGetNode<Shared.NodeContainer.Nodes.PipeNode>(uid, component.NodeNameMonitoredPipe, out var pipeNode))
             component.TileGas = pipeNode.Air;
 
         UpdateState(uid, component.TileGas, component);

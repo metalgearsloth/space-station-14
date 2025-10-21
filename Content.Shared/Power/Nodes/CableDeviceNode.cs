@@ -1,13 +1,11 @@
-using Content.Server.NodeContainer;
-using Content.Server.NodeContainer.EntitySystems;
-using Content.Server.NodeContainer.Nodes;
 using Content.Shared.NodeContainer;
+using Content.Shared.NodeContainer.Nodes;
 using Robust.Shared.Map.Components;
 
-namespace Content.Server.Power.Nodes
+namespace Content.Shared.Power.Nodes
 {
     /// <summary>
-    ///     Type of node that connects to a <see cref="CableNode"/> below it.
+    ///     Type of node that connects to a <see cref="Shared.Power.Nodes.CableNode"/> below it.
     /// </summary>
     [DataDefinition]
     [Virtual]
@@ -20,8 +18,8 @@ namespace Content.Server.Power.Nodes
         /// If you change this,
         /// you must manually call <see cref="NodeGroupSystem.QueueReflood"/> to update the node connections.
         /// </remarks>
-        [DataField("enabled")]
-        public bool Enabled { get; set; } = true;
+        [DataField]
+        public bool Enabled = true;
 
         public override bool Connectable(IEntityManager entMan, TransformComponent? xform = null)
         {

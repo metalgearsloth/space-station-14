@@ -11,6 +11,7 @@ using Content.Shared.Body.Components;
 using Content.Shared.Chemistry.EntitySystems;
 using Content.Shared.Medical.Cryogenics;
 using Content.Shared.MedicalScanner;
+using Content.Shared.NodeContainer.NodeGroups;
 using Content.Shared.UserInterface;
 using Robust.Shared.Containers;
 
@@ -88,7 +89,7 @@ public sealed partial class CryoPodSystem : SharedCryoPodSystem
         args.GasMixtures.Add((Name(entity.Owner), cryoPodAir.Air));
         // If it's connected to a port, include the port side
         // multiply by volume fraction to make sure to send only the gas inside the analyzed pipe element, not the whole pipe system
-        if (_nodeContainer.TryGetNode(entity.Owner, entity.Comp.PortName, out PipeNode? port) && port.Air.Volume != 0f)
+        if (_nodeContainer.TryGetNode(entity.Owner, entity.Comp.PortName, out Shared.NodeContainer.Nodes.PipeNode? port) && port.Air.Volume != 0f)
         {
             var portAirLocal = port.Air.Clone();
             portAirLocal.Multiply(port.Volume / port.Air.Volume);

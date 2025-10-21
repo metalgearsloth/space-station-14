@@ -1,7 +1,5 @@
 using Content.Server.DeviceLinking.Components;
-using Content.Server.NodeContainer;
 using Content.Server.Power.EntitySystems;
-using Content.Server.Power.Nodes;
 using Content.Server.Power.NodeGroups;
 using Content.Shared.Examine;
 using Content.Shared.Interaction;
@@ -96,7 +94,7 @@ public sealed class PowerSensorSystem : EntitySystem
         var powerSwitchable = Comp<PowerSwitchableComponent>(uid);
         var cable = powerSwitchable.Cables[powerSwitchable.ActiveIndex];
         var nodeContainer = Comp<NodeContainerComponent>(uid);
-        var deviceNode = (CableDeviceNode) nodeContainer.Nodes[cable.Node];
+        var deviceNode = (Shared.Power.Nodes.CableDeviceNode) nodeContainer.Nodes[cable.Node];
 
         var charge = 0f;
         var chargingState = false;

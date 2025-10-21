@@ -1,7 +1,5 @@
-using Content.Server.NodeContainer;
 using Content.Server.NodeContainer.EntitySystems;
 using Content.Server.Power.Components;
-using Content.Server.Power.Nodes;
 using Content.Shared.Wires;
 using JetBrains.Annotations;
 using Robust.Shared.Map.Components;
@@ -24,7 +22,7 @@ namespace Content.Server.Power.EntitySystems
 
         private void UpdateAppearance(EntityUid uid, CableVisComponent cableVis, ref NodeGroupsRebuilt args)
         {
-            if (!_nodeContainer.TryGetNode(uid, cableVis.Node, out CableNode? node))
+            if (!_nodeContainer.TryGetNode(uid, cableVis.Node, out Shared.Power.Nodes.CableNode? node))
                 return;
 
             var transform = Transform(uid);
@@ -36,7 +34,7 @@ namespace Content.Server.Power.EntitySystems
 
             foreach (var reachable in node.ReachableNodes)
             {
-                if (reachable is not CableNode)
+                if (reachable is not Shared.Power.Nodes.CableNode)
                     continue;
 
                 var otherTransform = Transform(reachable.Owner);

@@ -1,13 +1,12 @@
-using Content.Server.NodeContainer;
-using Content.Server.NodeContainer.Nodes;
 using Content.Shared.NodeContainer;
+using Content.Shared.NodeContainer.Nodes;
 using Robust.Shared.Map;
 using Robust.Shared.Map.Components;
 
-namespace Content.Server.Power.Nodes
+namespace Content.Server.NodeContainer.Nodes
 {
     [DataDefinition]
-    public sealed partial class CableTerminalNode : CableDeviceNode
+    public sealed partial class PortPipeNode : Shared.NodeContainer.Nodes.PipeNode
     {
         public override IEnumerable<Node> GetReachableNodes(TransformComponent xform,
             EntityQuery<NodeContainerComponent> nodeQuery,
@@ -20,12 +19,9 @@ namespace Content.Server.Power.Nodes
 
             var gridIndex = grid.TileIndicesFor(xform.Coordinates);
 
-            var dir = xform.LocalRotation.GetDir();
-            var targetIdx = gridIndex.Offset(dir);
-
-            foreach (var node in NodeHelpers.GetNodesInTile(nodeQuery, grid, targetIdx))
+            foreach (var node in NodeHelpers.GetNodesInTile(nodeQuery, grid, gridIndex))
             {
-                if (node is CableTerminalPortNode)
+                if (node is PortablePipeNode)
                     yield return node;
             }
 

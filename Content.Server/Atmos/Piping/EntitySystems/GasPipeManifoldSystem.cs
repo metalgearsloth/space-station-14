@@ -27,12 +27,12 @@ public sealed partial class GasPipeManifoldSystem : EntitySystem
 
         foreach (var inletName in ent.Comp.InletNames)
         {
-            if (!_nodeContainer.TryGetNode(nodeContainer, inletName, out PipeNode? inlet))
+            if (!_nodeContainer.TryGetNode(nodeContainer, inletName, out Shared.NodeContainer.Nodes.PipeNode? inlet))
                 continue;
 
             foreach (var outletName in ent.Comp.OutletNames)
             {
-                if (!_nodeContainer.TryGetNode(nodeContainer, outletName, out PipeNode? outlet))
+                if (!_nodeContainer.TryGetNode(nodeContainer, outletName, out Shared.NodeContainer.Nodes.PipeNode? outlet))
                     continue;
 
                 inlet.AddAlwaysReachable(outlet);
@@ -54,7 +54,7 @@ public sealed partial class GasPipeManifoldSystem : EntitySystem
 
         foreach (var pipeName in pipeNames)
         {
-            if (!_nodeContainer.TryGetNode(nodeContainer, pipeName, out PipeNode? pipe))
+            if (!_nodeContainer.TryGetNode(nodeContainer, pipeName, out Shared.NodeContainer.Nodes.PipeNode? pipe))
                 continue;
 
             var pipeLocal = pipe.Air.Clone();
