@@ -9,7 +9,6 @@ namespace Content.Client.Audio.Jukebox;
 public sealed partial class JukeboxSystem : SharedJukeboxSystem
 {
     [Dependency] private IPrototypeManager _protoManager = default!;
-    [Dependency] private AnimationPlayerSystem _animationPlayer = default!;
     [Dependency] private SharedAppearanceSystem _appearanceSystem = default!;
     [Dependency] private SharedUserInterfaceSystem _uiSystem = default!;
     [Dependency] private SpriteSystem _sprite = default!;
@@ -46,12 +45,17 @@ public sealed partial class JukeboxSystem : SharedJukeboxSystem
         }
     }
 
-    private void OnJukeboxAfterState(Entity<JukeboxComponent> ent, ref AfterAutoHandleStateEvent args)
+    protected override void UpdateUi(Entity<JukeboxComponent?> jukebox)
     {
-        if (!_uiSystem.TryGetOpenUi<JukeboxBoundUserInterface>(ent.Owner, JukeboxUiKey.Key, out var bui))
+        if (!_uiSystem.TryGetOpenUi<JukeboxBoundUserInterface>(jukebox.Owner, JukeboxUiKey.Key, out var bui))
             return;
 
-        bui.Reload();
+        bui.Update();
+    }
+
+    private void OnJukeboxAfterState(Entity<JukeboxComponent> ent, ref AfterAutoHandleStateEvent args)
+    {
+        UpdateUi(ent.AsNullable());
     }
 
     private void OnAnimationCompleted(EntityUid uid, JukeboxComponent component, AnimationCompletedEvent args)
@@ -84,63 +88,15 @@ public sealed partial class JukeboxSystem : SharedJukeboxSystem
 
     private void UpdateAppearance(Entity<SpriteComponent> entity, JukeboxVisualState visualState, JukeboxComponent component)
     {
-        SetLayerState(JukeboxVisualLayers.Base, component.OffState, entity);
-
         switch (visualState)
         {
             case JukeboxVisualState.On:
-                SetLayerState(JukeboxVisualLayers.Base, component.OnState, entity);
+                _sprite.LayerSetRsiState(entity.AsNullable(), JukeboxVisualLayers.Base, component.OnState);
                 break;
 
             case JukeboxVisualState.Off:
-                SetLayerState(JukeboxVisualLayers.Base, component.OffState, entity);
-                break;
-
-            case JukeboxVisualState.Select:
-                PlayAnimation(entity.Owner, JukeboxVisualLayers.Base, component.SelectState, 1.0f, entity);
+                _sprite.LayerSetRsiState(entity.AsNullable(), JukeboxVisualLayers.Base, component.OffState);
                 break;
         }
-    }
-
-    private void PlayAnimation(EntityUid uid, JukeboxVisualLayers layer, string? state, float animationTime, SpriteComponent sprite)
-    {
-        if (string.IsNullOrEmpty(state))
-            return;
-
-        if (!_animationPlayer.HasRunningAnimation(uid, state))
-        {
-            var animation = GetAnimation(layer, state, animationTime);
-            _sprite.LayerSetVisible((uid, sprite), layer, true);
-            _animationPlayer.Play(uid, animation, state);
-        }
-    }
-
-    private static Animation GetAnimation(JukeboxVisualLayers layer, string state, float animationTime)
-    {
-        return new Animation
-        {
-            Length = TimeSpan.FromSeconds(animationTime),
-            AnimationTracks =
-                {
-                    new AnimationTrackSpriteFlick
-                    {
-                        LayerKey = layer,
-                        KeyFrames =
-                        {
-                            new AnimationTrackSpriteFlick.KeyFrame(state, 0f)
-                        }
-                    }
-                }
-        };
-    }
-
-    private void SetLayerState(JukeboxVisualLayers layer, string? state, Entity<SpriteComponent> sprite)
-    {
-        if (string.IsNullOrEmpty(state))
-            return;
-
-        _sprite.LayerSetVisible(sprite.AsNullable(), layer, true);
-        _sprite.LayerSetAutoAnimated(sprite.AsNullable(), layer, true);
-        _sprite.LayerSetRsiState(sprite.AsNullable(), layer, state);
     }
 }

@@ -1,5 +1,6 @@
 using Content.Shared.Audio.Jukebox;
 using Robust.Client.Audio;
+using Robust.Client.Player;
 using Robust.Client.UserInterface;
 using Robust.Shared.Audio.Components;
 using Robust.Shared.Prototypes;
@@ -28,35 +29,36 @@ public sealed partial class JukeboxBoundUserInterface : BoundUserInterface
         {
             if (args)
             {
-                SendMessage(new JukeboxPlayingMessage());
+                SendPredictedMessage(new JukeboxPlayingMessage());
             }
             else
             {
-                SendMessage(new JukeboxPauseMessage());
+                SendPredictedMessage(new JukeboxPauseMessage());
             }
         };
 
         _menu.OnStopPressed += () =>
         {
-            SendMessage(new JukeboxStopMessage());
+            SendPredictedMessage(new JukeboxStopMessage());
         };
 
         _menu.OnSongSelected += SelectSong;
 
         _menu.SetTime += SetTime;
         PopulateMusic();
-        Reload();
+        Update();
     }
 
     /// <summary>
     /// Reloads the attached menu if it exists.
     /// </summary>
-    public void Reload()
+    public override void Update()
     {
         if (_menu == null || !EntMan.TryGetComponent(Owner, out JukeboxComponent? jukebox))
             return;
 
         _menu.SetAudioStream(jukebox.AudioStream);
+        _menu.SetPlaybackState(jukebox.PlaybackState);
 
         if (_protoManager.Resolve(jukebox.SelectedSongId, out var songProto))
         {
@@ -76,7 +78,7 @@ public sealed partial class JukeboxBoundUserInterface : BoundUserInterface
 
     public void SelectSong(ProtoId<JukeboxPrototype> songid)
     {
-        SendMessage(new JukeboxSelectedMessage(songid));
+        SendPredictedMessage(new JukeboxSelectedMessage(songid));
     }
 
     public void SetTime(float time)
@@ -95,7 +97,9 @@ public sealed partial class JukeboxBoundUserInterface : BoundUserInterface
             audioComp.PlaybackPosition = time;
         }
 
-        SendMessage(new JukeboxSetTimeMessage(sentTime));
+        var plyMgr = IoCManager.Resolve<IPlayerManager>();
+        var ping = (plyMgr.LocalSession?.Ping ?? 0) * 2f / 1000f;
+        SendMessage(new JukeboxSetTimeMessage(sentTime + ping));
     }
 }
 

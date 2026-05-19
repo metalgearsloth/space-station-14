@@ -4,12 +4,16 @@ using Robust.Shared.Serialization;
 
 namespace Content.Shared.Audio.Jukebox;
 
-[NetworkedComponent, RegisterComponent, AutoGenerateComponentState(true)]
+[NetworkedComponent, RegisterComponent, AutoGenerateComponentState(raiseAfterAutoHandleState: true)]
 [Access(typeof(SharedJukeboxSystem))]
 public sealed partial class JukeboxComponent : Component
 {
     [DataField, AutoNetworkedField]
     public ProtoId<JukeboxPrototype>? SelectedSongId;
+
+    // Fake audio state so we don't have to predict the spawned audio.
+    [DataField, AutoNetworkedField]
+    public JukeboxPlaybackState PlaybackState = JukeboxPlaybackState.Stopped;
 
     [DataField, AutoNetworkedField]
     public EntityUid? AudioStream;
@@ -32,10 +36,7 @@ public sealed partial class JukeboxComponent : Component
     [DataField]
     public string? SelectState;
 
-    [ViewVariables]
-    public bool Selecting;
-
-    [ViewVariables]
+    [ViewVariables, AutoNetworkedField]
     public float SelectAccumulator;
 }
 
@@ -61,6 +62,14 @@ public sealed class JukeboxSetTimeMessage(float songTime) : BoundUserInterfaceMe
 }
 
 [Serializable, NetSerializable]
+public enum JukeboxPlaybackState : byte
+{
+    Stopped,
+    Paused,
+    Playing,
+}
+
+[Serializable, NetSerializable]
 public enum JukeboxVisuals : byte
 {
     VisualState
@@ -71,7 +80,6 @@ public enum JukeboxVisualState : byte
 {
     On,
     Off,
-    Select,
 }
 
 public enum JukeboxVisualLayers : byte
