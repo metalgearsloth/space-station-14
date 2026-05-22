@@ -164,7 +164,6 @@ public abstract partial class SharedStackSystem
         amount = Math.Max(amount, 0);
 
         ent.Comp.Count = amount;
-        ent.Comp.UiUpdateNeeded = true;
         Dirty(ent);
 
         Appearance.SetData(ent.Owner, StackVisuals.Actual, ent.Comp.Count);
@@ -173,6 +172,9 @@ public abstract partial class SharedStackSystem
         // Queue delete stack if count reaches zero.
         if (ent.Comp.Count <= 0)
             PredictedQueueDel(ent.Owner);
+        // Show the old count if we should be deleted and don't update.
+        else
+            ent.Comp.UiUpdateNeeded = true;
     }
 
     /// <inheritdoc cref="SetCount(Entity{StackComponent?}, int)"/>
