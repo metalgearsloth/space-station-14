@@ -282,6 +282,16 @@ public sealed partial class OptionsTabControlRow : Control
 
     private void ShowDangerousConfirmation(DangerousOptionChange change)
     {
+        if (!change.Option.IsModified())
+        {
+            RemoveDangerousChanges(change.Option);
+
+            if (_dangerousChanges.Count == 0)
+                _dangerousConfirmWindow?.Dismiss();
+
+            return;
+        }
+
         _dangerousChanges.Add(change);
 
         if (_dangerousConfirmWindow is { IsOpen: true } window)
@@ -296,6 +306,15 @@ public sealed partial class OptionsTabControlRow : Control
             RejectDangerousChanges);
 
         _dangerousConfirmWindow.OpenCentered();
+    }
+
+    private void RemoveDangerousChanges(BaseOption option)
+    {
+        for (var i = _dangerousChanges.Count - 1; i >= 0; i--)
+        {
+            if (_dangerousChanges[i].Option == option)
+                _dangerousChanges.RemoveAt(i);
+        }
     }
 
     private void ConfirmDangerousChanges()
@@ -382,7 +401,7 @@ public abstract class BaseOption(OptionsTabControlRow controller)
     public virtual DangerousOptionChange ApplyValueForConfirmation()
     {
         ApplyValue();
-        return new DangerousOptionChange(AcceptCurrentValue, RevertRecentChange);
+        return new DangerousOptionChange(this, AcceptCurrentValue, RevertRecentChange);
     }
 
     /// <summary>
@@ -420,7 +439,7 @@ public abstract class BaseOption(OptionsTabControlRow controller)
     public abstract bool IsModifiedFromDefault();
 }
 
-public readonly record struct DangerousOptionChange(Action Confirm, Action Reject);
+public readonly record struct DangerousOptionChange(BaseOption Option, Action Confirm, Action Reject);
 
 /// <summary>
 /// Derived class of <see cref="BaseOption"/> intended for making mappings to simple CVars easier.
@@ -504,12 +523,13 @@ public abstract class BaseOptionCVar<TValue> : BaseOption
         var value = Value;
 
         if (IsValueEqual(value, previous))
-            return new DangerousOptionChange(AcceptCurrentValue, () => { });
+            return new DangerousOptionChange(this, AcceptCurrentValue, () => { });
 
         _previousAppliedValue = previous;
         _cfg.SetCVar(_cVar, value);
 
         return new DangerousOptionChange(
+            this,
             AcceptCurrentValue,
             () =>
             {
@@ -1004,6 +1024,12 @@ public sealed class OptionsDangerousConfirmWindow : DefaultWindow
         _elapsed = 0f;
         _finished = false;
         _progressBar.Value = 0f;
+    }
+
+    public void Dismiss()
+    {
+        _finished = true;
+        Close();
     }
 
     protected override void FrameUpdate(FrameEventArgs args)
