@@ -41,7 +41,7 @@ public sealed partial class MiscTab : Control
         ShowOocPatronColor.Visible = _playerManager.LocalSession?.Channel?.UserData.PatronTier is { };
 
         Control.AddOptionDropDown(CVars.InterfaceTheme, DropDownHudTheme, themeEntries);
-        Control.AddOptionDropDown(CCVars.UILayout, DropDownHudLayout, layoutEntries);
+        Control.AddOptionDropDown(CCVars.UILayout, DropDownHudLayout, layoutEntries, dangerous: true);
 
         Control.AddOptionCheckBox(CVars.DiscordEnabled, DiscordRich);
         Control.AddOptionCheckBox(CCVars.ShowOocPatronColor, ShowOocPatronColor);

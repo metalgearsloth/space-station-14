@@ -22,6 +22,8 @@ namespace Content.Client.Options.UI
             Tabs.SetTabTitle(4, Loc.GetString("ui-options-tab-accessibility"));
             Tabs.SetTabTitle(5, Loc.GetString("ui-options-tab-admin"));
 
+            OnClose += ResetChanges;
+
             UpdateTabs();
         }
 
@@ -35,6 +37,15 @@ namespace Content.Client.Options.UI
             AccessibilityTab.Control.ReloadValues();
             AudioTab.Control.ReloadValues();
             AdminOptionsTab.Control.ReloadValues();
+        }
+
+        private void ResetChanges()
+        {
+            GraphicsTab.Control.ResetChanges();
+            MiscTab.Control.ResetChanges();
+            AccessibilityTab.Control.ResetChanges();
+            AudioTab.Control.ResetChanges();
+            AdminOptionsTab.Control.ResetChanges();
         }
     }
 }

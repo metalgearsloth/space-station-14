@@ -19,9 +19,9 @@ public sealed partial class GraphicsTab : Control
         IoCManager.InjectDependencies(this);
         RobustXamlLoader.Load(this);
 
-        Control.AddOptionCheckBox(CVars.DisplayVSync, VSyncCheckBox);
+        Control.AddOptionCheckBox(CVars.DisplayVSync, VSyncCheckBox, dangerous: true);
         Control.AddOptionCheckBox(CCVars.AmbientOcclusion, AmbientOcclusionCheckBox);
-        Control.AddOption(new OptionFullscreen(Control, _cfg, FullscreenCheckBox));
+        Control.AddOption(new OptionFullscreen(Control, _cfg, FullscreenCheckBox), dangerous: true);
         Control.AddOption(new OptionLightingQuality(Control, _cfg, DropDownLightingQuality));
 
         Control.AddOptionDropDown(
@@ -102,6 +102,10 @@ public sealed partial class GraphicsTab : Control
     {
         private readonly IConfigurationManager _cfg;
         private readonly OptionDropDown _dropDown;
+        private bool _suppressValueChanged;
+        private int _originalQuality;
+        private LightingValues _originalValues;
+        private LightingValues _previousAppliedValues;
 
         private const int QualityVeryLow = 0;
         private const int QualityLow = 1;
@@ -125,16 +129,35 @@ public sealed partial class GraphicsTab : Control
         private void OnOptionSelected(OptionButton.ItemSelectedEventArgs obj)
         {
             _dropDown.Button.SelectId(obj.Id);
+            if (_suppressValueChanged)
+                return;
+
             ValueChanged();
         }
 
         public override void LoadValue()
         {
-            _dropDown.Button.SelectId(GetConfigLightingQuality());
+            _originalValues = GetLightingValues();
+            _previousAppliedValues = _originalValues;
+            _originalQuality = GetConfigLightingQuality();
+            SelectSilently(_originalQuality);
         }
 
         public override void SaveValue()
         {
+            ApplyValue();
+            _originalValues = GetLightingValues();
+            _originalQuality = _dropDown.Button.SelectedId;
+        }
+
+        public override void ApplyValue()
+        {
+            var current = GetLightingValues();
+            var selected = _dropDown.Button.SelectedId;
+            if (selected == GetConfigLightingQuality())
+                return;
+
+            _previousAppliedValues = current;
             switch (_dropDown.Button.SelectedId)
             {
                 case QualityVeryLow:
@@ -160,6 +183,19 @@ public sealed partial class GraphicsTab : Control
             }
         }
 
+        public override void RevertValue()
+        {
+            SelectSilently(_originalQuality);
+            SetLightingValues(_originalValues);
+            _previousAppliedValues = _originalValues;
+        }
+
+        public override void RevertRecentChange()
+        {
+            SetLightingValues(_previousAppliedValues);
+            SelectSilently(GetConfigLightingQuality());
+        }
+
         public override void ResetToDefault()
         {
             _dropDown.Button.SelectId(QualityDefault);
@@ -167,7 +203,7 @@ public sealed partial class GraphicsTab : Control
 
         public override bool IsModified()
         {
-            return _dropDown.Button.SelectedId != GetConfigLightingQuality();
+            return _dropDown.Button.SelectedId != _originalQuality;
         }
 
         public override bool IsModifiedFromDefault()
@@ -190,6 +226,30 @@ public sealed partial class GraphicsTab : Control
 
             return QualityHigh;
         }
+
+        private LightingValues GetLightingValues()
+        {
+            return new LightingValues(
+                _cfg.GetCVar(CVars.LightResolutionScale),
+                _cfg.GetCVar(CVars.LightSoftShadows),
+                _cfg.GetCVar(CVars.LightBlur));
+        }
+
+        private void SetLightingValues(LightingValues values)
+        {
+            _cfg.SetCVar(CVars.LightResolutionScale, values.ResolutionScale);
+            _cfg.SetCVar(CVars.LightSoftShadows, values.SoftShadows);
+            _cfg.SetCVar(CVars.LightBlur, values.Blur);
+        }
+
+        private void SelectSilently(int quality)
+        {
+            _suppressValueChanged = true;
+            _dropDown.Button.SelectId(quality);
+            _suppressValueChanged = false;
+        }
+
+        private readonly record struct LightingValues(float ResolutionScale, bool SoftShadows, bool Blur);
     }
 
     private sealed class OptionFullscreen : BaseOptionCVar<int>

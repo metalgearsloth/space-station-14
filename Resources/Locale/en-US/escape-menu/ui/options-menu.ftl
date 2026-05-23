@@ -12,6 +12,10 @@ ui-options-tab-misc = General
 ui-options-apply = Save & apply
 ui-options-reset-all = Reset changed
 ui-options-default = Reset to defaults
+ui-options-dangerous-confirm-title = Confirm display change
+ui-options-dangerous-confirm-message = Keep this setting?
+ui-options-dangerous-confirm-confirm = Confirm
+ui-options-dangerous-confirm-reject = Reject
 
 ui-options-value-percent = { TOSTRING($value, "P0") }
 
