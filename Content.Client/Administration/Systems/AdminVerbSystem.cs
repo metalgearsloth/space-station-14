@@ -10,11 +10,11 @@ namespace Content.Client.Administration.Systems
     /// <summary>
     ///     Client-side admin verb system. These usually open some sort of UIs.
     /// </summary>
-    sealed class AdminVerbSystem : EntitySystem
+    sealed partial class AdminVerbSystem : EntitySystem
     {
-        [Dependency] private readonly IClientConGroupController _clientConGroupController = default!;
-        [Dependency] private readonly IClientConsoleHost _clientConsoleHost = default!;
-        [Dependency] private readonly ISharedAdminManager _admin = default!;
+        [Dependency] private IClientConGroupController _clientConGroupController = default!;
+        [Dependency] private IClientConsoleHost _clientConsoleHost = default!;
+        [Dependency] private ISharedAdminManager _admin = default!;
 
         public override void Initialize()
         {
@@ -37,21 +37,6 @@ namespace Content.Client.Administration.Systems
                     ClientExclusive = true // opening VV window is client-side. Don't ask server to run this verb.
                 };
                 args.Verbs.Add(verb);
-
-                // Inspect mind
-                if (TryComp<MindContainerComponent>(args.Target, out var mindContainer)
-                    && mindContainer.HasMind)
-                {
-                    Verb mindVerb = new()
-                    {
-                        Text = Loc.GetString("inspect-mind-verb-get-data-text"),
-                        Icon = new SpriteSpecifier.Texture(new("/Textures/Interface/VerbIcons/sentient.svg.192dpi.png")),
-                        Category = VerbCategory.Debug,
-                        Act = () => _clientConsoleHost.ExecuteCommand($"vv {GetNetEntity(mindContainer.Mind)}"),
-                        ClientExclusive = true
-                    };
-                    args.Verbs.Add(mindVerb);
-                }
             }
 
             if (!_admin.IsAdmin(args.User))

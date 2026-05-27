@@ -8,26 +8,23 @@ using Content.Shared.Radio;
 using Content.Shared.Salvage.Magnet;
 using Robust.Shared.Exceptions;
 using Robust.Shared.Map;
+using Robust.Shared.Prototypes;
 
 namespace Content.Server.Salvage;
 
 public sealed partial class SalvageSystem
 {
-    [Dependency] private readonly IRuntimeLog _runtimeLog = default!;
+    [Dependency] private IRuntimeLog _runtimeLog = default!;
 
-    [ValidatePrototypeId<RadioChannelPrototype>]
-    private const string MagnetChannel = "Supply";
+    [Dependency] private EntityQuery<SalvageMobRestrictionsComponent> _salvMobQuery = default!;
+    [Dependency] private EntityQuery<MobStateComponent> _mobStateQuery = default!;
 
-    private EntityQuery<SalvageMobRestrictionsComponent> _salvMobQuery;
-    private EntityQuery<MobStateComponent> _mobStateQuery;
+    private static readonly ProtoId<RadioChannelPrototype> MagnetChannel = "Supply";
 
     private List<(Entity<TransformComponent> Entity, EntityUid MapUid, Vector2 LocalPosition)> _detachEnts = new();
 
     private void InitializeMagnet()
     {
-        _salvMobQuery = GetEntityQuery<SalvageMobRestrictionsComponent>();
-        _mobStateQuery = GetEntityQuery<MobStateComponent>();
-
         SubscribeLocalEvent<SalvageMagnetDataComponent, MapInitEvent>(OnMagnetDataMapInit);
 
         SubscribeLocalEvent<SalvageMagnetTargetComponent, GridSplitEvent>(OnMagnetTargetSplit);
@@ -135,11 +132,11 @@ public sealed partial class SalvageSystem
         if (data.Comp.ActiveEntities != null)
         {
             // Handle mobrestrictions getting deleted
-            var query = AllEntityQuery<SalvageMobRestrictionsComponent>();
+            var query = AllEntityQuery<SalvageMobRestrictionsComponent, MobStateComponent>();
 
-            while (query.MoveNext(out var salvUid, out var salvMob))
+            while (query.MoveNext(out var salvUid, out var salvMob, out var salvMobState))
             {
-                if (data.Comp.ActiveEntities.Contains(salvMob.LinkedEntity))
+                if (data.Comp.ActiveEntities.Contains(salvMob.LinkedEntity) && _mobState.IsAlive(salvUid, salvMobState))
                 {
                     QueueDel(salvUid);
                 }
@@ -164,8 +161,7 @@ public sealed partial class SalvageSystem
                         uid = _transform.GetParentUid(uid);
                         if (_mobStateQuery.HasComp(uid))
                             return true;
-                    }
-                    while (uid != xform.GridUid && uid != EntityUid.Invalid);
+                    } while (uid != xform.GridUid && uid != EntityUid.Invalid);
                     return false;
                 }
 
@@ -346,7 +342,7 @@ public sealed partial class SalvageSystem
             }
         }
 
-        var magnetXform = _xformQuery.GetComponent(magnet.Owner);
+        var magnetXform = Transform(magnet.Owner);
         var magnetGridUid = magnetXform.GridUid;
         var attachedBounds = new Box2Rotated();
         var mapId = MapId.Nullspace;
@@ -354,7 +350,7 @@ public sealed partial class SalvageSystem
 
         if (magnetGridUid != null)
         {
-            var magnetGridXform = _xformQuery.GetComponent(magnetGridUid.Value);
+            var magnetGridXform = Transform(magnetGridUid.Value);
             var (gridPos, gridRot) = _transform.GetWorldPositionRotation(magnetGridXform);
             var gridAABB = _gridQuery.GetComponent(magnetGridUid.Value).LocalAABB;
 
@@ -386,7 +382,7 @@ public sealed partial class SalvageSystem
         // It worked, move it into position and cleanup values.
         while (mapChildren.MoveNext(out var mapChild))
         {
-            var salvXForm = _xformQuery.GetComponent(mapChild);
+            var salvXForm = Transform(mapChild);
             var localPos = salvXForm.LocalPosition;
 
             _transform.SetParent(mapChild, salvXForm, spawnUid.Value);

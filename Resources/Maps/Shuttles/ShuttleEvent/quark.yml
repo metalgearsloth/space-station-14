@@ -1351,6 +1351,8 @@ entities:
         intensity: 50
         type: SingularityDistortion
       - type: ExplodeOnTrigger
+        keysIn:
+        - stageTwo
       triggerDelay: 500
 - proto: GravityGeneratorMini
   entities:
@@ -1369,67 +1371,56 @@ entities:
   - uid: 94
     components:
     - type: Transform
-      rot: 1.5707963267948966 rad
       pos: -2.5,3.5
       parent: 1
   - uid: 95
     components:
     - type: Transform
-      rot: 1.5707963267948966 rad
       pos: -3.5,9.5
       parent: 1
   - uid: 96
     components:
     - type: Transform
-      rot: 1.5707963267948966 rad
       pos: -1.5,9.5
       parent: 1
   - uid: 97
     components:
     - type: Transform
-      rot: 1.5707963267948966 rad
       pos: -2.5,9.5
       parent: 1
   - uid: 98
     components:
     - type: Transform
-      rot: 1.5707963267948966 rad
       pos: -5.5,3.5
       parent: 1
   - uid: 99
     components:
     - type: Transform
-      rot: 1.5707963267948966 rad
       pos: -1.5,8.5
       parent: 1
   - uid: 100
     components:
     - type: Transform
-      rot: 1.5707963267948966 rad
       pos: -5.5,0.5
       parent: 1
   - uid: 101
     components:
     - type: Transform
-      rot: 1.5707963267948966 rad
       pos: -5.5,5.5
       parent: 1
   - uid: 102
     components:
     - type: Transform
-      rot: 1.5707963267948966 rad
       pos: -3.5,8.5
       parent: 1
   - uid: 103
     components:
     - type: Transform
-      rot: 1.5707963267948966 rad
       pos: -5.5,-0.5
       parent: 1
   - uid: 104
     components:
     - type: Transform
-      rot: 1.5707963267948966 rad
       pos: -5.5,1.5
       parent: 1
   - uid: 217
@@ -1479,8 +1470,8 @@ entities:
 
                                            [bold]Crew of the NT-Quark[/bold]
 
-             [bold]Nuclear containment breach detected on long range 
-                 halcyon scanners. Seek immediate shelter. Avoid 
+             [bold]Nuclear containment breach detected on long range
+                 halcyon scanners. Seek immediate shelter. Avoid
                          contaminated materials. Do not panic.[/bold]
 
                               [color=red][bold]Alpha decay rates indicate estimated

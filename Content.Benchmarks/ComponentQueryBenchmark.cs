@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using System;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using BenchmarkDotNet.Attributes;
@@ -35,9 +36,7 @@ namespace Content.Benchmarks;
 [ShortRunJob]
 public class ComponentQueryBenchmark
 {
-    public const string Map = "Maps/bagel.yml";
-
-    private static readonly Consumer _consumer = new();
+    public const string Map = "Maps/saltern.yml";
 
     private TestPair _pair = default!;
     private EntityManager _entMan = default!;
@@ -55,8 +54,8 @@ public class ComponentQueryBenchmark
         ProgramShared.PathOffset = "../../../../";
         PoolManager.Startup(typeof(QueryBenchSystem).Assembly);
 
-        _pair = PoolManager.GetServerClient().GetAwaiter().GetResult();
-        _entMan = _pair.Server.ResolveDependency<EntityManager>();
+        _pair = PoolManager.GetServerClient(testContext: new ExternalTestContext("Benchmark", StreamWriter.Null)).GetAwaiter().GetResult();
+        _entMan = _pair.Server.ResolveDependency<IEntityManager>();
 
         _airlockEntityQuery = _entMan.AllEntityQueryEnumerator<AirlockComponent>();
         _itemEntityQuery = _entMan.AllEntityQueryEnumerator<ItemComponent>();

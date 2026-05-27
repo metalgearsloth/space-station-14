@@ -4,28 +4,35 @@ using Content.Shared.UserInterface;
 using Content.Shared.Database;
 using Content.Shared.Examine;
 using Content.Shared.Interaction;
+using Content.Shared.Random.Helpers;
 using Content.Shared.Popups;
 using Content.Shared.Tag;
 using Robust.Shared.Player;
 using Robust.Shared.Audio.Systems;
 using static Content.Shared.Paper.PaperComponent;
 using Robust.Shared.Prototypes;
+using Robust.Shared.Random;
 
 namespace Content.Shared.Paper;
 
-public sealed class PaperSystem : EntitySystem
+public sealed partial class PaperSystem : EntitySystem
 {
-    [Dependency] private readonly ISharedAdminLogManager _adminLogger = default!;
-    [Dependency] private readonly SharedAppearanceSystem _appearance = default!;
-    [Dependency] private readonly SharedInteractionSystem _interaction = default!;
-    [Dependency] private readonly SharedPopupSystem _popupSystem = default!;
-    [Dependency] private readonly TagSystem _tagSystem = default!;
-    [Dependency] private readonly SharedUserInterfaceSystem _uiSystem = default!;
-    [Dependency] private readonly MetaDataSystem _metaSystem = default!;
-    [Dependency] private readonly SharedAudioSystem _audio = default!;
+    [Dependency] private ISharedAdminLogManager _adminLogger = default!;
+    [Dependency] private IPrototypeManager _protoMan = default!;
+    [Dependency] private IRobustRandom _random = default!;
+    [Dependency] private SharedAppearanceSystem _appearance = default!;
+    [Dependency] private SharedInteractionSystem _interaction = default!;
+    [Dependency] private SharedPopupSystem _popupSystem = default!;
+    [Dependency] private TagSystem _tagSystem = default!;
+    [Dependency] private SharedUserInterfaceSystem _uiSystem = default!;
+    [Dependency] private MetaDataSystem _metaSystem = default!;
+    [Dependency] private SharedAudioSystem _audio = default!;
+
+    [Dependency] private EntityQuery<PaperComponent> _paperQuery = default!;
 
     private static readonly ProtoId<TagPrototype> WriteIgnoreStampsTag = "WriteIgnoreStamps";
     private static readonly ProtoId<TagPrototype> WriteTag = "Write";
+
 
     public override void Initialize()
     {
@@ -37,6 +44,8 @@ public sealed class PaperSystem : EntitySystem
         SubscribeLocalEvent<PaperComponent, ExaminedEvent>(OnExamined);
         SubscribeLocalEvent<PaperComponent, InteractUsingEvent>(OnInteractUsing);
         SubscribeLocalEvent<PaperComponent, PaperInputTextMessage>(OnInputTextMessage);
+
+        SubscribeLocalEvent<RandomPaperContentComponent, MapInitEvent>(OnRandomPaperContentMapInit);
 
         SubscribeLocalEvent<ActivateOnPaperOpenedComponent, PaperWriteEvent>(OnPaperWrite);
     }
@@ -112,7 +121,7 @@ public sealed class PaperSystem : EntitySystem
                 if (entity.Comp.EditingDisabled)
                 {
                     var paperEditingDisabledMessage = Loc.GetString("paper-tamper-proof-modified-message");
-                    _popupSystem.PopupEntity(paperEditingDisabledMessage, entity, args.User);
+                    _popupSystem.PopupClient(paperEditingDisabledMessage, entity, args.User);
 
                     args.Handled = true;
                     return;
@@ -203,6 +212,30 @@ public sealed class PaperSystem : EntitySystem
         UpdateUserInterface(entity);
     }
 
+    private void OnRandomPaperContentMapInit(Entity<RandomPaperContentComponent> ent, ref MapInitEvent args)
+    {
+        if (!_paperQuery.TryComp(ent, out var paperComp))
+        {
+            Log.Warning($"{ToPrettyString(ent)} has a {nameof(RandomPaperContentComponent)} but no {nameof(PaperComponent)}!");
+            RemCompDeferred(ent, ent.Comp);
+            return;
+        }
+        var dataset = _protoMan.Index(ent.Comp.Dataset);
+        // Intentionally not using the Pick overload that directly takes a LocalizedDataset,
+        // because we want to get multiple attributes from the same pick.
+        var pick = _random.Pick(dataset.Values);
+
+        // Name
+        _metaSystem.SetEntityName(ent, Loc.GetString(pick));
+        // Description
+        _metaSystem.SetEntityDescription(ent, Loc.GetString($"{pick}.desc"));
+        // Content
+        SetContent((ent, paperComp), Loc.GetString($"{pick}.content"));
+
+        // Our work here is done
+        RemCompDeferred(ent, ent.Comp);
+    }
+
     private void OnPaperWrite(Entity<ActivateOnPaperOpenedComponent> entity, ref PaperWriteEvent args)
     {
         _interaction.UseInHandInteraction(args.User, entity);
@@ -247,6 +280,12 @@ public sealed class PaperSystem : EntitySystem
         }
     }
 
+    public void SetContent(EntityUid entity, string content)
+    {
+        if (!TryComp<PaperComponent>(entity, out var paper))
+            return;
+        SetContent((entity, paper), content);
+    }
 
     public void SetContent(Entity<PaperComponent> entity, string content)
     {
