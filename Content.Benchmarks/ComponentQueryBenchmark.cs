@@ -38,6 +38,7 @@ public class ComponentQueryBenchmark
 {
     public const string Map = "Maps/saltern.yml";
 
+    private readonly Consumer _consumer = new();
     private TestPair _pair = default!;
     private EntityManager _entMan = default!;
     private EntityQuery<ItemComponent> _itemQuery;
@@ -55,7 +56,7 @@ public class ComponentQueryBenchmark
         PoolManager.Startup(typeof(QueryBenchSystem).Assembly);
 
         _pair = PoolManager.GetServerClient(testContext: new ExternalTestContext("Benchmark", StreamWriter.Null)).GetAwaiter().GetResult();
-        _entMan = _pair.Server.ResolveDependency<IEntityManager>();
+        _entMan = (EntityManager) _pair.Server.ResolveDependency<IEntityManager>();
 
         _airlockEntityQuery = _entMan.AllEntityQueryEnumerator<AirlockComponent>();
         _itemEntityQuery = _entMan.AllEntityQueryEnumerator<ItemComponent>();

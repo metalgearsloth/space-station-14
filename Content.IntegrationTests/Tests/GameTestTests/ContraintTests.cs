@@ -68,7 +68,7 @@ public sealed class ConstraintsTests : GameTest
     public void DeletedNeverExisted()
     {
         // We'll never spawn this many ents in tests without it taking all damn day.
-        var ent = new EntityUid(int.MaxValue / 2);
+        var ent = new EntityUid(int.MaxValue / 2, 1);
 
         Assert.That(ent, Is.Deleted(Server), "Entites that never existed still count as deleted.");
     }

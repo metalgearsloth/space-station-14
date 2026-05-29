@@ -85,11 +85,17 @@ public sealed partial class SelectableComponentAdderSystem : EntitySystem
 
         foreach (var component in registry)
         {
-            if (HasComp(target, Factory.GetComponent(component.Key).GetType()) &&
+            var comp = Factory.GetComponent(component.Value);
+            var type = comp.GetType();
+
+            if (HasComp(target, type) &&
                 setting is ComponentExistsSetting.Skip or ComponentExistsSetting.Block)
                 continue;
 
-            EntityManager.AddComponent(target, component.Value, true);
+            if (setting == ComponentExistsSetting.Replace)
+                RemComp(target, type);
+
+            EntityManager.AddComponent(target, comp);
         }
     }
 }

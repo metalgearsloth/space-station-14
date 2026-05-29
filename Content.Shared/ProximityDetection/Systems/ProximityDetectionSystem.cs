@@ -90,7 +90,7 @@ public sealed partial class ProximityDetectionSystem : EntitySystem
         var closestDistance = float.PositiveInfinity;
         EntityUid? closestUid = null;
 
-        var query = EntityManager.CompRegistryQueryEnumerator(component.Components);
+        var query = EntityManager.ComponentQueryEnumerator(component.Components);
 
         while (query.MoveNext(out var uid))
         {

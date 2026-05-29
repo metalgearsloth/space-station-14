@@ -302,7 +302,7 @@ public sealed partial class SiliconLawSystem : SharedSiliconLawSystem
 
         var lawset = provider.Lawset ?? GetLawset(provider.Laws);
 
-        var query = EntityManager.CompRegistryQueryEnumerator(ent.Comp.Components);
+        var query = EntityManager.ComponentQueryEnumerator(ent.Comp.Components);
 
         while (query.MoveNext(out var update))
         {

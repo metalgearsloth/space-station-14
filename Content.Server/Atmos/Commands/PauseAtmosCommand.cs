@@ -31,13 +31,15 @@ public sealed partial class PauseAtmosCommand : LocalizedEntityCommands
                 grid = playerxform.GridUid.Value;
                 break;
             case 1:
-                if (!EntityUid.TryParse(args[0], out var parsedGrid) || !EntityManager.EntityExists(parsedGrid))
+                if (!NetEntity.TryParse(args[0], out var parsedGridNet) ||
+                    !EntityManager.TryGetEntity(parsedGridNet, out var parsedGrid) ||
+                    !EntityManager.EntityExists(parsedGrid.Value))
                 {
                     shell.WriteError(Loc.GetString("cmd-error-couldnt-parse-entity"));
                     return;
                 }
 
-                grid = parsedGrid;
+                grid = parsedGrid.Value;
                 break;
         }
 
