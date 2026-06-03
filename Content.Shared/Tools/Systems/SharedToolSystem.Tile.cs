@@ -1,5 +1,5 @@
 using Content.Shared.Database;
-using Content.Shared.Fluids.Components;
+using Content.Shared.Fluids;
 using Content.Shared.Interaction;
 using Content.Shared.Maps;
 using Content.Shared.Physics;
@@ -14,6 +14,7 @@ namespace Content.Shared.Tools.Systems;
 public abstract partial class SharedToolSystem
 {
     [Dependency] private INetManager _net = default!;
+    [Dependency] private SharedPuddleSystem _puddle = default!;
 
     public void InitializeTile()
     {
@@ -23,7 +24,7 @@ public abstract partial class SharedToolSystem
 
     private void OnToolTileAfterInteract(Entity<ToolTileCompatibleComponent> ent, ref AfterInteractEvent args)
     {
-        if (args.Handled || args.Target != null && !HasComp<PuddleComponent>(args.Target))
+        if (args.Handled || args.Target != null && !_puddle.TryGetPuddle(args.Target.Value, out _))
             return;
 
         args.Handled = UseToolOnTile((ent, ent, null), args.User, args.ClickLocation);

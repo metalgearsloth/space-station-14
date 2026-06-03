@@ -5,6 +5,7 @@ using Content.IntegrationTests.NUnit.Constraints;
 using Content.Server.Chemistry.Components;
 using Content.Server.Chemistry.EntitySystems;
 using Content.Server.Decals;
+using Content.Server.Fluids.Components;
 using Content.Server.Fluids.EntitySystems;
 using Content.Shared.Chemistry.Components;
 using Content.Shared.Chemistry.Reagent;

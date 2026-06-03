@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Diagnostics.CodeAnalysis;
 using Content.Shared.Administration.Logs;
 using Content.Shared.Chemistry;
 using Content.Shared.Chemistry.Components;
@@ -64,12 +65,6 @@ public abstract partial class SharedPuddleSystem : EntitySystem
     public override void Initialize()
     {
         base.Initialize();
-        // Shouldn't need re-anchoring.
-        SubscribeLocalEvent<PuddleComponent, AnchorStateChangedEvent>(OnAnchorChanged);
-        SubscribeLocalEvent<PuddleComponent, SolutionChangedEvent>(OnSolutionUpdate);
-        SubscribeLocalEvent<PuddleComponent, GetFootstepSoundEvent>(OnGetFootstepSound);
-        SubscribeLocalEvent<PuddleComponent, ExaminedEvent>(HandlePuddleExamined);
-        SubscribeLocalEvent<PuddleComponent, EntRemovedFromContainerMessage>(OnEntRemoved);
 
         SubscribeLocalEvent<EvaporationComponent, MapInitEvent>(OnEvaporationMapInit);
 
@@ -78,6 +73,31 @@ public abstract partial class SharedPuddleSystem : EntitySystem
         CacheStandsout();
         InitializeSpillable();
     }
+
+    protected void InitializeSharedPuddle<T>() where T : SharedPuddleComponent
+    {
+        // Shouldn't need re-anchoring.
+        SubscribeLocalEvent<T, AnchorStateChangedEvent>(OnAnchorChanged);
+        SubscribeLocalEvent<T, SolutionChangedEvent>(OnSolutionUpdate);
+        SubscribeLocalEvent<T, GetFootstepSoundEvent>(OnGetFootstepSound);
+        SubscribeLocalEvent<T, ExaminedEvent>(HandlePuddleExamined);
+        SubscribeLocalEvent<T, EntRemovedFromContainerMessage>(OnEntRemoved);
+    }
+
+    private void OnSolutionUpdate<T>(Entity<T> entity, ref SolutionChangedEvent args) where T : SharedPuddleComponent =>
+        OnSolutionUpdate((entity.Owner, entity.Comp), ref args);
+
+    private void OnGetFootstepSound<T>(Entity<T> entity, ref GetFootstepSoundEvent args) where T : SharedPuddleComponent =>
+        OnGetFootstepSound((entity.Owner, entity.Comp), ref args);
+
+    private void HandlePuddleExamined<T>(Entity<T> entity, ref ExaminedEvent args) where T : SharedPuddleComponent =>
+        HandlePuddleExamined((entity.Owner, entity.Comp), ref args);
+
+    private void OnAnchorChanged<T>(Entity<T> entity, ref AnchorStateChangedEvent args) where T : SharedPuddleComponent =>
+        OnAnchorChanged((entity.Owner, entity.Comp), ref args);
+
+    private void OnEntRemoved<T>(Entity<T> entity, ref EntRemovedFromContainerMessage args) where T : SharedPuddleComponent =>
+        OnEntRemoved((entity.Owner, entity.Comp), ref args);
 
     public override void Update(float frameTime)
     {
@@ -102,6 +122,10 @@ public abstract partial class SharedPuddleSystem : EntitySystem
             CacheStandsout();
     }
 
+    public abstract bool TryGetPuddle(EntityUid uid, [NotNullWhen(true)] out SharedPuddleComponent? puddle);
+
+    protected abstract void TickEvaporation();
+
     /// <summary>
     /// Used to cache standout reagents for future use.
     /// </summary>
@@ -110,7 +134,7 @@ public abstract partial class SharedPuddleSystem : EntitySystem
         _standoutReagents = [.. _prototypeManager.EnumeratePrototypes<ReagentPrototype>().Where(x => x.Standsout).Select(x => x.ID)];
     }
 
-    private void OnSolutionUpdate(Entity<PuddleComponent> entity, ref SolutionChangedEvent args)
+    private void OnSolutionUpdate(Entity<SharedPuddleComponent> entity, ref SolutionChangedEvent args)
     {
         // The changes are already networked as part of the same game state.
         if (_timing.ApplyingState)
@@ -132,7 +156,7 @@ public abstract partial class SharedPuddleSystem : EntitySystem
         UpdateAppearance((entity, entity.Comp));
     }
 
-    private void OnGetFootstepSound(Entity<PuddleComponent> entity, ref GetFootstepSoundEvent args)
+    private void OnGetFootstepSound(Entity<SharedPuddleComponent> entity, ref GetFootstepSoundEvent args)
     {
         if (!_solutionContainerSystem.ResolveSolution(entity.Owner, entity.Comp.SolutionName, ref entity.Comp.Solution,
                 out var solution))
@@ -146,9 +170,9 @@ public abstract partial class SharedPuddleSystem : EntitySystem
         }
     }
 
-    private void HandlePuddleExamined(Entity<PuddleComponent> entity, ref ExaminedEvent args)
+    private void HandlePuddleExamined(Entity<SharedPuddleComponent> entity, ref ExaminedEvent args)
     {
-        using (args.PushGroup(nameof(PuddleComponent)))
+        using (args.PushGroup(nameof(SharedPuddleComponent)))
         {
             if (_stepTriggerQuery.TryComp(entity, out var slippery) && slippery.Active)
             {
@@ -171,21 +195,21 @@ public abstract partial class SharedPuddleSystem : EntitySystem
         }
     }
 
-    private void OnAnchorChanged(Entity<PuddleComponent> entity, ref AnchorStateChangedEvent args)
+    private void OnAnchorChanged(Entity<SharedPuddleComponent> entity, ref AnchorStateChangedEvent args)
     {
         if (!args.Anchored)
             PredictedQueueDel(entity.Owner);
     }
 
     // Workaround for https://github.com/space-wizards/space-station-14/pull/35314
-    private void OnEntRemoved(Entity<PuddleComponent> ent, ref EntRemovedFromContainerMessage args)
+    private void OnEntRemoved(Entity<SharedPuddleComponent> ent, ref EntRemovedFromContainerMessage args)
     {
         // Make sure the removed entity was our contained solution and clear our cached reference
         if (args.Entity == ent.Comp.Solution?.Owner)
             ent.Comp.Solution = null;
     }
 
-    private void UpdateAppearance(Entity<PuddleComponent?, AppearanceComponent?> ent)
+    private void UpdateAppearance(Entity<SharedPuddleComponent?, AppearanceComponent?> ent)
     {
         var (uid, puddle, appearance) = ent;
         if (!Resolve(ent, ref puddle, ref appearance))
@@ -225,7 +249,7 @@ public abstract partial class SharedPuddleSystem : EntitySystem
         _appearance.SetData(ent, PuddleVisuals.SolutionColor, color, appearance);
     }
 
-    private void UpdateSlip(Entity<PuddleComponent> entity, Solution solution)
+    private void UpdateSlip(Entity<SharedPuddleComponent> entity, Solution solution)
     {
         if (!_stepTriggerQuery.TryComp(entity, out var comp))
             return;

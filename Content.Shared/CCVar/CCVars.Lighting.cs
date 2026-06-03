@@ -8,7 +8,13 @@ public sealed partial class CCVars
         CVarDef.Create("light.ambient_occlusion", true, CVar.CLIENTONLY | CVar.ARCHIVE);
 
     /// <summary>
-    /// Distance in world-pixels of ambient occlusion.
+    /// Controls whether puddles should blend with each other via shaders.
+    /// </summary>
+    public static readonly CVarDef<bool> PuddleShaders =
+        CVarDef.Create("graphics.puddle_shaders", true, CVar.CLIENTONLY | CVar.ARCHIVE);
+
+    /// <summary>
+    /// Color of ambient occlusion.
     /// </summary>
     public static readonly CVarDef<string> AmbientOcclusionColor =
         CVarDef.Create("light.ambient_occlusion_color", "#04080FAA", CVar.CLIENTONLY);

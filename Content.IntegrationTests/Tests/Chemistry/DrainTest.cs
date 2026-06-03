@@ -1,4 +1,5 @@
 using Content.IntegrationTests.Tests.Interaction;
+using Content.Server.Fluids.Components;
 using Content.Shared.Chemistry.EntitySystems;
 using Content.Shared.Chemistry.Reagent;
 using Content.Shared.FixedPoint;

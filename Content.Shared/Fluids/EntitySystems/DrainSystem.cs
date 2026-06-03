@@ -38,7 +38,8 @@ public sealed partial class DrainSystem : EntitySystem
     [Dependency] private TagSystem _tag = default!;
     [Dependency] private IGameTiming _timing = default!;
 
-    private readonly HashSet<Entity<PuddleComponent>> _puddles = [];
+    private readonly HashSet<EntityUid> _nearbyEntities = [];
+    private readonly List<Entity<SharedPuddleComponent>> _puddles = [];
 
     /// <inheritdoc/>
     public override void Initialize()
@@ -159,7 +160,14 @@ public sealed partial class DrainSystem : EntitySystem
             if (drain.AutoDrain)
             {
                 _puddles.Clear();
-                _lookup.GetEntitiesInRange(Transform(uid).Coordinates, drain.Range, _puddles);
+                _nearbyEntities.Clear();
+                _lookup.GetEntitiesInRange(Transform(uid).Coordinates, drain.Range, _nearbyEntities);
+
+                foreach (var entity in _nearbyEntities)
+                {
+                    if (_puddle.TryGetPuddle(entity, out var puddle))
+                        _puddles.Add((entity, puddle));
+                }
 
                 if (_puddles.Count == 0 && drainSolution.Volume <= 0)
                 {

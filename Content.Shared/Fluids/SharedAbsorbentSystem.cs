@@ -274,7 +274,7 @@ public abstract partial class SharedAbsorbentSystem : EntitySystem
         EntityUid user,
         EntityUid target)
     {
-        if (!TryComp<PuddleComponent>(target, out var puddle))
+        if (!Puddle.TryGetPuddle(target, out var puddle))
             return false;
 
         if (!SolutionContainer.ResolveSolution(target, puddle.SolutionName, ref puddle.Solution, out var puddleSolution)

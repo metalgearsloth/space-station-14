@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Content.Server.Fluids.Components;
 using Content.Server.Spreader;
 using Content.Shared.Chemistry;
@@ -49,9 +50,22 @@ public sealed partial class PuddleSystem : SharedPuddleSystem
     public override void Initialize()
     {
         base.Initialize();
+        InitializeSharedPuddle<PuddleComponent>();
 
         SubscribeLocalEvent<PuddleComponent, SpreadNeighborsEvent>(OnPuddleSpread);
         SubscribeLocalEvent<PuddleComponent, SlipEvent>(OnPuddleSlip);
+    }
+
+    public override bool TryGetPuddle(EntityUid uid, [NotNullWhen(true)] out SharedPuddleComponent? puddle)
+    {
+        var found = _puddleQuery.TryComp(uid, out var serverPuddle);
+        puddle = serverPuddle;
+        return found;
+    }
+
+    protected override void TickEvaporation()
+    {
+        TickEvaporation(_puddleQuery);
     }
 
     // TODO: This can be predicted once https://github.com/space-wizards/RobustToolbox/pull/5849 is merged

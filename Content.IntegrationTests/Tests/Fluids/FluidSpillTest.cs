@@ -1,5 +1,6 @@
 #nullable enable
 using Content.IntegrationTests.Fixtures;
+using Content.Server.Fluids.Components;
 using Content.Server.Fluids.EntitySystems;
 using Content.Server.Spreader;
 using Content.Shared.Chemistry.Components;

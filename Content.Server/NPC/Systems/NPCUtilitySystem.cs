@@ -1,3 +1,4 @@
+using Content.Server.Fluids.Components;
 using Content.Server.Fluids.EntitySystems;
 using Content.Server.Hands.Systems;
 using Content.Server.NPC.Queries;
@@ -7,7 +8,6 @@ using Content.Server.NPC.Queries.Queries;
 using Content.Server.Nutrition.Components;
 using Content.Shared.Chemistry.EntitySystems;
 using Content.Shared.Examine;
-using Content.Shared.Fluids.Components;
 using Content.Shared.Inventory;
 using Content.Shared.Mobs;
 using Content.Shared.Mobs.Systems;

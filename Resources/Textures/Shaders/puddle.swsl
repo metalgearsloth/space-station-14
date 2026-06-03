@@ -1,0 +1,21 @@
+uniform highp vec4 color;
+uniform highp vec4 northColor;
+uniform highp vec4 southColor;
+uniform highp vec4 eastColor;
+uniform highp vec4 westColor;
+uniform highp vec2 spritePixelSize;
+
+void fragment() {
+    highp vec4 tex = zTexture(UV);
+    highp vec2 tileUv = fract(UV / TEXTURE_PIXEL_SIZE / spritePixelSize);
+
+    highp vec4 horizontal = mix(westColor, eastColor, smoothstep(0.0, 1.0, tileUv.x));
+    highp vec4 vertical = mix(southColor, northColor, smoothstep(0.0, 1.0, tileUv.y));
+
+    highp float horizontalWeight = pow(abs(tileUv.x - 0.5) * 2.0, 1.5);
+    highp float verticalWeight = pow(abs(tileUv.y - 0.5) * 2.0, 1.5);
+    highp vec4 blended = (color + horizontal * horizontalWeight + vertical * verticalWeight)
+        / (1.0 + horizontalWeight + verticalWeight);
+
+    COLOR = vec4(tex.rgb * blended.rgb, tex.a);
+}

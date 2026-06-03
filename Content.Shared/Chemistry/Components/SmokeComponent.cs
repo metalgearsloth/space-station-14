@@ -6,7 +6,7 @@ namespace Content.Shared.Chemistry.Components;
 
 /// <summary>
 /// Stores solution on an anchored entity that has touch and ingestion reactions
-/// to entities that collide with it. Similar to <see cref="PuddleComponent"/>
+/// to entities that collide with it. Similar to <see cref="SharedPuddleComponent"/>
 /// </summary>
 [RegisterComponent, NetworkedComponent, AutoGenerateComponentState]
 public sealed partial class SmokeComponent : Component
