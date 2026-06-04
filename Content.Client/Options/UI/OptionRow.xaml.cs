@@ -50,8 +50,10 @@ public sealed partial class OptionRow : Control
 
         RowPanel.PanelOverride = new StyleBoxFlat
         {
-            BackgroundColor = Theme.ResolveColorOrSpecified("slotColor", Color.FromHex("#0f1215")),
-            BorderColor = Theme.ResolveColorOrSpecified("slotOutline", Color.FromHex("#333850")),
+            BackgroundColor = Theme.ResolveColorOrSpecified(
+                "optionsRowColor",
+                Theme.ResolveColorOrSpecified("slotColor", Color.FromHex("#1F242E"))),
+            BorderColor = Theme.ResolveColorOrSpecified("slotOutline", Color.FromHex("#252632")),
             BorderThickness = new Thickness(1),
         };
 

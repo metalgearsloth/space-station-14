@@ -29,7 +29,9 @@ public sealed partial class OptionSection : Control
 
         SectionPanel.PanelOverride = new StyleBoxFlat
         {
-            BackgroundColor = Theme.ResolveColorOrSpecified("slotColorDark", Color.FromHex("#080a0c")),
+            BackgroundColor = Theme.ResolveColorOrSpecified(
+                "optionsSectionColor",
+                Theme.ResolveColorOrSpecified("slotColorDark", Color.FromHex("#171823"))),
             BorderColor = outline,
             BorderThickness = new Thickness(1),
         };
