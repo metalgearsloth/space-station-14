@@ -94,6 +94,11 @@ public sealed partial class OptionsTabControlRow : Control
         return AddOption(new OptionCheckboxCVar(this, _cfg, cVar, checkBox, invert));
     }
 
+    public OptionSwitchCVar AddOptionSwitch(CVarDef<bool> cVar, Content.Client.UserInterface.Controls.SwitchButton switchButton, bool invert = false)
+    {
+        return AddOption(new OptionSwitchCVar(this, _cfg, cVar, switchButton, invert));
+    }
+
     /// <summary>
     /// Add a slider option, displayed in percent, backed by a simple float CVar.
     /// </summary>
@@ -452,6 +457,34 @@ public sealed class OptionCheckboxCVar : BaseOptionCVar<bool>
         {
             ValueChanged();
         };
+    }
+}
+
+/// <summary>
+/// Implementation of a CVar option that corresponds with a toggle switch.
+/// </summary>
+public sealed class OptionSwitchCVar : BaseOptionCVar<bool>
+{
+    private readonly Content.Client.UserInterface.Controls.SwitchButton _switchButton;
+    private readonly bool _invert;
+
+    protected override bool Value
+    {
+        get => _switchButton.Pressed ^ _invert;
+        set => _switchButton.Pressed = value ^ _invert;
+    }
+
+    public OptionSwitchCVar(
+        OptionsTabControlRow controller,
+        IConfigurationManager cfg,
+        CVarDef<bool> cVar,
+        Content.Client.UserInterface.Controls.SwitchButton switchButton,
+        bool invert)
+        : base(controller, cfg, cVar)
+    {
+        _switchButton = switchButton;
+        _invert = invert;
+        switchButton.OnToggled += _ => ValueChanged();
     }
 }
 

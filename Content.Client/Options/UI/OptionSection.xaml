@@ -1,0 +1,16 @@
+<Control xmlns="https://spacestation14.io">
+    <PanelContainer Name="SectionPanel" Access="Public">
+        <BoxContainer Orientation="Vertical" Margin="10 8 10 10">
+            <BoxContainer Orientation="Horizontal" Margin="0 0 0 8">
+                <PanelContainer Name="AccentBar"
+                                Access="Public"
+                                MinWidth="3"
+                                MaxWidth="3"
+                                Margin="0 2 8 2"
+                                VerticalExpand="True" />
+                <Label Name="TitleLabel" StyleClasses="LabelHeading" VerticalAlignment="Center" />
+            </BoxContainer>
+            <BoxContainer Name="RowContainer" Orientation="Vertical" SeparationOverride="4" />
+        </BoxContainer>
+    </PanelContainer>
+</Control>

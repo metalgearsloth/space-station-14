@@ -6,6 +6,7 @@ using Robust.Client.UserInterface.Controls;
 using Robust.Client.UserInterface.XAML;
 using Robust.Shared;
 using Robust.Shared.Configuration;
+using SwitchButton = Content.Client.UserInterface.Controls.SwitchButton;
 
 namespace Content.Client.Options.UI.Tabs;
 
@@ -20,10 +21,10 @@ public sealed partial class GraphicsTab : Control
         IoCManager.InjectDependencies(this);
         RobustXamlLoader.Load(this);
 
-        var vSync = Control.AddOptionCheckBox(CVars.DisplayVSync, VSyncCheckBox);
+        var vSync = Control.AddOptionSwitch(CVars.DisplayVSync, VSyncToggleStatusButton);
         Control.AddOption(new OptionSliderIntInput(Control, _cfg, CVars.DisplayMaxFPS, MaxFpsInput, 0, 500));
-        Control.AddOptionCheckBox(CCVars.AmbientOcclusion, AmbientOcclusionCheckBox);
-        Control.AddOption(new OptionFullscreen(Control, _cfg, FullscreenCheckBox));
+        Control.AddOptionSwitch(CCVars.AmbientOcclusion, AmbientOcclusionToggleStatusButton);
+        Control.AddOption(new OptionFullscreen(Control, _cfg, FullscreenToggleStatusButton));
         Control.AddOption(new OptionLightingQuality(Control, _cfg, DropDownLightingQuality));
 
         Control.AddOptionDropDown(
@@ -49,8 +50,8 @@ public sealed partial class GraphicsTab : Control
                 new OptionDropDownCVar<string>.ValueOption("bilinear", Loc.GetString("ui-options-filter-bilinear")),
             ]);
 
-        var vpStretch = Control.AddOptionCheckBox(CCVars.ViewportStretch, ViewportStretchCheckBox);
-        var vpVertFit = Control.AddOptionCheckBox(CCVars.ViewportVerticalFit, ViewportVerticalFitCheckBox);
+        var vpStretch = Control.AddOptionSwitch(CCVars.ViewportStretch, ViewportStretchToggleStatusButton);
+        var vpVertFit = Control.AddOptionSwitch(CCVars.ViewportVerticalFit, ViewportVerticalFitToggleStatusButton);
         Control.AddOptionSlider(
             CCVars.ViewportFixedScaleFactor,
             ViewportScaleSlider,
@@ -62,7 +63,7 @@ public sealed partial class GraphicsTab : Control
         MaxFpsDisplayRateButton.OnPressed += _ => SetMaxFpsToDisplayRate();
         vpStretch.ImmediateValueChanged += _ => UpdateViewportSettingsVisibility();
         vpVertFit.ImmediateValueChanged += _ => UpdateViewportSettingsVisibility();
-        IntegerScalingCheckBox.OnToggled += _ => UpdateViewportSettingsVisibility();
+        IntegerScalingToggleStatusButton.OnToggled += _ => UpdateViewportSettingsVisibility();
 
         Control.AddOptionSlider(
             CCVars.ViewportWidth,
@@ -70,10 +71,10 @@ public sealed partial class GraphicsTab : Control
             (int)ViewportWidthSlider.Slider.MinValue,
             (int)ViewportWidthSlider.Slider.MaxValue);
 
-        Control.AddOption(new OptionIntegerScaling(Control, _cfg, IntegerScalingCheckBox));
-        Control.AddOptionCheckBox(CCVars.ViewportScaleRender, ViewportLowResCheckBox, invert: true);
-        Control.AddOptionCheckBox(CCVars.ParallaxLowQuality, ParallaxLowQualityCheckBox);
-        Control.AddOptionCheckBox(CCVars.HudFpsCounterVisible, FpsCounterCheckBox);
+        Control.AddOption(new OptionIntegerScaling(Control, _cfg, IntegerScalingToggleStatusButton));
+        Control.AddOptionSwitch(CCVars.ViewportScaleRender, ViewportLowResToggleStatusButton, invert: true);
+        Control.AddOptionSwitch(CCVars.ParallaxLowQuality, ParallaxLowQualityToggleStatusButton);
+        Control.AddOptionSwitch(CCVars.HudFpsCounterVisible, FpsCounterToggleStatusButton);
 
         Control.Initialize();
 
@@ -87,10 +88,10 @@ public sealed partial class GraphicsTab : Control
 
     private void UpdateMaxFpsEnabled()
     {
-        var vSync = VSyncCheckBox.Pressed;
+        var vSync = VSyncToggleStatusButton.Pressed;
         MaxFpsInput.Disabled = vSync;
         MaxFpsDisplayRateButton.Disabled = vSync || _clyde.GetWindowMonitor() == null;
-        MaxFpsContainer.Modulate = vSync ? Color.FromHex("#FFFFFF80") : Color.White;
+        MaxFpsContainer.DisabledStyle = vSync;
     }
 
     private void SetMaxFpsToDisplayRate()
@@ -104,11 +105,11 @@ public sealed partial class GraphicsTab : Control
 
     private void UpdateViewportSettingsVisibility()
     {
-        ViewportScaleSlider.Visible = !ViewportStretchCheckBox.Pressed;
-        IntegerScalingCheckBox.Visible = ViewportStretchCheckBox.Pressed;
-        ViewportVerticalFitCheckBox.Visible = ViewportStretchCheckBox.Pressed;
-        ViewportWidthSlider.Visible = !ViewportStretchCheckBox.Pressed || !ViewportVerticalFitCheckBox.Pressed;
-        DropDownFilterMode.Visible = !IntegerScalingCheckBox.Pressed && ViewportStretchCheckBox.Pressed;
+        ViewportScaleRow.Visible = !ViewportStretchToggleStatusButton.Pressed;
+        IntegerScalingRow.Visible = ViewportStretchToggleStatusButton.Pressed;
+        ViewportVerticalFitRow.Visible = ViewportStretchToggleStatusButton.Pressed;
+        ViewportWidthRow.Visible = !ViewportStretchToggleStatusButton.Pressed || !ViewportVerticalFitToggleStatusButton.Pressed;
+        DropDownFilterModeRow.Visible = !IntegerScalingToggleStatusButton.Pressed && ViewportStretchToggleStatusButton.Pressed;
     }
 
     private void UpdateViewportWidthRange()
@@ -216,22 +217,22 @@ public sealed partial class GraphicsTab : Control
 
     private sealed class OptionFullscreen : BaseOptionCVar<int>
     {
-        private readonly CheckBox _checkBox;
+        private readonly SwitchButton _switchButton;
 
         protected override int Value
         {
-            get => _checkBox.Pressed ? (int) WindowMode.Fullscreen : (int) WindowMode.Windowed;
-            set => _checkBox.Pressed = (value == (int) WindowMode.Fullscreen);
+            get => _switchButton.Pressed ? (int) WindowMode.Fullscreen : (int) WindowMode.Windowed;
+            set => _switchButton.Pressed = (value == (int) WindowMode.Fullscreen);
         }
 
         public OptionFullscreen(
             OptionsTabControlRow controller,
             IConfigurationManager cfg,
-            CheckBox checkBox)
+            SwitchButton switchButton)
             : base(controller, cfg, CVars.DisplayWindowMode)
         {
-            _checkBox = checkBox;
-            _checkBox.OnToggled += _ =>
+            _switchButton = switchButton;
+            _switchButton.OnToggled += _ =>
             {
                 ValueChanged();
             };
@@ -266,22 +267,22 @@ public sealed partial class GraphicsTab : Control
 
     private sealed class OptionIntegerScaling : BaseOptionCVar<int>
     {
-        private readonly CheckBox _checkBox;
+        private readonly SwitchButton _switchButton;
 
         protected override int Value
         {
-            get => _checkBox.Pressed ? CCVars.ViewportSnapToleranceMargin.DefaultValue : 0;
-            set => _checkBox.Pressed = (value != 0);
+            get => _switchButton.Pressed ? CCVars.ViewportSnapToleranceMargin.DefaultValue : 0;
+            set => _switchButton.Pressed = (value != 0);
         }
 
         public OptionIntegerScaling(
             OptionsTabControlRow controller,
             IConfigurationManager cfg,
-            CheckBox checkBox)
+            SwitchButton switchButton)
             : base(controller, cfg, CCVars.ViewportSnapToleranceMargin)
         {
-            _checkBox = checkBox;
-            _checkBox.OnToggled += _ =>
+            _switchButton = switchButton;
+            _switchButton.OnToggled += _ =>
             {
                 ValueChanged();
             };
