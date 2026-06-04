@@ -38,20 +38,20 @@ public sealed partial class MiscTab : Control
 
         // Channel can be null in replays so.
         // ReSharper disable once ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
-        ShowOocPatronColor.Visible = _playerManager.LocalSession?.Channel?.UserData.PatronTier is { };
+        ShowOocPatronColorRow.Visible = _playerManager.LocalSession?.Channel?.UserData.PatronTier is { };
 
         Control.AddOptionDropDown(CVars.InterfaceTheme, DropDownHudTheme, themeEntries);
         Control.AddOptionDropDown(CCVars.UILayout, DropDownHudLayout, layoutEntries);
 
-        Control.AddOptionCheckBox(CVars.DiscordEnabled, DiscordRich);
-        Control.AddOptionCheckBox(CCVars.ShowOocPatronColor, ShowOocPatronColor);
-        Control.AddOptionCheckBox(CCVars.LoocAboveHeadShow, ShowLoocAboveHeadCheckBox);
-        Control.AddOptionCheckBox(CCVars.HudHeldItemShow, ShowHeldItemCheckBox);
-        Control.AddOptionCheckBox(CCVars.CombatModeIndicatorsPointShow, ShowCombatModeIndicatorsCheckBox);
-        Control.AddOptionCheckBox(CCVars.OpaqueStorageWindow, OpaqueStorageWindowCheckBox);
-        Control.AddOptionCheckBox(CCVars.ChatEnableFancyBubbles, FancySpeechBubblesCheckBox);
-        Control.AddOptionCheckBox(CCVars.ChatFancyNameBackground, FancyNameBackgroundsCheckBox);
-        Control.AddOptionCheckBox(CCVars.StaticStorageUI, StaticStorageUI);
+        Control.AddOptionSwitch(CVars.DiscordEnabled, DiscordRichToggleStatusButton);
+        Control.AddOptionSwitch(CCVars.ShowOocPatronColor, ShowOocPatronColorToggleStatusButton);
+        Control.AddOptionSwitch(CCVars.LoocAboveHeadShow, ShowLoocAboveHeadToggleStatusButton);
+        Control.AddOptionSwitch(CCVars.HudHeldItemShow, ShowHeldItemToggleStatusButton);
+        Control.AddOptionSwitch(CCVars.CombatModeIndicatorsPointShow, ShowCombatModeIndicatorsToggleStatusButton);
+        Control.AddOptionSwitch(CCVars.OpaqueStorageWindow, OpaqueStorageWindowToggleStatusButton);
+        Control.AddOptionSwitch(CCVars.ChatEnableFancyBubbles, FancySpeechBubblesToggleStatusButton);
+        Control.AddOptionSwitch(CCVars.ChatFancyNameBackground, FancyNameBackgroundsToggleStatusButton);
+        Control.AddOptionSwitch(CCVars.StaticStorageUI, StaticStorageUIToggleStatusButton);
 
         Control.Initialize();
     }

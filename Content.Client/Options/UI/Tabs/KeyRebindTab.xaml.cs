@@ -111,50 +111,60 @@ namespace Content.Client.Options.UI.Tabs
                 });
             };
 
-            var first = true;
+            OptionSection? currentSection = null;
 
             void AddHeader(string headerContents)
             {
-                if (!first)
+                currentSection = new OptionSection
                 {
-                    KeybindsContainer.AddChild(new Control { MinSize = new Vector2(0, 8) });
-                }
+                    Title = Loc.GetString(headerContents),
+                };
 
-                first = false;
-                KeybindsContainer.AddChild(new Label
-                {
-                    Text = Loc.GetString(headerContents),
-                    StyleClasses = { StyleClass.LabelKeyText }
-                });
+                KeybindsContainer.AddChild(currentSection);
+            }
+
+            void AddOptionRow(Control control)
+            {
+                currentSection?.AddRow(control);
             }
 
             void AddButton(BoundKeyFunction function)
             {
                 var control = new KeyControl(this, function);
-                KeybindsContainer.AddChild(control);
+                AddOptionRow(control);
                 _keyControls.Add(function, control);
             }
 
             void AddCheckBox(string checkBoxName, bool currentState, Action<BaseButton.ButtonToggledEventArgs>? callBackOnClick)
             {
-                CheckBox newCheckBox = new CheckBox() { Text = Loc.GetString(checkBoxName) };
-                newCheckBox.Pressed = currentState;
-                newCheckBox.OnToggled += callBackOnClick;
+                var switchButton = new Content.Client.UserInterface.Controls.SwitchButton
+                {
+                    Pressed = currentState,
+                    HorizontalAlignment = HAlignment.Right,
+                };
+                switchButton.OnToggled += callBackOnClick;
 
-                KeybindsContainer.AddChild(newCheckBox);
+                var row = new OptionRow { Title = Loc.GetString(checkBoxName) };
+                row.AddContent(switchButton);
+                AddOptionRow(row);
             }
 
             void AddToggleCvarCheckBox(string checkBoxName, CVarDef<bool> cvar)
             {
-                CheckBox newCheckBox = new CheckBox() { Text = Loc.GetString(checkBoxName) };
-                newCheckBox.Pressed = _cfg.GetCVar(cvar);
-                newCheckBox.OnToggled += (e) =>
+                var switchButton = new Content.Client.UserInterface.Controls.SwitchButton
+                {
+                    Pressed = _cfg.GetCVar(cvar),
+                    HorizontalAlignment = HAlignment.Right,
+                };
+                switchButton.OnToggled += e =>
                 {
                     _cfg.SetCVar(cvar, e.Pressed);
                     _cfg.SaveToFile();
                 };
 
-                KeybindsContainer.AddChild(newCheckBox);
+                var row = new OptionRow { Title = Loc.GetString(checkBoxName) };
+                row.AddContent(switchButton);
+                AddOptionRow(row);
             }
 
             AddHeader("ui-options-header-general");
@@ -530,14 +540,6 @@ namespace Content.Client.Options.UI.Tabs
             public KeyControl(KeyRebindTab parent, BoundKeyFunction function)
             {
                 Function = function;
-                var name = new Label
-                {
-                    Text = Loc.GetString(
-                        $"ui-options-function-{CaseConversion.PascalToKebab(function.FunctionName)}"),
-                    HorizontalExpand = true,
-                    HorizontalAlignment = HAlignment.Left
-                };
-
                 BindButton1 = new BindButton(parent, this, StyleClass.ButtonOpenRight);
                 BindButton2 = new BindButton(parent, this, StyleClass.ButtonOpenLeft);
                 ResetButton = new Button { Text = Loc.GetString("ui-options-bind-reset"), StyleClasses = { StyleClass.Negative } };
@@ -545,10 +547,10 @@ namespace Content.Client.Options.UI.Tabs
                 var hBox = new BoxContainer
                 {
                     Orientation = LayoutOrientation.Horizontal,
+                    HorizontalExpand = true,
+                    Align = AlignMode.End,
                     Children =
                     {
-                        new Control {MinSize = new Vector2(5, 0)},
-                        name,
                         BindButton1,
                         BindButton2,
                         new Control {MinSize = new Vector2(10, 0)},
@@ -565,7 +567,13 @@ namespace Content.Client.Options.UI.Tabs
                     });
                 };
 
-                AddChild(hBox);
+                var row = new OptionRow
+                {
+                    Title = Loc.GetString($"ui-options-function-{CaseConversion.PascalToKebab(function.FunctionName)}"),
+                };
+                row.AddContent(hBox);
+
+                AddChild(row);
             }
         }
 

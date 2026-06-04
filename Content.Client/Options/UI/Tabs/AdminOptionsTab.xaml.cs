@@ -58,8 +58,8 @@ public sealed partial class AdminOptionsTab : Control
         Control.AddOptionDropDown(CCVars.AdminOverlayAntagFormat, DropDownOverlayAntagFormat, antagFormats);
         Control.AddOptionDropDown(CCVars.AdminOverlaySymbolStyle, DropDownOverlayAntagSymbol, antagSymbolStyles);
 
-        Control.AddOptionCheckBox(CCVars.AdminOverlayPlaytime, EnableOverlayPlaytimeCheckBox);
-        Control.AddOptionCheckBox(CCVars.AdminOverlayStartingJob, EnableOverlayStartingJobCheckBox);
+        Control.AddOptionSwitch(CCVars.AdminOverlayPlaytime, EnableOverlayPlaytimeToggleStatusButton);
+        Control.AddOptionSwitch(CCVars.AdminOverlayStartingJob, EnableOverlayStartingJobToggleStatusButton);
 
         Control.Initialize();
 
@@ -81,7 +81,7 @@ public sealed partial class AdminOptionsTab : Control
             OverlayGhostHideMin,
             OverlayGhostHideMax);
 
-        Control.AddOptionCheckBox(CCVars.AdminStripMenuOverlayDefault, EnableAdminStripOverlayDefault);
+        Control.AddOptionSwitch(CCVars.AdminStripMenuOverlayDefault, EnableAdminStripOverlayDefaultToggleStatusButton);
     }
 }
 

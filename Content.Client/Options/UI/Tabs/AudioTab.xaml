@@ -1,27 +1,50 @@
-﻿<Control xmlns="https://spacestation14.io"
+<Control xmlns="https://spacestation14.io"
          xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-         xmlns:ui="clr-namespace:Content.Client.Options.UI">
+         xmlns:ui="clr-namespace:Content.Client.Options.UI"
+         xmlns:controls="clr-namespace:Content.Client.UserInterface.Controls">
     <BoxContainer Orientation="Vertical">
-        <BoxContainer Orientation="Vertical" Margin="8 8 8 8" VerticalExpand="True">
-            <Label Text="{Loc 'ui-options-volume-label'}"
-                   StyleClasses="LabelKeyText"/>
-            <BoxContainer Orientation="Vertical" Margin="0 3 0 0">
-                <ui:OptionSlider Name="SliderVolumeMaster" Title="{Loc 'ui-options-master-volume'}"
-                                 Margin="0 0 0 8" />
-                <ui:OptionSlider Name="SliderVolumeMidi" Title="{Loc 'ui-options-midi-volume'}" />
-                <ui:OptionSlider Name="SliderVolumeAmbientMusic" Title="{Loc 'ui-options-ambient-music-volume'}" />
-                <ui:OptionSlider Name="SliderVolumeAmbience" Title="{Loc 'ui-options-ambience-volume'}" />
-                <ui:OptionSlider Name="SliderVolumeLobby" Title="{Loc 'ui-options-lobby-volume'}" />
-                <ui:OptionSlider Name="SliderVolumeInterface" Title="{Loc 'ui-options-interface-volume'}" />
-                <ui:OptionSlider Name="SliderMaxAmbienceSounds" Title="{Loc 'ui-options-ambience-max-sounds'}"
-                                 Margin="0 0 0 8" />
-                <CheckBox Name="LobbyMusicCheckBox" Text="{Loc 'ui-options-lobby-music'}" />
-                <CheckBox Name="RestartSoundsCheckBox" Text="{Loc 'ui-options-restart-sounds'}" />
-                <CheckBox Name="EventMusicCheckBox" Text="{Loc 'ui-options-event-music'}" />
-                <CheckBox Name="AdminSoundsCheckBox" Text="{Loc 'ui-options-admin-sounds'}" />
-                <CheckBox Name="BwoinkSoundCheckBox" Text="{Loc 'ui-options-bwoink-sound'}" />
+        <ScrollContainer VerticalExpand="True" HScrollEnabled="False">
+            <BoxContainer Orientation="Vertical" Margin="8" SeparationOverride="8">
+                <ui:OptionSection Title="{Loc 'ui-options-volume-label'}">
+                    <ui:OptionRow Title="{Loc 'ui-options-master-volume'}">
+                        <ui:OptionSlider Name="SliderVolumeMaster" ShowTitle="False" HorizontalExpand="True" />
+                    </ui:OptionRow>
+                    <ui:OptionRow Title="{Loc 'ui-options-midi-volume'}">
+                        <ui:OptionSlider Name="SliderVolumeMidi" ShowTitle="False" HorizontalExpand="True" />
+                    </ui:OptionRow>
+                    <ui:OptionRow Title="{Loc 'ui-options-ambient-music-volume'}">
+                        <ui:OptionSlider Name="SliderVolumeAmbientMusic" ShowTitle="False" HorizontalExpand="True" />
+                    </ui:OptionRow>
+                    <ui:OptionRow Title="{Loc 'ui-options-ambience-volume'}">
+                        <ui:OptionSlider Name="SliderVolumeAmbience" ShowTitle="False" HorizontalExpand="True" />
+                    </ui:OptionRow>
+                    <ui:OptionRow Title="{Loc 'ui-options-lobby-volume'}">
+                        <ui:OptionSlider Name="SliderVolumeLobby" ShowTitle="False" HorizontalExpand="True" />
+                    </ui:OptionRow>
+                    <ui:OptionRow Title="{Loc 'ui-options-interface-volume'}">
+                        <ui:OptionSlider Name="SliderVolumeInterface" ShowTitle="False" HorizontalExpand="True" />
+                    </ui:OptionRow>
+                    <ui:OptionRow Title="{Loc 'ui-options-ambience-max-sounds'}">
+                        <ui:OptionSlider Name="SliderMaxAmbienceSounds" ShowTitle="False" HorizontalExpand="True" />
+                    </ui:OptionRow>
+                    <ui:OptionRow Title="{Loc 'ui-options-lobby-music'}">
+                        <controls:SwitchButton Name="LobbyMusicToggleStatusButton" HorizontalAlignment="Right" />
+                    </ui:OptionRow>
+                    <ui:OptionRow Title="{Loc 'ui-options-restart-sounds'}">
+                        <controls:SwitchButton Name="RestartSoundsToggleStatusButton" HorizontalAlignment="Right" />
+                    </ui:OptionRow>
+                    <ui:OptionRow Title="{Loc 'ui-options-event-music'}">
+                        <controls:SwitchButton Name="EventMusicToggleStatusButton" HorizontalAlignment="Right" />
+                    </ui:OptionRow>
+                    <ui:OptionRow Title="{Loc 'ui-options-admin-sounds'}">
+                        <controls:SwitchButton Name="AdminSoundsToggleStatusButton" HorizontalAlignment="Right" />
+                    </ui:OptionRow>
+                    <ui:OptionRow Name="BwoinkSoundRow" Title="{Loc 'ui-options-bwoink-sound'}">
+                        <controls:SwitchButton Name="BwoinkSoundToggleStatusButton" HorizontalAlignment="Right" />
+                    </ui:OptionRow>
+                </ui:OptionSection>
             </BoxContainer>
-        </BoxContainer>
+        </ScrollContainer>
         <ui:OptionsTabControlRow Name="Control" Access="Public" />
     </BoxContainer>
 </Control>

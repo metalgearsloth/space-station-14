@@ -44,6 +44,11 @@ public sealed partial class OptionRow : Control
         DescriptionLabel.Visible = false;
     }
 
+    public void AddContent(Control control)
+    {
+        ContentContainer.AddChild(control);
+    }
+
     protected override void OnThemeUpdated()
     {
         base.OnThemeUpdated();
@@ -53,7 +58,7 @@ public sealed partial class OptionRow : Control
             BackgroundColor = Theme.ResolveColorOrSpecified(
                 "optionsRowColor",
                 Theme.ResolveColorOrSpecified("slotColor", Color.FromHex("#1F242E"))),
-            BorderColor = Theme.ResolveColorOrSpecified("slotOutline", Color.FromHex("#252632")),
+            BorderColor = Theme.ResolveColorOrSpecified("slotOutline", Color.FromHex("#333850")),
             BorderThickness = new Thickness(1),
         };
 

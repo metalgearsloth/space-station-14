@@ -21,6 +21,11 @@ public sealed partial class OptionSection : Control
         XamlChildren = RowContainer.Children;
     }
 
+    public void AddRow(Control control)
+    {
+        RowContainer.AddChild(control);
+    }
+
     protected override void OnThemeUpdated()
     {
         base.OnThemeUpdated();

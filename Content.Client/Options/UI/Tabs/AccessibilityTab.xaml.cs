@@ -12,19 +12,19 @@ public sealed partial class AccessibilityTab : Control
     {
         RobustXamlLoader.Load(this);
 
-        Control.AddOptionCheckBox(CCVars.ChatEnableColorName, EnableColorNameCheckBox);
-        Control.AddOptionCheckBox(CCVars.AccessibilityColorblindFriendly, ColorblindFriendlyCheckBox);
-        Control.AddOptionCheckBox(CCVars.ReducedMotion, ReducedMotionCheckBox);
-        Control.AddOptionCheckBox(CCVars.DisableAiStatic, DisableAiStaticCheckBox);
+        Control.AddOptionSwitch(CCVars.ChatEnableColorName, EnableColorNameToggleStatusButton);
+        Control.AddOptionSwitch(CCVars.AccessibilityColorblindFriendly, ColorblindFriendlyToggleStatusButton);
+        Control.AddOptionSwitch(CCVars.ReducedMotion, ReducedMotionToggleStatusButton);
+        Control.AddOptionSwitch(CCVars.DisableAiStatic, DisableAiStaticToggleStatusButton);
         Control.AddOptionPercentSlider(CCVars.ScreenShakeIntensity, ScreenShakeIntensitySlider);
         Control.AddOptionPercentSlider(CCVars.ChatWindowOpacity, ChatWindowOpacitySlider);
         Control.AddOptionPercentSlider(CCVars.SpeechBubbleTextOpacity, SpeechBubbleTextOpacitySlider);
         Control.AddOptionPercentSlider(CCVars.SpeechBubbleSpeakerOpacity, SpeechBubbleSpeakerOpacitySlider);
         Control.AddOptionPercentSlider(CCVars.SpeechBubbleBackgroundOpacity, SpeechBubbleBackgroundOpacitySlider);
-        Control.AddOptionCheckBox(CCVars.ChatAutoFillHighlights, AutoFillHighlightsCheckBox);
+        Control.AddOptionSwitch(CCVars.ChatAutoFillHighlights, AutoFillHighlightsToggleStatusButton);
         Control.AddOptionColorSlider(CCVars.ChatHighlightsColor, HighlightsColorSlider);
 
-        Control.AddOptionCheckBox(CCVars.AccessibilityClientCensorNudity, CensorNudityCheckBox);
+        Control.AddOptionSwitch(CCVars.AccessibilityClientCensorNudity, CensorNudityToggleStatusButton);
 
         Control.Initialize();
     }

@@ -1,6 +1,7 @@
 <Control xmlns="https://spacestation14.io">
-    <BoxContainer Orientation="Horizontal" HorizontalExpand="True">
+    <BoxContainer Orientation="Horizontal" HorizontalExpand="True" MinHeight="32">
         <Slider Name="Slider"
+                MinHeight="32"
                 HorizontalExpand="True"
                 Rounded="True" />
         <SpinBox Name="SpinBox"

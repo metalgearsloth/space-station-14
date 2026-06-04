@@ -59,11 +59,11 @@ public sealed partial class AudioTab : Control
             _cfg.GetCVar(CCVars.MinMaxAmbientSourcesConfigured),
             _cfg.GetCVar(CCVars.MaxMaxAmbientSourcesConfigured));
 
-        Control.AddOptionCheckBox(CCVars.LobbyMusicEnabled, LobbyMusicCheckBox);
-        Control.AddOptionCheckBox(CCVars.RestartSoundsEnabled, RestartSoundsCheckBox);
-        Control.AddOptionCheckBox(CCVars.EventMusicEnabled, EventMusicCheckBox);
-        Control.AddOptionCheckBox(CCVars.AdminSoundsEnabled, AdminSoundsCheckBox);
-        Control.AddOptionCheckBox(CCVars.BwoinkSoundEnabled, BwoinkSoundCheckBox);
+        Control.AddOptionSwitch(CCVars.LobbyMusicEnabled, LobbyMusicToggleStatusButton);
+        Control.AddOptionSwitch(CCVars.RestartSoundsEnabled, RestartSoundsToggleStatusButton);
+        Control.AddOptionSwitch(CCVars.EventMusicEnabled, EventMusicToggleStatusButton);
+        Control.AddOptionSwitch(CCVars.AdminSoundsEnabled, AdminSoundsToggleStatusButton);
+        Control.AddOptionSwitch(CCVars.BwoinkSoundEnabled, BwoinkSoundToggleStatusButton);
 
         Control.Initialize();
     }
@@ -84,7 +84,7 @@ public sealed partial class AudioTab : Control
 
     private void UpdateAdminButtonsVisibility()
     {
-        BwoinkSoundCheckBox.Visible = _admin.IsActive();
+        BwoinkSoundRow.Visible = _admin.IsActive();
     }
 
     private void OnMasterVolumeSliderChanged(float value)
