@@ -6,16 +6,14 @@
 
                 <!-- Keybind sections are added here in the C# code -->
 
+                <ui:OptionRow Title="{Loc 'ui-options-binds-reset-all'}"
+                              Description="{Loc 'ui-options-binds-explanation'}"
+                              HorizontalExpand="True">
+                    <Button Name="ResetAllButton"
+                            Text="{Loc 'ui-options-binds-reset-all'}"
+                            HorizontalAlignment="Right" />
+                </ui:OptionRow>
             </BoxContainer>
         </ScrollContainer>
-        <BoxContainer Margin="8 0 8 8">
-            <ui:OptionRow Title="{Loc 'ui-options-binds-reset-all'}"
-                          Description="{Loc 'ui-options-binds-explanation'}"
-                          HorizontalExpand="True">
-                <Button Name="ResetAllButton"
-                        Text="{Loc 'ui-options-binds-reset-all'}"
-                        HorizontalAlignment="Right" />
-            </ui:OptionRow>
-        </BoxContainer>
     </BoxContainer>
 </Control>
