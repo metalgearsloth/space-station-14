@@ -28,19 +28,19 @@
                         <ui:OptionSlider Name="SliderMaxAmbienceSounds" ShowTitle="False" HorizontalExpand="True" />
                     </ui:OptionRow>
                     <ui:OptionRow Title="{Loc 'ui-options-lobby-music'}">
-                        <controls:SwitchButton Name="LobbyMusicToggleStatusButton" HorizontalAlignment="Right" />
+                        <controls:SwitchButton Name="LobbyMusicToggleStatusButton" HorizontalAlignment="Right" OffStateText="" OnStateText="" />
                     </ui:OptionRow>
                     <ui:OptionRow Title="{Loc 'ui-options-restart-sounds'}">
-                        <controls:SwitchButton Name="RestartSoundsToggleStatusButton" HorizontalAlignment="Right" />
+                        <controls:SwitchButton Name="RestartSoundsToggleStatusButton" HorizontalAlignment="Right" OffStateText="" OnStateText="" />
                     </ui:OptionRow>
                     <ui:OptionRow Title="{Loc 'ui-options-event-music'}">
-                        <controls:SwitchButton Name="EventMusicToggleStatusButton" HorizontalAlignment="Right" />
+                        <controls:SwitchButton Name="EventMusicToggleStatusButton" HorizontalAlignment="Right" OffStateText="" OnStateText="" />
                     </ui:OptionRow>
                     <ui:OptionRow Title="{Loc 'ui-options-admin-sounds'}">
-                        <controls:SwitchButton Name="AdminSoundsToggleStatusButton" HorizontalAlignment="Right" />
+                        <controls:SwitchButton Name="AdminSoundsToggleStatusButton" HorizontalAlignment="Right" OffStateText="" OnStateText="" />
                     </ui:OptionRow>
                     <ui:OptionRow Name="BwoinkSoundRow" Title="{Loc 'ui-options-bwoink-sound'}">
-                        <controls:SwitchButton Name="BwoinkSoundToggleStatusButton" HorizontalAlignment="Right" />
+                        <controls:SwitchButton Name="BwoinkSoundToggleStatusButton" HorizontalAlignment="Right" OffStateText="" OnStateText="" />
                     </ui:OptionRow>
                 </ui:OptionSection>
             </BoxContainer>
@@ -48,3 +48,4 @@
         <ui:OptionsTabControlRow Name="Control" Access="Public" />
     </BoxContainer>
 </Control>
+

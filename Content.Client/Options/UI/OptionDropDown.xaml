@@ -5,6 +5,6 @@
         <Label Name="NameLabel" MinWidth="400" />
         <OptionButton Name="Button"
                       Access="Public"
-                      MinWidth="180" />
+                      MinWidth="144" />
     </BoxContainer>
 </Control>

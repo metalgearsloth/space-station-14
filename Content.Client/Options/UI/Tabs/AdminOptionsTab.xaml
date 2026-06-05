@@ -25,10 +25,10 @@
                         <ui:OptionDropDown Name="DropDownOverlayAntagSymbol" ShowTitle="False" HorizontalExpand="True" />
                     </ui:OptionRow>
                     <ui:OptionRow Title="{Loc 'ui-options-admin-enable-overlay-playtime'}">
-                        <controls:SwitchButton Name="EnableOverlayPlaytimeToggleStatusButton" HorizontalAlignment="Right" />
+                        <controls:SwitchButton Name="EnableOverlayPlaytimeToggleStatusButton" HorizontalAlignment="Right" OffStateText="" OnStateText="" />
                     </ui:OptionRow>
                     <ui:OptionRow Title="{Loc 'ui-options-admin-enable-overlay-starting-job'}">
-                        <controls:SwitchButton Name="EnableOverlayStartingJobToggleStatusButton" HorizontalAlignment="Right" />
+                        <controls:SwitchButton Name="EnableOverlayStartingJobToggleStatusButton" HorizontalAlignment="Right" OffStateText="" OnStateText="" />
                     </ui:OptionRow>
                     <ui:OptionRow Title="{Loc 'ui-options-admin-overlay-merge-distance'}">
                         <ui:OptionSlider Name="OverlayMergeDistanceSlider" ShowTitle="False" HorizontalExpand="True" />
@@ -43,7 +43,7 @@
 
                 <ui:OptionSection Title="{Loc 'ui-options-admin-strip-overlay-title'}">
                     <ui:OptionRow Title="{Loc 'ui-options-admin-strip-overlay-setting'}">
-                        <controls:SwitchButton Name="EnableAdminStripOverlayDefaultToggleStatusButton" HorizontalAlignment="Right" />
+                        <controls:SwitchButton Name="EnableAdminStripOverlayDefaultToggleStatusButton" HorizontalAlignment="Right" OffStateText="" OnStateText="" />
                     </ui:OptionRow>
                 </ui:OptionSection>
             </BoxContainer>
@@ -51,3 +51,4 @@
         <ui:OptionsTabControlRow Name="Control" Access="Public" />
     </BoxContainer>
 </Control>
+

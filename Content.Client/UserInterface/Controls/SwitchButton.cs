@@ -1,5 +1,8 @@
 using System.Numerics;
+using Content.Shared.CCVar;
 using Robust.Client.UserInterface.Controls;
+using Robust.Shared.Configuration;
+using Robust.Shared.Timing;
 
 namespace Content.Client.UserInterface.Controls
 {
@@ -7,9 +10,13 @@ namespace Content.Client.UserInterface.Controls
     ///     A type of toggleable button that a switch icon and a secondary text label both showing the current state
     /// </summary>
     [Virtual]
-    public class SwitchButton : ContainerButton
+    public partial class SwitchButton : ContainerButton
     {
+        [Dependency] private IConfigurationManager _configurationManager = default!;
+
         public const string StyleClassTrackFill = "trackFill";
+        public const string StyleClassTrackFillOn = "trackFillOn";
+        public const string StyleClassTrackFillOnClip = "trackFillOnClip";
         public const string StyleClassTrackOutline = "trackOutline";
         public const string StyleClassThumbFill = "thumbFill";
         public const string StyleClassThumbOutline = "thumbOutline";
@@ -18,6 +25,14 @@ namespace Content.Client.UserInterface.Controls
         public const string StylePropertySeparation = "separation";
 
         private const int DefaultSeparation = 0;
+        private const float DefaultThumbAnimationDuration = 0.125f;
+
+        private float _thumbPosition;
+        private float _thumbStartPosition;
+        private float _thumbTargetPosition;
+        private float _thumbAnimationTime;
+        private bool _thumbPositionInitialized;
+        private bool _skipNextThumbAnimation;
 
         private int ActualSeparation
         {
@@ -33,6 +48,10 @@ namespace Content.Client.UserInterface.Controls
         }
 
         public int? SeparationOverride { get; set; }
+
+        [ViewVariables(VVAccess.ReadWrite)]
+        public float ThumbAnimationDuration { get; set; } = DefaultThumbAnimationDuration;
+
         public Label Label { get; }
         public Label OffStateLabel { get; }
         public Label OnStateLabel { get; }
@@ -40,13 +59,27 @@ namespace Content.Client.UserInterface.Controls
         // I tried to find a way not to have five textures here, but the other
         // options were worse.
         public TextureRect TrackFill { get; }
+        public TextureRect TrackFillOn { get; }
+        public ClipControl TrackFillOnClip { get; }
         public TextureRect TrackOutline { get; }
         public TextureRect ThumbFill { get; }
         public TextureRect ThumbOutline { get; }
         public TextureRect Symbol { get; }
 
+        public void SetPressedNoAnimation(bool pressed)
+        {
+            _skipNextThumbAnimation = true;
+            Pressed = pressed;
+
+            // If the value did not change, DrawModeChanged will not run.
+            if (_skipNextThumbAnimation)
+                UpdateThumbTarget();
+        }
+
         public SwitchButton()
         {
+            IoCManager.InjectDependencies(this);
+
             ToggleMode = true;
 
             TrackFill = new TextureRect
@@ -54,6 +87,22 @@ namespace Content.Client.UserInterface.Controls
                 StyleClasses = { StyleClassTrackFill },
                 VerticalAlignment = VAlignment.Center,
             };
+
+            TrackFillOn = new TextureRect
+            {
+                StyleClasses = { StyleClassTrackFillOn },
+                VerticalAlignment = VAlignment.Center,
+            };
+
+            TrackFillOnClip = new ClipControl
+            {
+                StyleClasses = { StyleClassTrackFillOnClip },
+                ClipHorizontal = false,
+                ClipVertical = false,
+                RectClipContent = true,
+                VerticalAlignment = VAlignment.Center,
+            };
+            TrackFillOnClip.AddChild(TrackFillOn);
 
             TrackOutline = new TextureRect
             {
@@ -95,12 +144,40 @@ namespace Content.Client.UserInterface.Controls
 
             AddChild(Label);
             AddChild(TrackFill);
+            AddChild(TrackFillOnClip);
             AddChild(TrackOutline);
+            AddChild(Symbol);
             AddChild(ThumbFill);
             AddChild(ThumbOutline);
-            AddChild(Symbol);
             AddChild(OffStateLabel);
             AddChild(OnStateLabel);
+        }
+
+        protected override void FrameUpdate(FrameEventArgs args)
+        {
+            base.FrameUpdate(args);
+
+            if (MathHelper.CloseTo(_thumbPosition, _thumbTargetPosition))
+                return;
+
+            if (ThumbAnimationDuration <= 0f)
+            {
+                _thumbPosition = _thumbTargetPosition;
+                InvalidateArrange();
+                return;
+            }
+
+            _thumbAnimationTime += args.DeltaSeconds;
+
+            var progress = MathHelper.Clamp01(_thumbAnimationTime / ThumbAnimationDuration);
+            var easedProgress = 1f - MathF.Pow(1f - progress, 3f);
+
+            _thumbPosition = MathHelper.Lerp(_thumbStartPosition, _thumbTargetPosition, easedProgress);
+
+            if (progress >= 1f)
+                _thumbPosition = _thumbTargetPosition;
+
+            InvalidateArrange();
         }
 
         protected override void DrawModeChanged()
@@ -148,6 +225,7 @@ namespace Content.Client.UserInterface.Controls
             {
                 Label.RemoveStyleClass("dummy");
                 TrackFill.RemoveStyleClass("dummy");
+                TrackFillOn.RemoveStyleClass("dummy");
                 TrackOutline.RemoveStyleClass("dummy");
                 ThumbFill.RemoveStyleClass("dummy");
                 ThumbOutline.RemoveStyleClass("dummy");
@@ -160,6 +238,7 @@ namespace Content.Client.UserInterface.Controls
             // doesn't support a button being both pressed and disabled
 
             UpdateAppearance();
+            UpdateThumbTarget();
         }
 
         /// <summary>
@@ -215,6 +294,30 @@ namespace Content.Client.UserInterface.Controls
             {
                 OnStateLabel.Visible = Pressed;
             }
+        }
+
+        private void UpdateThumbTarget()
+        {
+            _thumbTargetPosition = Pressed ? 1f : 0f;
+
+            if (!_thumbPositionInitialized ||
+                _skipNextThumbAnimation ||
+                _configurationManager == null ||
+                _configurationManager.GetCVar(CCVars.ReducedMotion) ||
+                ThumbAnimationDuration <= 0f)
+            {
+                _thumbPosition = _thumbTargetPosition;
+                _thumbStartPosition = _thumbTargetPosition;
+                _thumbAnimationTime = 0f;
+                _thumbPositionInitialized = true;
+                _skipNextThumbAnimation = false;
+                InvalidateArrange();
+                return;
+            }
+
+            _thumbStartPosition = _thumbPosition;
+            _thumbAnimationTime = 0f;
+            InvalidateArrange();
         }
 
         protected override void StylePropertiesChanged()
@@ -296,13 +399,17 @@ namespace Content.Client.UserInterface.Controls
 
             var iconTargetBox = new UIBox2(iconPosition, 0, iconPosition + TrackOutline.DesiredSize.X, finalSize.Y);
             TrackFill.Arrange(iconTargetBox);
+            TrackFillOn.Measure(TrackOutline.DesiredSize);
+            var onFillWidth = TrackOutline.DesiredSize.X * _thumbPosition;
+            var onFillClipBox = new UIBox2(iconPosition, 0, iconPosition + onFillWidth, finalSize.Y);
+            TrackFillOnClip.Arrange(onFillClipBox);
             TrackOutline.Arrange(iconTargetBox);
             Symbol.Arrange(iconTargetBox);
 
             ThumbOutline.Measure(TrackOutline.DesiredSize); // didn't measure in MeasureOverride, don't need its size there
-            var thumbLeft = iconTargetBox.Left;
-            if (Pressed)
-                thumbLeft = iconTargetBox.Right - ThumbOutline.DesiredSize.X;
+            var thumbOffLeft = iconTargetBox.Left;
+            var thumbOnLeft = iconTargetBox.Right - ThumbOutline.DesiredSize.X;
+            var thumbLeft = MathHelper.Lerp(thumbOffLeft, thumbOnLeft, _thumbPosition);
             var thumbTargetBox = new UIBox2(thumbLeft, 0, thumbLeft + ThumbOutline.DesiredSize.X, finalSize.Y);
             ThumbFill.Arrange(thumbTargetBox);
             ThumbOutline.Arrange(thumbTargetBox);

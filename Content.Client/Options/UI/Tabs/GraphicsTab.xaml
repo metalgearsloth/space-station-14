@@ -3,22 +3,24 @@
                   xmlns:ui="clr-namespace:Content.Client.Options.UI"
                   xmlns:controls="clr-namespace:Content.Client.UserInterface.Controls">
     <BoxContainer Orientation="Vertical">
-        <ScrollContainer VerticalExpand="True">
+        <ScrollContainer VerticalExpand="True" HScrollEnabled="False">
             <BoxContainer Orientation="Vertical" Margin="8 8 8 8" SeparationOverride="8">
                 <ui:OptionSection Title="{Loc 'ui-options-display-label'}">
                     <ui:OptionRow Title="{Loc 'ui-options-fullscreen'}">
-                        <controls:SwitchButton Name="FullscreenToggleStatusButton" HorizontalAlignment="Right" />
+                        <controls:SwitchButton Name="FullscreenToggleStatusButton" HorizontalAlignment="Right" OffStateText="" OnStateText="" />
                     </ui:OptionRow>
                     <ui:OptionRow Title="{Loc 'ui-options-vsync'}">
-                        <controls:SwitchButton Name="VSyncToggleStatusButton" HorizontalAlignment="Right" />
+                        <controls:SwitchButton Name="VSyncToggleStatusButton" HorizontalAlignment="Right" OffStateText="" OnStateText="" />
                     </ui:OptionRow>
                     <ui:OptionRow Name="MaxFpsContainer"
                                   Title="{Loc 'ui-options-max-fps'}"
                                   Description="{Loc 'ui-options-max-fps-tooltip'}"
+                                  ContentBelowLabel="True"
                                   ToolTip="{Loc 'ui-options-max-fps-tooltip'}">
-                        <BoxContainer Orientation="Horizontal" HorizontalExpand="True" SeparationOverride="8">
+                        <BoxContainer Orientation="Vertical" HorizontalExpand="True" SeparationOverride="6">
                             <ui:OptionIntInput Name="MaxFpsInput" HorizontalExpand="True" />
                             <Button Name="MaxFpsDisplayRateButton"
+                                    HorizontalAlignment="Right"
                                     Text="{Loc 'ui-options-max-fps-display-rate'}" />
                         </BoxContainer>
                     </ui:OptionRow>
@@ -29,13 +31,13 @@
                         <ui:OptionDropDown Name="DropDownLightingQuality" ShowTitle="False" HorizontalExpand="True" />
                     </ui:OptionRow>
                     <ui:OptionRow Title="{Loc 'ui-options-vp-low-res'}">
-                        <controls:SwitchButton Name="ViewportLowResToggleStatusButton" HorizontalAlignment="Right" />
+                        <controls:SwitchButton Name="ViewportLowResToggleStatusButton" HorizontalAlignment="Right" OffStateText="" OnStateText="" />
                     </ui:OptionRow>
                     <ui:OptionRow Title="{Loc 'ui-options-parallax-low-quality'}">
-                        <controls:SwitchButton Name="ParallaxLowQualityToggleStatusButton" HorizontalAlignment="Right" />
+                        <controls:SwitchButton Name="ParallaxLowQualityToggleStatusButton" HorizontalAlignment="Right" OffStateText="" OnStateText="" />
                     </ui:OptionRow>
                     <ui:OptionRow Title="{Loc 'ui-options-ambient-occlusion'}">
-                        <controls:SwitchButton Name="AmbientOcclusionToggleStatusButton" HorizontalAlignment="Right" />
+                        <controls:SwitchButton Name="AmbientOcclusionToggleStatusButton" HorizontalAlignment="Right" OffStateText="" OnStateText="" />
                     </ui:OptionRow>
                 </ui:OptionSection>
 
@@ -44,7 +46,7 @@
                         <ui:OptionDropDown Name="DropDownUIScale" ShowTitle="False" HorizontalExpand="True" />
                     </ui:OptionRow>
                     <ui:OptionRow Title="{Loc 'ui-options-vp-stretch'}">
-                        <controls:SwitchButton Name="ViewportStretchToggleStatusButton" HorizontalAlignment="Right" />
+                        <controls:SwitchButton Name="ViewportStretchToggleStatusButton" HorizontalAlignment="Right" OffStateText="" OnStateText="" />
                     </ui:OptionRow>
                     <ui:OptionRow Name="ViewportScaleRow" Title="{Loc ui-options-vp-scale}">
                         <ui:OptionSlider Name="ViewportScaleSlider" ShowTitle="False" HorizontalExpand="True" />
@@ -53,13 +55,13 @@
                                   Title="{Loc 'ui-options-vp-integer-scaling'}"
                                   Description="{Loc 'ui-options-vp-integer-scaling-tooltip'}"
                                   ToolTip="{Loc 'ui-options-vp-integer-scaling-tooltip'}">
-                        <controls:SwitchButton Name="IntegerScalingToggleStatusButton" HorizontalAlignment="Right" />
+                        <controls:SwitchButton Name="IntegerScalingToggleStatusButton" HorizontalAlignment="Right" OffStateText="" OnStateText="" />
                     </ui:OptionRow>
                     <ui:OptionRow Name="ViewportVerticalFitRow"
                                   Title="{Loc 'ui-options-vp-vertical-fit'}"
                                   Description="{Loc 'ui-options-vp-vertical-fit-tooltip'}"
                                   ToolTip="{Loc 'ui-options-vp-vertical-fit-tooltip'}">
-                        <controls:SwitchButton Name="ViewportVerticalFitToggleStatusButton" HorizontalAlignment="Right" />
+                        <controls:SwitchButton Name="ViewportVerticalFitToggleStatusButton" HorizontalAlignment="Right" OffStateText="" OnStateText="" />
                     </ui:OptionRow>
                     <ui:OptionRow Name="ViewportWidthRow" Title="{Loc ui-options-vp-width}">
                         <ui:OptionSlider Name="ViewportWidthSlider" ShowTitle="False" HorizontalExpand="True" />
@@ -71,7 +73,7 @@
 
                 <ui:OptionSection Title="{Loc 'ui-options-misc-label'}">
                     <ui:OptionRow Title="{Loc 'ui-options-fps-counter'}">
-                        <controls:SwitchButton Name="FpsCounterToggleStatusButton" HorizontalAlignment="Right" />
+                        <controls:SwitchButton Name="FpsCounterToggleStatusButton" HorizontalAlignment="Right" OffStateText="" OnStateText="" />
                     </ui:OptionRow>
                 </ui:OptionSection>
             </BoxContainer>
@@ -79,3 +81,4 @@
         <ui:OptionsTabControlRow Name="Control" Access="Public" />
     </BoxContainer>
 </tabs:GraphicsTab>
+

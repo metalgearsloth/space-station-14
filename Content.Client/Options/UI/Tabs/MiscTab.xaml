@@ -17,40 +17,40 @@
 
                 <ui:OptionSection Title="{Loc 'ui-options-general-discord'}">
                     <ui:OptionRow Title="{Loc 'ui-options-discordrich'}">
-                        <controls:SwitchButton Name="DiscordRichToggleStatusButton" HorizontalAlignment="Right" />
+                        <controls:SwitchButton Name="DiscordRichToggleStatusButton" HorizontalAlignment="Right" OffStateText="" OnStateText="" />
                     </ui:OptionRow>
                 </ui:OptionSection>
 
                 <ui:OptionSection Title="{Loc 'ui-options-general-speech'}">
                     <ui:OptionRow Name="ShowOocPatronColorRow" Title="{Loc 'ui-options-show-ooc-patron-color'}">
-                        <controls:SwitchButton Name="ShowOocPatronColorToggleStatusButton" HorizontalAlignment="Right" />
+                        <controls:SwitchButton Name="ShowOocPatronColorToggleStatusButton" HorizontalAlignment="Right" OffStateText="" OnStateText="" />
                     </ui:OptionRow>
                     <ui:OptionRow Title="{Loc 'ui-options-show-looc-on-head'}">
-                        <controls:SwitchButton Name="ShowLoocAboveHeadToggleStatusButton" HorizontalAlignment="Right" />
+                        <controls:SwitchButton Name="ShowLoocAboveHeadToggleStatusButton" HorizontalAlignment="Right" OffStateText="" OnStateText="" />
                     </ui:OptionRow>
                     <ui:OptionRow Title="{Loc 'ui-options-fancy-speech'}">
-                        <controls:SwitchButton Name="FancySpeechBubblesToggleStatusButton" HorizontalAlignment="Right" />
+                        <controls:SwitchButton Name="FancySpeechBubblesToggleStatusButton" HorizontalAlignment="Right" OffStateText="" OnStateText="" />
                     </ui:OptionRow>
                     <ui:OptionRow Title="{Loc 'ui-options-fancy-name-background'}">
-                        <controls:SwitchButton Name="FancyNameBackgroundsToggleStatusButton" HorizontalAlignment="Right" />
+                        <controls:SwitchButton Name="FancyNameBackgroundsToggleStatusButton" HorizontalAlignment="Right" OffStateText="" OnStateText="" />
                     </ui:OptionRow>
                 </ui:OptionSection>
 
                 <ui:OptionSection Title="{Loc 'ui-options-general-cursor'}">
                     <ui:OptionRow Title="{Loc 'ui-options-show-held-item'}">
-                        <controls:SwitchButton Name="ShowHeldItemToggleStatusButton" HorizontalAlignment="Right" />
+                        <controls:SwitchButton Name="ShowHeldItemToggleStatusButton" HorizontalAlignment="Right" OffStateText="" OnStateText="" />
                     </ui:OptionRow>
                     <ui:OptionRow Title="{Loc 'ui-options-show-combat-mode-indicators'}">
-                        <controls:SwitchButton Name="ShowCombatModeIndicatorsToggleStatusButton" HorizontalAlignment="Right" />
+                        <controls:SwitchButton Name="ShowCombatModeIndicatorsToggleStatusButton" HorizontalAlignment="Right" OffStateText="" OnStateText="" />
                     </ui:OptionRow>
                 </ui:OptionSection>
 
                 <ui:OptionSection Title="{Loc 'ui-options-general-storage'}">
                     <ui:OptionRow Title="{Loc 'ui-options-opaque-storage-window'}">
-                        <controls:SwitchButton Name="OpaqueStorageWindowToggleStatusButton" HorizontalAlignment="Right" />
+                        <controls:SwitchButton Name="OpaqueStorageWindowToggleStatusButton" HorizontalAlignment="Right" OffStateText="" OnStateText="" />
                     </ui:OptionRow>
                     <ui:OptionRow Title="{Loc 'ui-options-static-storage-ui'}">
-                        <controls:SwitchButton Name="StaticStorageUIToggleStatusButton" HorizontalAlignment="Right" />
+                        <controls:SwitchButton Name="StaticStorageUIToggleStatusButton" HorizontalAlignment="Right" OffStateText="" OnStateText="" />
                     </ui:OptionRow>
                 </ui:OptionSection>
             </BoxContainer>
@@ -58,3 +58,4 @@
         <ui:OptionsTabControlRow Name="Control" Access="Public" />
     </BoxContainer>
 </tabs:MiscTab>
+

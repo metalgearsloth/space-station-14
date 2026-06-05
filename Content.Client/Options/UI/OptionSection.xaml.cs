@@ -19,6 +19,7 @@ public sealed partial class OptionSection : Control
     {
         RobustXamlLoader.Load(this);
         XamlChildren = RowContainer.Children;
+        ApplyTheme();
     }
 
     public void AddRow(Control control)
@@ -29,7 +30,11 @@ public sealed partial class OptionSection : Control
     protected override void OnThemeUpdated()
     {
         base.OnThemeUpdated();
+        ApplyTheme();
+    }
 
+    private void ApplyTheme()
+    {
         var outline = Theme.ResolveColorOrSpecified("slotOutline", Color.FromHex("#333850"));
 
         SectionPanel.PanelOverride = new StyleBoxFlat

@@ -96,6 +96,8 @@ public sealed partial class OptionsTabControlRow : Control
 
     public OptionSwitchCVar AddOptionSwitch(CVarDef<bool> cVar, Content.Client.UserInterface.Controls.SwitchButton switchButton, bool invert = false)
     {
+        switchButton.OffStateText = string.Empty;
+        switchButton.OnStateText = string.Empty;
         return AddOption(new OptionSwitchCVar(this, _cfg, cVar, switchButton, invert));
     }
 
@@ -471,7 +473,7 @@ public sealed class OptionSwitchCVar : BaseOptionCVar<bool>
     protected override bool Value
     {
         get => _switchButton.Pressed ^ _invert;
-        set => _switchButton.Pressed = value ^ _invert;
+        set => _switchButton.SetPressedNoAnimation(value ^ _invert);
     }
 
     public OptionSwitchCVar(

@@ -7,16 +7,16 @@
             <BoxContainer Orientation="Vertical" Margin="8" SeparationOverride="8">
                 <ui:OptionSection Title="{Loc 'ui-options-accessability-header-visuals'}">
                     <ui:OptionRow Title="{Loc 'ui-options-reduced-motion'}">
-                        <controls:SwitchButton Name="ReducedMotionToggleStatusButton" HorizontalAlignment="Right" />
+                        <controls:SwitchButton Name="ReducedMotionToggleStatusButton" HorizontalAlignment="Right" OffStateText="" OnStateText="" />
                     </ui:OptionRow>
                     <ui:OptionRow Title="{Loc 'ui-options-disable-ai-static'}">
-                        <controls:SwitchButton Name="DisableAiStaticToggleStatusButton" HorizontalAlignment="Right" />
+                        <controls:SwitchButton Name="DisableAiStaticToggleStatusButton" HorizontalAlignment="Right" OffStateText="" OnStateText="" />
                     </ui:OptionRow>
                     <ui:OptionRow Title="{Loc 'ui-options-enable-color-name'}">
-                        <controls:SwitchButton Name="EnableColorNameToggleStatusButton" HorizontalAlignment="Right" />
+                        <controls:SwitchButton Name="EnableColorNameToggleStatusButton" HorizontalAlignment="Right" OffStateText="" OnStateText="" />
                     </ui:OptionRow>
                     <ui:OptionRow Title="{Loc 'ui-options-colorblind-friendly'}">
-                        <controls:SwitchButton Name="ColorblindFriendlyToggleStatusButton" HorizontalAlignment="Right" />
+                        <controls:SwitchButton Name="ColorblindFriendlyToggleStatusButton" HorizontalAlignment="Right" OffStateText="" OnStateText="" />
                     </ui:OptionRow>
                     <ui:OptionRow Title="{Loc 'ui-options-screen-shake-intensity'}">
                         <ui:OptionSlider Name="ScreenShakeIntensitySlider" ShowTitle="False" HorizontalExpand="True" />
@@ -34,7 +34,7 @@
                         <ui:OptionSlider Name="SpeechBubbleBackgroundOpacitySlider" ShowTitle="False" HorizontalExpand="True" />
                     </ui:OptionRow>
                     <ui:OptionRow Title="{Loc 'ui-options-auto-fill-highlights'}">
-                        <controls:SwitchButton Name="AutoFillHighlightsToggleStatusButton" HorizontalAlignment="Right" />
+                        <controls:SwitchButton Name="AutoFillHighlightsToggleStatusButton" HorizontalAlignment="Right" OffStateText="" OnStateText="" />
                     </ui:OptionRow>
                     <ui:OptionRow Title="{Loc 'ui-options-highlights-color'}">
                         <ui:OptionColorSlider Name="HighlightsColorSlider"
@@ -46,7 +46,7 @@
 
                 <ui:OptionSection Title="{Loc 'ui-options-accessability-header-content'}">
                     <ui:OptionRow Title="{Loc 'ui-options-censor-nudity'}">
-                        <controls:SwitchButton Name="CensorNudityToggleStatusButton" HorizontalAlignment="Right" />
+                        <controls:SwitchButton Name="CensorNudityToggleStatusButton" HorizontalAlignment="Right" OffStateText="" OnStateText="" />
                     </ui:OptionRow>
                 </ui:OptionSection>
             </BoxContainer>
@@ -54,3 +54,4 @@
         <ui:OptionsTabControlRow Name="Control" Access="Public" />
     </BoxContainer>
 </Control>
+

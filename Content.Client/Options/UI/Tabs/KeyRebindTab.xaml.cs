@@ -139,9 +139,11 @@ namespace Content.Client.Options.UI.Tabs
             {
                 var switchButton = new Content.Client.UserInterface.Controls.SwitchButton
                 {
-                    Pressed = currentState,
+                    OffStateText = string.Empty,
+                    OnStateText = string.Empty,
                     HorizontalAlignment = HAlignment.Right,
                 };
+                switchButton.SetPressedNoAnimation(currentState);
                 switchButton.OnToggled += callBackOnClick;
 
                 var row = new OptionRow { Title = Loc.GetString(checkBoxName) };
@@ -153,9 +155,11 @@ namespace Content.Client.Options.UI.Tabs
             {
                 var switchButton = new Content.Client.UserInterface.Controls.SwitchButton
                 {
-                    Pressed = _cfg.GetCVar(cvar),
+                    OffStateText = string.Empty,
+                    OnStateText = string.Empty,
                     HorizontalAlignment = HAlignment.Right,
                 };
+                switchButton.SetPressedNoAnimation(_cfg.GetCVar(cvar));
                 switchButton.OnToggled += e =>
                 {
                     _cfg.SetCVar(cvar, e.Pressed);
@@ -553,7 +557,7 @@ namespace Content.Client.Options.UI.Tabs
                     {
                         BindButton1,
                         BindButton2,
-                        new Control {MinSize = new Vector2(10, 0)},
+                        new Control {MinSize = new Vector2(6, 0)},
                         ResetButton
                     }
                 };
@@ -599,7 +603,7 @@ namespace Content.Client.Options.UI.Tabs
 
                 Button.OnKeyBindDown += ButtonOnOnKeyBindDown;
 
-                MinSize = new Vector2(200, 0);
+                MinSize = new Vector2(128, 0);
             }
 
             protected override void EnteredTree()

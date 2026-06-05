@@ -1,7 +1,7 @@
 <Control xmlns="https://spacestation14.io"
          xmlns:ui="clr-namespace:Content.Client.Options.UI">
     <BoxContainer Orientation="Vertical">
-        <ScrollContainer VerticalExpand="True">
+        <ScrollContainer VerticalExpand="True" HScrollEnabled="False">
             <BoxContainer Name="KeybindsContainer" Orientation="Vertical" Margin="8" SeparationOverride="8">
 
                 <!-- Keybind sections are added here in the C# code -->

@@ -1,12 +1,14 @@
 <Control xmlns="https://spacestation14.io">
     <PanelContainer Name="RowPanel" Access="Public">
-        <BoxContainer Orientation="Horizontal"
+        <BoxContainer Name="RowContainer"
+                      Orientation="Horizontal"
                       Margin="10 8 10 8"
                       MinHeight="36"
                       SeparationOverride="12"
                       HorizontalExpand="True">
-            <BoxContainer Orientation="Vertical"
-                          MinWidth="180"
+            <BoxContainer Name="LabelContainer"
+                          Orientation="Vertical"
+                          MinWidth="128"
                           SizeFlagsStretchRatio="0.45"
                           HorizontalExpand="True"
                           VerticalAlignment="Center">

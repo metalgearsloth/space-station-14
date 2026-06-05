@@ -222,7 +222,7 @@ public sealed partial class GraphicsTab : Control
         protected override int Value
         {
             get => _switchButton.Pressed ? (int) WindowMode.Fullscreen : (int) WindowMode.Windowed;
-            set => _switchButton.Pressed = (value == (int) WindowMode.Fullscreen);
+            set => _switchButton.SetPressedNoAnimation(value == (int) WindowMode.Fullscreen);
         }
 
         public OptionFullscreen(
@@ -272,7 +272,7 @@ public sealed partial class GraphicsTab : Control
         protected override int Value
         {
             get => _switchButton.Pressed ? CCVars.ViewportSnapToleranceMargin.DefaultValue : 0;
-            set => _switchButton.Pressed = (value != 0);
+            set => _switchButton.SetPressedNoAnimation(value != 0);
         }
 
         public OptionIntegerScaling(
