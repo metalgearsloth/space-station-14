@@ -13,6 +13,7 @@ using Robust.Shared.Prototypes;
 using Robust.Shared.Timing;
 using Robust.Shared.Utility;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using DrawDepth = Content.Shared.DrawDepth.DrawDepth;
 
 namespace Content.Client.Atmos.Overlays;
@@ -45,6 +46,7 @@ public sealed partial class GasTileVisibleGasOverlay : Overlay
 
     // TODO combine textures into a single texture atlas.
     private readonly Texture[][] _frames;
+    private readonly List<WorldTextureRect>[] _quadBuffers;
 
     private readonly int _gasCount;
 
@@ -67,9 +69,11 @@ public sealed partial class GasTileVisibleGasOverlay : Overlay
         _frameDelays = new float[_gasCount][];
         _frameCounter = new int[_gasCount];
         _frames = new Texture[_gasCount][];
+        _quadBuffers = new List<WorldTextureRect>[_gasCount];
 
         for (var i = 0; i < _gasCount; i++)
         {
+            _quadBuffers[i] = new List<WorldTextureRect>();
             var gasPrototype = _atmosphereSystem.GetGas(_gasTileOverlaySystem.VisibleGasId[i]);
 
             switch (gasPrototype.GasOverlaySprite)
@@ -128,6 +132,7 @@ public sealed partial class GasTileVisibleGasOverlay : Overlay
             _gasCount,
             _frames,
             _frameCounter,
+            _quadBuffers,
             _shader,
             overlayQuery,
             xformQuery,
@@ -152,6 +157,7 @@ public sealed partial class GasTileVisibleGasOverlay : Overlay
                     int gasCount,
                     Texture[][] frames,
                     int[] frameCounter,
+                    List<WorldTextureRect>[] quadBuffers,
                     ShaderInstance shader,
                     EntityQuery<GasTileOverlayComponent> overlayQuery,
                     EntityQuery<TransformComponent> xformQuery,
@@ -172,11 +178,9 @@ public sealed partial class GasTileVisibleGasOverlay : Overlay
                     (int)MathF.Ceiling(floatBounds.Right),
                     (int)MathF.Ceiling(floatBounds.Top));
 
-                // Currently it would be faster to group drawing by gas rather than by chunk, but if the textures are
-                // ever moved to a single atlas, that should no longer be the case. So this is just grouping draw calls
-                // by chunk, even though its currently slower.
-
                 state.drawHandle.UseShader(null);
+                ClearQuadBuffers(state.quadBuffers, state.gasCount);
+
                 foreach (var chunk in comp.Chunks.Values)
                 {
                     var enumerator = new GasChunkEnumerator(chunk);
@@ -195,12 +199,25 @@ public sealed partial class GasTileVisibleGasOverlay : Overlay
                             var opacity = gas.Opacity[i];
                             if (opacity > 0)
                             {
-                                state.drawHandle.DrawTexture(state.frames[i][state.frameCounter[i]],
+                                var texture = state.frames[i][state.frameCounter[i]];
+                                state.quadBuffers[i].Add(BuildTextureQuad(
+                                    texture,
                                     tilePosition,
-                                    Color.White.WithAlpha(opacity));
+                                    Color.White.WithAlpha(opacity)));
                             }
                         }
                     }
+                }
+
+                for (var i = 0; i < state.gasCount; i++)
+                {
+                    var buffer = state.quadBuffers[i];
+                    if (buffer.Count == 0)
+                        continue;
+
+                    state.drawHandle.DrawTextureRects(
+                        state.frames[i][state.frameCounter[i]],
+                        CollectionsMarshal.AsSpan(buffer));
                 }
 
                 return true;
@@ -229,20 +246,44 @@ public sealed partial class GasTileVisibleGasOverlay : Overlay
         var bottomLeft = args.WorldAABB.BottomLeft.Floored();
         var topRight = args.WorldAABB.TopRight.Ceiled();
 
-        for (var x = bottomLeft.X; x <= topRight.X; x++)
+        for (var i = 0; i < atmos.OverlayData.Opacity.Length; i++)
         {
-            for (var y = bottomLeft.Y; y <= topRight.Y; y++)
+            var opacity = atmos.OverlayData.Opacity[i];
+
+            if (opacity <= 0)
+                continue;
+
+            var texture = _frames[i][_frameCounter[i]];
+            var buffer = _quadBuffers[i];
+            buffer.Clear();
+
+            for (var x = bottomLeft.X; x <= topRight.X; x++)
             {
-                var tilePosition = new Vector2(x, y);
-
-                for (var i = 0; i < atmos.OverlayData.Opacity.Length; i++)
+                for (var y = bottomLeft.Y; y <= topRight.Y; y++)
                 {
-                    var opacity = atmos.OverlayData.Opacity[i];
-
-                    if (opacity > 0)
-                        handle.DrawTexture(_frames[i][_frameCounter[i]], tilePosition, Color.White.WithAlpha(opacity));
+                    buffer.Add(BuildTextureQuad(
+                        texture,
+                        new Vector2(x, y),
+                        Color.White.WithAlpha(opacity)));
                 }
             }
+
+            handle.DrawTextureRects(texture, CollectionsMarshal.AsSpan(buffer));
         }
     }
+
+    private static void ClearQuadBuffers(List<WorldTextureRect>[] buffers, int count)
+    {
+        for (var i = 0; i < count; i++)
+        {
+            buffers[i].Clear();
+        }
+    }
+
+    private static WorldTextureRect BuildTextureQuad(Texture texture, Vector2 position, Color color)
+    {
+        var quad = Box2.FromDimensions(position, texture.Size / (float) EyeManager.PixelsPerMeter);
+        return new WorldTextureRect(new Box2Rotated(quad), color);
+    }
 }
+

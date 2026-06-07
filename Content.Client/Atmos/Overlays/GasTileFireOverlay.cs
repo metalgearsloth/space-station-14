@@ -12,6 +12,7 @@ using Robust.Shared.Map.Components;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Timing;
 using System.Numerics;
+using System.Runtime.InteropServices;
 
 namespace Content.Client.Atmos.Overlays;
 
@@ -38,6 +39,7 @@ public sealed partial class GasTileFireOverlay : Overlay
 
     // TODO combine textures into a single texture atlas.
     private readonly Texture[][] _frames;
+    private readonly List<WorldTextureRect>[] _quadBuffers;
 
     private const int FireStates = 3;
     private const string FireRsiPath = "/Textures/Effects/fire.rsi";
@@ -56,11 +58,14 @@ public sealed partial class GasTileFireOverlay : Overlay
         _frameDelays = new float[FireStates][];
         _frameCounter = new int[FireStates];
         _frames = new Texture[FireStates][];
+        _quadBuffers = new List<WorldTextureRect>[FireStates];
 
         var fire = _resourceCache.GetResource<RSIResource>(FireRsiPath).RSI;
 
         for (var i = 0; i < FireStates; i++)
         {
+            _quadBuffers[i] = new List<WorldTextureRect>();
+
             if (!fire.TryGetState((i + 1).ToString(), out var state))
                 throw new ArgumentOutOfRangeException($"Fire RSI doesn't have state \"{i}\"!");
 
@@ -102,6 +107,7 @@ public sealed partial class GasTileFireOverlay : Overlay
             args.WorldHandle,
             _frames,
             _frameCounter,
+            _quadBuffers,
             _shader,
             overlayQuery,
             xformQuery,
@@ -119,6 +125,7 @@ public sealed partial class GasTileFireOverlay : Overlay
                     DrawingHandleWorld drawHandle,
                     Texture[][] frames,
                     int[] frameCounter,
+                    List<WorldTextureRect>[] quadBuffers,
                     ShaderInstance shader,
                     EntityQuery<GasTileOverlayComponent> overlayQuery,
                     EntityQuery<TransformComponent> xformQuery,
@@ -139,11 +146,9 @@ public sealed partial class GasTileFireOverlay : Overlay
                     (int)MathF.Ceiling(floatBounds.Right),
                     (int)MathF.Ceiling(floatBounds.Top));
 
-                // Currently it would be faster to group drawing by gas rather than by chunk, but if the textures are
-                // ever moved to a single atlas, that should no longer be the case. So this is just grouping draw calls
-                // by chunk, even though its currently slower.
-
                 state.drawHandle.UseShader(state.shader);
+                ClearQuadBuffers(state.quadBuffers);
+
                 foreach (var chunk in comp.Chunks.Values)
                 {
                     var enumerator = new GasChunkEnumerator(chunk);
@@ -159,8 +164,19 @@ public sealed partial class GasTileFireOverlay : Overlay
 
                         var fireState = gas.FireState - 1;
                         var texture = state.frames[fireState][state.frameCounter[fireState]];
-                        state.drawHandle.DrawTexture(texture, index);
+                        state.quadBuffers[fireState].Add(BuildTextureQuad(texture, index));
                     }
+                }
+
+                for (var i = 0; i < FireStates; i++)
+                {
+                    var buffer = state.quadBuffers[i];
+                    if (buffer.Count == 0)
+                        continue;
+
+                    state.drawHandle.DrawTextureRects(
+                        state.frames[i][state.frameCounter[i]],
+                        CollectionsMarshal.AsSpan(buffer));
                 }
 
                 return true;
@@ -169,4 +185,19 @@ public sealed partial class GasTileFireOverlay : Overlay
         drawHandle.UseShader(null);
         drawHandle.SetTransform(Matrix3x2.Identity);
     }
+
+    private static void ClearQuadBuffers(List<WorldTextureRect>[] buffers)
+    {
+        for (var i = 0; i < buffers.Length; i++)
+        {
+            buffers[i].Clear();
+        }
+    }
+
+    private static WorldTextureRect BuildTextureQuad(Texture texture, Vector2 position)
+    {
+        var quad = Box2.FromDimensions(position, texture.Size / (float) EyeManager.PixelsPerMeter);
+        return new WorldTextureRect(new Box2Rotated(quad));
+    }
 }
+
