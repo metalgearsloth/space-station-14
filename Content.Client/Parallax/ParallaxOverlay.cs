@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Runtime.InteropServices;
 using Content.Client.Parallax.Managers;
 using Content.Shared.CCVar;
 using Content.Shared.Parallax.Biomes;
@@ -21,6 +22,7 @@ public sealed partial class ParallaxOverlay : Overlay
     [Dependency] private IParallaxManager _manager = default!;
     private readonly SharedMapSystem _mapSystem;
     private readonly ParallaxSystem _parallax;
+    private readonly List<WorldTextureRect> _quadBuffer = new();
 
     public override OverlaySpace Space => OverlaySpace.WorldSpaceBelowWorld;
 
@@ -91,6 +93,8 @@ public sealed partial class ParallaxOverlay : Overlay
 
             if (layer.Config.Tiled)
             {
+                _quadBuffer.Clear();
+
                 // Remove offset so we can floor.
                 var flooredBL = args.WorldAABB.BottomLeft - originBL;
 
@@ -104,9 +108,12 @@ public sealed partial class ParallaxOverlay : Overlay
                 {
                     for (var y = flooredBL.Y; y < args.WorldAABB.Top; y += size.Y)
                     {
-                        worldHandle.DrawTextureRect(tex, Box2.FromDimensions(new Vector2(x, y), size));
+                        var quad = Box2.FromDimensions(new Vector2(x, y), size);
+                        _quadBuffer.Add(new WorldTextureRect(new Box2Rotated(quad)));
                     }
                 }
+
+                worldHandle.DrawTextureRects(tex, CollectionsMarshal.AsSpan(_quadBuffer));
             }
             else
             {
@@ -117,4 +124,5 @@ public sealed partial class ParallaxOverlay : Overlay
         worldHandle.UseShader(null);
     }
 }
+
 
