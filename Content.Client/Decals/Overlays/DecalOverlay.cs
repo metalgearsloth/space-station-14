@@ -120,25 +120,28 @@ namespace Content.Client.Decals.Overlays
 
             // Draw static / dynamic 1 layer at a time.
             // This will essentially flip-flop between the two. If you squint hard enough it's how the clyde sprite renderer does it.
-            while (staticIndex < _staticEntries.Count || dynamicIndex < _dynamicEntries.Count)
+            var statEntries = CollectionsMarshal.AsSpan(_staticEntries);
+            var dynEntries = CollectionsMarshal.AsSpan(_dynamicEntries);
+
+            while (staticIndex < statEntries.Length || dynamicIndex < dynEntries.Length)
             {
                 int zIndex;
 
-                if (staticIndex >= _staticEntries.Count)
+                if (staticIndex >= statEntries.Length)
                 {
-                    zIndex = _dynamicEntries[dynamicIndex].ZIndex;
+                    zIndex = dynEntries[dynamicIndex].ZIndex;
                 }
-                else if (dynamicIndex >= _dynamicEntries.Count)
+                else if (dynamicIndex >= dynEntries.Length)
                 {
-                    zIndex = _staticEntries[staticIndex].ZIndex;
+                    zIndex = statEntries[staticIndex].ZIndex;
                 }
                 else
                 {
-                    zIndex = Math.Min(_staticEntries[staticIndex].ZIndex, _dynamicEntries[dynamicIndex].ZIndex);
+                    zIndex = Math.Min(statEntries[staticIndex].ZIndex, dynEntries[dynamicIndex].ZIndex);
                 }
 
-                staticIndex = DrawStaticZ(handle, staticIndex, zIndex);
-                dynamicIndex = DrawDynamicZ(handle, _dynamicEntries, dynamicIndex, zIndex, worldAngle);
+                staticIndex = DrawStaticZ(handle, statEntries, staticIndex, zIndex);
+                dynamicIndex = DrawDynamicZ(handle, dynEntries, dynamicIndex, zIndex, worldAngle);
             }
 
             handle.SetTransform(Matrix3x2.Identity);
@@ -208,10 +211,8 @@ namespace Content.Client.Decals.Overlays
             return true;
         }
 
-        private int DrawStaticZ(DrawingHandleWorld handle, int index, int zIndex)
+        private int DrawStaticZ(DrawingHandleWorld handle, ReadOnlySpan<StaticRenderEntry> statEntries, int index, int zIndex)
         {
-            var statEntries = CollectionsMarshal.AsSpan(_staticEntries);
-
             while (index < _staticEntries.Count)
             {
                 var entry = statEntries[index];
@@ -222,16 +223,18 @@ namespace Content.Client.Decals.Overlays
                 var texture = entry.Texture;
                 _quadBuffer.Clear();
 
-                // Iterate all the static entries for this zIndex where it doesn't slice with the relevant dynamic index
-                // Then batch and dispatch.
-                do
+                // Batch consecutive static decals that share z-index and texture. We must stop before the next texture
+                // so Clyde receives one texture per batch.
+                while (index < _staticEntries.Count)
                 {
+                    entry = statEntries[index];
+
+                    if (entry.ZIndex != zIndex || !ReferenceEquals(entry.Texture, texture))
+                        break;
+
                     _quadBuffer.Add(entry.Quad);
                     index++;
                 }
-                while (index < _staticEntries.Count &&
-                       entry.ZIndex == zIndex &&
-                       ReferenceEquals(entry.Texture, texture));
 
                 handle.DrawTextureRects(texture, CollectionsMarshal.AsSpan(_quadBuffer));
             }
@@ -241,15 +244,16 @@ namespace Content.Client.Decals.Overlays
 
         private static int DrawDynamicZ(
             DrawingHandleWorld handle,
-            List<DynamicRenderEntry> entries,
+            ReadOnlySpan<DynamicRenderEntry> entries,
             int index,
             int zIndex,
             Angle worldAngle)
         {
-            while (index < entries.Count && entries[index].ZIndex == zIndex)
+            var cardinal = worldAngle.GetCardinalDir().ToAngle();
+
+            while (index < entries.Length && entries[index].ZIndex == zIndex)
             {
                 var (_, decal, texture, _) = entries[index];
-                var cardinal = worldAngle.GetCardinalDir().ToAngle();
                 var angle = decal.Angle - cardinal;
 
                 if (angle.Equals(Angle.Zero))
