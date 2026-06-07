@@ -210,21 +210,28 @@ namespace Content.Client.Decals.Overlays
 
         private int DrawStaticZ(DrawingHandleWorld handle, int index, int zIndex)
         {
-            while (index < _staticEntries.Count && _staticEntries[index].ZIndex == zIndex)
+            var statEntries = CollectionsMarshal.AsSpan(_staticEntries);
+
+            while (index < _staticEntries.Count)
             {
-                var texture = _staticEntries[index].Texture;
+                var entry = statEntries[index];
+
+                if (entry.ZIndex != zIndex)
+                    break;
+
+                var texture = entry.Texture;
                 _quadBuffer.Clear();
 
                 // Iterate all the static entries for this zIndex where it doesn't slice with the relevant dynamic index
                 // Then batch and dispatch.
                 do
                 {
-                    _quadBuffer.Add(_staticEntries[index].Quad);
+                    _quadBuffer.Add(entry.Quad);
                     index++;
                 }
                 while (index < _staticEntries.Count &&
-                       _staticEntries[index].ZIndex == zIndex &&
-                       ReferenceEquals(_staticEntries[index].Texture, texture));
+                       entry.ZIndex == zIndex &&
+                       ReferenceEquals(entry.Texture, texture));
 
                 handle.DrawTextureRects(texture, CollectionsMarshal.AsSpan(_quadBuffer));
             }
