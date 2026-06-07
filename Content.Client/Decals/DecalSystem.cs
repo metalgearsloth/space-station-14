@@ -163,6 +163,8 @@ namespace Content.Client.Decals
                 {
                     gridComp.DecalIndex[uid] = indices;
                 }
+
+                _overlay?.InvalidateChunk(gridId, indices);
             }
         }
 
@@ -182,6 +184,7 @@ namespace Content.Client.Decals
                 }
 
                 chunkCollection.Remove(index);
+                _overlay?.InvalidateChunk(gridId, index);
             }
         }
     }
