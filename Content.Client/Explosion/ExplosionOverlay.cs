@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Runtime.InteropServices;
 using Content.Shared.Explosion.Components;
 using JetBrains.Annotations;
 using Robust.Client.Graphics;
@@ -20,6 +21,7 @@ public sealed partial class ExplosionOverlay : Overlay
     [Dependency] private IPrototypeManager _proto = default!;
     private readonly SharedTransformSystem _transformSystem;
     private SharedAppearanceSystem _appearance;
+    private readonly Dictionary<Texture, List<WorldTextureRect>> _quadBatches = new();
 
     public override OverlaySpace Space => OverlaySpace.WorldSpaceBelowFOV;
 
@@ -106,6 +108,7 @@ public sealed partial class ExplosionOverlay : Overlay
 
             var frameIndex = (int) Math.Min(visuals.Intensity[j] / textures.IntensityPerState, textures.FireFrames.Count - 1);
             var frames = textures.FireFrames[frameIndex];
+            ClearQuadBatches();
 
             foreach (var tile in tiles)
             {
@@ -115,8 +118,32 @@ public sealed partial class ExplosionOverlay : Overlay
                     continue;
 
                 var texture = _robustRandom.Pick(frames);
-                drawHandle.DrawTextureRect(texture, Box2.CenteredAround(centre, new Vector2(tileSize, tileSize)), textures.FireColor);
+                if (!_quadBatches.TryGetValue(texture, out var batch))
+                {
+                    batch = new List<WorldTextureRect>();
+                    _quadBatches.Add(texture, batch);
+                }
+
+                var quad = Box2.CenteredAround(centre, new Vector2(tileSize, tileSize));
+                batch.Add(new WorldTextureRect(new Box2Rotated(quad), textures.FireColor));
+            }
+
+            foreach (var (texture, batch) in _quadBatches)
+            {
+                if (batch.Count == 0)
+                    continue;
+
+                drawHandle.DrawTextureRects(texture, CollectionsMarshal.AsSpan(batch));
             }
         }
     }
+
+    private void ClearQuadBatches()
+    {
+        foreach (var batch in _quadBatches.Values)
+        {
+            batch.Clear();
+        }
+    }
 }
+
