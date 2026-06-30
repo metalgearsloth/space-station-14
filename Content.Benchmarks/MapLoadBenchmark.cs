@@ -20,6 +20,9 @@ namespace Content.Benchmarks;
 [Virtual]
 public class MapLoadBenchmark
 {
+    private static readonly object PoolStartupLock = new();
+    private static bool PoolStarted;
+
     private TestPair _pair = default!;
     private MapLoaderSystem _mapLoader = default!;
     private SharedMapSystem _mapSys = default!;
@@ -27,8 +30,7 @@ public class MapLoadBenchmark
     [GlobalSetup]
     public void Setup()
     {
-        ProgramShared.PathOffset = "../../../../";
-        PoolManager.Startup();
+        EnsurePoolStarted();
 
         _pair = PoolManager.GetServerClient(testContext: new ExternalTestContext("Benchmark", StreamWriter.Null)).GetAwaiter().GetResult();
         var server = _pair.Server;
@@ -44,11 +46,25 @@ public class MapLoadBenchmark
     [GlobalCleanup]
     public async Task Cleanup()
     {
-        await _pair.DisposeAsync();
-        PoolManager.Shutdown();
+        await _pair.CleanReturnAsync();
     }
 
-    public static string[] MapsSource { get; } = { "Empty", "Saltern", "Box", "Bagel", "Dev", "CentComm", "Core", "TestTeg", "Packed", "Omega", "Reach", "Meta", "Marathon", "MeteorArena", "Fland", "Oasis", "Convex"};
+    private static void EnsurePoolStarted()
+    {
+        lock (PoolStartupLock)
+        {
+            if (PoolStarted)
+                return;
+
+            ProgramShared.PathOffset = "";
+            PoolManager.Startup();
+            PoolStarted = true;
+        }
+    }
+
+    // Sane default.
+    public static string[] MapsSource { get; } = { "Saltern"};
+    //public static string[] MapsSource { get; } = { "Empty", "Saltern", "Box", "Bagel", "Dev", "CentComm", "Core", "TestTeg", "Packed", "Omega", "Reach", "Meta", "Marathon", "MeteorArena", "Fland", "Oasis", "Convex"};
 
     [ParamsSource(nameof(MapsSource))]
     public string Map;
