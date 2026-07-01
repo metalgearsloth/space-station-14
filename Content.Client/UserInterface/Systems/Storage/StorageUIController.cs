@@ -1,18 +1,21 @@
-using System.Linq;
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using Content.Client.Examine;
 using Content.Client.Hands.Systems;
 using Content.Client.Interaction;
 using Content.Client.Storage;
 using Content.Client.Storage.Systems;
+using Content.Client.UserInterface.Controls;
 using Content.Client.UserInterface.Systems.Hotbar.Widgets;
 using Content.Client.UserInterface.Systems.Info;
+using Content.Client.UserInterface.Systems.Hands.Controls;
 using Content.Client.UserInterface.Systems.Storage.Controls;
 using Content.Client.Verbs.UI;
 using Content.Shared.CCVar;
 using Content.Shared.Input;
 using Content.Shared.Interaction;
 using Content.Shared.Storage;
+using Robust.Client.Graphics;
 using Robust.Client.GameObjects;
 using Robust.Client.Input;
 using Robust.Client.Player;
@@ -37,10 +40,13 @@ public sealed partial class StorageUIController : UIController, IOnSystemChanged
      */
 
     [Dependency] private IConfigurationManager _configuration = default!;
+    [Dependency] private IEyeManager _eye = default!;
     [Dependency] private IInputManager _input = default!;
     [Dependency] private IPlayerManager _player = default!;
     [Dependency] private CloseRecentWindowUIController _closeRecentWindowUIController = default!;
+    [UISystemDependency] private readonly HandsSystem _hands = default!;
     [UISystemDependency] private readonly StorageSystem _storage = default!;
+    [UISystemDependency] private readonly TransformSystem _transform = default!;
     [UISystemDependency] private readonly UserInterfaceSystem _ui = default!;
 
     private readonly DragDropHelper<ItemGridPiece> _menuDragHelper;
@@ -119,10 +125,22 @@ public sealed partial class StorageUIController : UIController, IOnSystemChanged
                 if (parent is null)
                     return;
 
-                var parentChildren = parent.Children.ToList();
-                var invisibleIndex = parentChildren.FindIndex(c => c.Visible == false);
+                var invisibleIndex = -1;
+                var index = 0;
+                foreach (var control in parent.Children)
+                {
+                    if (!control.Visible)
+                    {
+                        invisibleIndex = index;
+                        break;
+                    }
+
+                    index++;
+                }
+
                 if (invisibleIndex == -1)
                     return;
+
                 child.SetPositionInParent(invisibleIndex);
             };
 
@@ -134,10 +152,10 @@ public sealed partial class StorageUIController : UIController, IOnSystemChanged
 
             if (_openStorageLimit == 2)
             {
-                if (hotbar?.LeftStorageContainer.Children.Any(c => c.Visible) == false) // we're comparing booleans because it's bool? and not bool from the optional chaining
+                if (hotbar != null && !HasVisibleChildren(hotbar.LeftStorageContainer))
                 {
-                    hotbar?.LeftStorageContainer.AddChild(window);
-                    reorder(hotbar?.LeftStorageContainer, window);
+                    hotbar.LeftStorageContainer.AddChild(window);
+                    reorder(hotbar.LeftStorageContainer, window);
                 }
                 else
                 {
@@ -222,7 +240,7 @@ public sealed partial class StorageUIController : UIController, IOnSystemChanged
               binding.Mod3 == Keyboard.Key.Control))
             return;
 
-        if (!IsDragging && EntityManager.System<HandsSystem>().GetActiveHandEntity() == null)
+        if (!IsDragging && _hands.GetActiveHandEntity() == null)
             return;
 
         // Do not rotate items unless we are either dragging them or hovering over a storage window.
@@ -364,6 +382,33 @@ public sealed partial class StorageUIController : UIController, IOnSystemChanged
                     window.Reclaim(dragLoc, control);
                 }
             }
+            // Dragging to a hand or inventory slot removes the item from storage into that slot.
+            else if (TryGetSlotControl(targetControl, out var slotControl))
+            {
+                if (slotControl is HandButton)
+                {
+                    EntityManager.RaisePredictiveEvent(new StoragePickupItemEvent(
+                        EntityManager.GetNetEntity(dragEnt),
+                        EntityManager.GetNetEntity(sourceStorage),
+                        slotControl.SlotName));
+                }
+                else
+                {
+                    EntityManager.RaisePredictiveEvent(new StorageEquipItemEvent(
+                        EntityManager.GetNetEntity(dragEnt),
+                        EntityManager.GetNetEntity(sourceStorage),
+                        slotControl.SlotName));
+                }
+            }
+            // Dragging out of storage drops the item at the cursor.
+            else
+            {
+                var dropCoords = _transform.ToCoordinates(_eye.ScreenToMap(args.PointerLocation.Position));
+                EntityManager.RaisePredictiveEvent(new StorageDropItemEvent(
+                    EntityManager.GetNetEntity(dragEnt),
+                    EntityManager.GetNetEntity(sourceStorage),
+                    EntityManager.GetNetCoordinates(dropCoords)));
+            }
 
             targetStorage?.FlagDirty();
         }
@@ -438,5 +483,33 @@ public sealed partial class StorageUIController : UIController, IOnSystemChanged
     {
         base.FrameUpdate(args);
         _menuDragHelper.Update(args.DeltaSeconds);
+    }
+
+    private static bool HasVisibleChildren(Control control)
+    {
+        foreach (var child in control.Children)
+        {
+            if (child.Visible)
+                return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryGetSlotControl(Control? control, [NotNullWhen(true)] out SlotControl? slot)
+    {
+        while (control != null)
+        {
+            if (control is SlotControl slotControl)
+            {
+                slot = slotControl;
+                return true;
+            }
+
+            control = control.Parent;
+        }
+
+        slot = null;
+        return false;
     }
 }

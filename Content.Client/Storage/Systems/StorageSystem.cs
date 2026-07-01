@@ -8,6 +8,7 @@ using Robust.Client.Player;
 using Robust.Shared.GameStates;
 using Robust.Shared.Map;
 using Robust.Shared.Timing;
+using Robust.Shared.Utility;
 
 namespace Content.Client.Storage.Systems;
 
@@ -35,8 +36,17 @@ public sealed partial class StorageSystem : SharedStorageSystem
         if (args.Current is not StorageComponentState state)
             return;
 
-        component.Grid.Clear();
-        component.Grid.AddRange(state.Grid);
+        var gridDirty = !component.Grid.SequenceEqual(state.Grid);
+
+        if (gridDirty)
+        {
+            component.Grid.Clear();
+            component.Grid.AddRange(state.Grid);
+            UpdateGridCache(component);
+        }
+
+        component.QuickInsert = state.QuickInsert;
+        component.AreaInsert = state.AreaInsert;
         component.MaxItemSize = state.MaxItemSize;
         component.Whitelist = state.Whitelist;
         component.Blacklist = state.Blacklist;
@@ -68,11 +78,18 @@ public sealed partial class StorageSystem : SharedStorageSystem
             component.SavedLocations[loc.Key] = new(loc.Value);
         }
 
-        UpdateOccupied((uid, component));
+        var storedDirty = !component.StoredItems.DictionaryEquals(_oldStoredItems);
 
-        var uiDirty = !component.StoredItems.SequenceEqual(_oldStoredItems);
+        if (gridDirty)
+        {
+            UpdateOccupied((uid, component));
+        }
+        else if (storedDirty)
+        {
+            UpdateOccupied((uid, component), _oldStoredItems);
+        }
 
-        if (uiDirty && UI.TryGetOpenUi<StorageBoundUserInterface>(uid, StorageComponent.StorageUiKey.Key, out var storageBui))
+        if (storedDirty && UI.TryGetOpenUi<StorageBoundUserInterface>(uid, StorageComponent.StorageUiKey.Key, out var storageBui))
         {
             storageBui.Refresh();
             // Make sure nesting still updated.

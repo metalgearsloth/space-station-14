@@ -97,6 +97,7 @@ public abstract partial class SharedStorageSystem : EntitySystem
     public bool CheckingCanInsert;
 
     private readonly List<EntityUid> _entList = new();
+    private readonly List<EntityUid> _transferEnts = new();
     private readonly HashSet<EntityUid> _entSet = new();
 
     private readonly List<ItemSizePrototype> _sortedSizes = new();
@@ -115,6 +116,7 @@ public abstract partial class SharedStorageSystem : EntitySystem
     // Caching for various checks
     private readonly Dictionary<Vector2i, ulong> _ignored = new();
     private List<Box2i> _itemShape = new();
+    private List<Box2i> _occupiedShape = new();
 
     /// <inheritdoc />
     public override void Initialize()
@@ -155,6 +157,9 @@ public abstract partial class SharedStorageSystem : EntitySystem
         SubscribeAllEvent<OpenNestedStorageEvent>(OnStorageNested);
         SubscribeAllEvent<StorageTransferItemEvent>(OnStorageTransfer);
         SubscribeAllEvent<StorageInteractWithItemEvent>(OnInteractWithItem);
+        SubscribeAllEvent<StorageDropItemEvent>(OnDropItem);
+        SubscribeAllEvent<StoragePickupItemEvent>(OnPickupItem);
+        SubscribeAllEvent<StorageEquipItemEvent>(OnEquipItem);
         SubscribeAllEvent<StorageSetItemLocationEvent>(OnSetItemLocation);
         SubscribeAllEvent<StorageInsertItemIntoLocationEvent>(OnInsertItemIntoLocation);
         SubscribeAllEvent<StorageSaveItemLocationEvent>(OnSaveItemLocation);
@@ -272,10 +277,17 @@ public abstract partial class SharedStorageSystem : EntitySystem
     private void OnComponentInit(EntityUid uid, StorageComponent storageComp, ComponentInit args)
     {
         storageComp.Container = ContainerSystem.EnsureContainer<Container>(uid, StorageComponent.ContainerId);
+        UpdateGridCache(storageComp);
         UpdateAppearance((uid, storageComp, null));
 
         // Make sure the initial starting grid is okay.
         UpdateOccupied((uid, storageComp));
+    }
+
+    protected void UpdateGridCache(StorageComponent storage)
+    {
+        storage.GridBounds = storage.Grid.GetBoundingBox();
+        storage.GridArea = storage.Grid.GetArea();
     }
 
     /// <summary>
@@ -359,6 +371,7 @@ public abstract partial class SharedStorageSystem : EntitySystem
 
         var targetComp = EnsureComp<StorageComponent>(target);
         targetComp.Grid = new List<Box2i>(source.Comp.Grid);
+        UpdateGridCache(targetComp);
         targetComp.MaxItemSize = source.Comp.MaxItemSize;
         targetComp.QuickInsert = source.Comp.QuickInsert;
         targetComp.QuickInsertCooldown = source.Comp.QuickInsertCooldown;
@@ -379,8 +392,6 @@ public abstract partial class SharedStorageSystem : EntitySystem
         targetComp.ShowVerb = source.Comp.ShowVerb;
 
         UpdateOccupied((target, targetComp));
-        Dirty(target, targetComp);
-
         var targetUI = EnsureComp<UserInterfaceComponent>(target);
 
         UI.SetUi((target, targetUI), StorageComponent.StorageUiKey.Key, new InterfaceData("StorageBoundUserInterface"));
@@ -760,6 +771,151 @@ public abstract partial class SharedStorageSystem : EntitySystem
         RaiseLocalEvent(storage, ref failedEv);
     }
 
+    private void OnDropItem(StorageDropItemEvent msg, EntitySessionEventArgs args)
+    {
+        if (!ValidateInput(args, msg.StorageUid, msg.ItemUid, out var player, out var storage, out var item))
+            return;
+
+        TryDropStoredItem(item.AsNullable(), storage.AsNullable(), player.AsNullable(), GetCoordinates(msg.Coordinates));
+    }
+
+    private void OnPickupItem(StoragePickupItemEvent msg, EntitySessionEventArgs args)
+    {
+        if (!ValidateInput(args, msg.StorageUid, msg.ItemUid, out var player, out var storage, out var item))
+            return;
+
+        TryPickupStoredItem(item.AsNullable(), storage.AsNullable(), player.AsNullable(), msg.Hand);
+    }
+
+    private void OnEquipItem(StorageEquipItemEvent msg, EntitySessionEventArgs args)
+    {
+        if (!ValidateInput(args, msg.StorageUid, msg.ItemUid, out var player, out var storage, out var item))
+            return;
+
+        TryEquipStoredItem(item.AsNullable(), storage.AsNullable(), player.AsNullable(), msg.Slot);
+    }
+
+    public bool TryDropStoredItem(
+        Entity<ItemComponent?> item,
+        Entity<StorageComponent?> storage,
+        Entity<HandsComponent?> player,
+        EntityCoordinates coordinates)
+    {
+        if (!Resolve(item, ref item.Comp) ||
+            !Resolve(storage, ref storage.Comp) ||
+            !Resolve(player, ref player.Comp))
+        {
+            return false;
+        }
+
+        if (!storage.Comp.Container.Contains(item))
+            return false;
+
+        if (!storage.Comp.StoredItems.TryGetValue(item, out var storedLocation))
+            return false;
+
+        _adminLog.Add(
+            LogType.Storage,
+            LogImpact.Low,
+            $"{ToPrettyString(player):player} is attempting to drop {ToPrettyString(item):item} out of {ToPrettyString(storage):storage}");
+
+        if (!ActionBlocker.CanDrop(player))
+            return false;
+
+        if (!_sharedHandsSystem.TryPickupAnyHand(player, item, handsComp: player.Comp, animate: false))
+            return false;
+
+        if (!_sharedHandsSystem.TryDrop(player.AsNullable(), item.Owner, coordinates))
+            return false;
+
+        TransformSystem.SetWorldRotation(item.Owner, storedLocation.Rotation);
+
+        if (storage.Comp.StorageRemoveSound != null
+            && !_tag.HasTag(player, storage.Comp.SilentStorageUserTag))
+        {
+            Audio.PlayPredicted(storage.Comp.StorageRemoveSound, storage, player, _audioParams);
+        }
+
+        return true;
+    }
+
+    public bool TryPickupStoredItem(
+        Entity<ItemComponent?> item,
+        Entity<StorageComponent?> storage,
+        Entity<HandsComponent?> player,
+        string hand)
+    {
+        if (!Resolve(item, ref item.Comp) ||
+            !Resolve(storage, ref storage.Comp) ||
+            !Resolve(player, ref player.Comp))
+        {
+            return false;
+        }
+
+        if (!storage.Comp.Container.Contains(item))
+            return false;
+
+        _adminLog.Add(
+            LogType.Storage,
+            LogImpact.Low,
+            $"{ToPrettyString(player):player} is attempting to pick up {ToPrettyString(item):item} from {ToPrettyString(storage):storage}");
+
+        if (!_sharedHandsSystem.TryPickup(player.Owner, item.Owner, hand, handsComp: player.Comp, animate: false))
+            return false;
+
+        if (storage.Comp.StorageRemoveSound != null
+            && !_tag.HasTag(player, storage.Comp.SilentStorageUserTag))
+        {
+            Audio.PlayPredicted(storage.Comp.StorageRemoveSound, storage, player, _audioParams);
+        }
+
+        return true;
+    }
+
+    public bool TryEquipStoredItem(
+        Entity<ItemComponent?> item,
+        Entity<StorageComponent?> storage,
+        Entity<HandsComponent?> player,
+        string slot)
+    {
+        if (!Resolve(item, ref item.Comp) ||
+            !Resolve(storage, ref storage.Comp) ||
+            !Resolve(player, ref player.Comp))
+        {
+            return false;
+        }
+
+        if (!storage.Comp.Container.Contains(item))
+            return false;
+
+        _adminLog.Add(
+            LogType.Storage,
+            LogImpact.Low,
+            $"{ToPrettyString(player):player} is attempting to equip {ToPrettyString(item):item} from {ToPrettyString(storage):storage}");
+
+        if (!_inventory.HasSlot(player.Owner, slot))
+            return false;
+
+        if (!_sharedHandsSystem.TryPickupAnyHand(player, item, handsComp: player.Comp, animate: false))
+            return false;
+
+        if (_inventory.TryEquip(player.Owner,
+                item.Owner,
+                slot,
+                predicted: true,
+                force: true,
+                checkDoafter: true,
+                triggerHandContact: true))
+        {
+            return true;
+        }
+
+        // If the slot rejects the item after it leaves storage, put it back where it came from if possible.
+        _sharedHandsSystem.TryDrop(player.AsNullable(), item.Owner);
+        Insert(storage.Owner, item.Owner, out _, player.Owner, storage.Comp, playSound: false, stackAutomatically: false);
+        return false;
+    }
+
     private void OnSetItemLocation(StorageSetItemLocationEvent msg, EntitySessionEventArgs args)
     {
         if (!ValidateInput(args, msg.StorageEnt, msg.ItemEnt, out var player, out var storage, out var item))
@@ -932,8 +1088,6 @@ public abstract partial class SharedStorageSystem : EntitySystem
             RemoveOccupiedEntity(entity, args.Entity, loc);
         }
 
-        Dirty(entity, entity.Comp);
-
         UpdateAppearance((entity, entity.Comp, null));
         UpdateUI((entity, entity.Comp));
     }
@@ -969,7 +1123,7 @@ public abstract partial class SharedStorageSystem : EntitySystem
         if (storage.Container == null)
             return; // component hasn't yet been initialized.
 
-        var capacity = storage.Grid.GetArea();
+        var capacity = storage.GridArea;
         var used = GetCumulativeItemAreas((uid, storage));
 
         var isOpen = UI.IsUiOpen(entity.Owner, StorageComponent.StorageUiKey.Key);
@@ -1009,10 +1163,15 @@ public abstract partial class SharedStorageSystem : EntitySystem
             || Resolve(target, ref targetLock, false) && targetLock.Locked)
             return;
 
-        foreach (var entity in entities.ToArray())
+        _transferEnts.Clear();
+        _transferEnts.AddRange(entities);
+
+        foreach (var entity in _transferEnts)
         {
             Insert(target, entity, out _, user: user, targetComp, playSound: false);
         }
+
+        _transferEnts.Clear();
         if (user != null
             && (!_tag.HasTag(user.Value, sourceComp.SilentStorageUserTag)
                 || !_tag.HasTag(user.Value, targetComp.SilentStorageUserTag)))
@@ -1298,16 +1457,20 @@ public abstract partial class SharedStorageSystem : EntitySystem
         if (!storageEnt.Comp.Container.ContainedEntities.Contains(itemEnt))
             return false;
 
-        if (!ItemFitsInGridLocation(itemEnt, storageEnt, location.Position, location.Rotation))
+        if (!ItemFitsInGridLocation(itemEnt, storageEnt, location))
             return false;
 
         if (storageEnt.Comp.StoredItems.Remove(itemEnt, out var existing))
         {
-            RemoveOccupiedEntity((storageEnt.Owner, storageEnt.Comp), itemEnt, existing);
+            if (existing == location)
+                return true;
+
+            RemoveOccupiedEntity((storageEnt.Owner, storageEnt.Comp), itemEnt, existing, dirty: false);
         }
 
         storageEnt.Comp.StoredItems.Add(itemEnt, location);
-        AddOccupiedEntity((storageEnt.Owner, storageEnt.Comp), itemEnt, location);
+        AddOccupiedEntity((storageEnt.Owner, storageEnt.Comp), itemEnt, location, dirty: false);
+        Dirty(storageEnt);
         UpdateUI(storageEnt);
         return true;
     }
@@ -1330,26 +1493,26 @@ public abstract partial class SharedStorageSystem : EntitySystem
         if (FindSavedLocation(storageEnt, itemEnt, out storageLocation))
             return true;
 
-        var storageBounding = storageEnt.Comp.Grid.GetBoundingBox();
+        var storageBounding = storageEnt.Comp.GridBounds;
 
-        Angle startAngle;
+        Direction startDirection;
         if (storageEnt.Comp.DefaultStorageOrientation == null)
         {
-            startAngle = Angle.Zero;
+            startDirection = Direction.South;
         }
         else
         {
             if (storageBounding.Width < storageBounding.Height)
             {
-                startAngle = storageEnt.Comp.DefaultStorageOrientation == StorageDefaultOrientation.Horizontal
-                    ? Angle.Zero
-                    : Angle.FromDegrees(90);
+                startDirection = storageEnt.Comp.DefaultStorageOrientation == StorageDefaultOrientation.Horizontal
+                    ? Direction.South
+                    : Direction.East;
             }
             else
             {
-                startAngle = storageEnt.Comp.DefaultStorageOrientation == StorageDefaultOrientation.Vertical
-                    ? Angle.Zero
-                    : Angle.FromDegrees(90);
+                startDirection = storageEnt.Comp.DefaultStorageOrientation == StorageDefaultOrientation.Vertical
+                    ? Direction.South
+                    : Direction.East;
             }
         }
 
@@ -1376,15 +1539,18 @@ public abstract partial class SharedStorageSystem : EntitySystem
             fastPath = true;
 
         var chunkEnumerator = new ChunkIndicesEnumerator(storageBounding, StorageComponent.ChunkSize);
-        var angles = new ValueList<Angle>();
+        var directions = new ValueList<Direction>();
 
         if (!fastAngles)
         {
-            angles.Clear();
+            directions.Add(startDirection);
+            directions.Add((Direction) (((int) startDirection + 2) & 7));
+            directions.Add((Direction) (((int) startDirection + 4) & 7));
 
-            for (var angle = startAngle; angle <= Angle.FromDegrees(360 - startAngle); angle += Math.PI / 2f)
+            if (startDirection == Direction.South)
             {
-                angles.Add(angle);
+                directions.Add(Direction.West);
+                directions.Add(Direction.South);
             }
         }
         else
@@ -1392,13 +1558,13 @@ public abstract partial class SharedStorageSystem : EntitySystem
             var shape = itemShape[0];
 
             // At least 1 check for a square.
-            angles.Add(startAngle);
+            directions.Add(startDirection);
 
             // If it's a rectangle make it 2.
             if (shape.Width != shape.Height)
             {
                 // Idk if there's a preferred facing but + or - 90 pick one.
-                angles.Add(startAngle + Angle.FromDegrees(90));
+                directions.Add((Direction) (((int) startDirection + 2) & 7));
             }
         }
 
@@ -1421,14 +1587,14 @@ public abstract partial class SharedStorageSystem : EntitySystem
             {
                 for (var x = left; x <= right; x++)
                 {
-                    foreach (var angle in angles)
+                    foreach (var direction in directions)
                     {
                         var position = new Vector2i(x, y);
 
                         // This bit of code is how area inserts go from tanking frames to being negligible.
                         if (fastPath)
                         {
-                            var flag = SharedMapSystem.ToBitmask(SharedMapSystem.GetChunkRelative(position, StorageComponent.ChunkSize), StorageComponent.ChunkSize);
+                            var flag = GetTileMask(storageChunkOrigin, position);
 
                             // Occupied so skip.
                             if ((occupied & flag) == flag)
@@ -1436,11 +1602,11 @@ public abstract partial class SharedStorageSystem : EntitySystem
                         }
 
                         _itemShape.Clear();
-                        ItemSystem.GetAdjustedItemShape(_itemShape, itemEnt, angle, position);
+                        ItemSystem.GetAdjustedItemShape(_itemShape, itemEnt, direction, position);
 
                         if (ItemFitsInGridLocation(storageEnt.Comp.OccupiedGrid, _itemShape, _ignored))
                         {
-                            storageLocation = new ItemStorageLocation(angle, position);
+                            storageLocation = new ItemStorageLocation(direction, position);
                             return true;
                         }
                     }
@@ -1502,7 +1668,7 @@ public abstract partial class SharedStorageSystem : EntitySystem
 
                 if (saved == location)
                 {
-                    list.Remove(location);
+                    list.RemoveAt(i);
                     return;
                 }
             }
@@ -1530,7 +1696,7 @@ public abstract partial class SharedStorageSystem : EntitySystem
         Entity<StorageComponent?> storageEnt,
         ItemStorageLocation location)
     {
-        return ItemFitsInGridLocation(itemEnt, storageEnt, location.Position, location.Rotation);
+        return ItemFitsInGridLocation(itemEnt, storageEnt, location.Position, location.Direction);
     }
 
     private bool ItemFitsInGridLocation(
@@ -1561,25 +1727,10 @@ public abstract partial class SharedStorageSystem : EntitySystem
                 }
 
                 var ignoredMask = ignored.GetValueOrDefault(chunkOrigin);
+                var mask = GetChunkMask(chunkOrigin, left, bottom, right, top);
 
-                for (var x = left; x <= right; x++)
-                {
-                    for (var y = bottom; y <= top; y++)
-                    {
-                        var index = new Vector2i(x, y);
-                        var chunkRelative = SharedMapSystem.GetChunkRelative(index, StorageComponent.ChunkSize);
-                        var flag = SharedMapSystem.ToBitmask(chunkRelative, StorageComponent.ChunkSize);
-
-                        // Ignore it
-                        if ((ignoredMask & flag) == flag)
-                            continue;
-
-                        if ((occupiedMask & flag) == flag)
-                        {
-                            return false;
-                        }
-                    }
-                }
+                if (((occupiedMask & ~ignoredMask) & mask) != 0)
+                    return false;
             }
         }
 
@@ -1595,14 +1746,25 @@ public abstract partial class SharedStorageSystem : EntitySystem
         Vector2i position,
         Angle rotation)
     {
+        return ItemFitsInGridLocation(itemEnt, storageEnt, position, rotation.GetCardinalDir());
+    }
+
+    public bool ItemFitsInGridLocation(
+        Entity<ItemComponent?> itemEnt,
+        Entity<StorageComponent?> storageEnt,
+        Vector2i position,
+        Direction direction)
+    {
         if (!Resolve(itemEnt, ref itemEnt.Comp) || !Resolve(storageEnt, ref storageEnt.Comp))
             return false;
 
-        var gridBounds = storageEnt.Comp.Grid.GetBoundingBox();
+        var gridBounds = storageEnt.Comp.GridBounds;
         if (!gridBounds.Contains(position))
             return false;
 
-        var itemShape = ItemSystem.GetAdjustedItemShape(itemEnt, rotation, position);
+        _itemShape.Clear();
+        ItemSystem.GetAdjustedItemShape(_itemShape, itemEnt, direction, position);
+
         // Ignore the item's existing location for fitting purposes.
         _ignored.Clear();
 
@@ -1611,7 +1773,7 @@ public abstract partial class SharedStorageSystem : EntitySystem
             AddOccupied(itemEnt, existing, _ignored);
         }
 
-        return ItemFitsInGridLocation(storageEnt.Comp.OccupiedGrid, itemShape, _ignored);
+        return ItemFitsInGridLocation(storageEnt.Comp.OccupiedGrid, _itemShape, _ignored);
     }
 
     /// <summary>
@@ -1628,8 +1790,7 @@ public abstract partial class SharedStorageSystem : EntitySystem
         if (!storageEnt.Comp.OccupiedGrid.TryGetValue(chunkOrigin, out var occupiedMask))
             return false;
 
-        var chunkRelative = SharedMapSystem.GetChunkRelative(location, StorageComponent.ChunkSize);
-        var occupiedIndex = SharedMapSystem.ToBitmask(chunkRelative);
+        var occupiedIndex = GetTileMask(chunkOrigin, location);
 
         if (ignored?.TryGetValue(chunkOrigin, out var ignoredMask) == true && (ignoredMask & occupiedIndex) == occupiedIndex)
         {
@@ -1652,28 +1813,72 @@ public abstract partial class SharedStorageSystem : EntitySystem
         ent.Comp.OccupiedGrid.Clear();
         RemoveOccupied(ent.Comp.Grid, ent.Comp.OccupiedGrid);
 
-        Dirty(ent);
-
         foreach (var (stent, storedItem) in ent.Comp.StoredItems)
         {
             if (!_itemQuery.TryGetComponent(stent, out var itemComp))
                 continue;
 
-            AddOccupiedEntity(ent, (stent, itemComp), storedItem);
+            AddOccupiedEntity(ent, (stent, itemComp), storedItem, dirty: false);
         }
+
+        Dirty(ent);
     }
 
-    private void AddOccupiedEntity(Entity<StorageComponent> storageEnt, Entity<ItemComponent?> itemEnt, ItemStorageLocation location)
+    /// <summary>
+    /// Applies occupied grid changes for item-only storage state updates.
+    /// Falls back to a full rebuild if an old item can no longer be resolved.
+    /// </summary>
+    protected void UpdateOccupied(
+        Entity<StorageComponent> ent,
+        IReadOnlyDictionary<EntityUid, ItemStorageLocation> oldStoredItems)
+    {
+        var dirty = false;
+
+        foreach (var (stent, oldLocation) in oldStoredItems)
+        {
+            if (ent.Comp.StoredItems.TryGetValue(stent, out var newLocation) && oldLocation == newLocation)
+                continue;
+
+            if (!_itemQuery.TryGetComponent(stent, out var itemComp))
+            {
+                // Run a full re-build instead and exit.
+                UpdateOccupied(ent);
+                return;
+            }
+
+            RemoveOccupiedEntity(ent, (stent, itemComp), oldLocation, dirty: false);
+            dirty = true;
+        }
+
+        foreach (var (stent, newLocation) in ent.Comp.StoredItems)
+        {
+            if (oldStoredItems.TryGetValue(stent, out var oldLocation) && oldLocation == newLocation)
+                continue;
+
+            if (!_itemQuery.TryGetComponent(stent, out var itemComp))
+                continue;
+
+            AddOccupiedEntity(ent, (stent, itemComp), newLocation, dirty: false);
+            dirty = true;
+        }
+
+        if (dirty)
+            Dirty(ent);
+    }
+
+    private void AddOccupiedEntity(Entity<StorageComponent> storageEnt, Entity<ItemComponent?> itemEnt, ItemStorageLocation location, bool dirty = true)
     {
         AddOccupied(itemEnt, location, storageEnt.Comp.OccupiedGrid);
 
-        Dirty(storageEnt);
+        if (dirty)
+            Dirty(storageEnt);
     }
 
     private void AddOccupied(Entity<ItemComponent?> itemEnt, ItemStorageLocation location, Dictionary<Vector2i, ulong> occupied)
     {
-        var adjustedShape = ItemSystem.GetAdjustedItemShape((itemEnt.Owner, itemEnt.Comp), location);
-        AddOccupied(adjustedShape, occupied);
+        _occupiedShape.Clear();
+        ItemSystem.GetAdjustedItemShape(_occupiedShape, (itemEnt.Owner, itemEnt.Comp), location);
+        AddOccupied(_occupiedShape, occupied);
     }
 
     private void RemoveOccupied(IReadOnlyList<Box2i> adjustedShape, Dictionary<Vector2i, ulong> occupied)
@@ -1692,18 +1897,7 @@ public abstract partial class SharedStorageSystem : EntitySystem
                 var top = Math.Min(box.Top, chunkOrigin.Y + StorageComponent.ChunkSize - 1);
                 var existing = occupied.GetValueOrDefault(chunkOrigin, ulong.MaxValue);
 
-                // Unmark all of the tiles that we actually have.
-                for (var x = left; x <= right; x++)
-                {
-                    for (var y = bottom; y <= top; y++)
-                    {
-                        var index = new Vector2i(x, y);
-                        var chunkRelative = SharedMapSystem.GetChunkRelative(index, StorageComponent.ChunkSize);
-
-                        var flag = SharedMapSystem.ToBitmask(chunkRelative, StorageComponent.ChunkSize);
-                        existing &= ~flag;
-                    }
-                }
+                existing &= ~GetChunkMask(chunkOrigin, left, bottom, right, top);
 
                 // My kingdom for collections.marshal
                 occupied[chunkOrigin] = existing;
@@ -1731,29 +1925,49 @@ public abstract partial class SharedStorageSystem : EntitySystem
                 var right = Math.Min(chunkOrigin.X + StorageComponent.ChunkSize - 1, box.Right);
                 var top = Math.Min(chunkOrigin.Y + StorageComponent.ChunkSize - 1, box.Top);
 
-                for (var x = left; x <= right; x++)
-                {
-                    for (var y = bottom; y <= top; y++)
-                    {
-                        var index = new Vector2i(x, y);
-                        var chunkRelative = SharedMapSystem.GetChunkRelative(index, StorageComponent.ChunkSize);
-                        var flag = SharedMapSystem.ToBitmask(chunkRelative, StorageComponent.ChunkSize);
-                        existing |= flag;
-                    }
-                }
+                existing |= GetChunkMask(chunkOrigin, left, bottom, right, top);
 
                 occupied[chunkOrigin] = existing;
             }
         }
     }
 
-    private void RemoveOccupiedEntity(Entity<StorageComponent> storageEnt, Entity<ItemComponent?> itemEnt, ItemStorageLocation location)
+    /// <summary>
+    /// Gets the chunk-local mask of a Box2i.
+    /// </summary>
+    private static ulong GetChunkMask(Vector2i chunkOrigin, int left, int bottom, int right, int top)
     {
-        var adjustedShape = ItemSystem.GetAdjustedItemShape((itemEnt.Owner, itemEnt.Comp), location);
+        var localLeft = left - chunkOrigin.X;
+        var localBottom = bottom - chunkOrigin.Y;
+        var localRight = right - chunkOrigin.X;
+        var localTop = top - chunkOrigin.Y;
 
-        RemoveOccupied(adjustedShape, storageEnt.Comp.OccupiedGrid);
+        // We know the width / height in advance so just set the bits directly for each column.
+        var width = localRight - localLeft + 1;
+        var rowMask = ((1UL << width) - 1) << localLeft;
+        var mask = 0UL;
 
-        Dirty(storageEnt);
+        for (var y = localBottom; y <= localTop; y++)
+        {
+            mask |= rowMask << (y * StorageComponent.ChunkSize);
+        }
+
+        return mask;
+    }
+
+    private static ulong GetTileMask(Vector2i chunkOrigin, Vector2i location)
+    {
+        return 1UL << (location.X - chunkOrigin.X + (location.Y - chunkOrigin.Y) * StorageComponent.ChunkSize);
+    }
+
+    private void RemoveOccupiedEntity(Entity<StorageComponent> storageEnt, Entity<ItemComponent?> itemEnt, ItemStorageLocation location, bool dirty = true)
+    {
+        _occupiedShape.Clear();
+        ItemSystem.GetAdjustedItemShape(_occupiedShape, (itemEnt.Owner, itemEnt.Comp), location);
+        RemoveOccupied(_occupiedShape, storageEnt.Comp.OccupiedGrid);
+
+        if (dirty)
+            Dirty(storageEnt);
     }
 
     /// <summary>
@@ -1764,7 +1978,7 @@ public abstract partial class SharedStorageSystem : EntitySystem
         if (!Resolve(uid, ref uid.Comp))
             return false;
 
-        return GetCumulativeItemAreas(uid) < uid.Comp.Grid.GetArea() || HasSpaceInStacks(uid);
+        return GetCumulativeItemAreas(uid) < uid.Comp.GridArea || HasSpaceInStacks(uid);
     }
 
     private bool HasSpaceInStacks(Entity<StorageComponent?> uid, ProtoId<StackPrototype>? stackType = null)

@@ -32,6 +32,12 @@ public partial record struct ItemStorageLocation
         Position = position;
     }
 
+    public ItemStorageLocation(Direction direction, Vector2i position)
+    {
+        Direction = direction;
+        Position = position;
+    }
+
     public bool Equals(ItemStorageLocation? other)
     {
         return Rotation == other?.Rotation &&

@@ -195,7 +195,20 @@ public abstract partial class SharedItemSystem : EntitySystem
     /// </summary>
     public IReadOnlyList<Box2i> GetAdjustedItemShape(Entity<ItemComponent?> entity, ItemStorageLocation location)
     {
-        return GetAdjustedItemShape(entity, location.Rotation, location.Position);
+        if (!Resolve(entity, ref entity.Comp))
+            return [];
+
+        var adjustedShapes = new List<Box2i>();
+        GetAdjustedItemShape(adjustedShapes, entity, location);
+        return adjustedShapes;
+    }
+
+    /// <summary>
+    /// Gets the shape of an item, adjusting for rotation and offset.
+    /// </summary>
+    public void GetAdjustedItemShape(List<Box2i> adjustedShapes, Entity<ItemComponent?> entity, ItemStorageLocation location)
+    {
+        GetAdjustedItemShape(adjustedShapes, entity, location.Direction, location.Position);
     }
 
     /// <summary>
@@ -207,25 +220,46 @@ public abstract partial class SharedItemSystem : EntitySystem
             return [];
 
         var adjustedShapes = new List<Box2i>();
-        GetAdjustedItemShape(adjustedShapes, entity, rotation, position);
+        GetAdjustedItemShape(adjustedShapes, entity, rotation.GetCardinalDir(), position);
         return adjustedShapes;
     }
 
     public void GetAdjustedItemShape(List<Box2i> adjustedShapes, Entity<ItemComponent?> entity, Angle rotation, Vector2i position)
     {
+        GetAdjustedItemShape(adjustedShapes, entity, rotation.GetCardinalDir(), position);
+    }
+
+    public void GetAdjustedItemShape(List<Box2i> adjustedShapes, Entity<ItemComponent?> entity, Direction direction, Vector2i position)
+    {
         var shapes = GetItemShape(entity);
         var boundingShape = shapes.GetBoundingBox();
-        var boundingCenter = ((Box2) boundingShape).Center;
-        var matty = Matrix3Helpers.CreateTransform(boundingCenter, rotation);
-        var drift = boundingShape.BottomLeft - matty.TransformBox(boundingShape).BottomLeft;
+        var width = boundingShape.Width;
+        var height = boundingShape.Height;
 
         foreach (var shape in shapes)
         {
-            var transformed = matty.TransformBox(shape).Translated(drift);
-            var floored = new Box2i(transformed.BottomLeft.Floored(), transformed.TopRight.Floored());
-            var translated = floored.Translated(position);
+            var adjusted = direction switch
+            {
+                Direction.South => shape,
+                Direction.East => new Box2i(
+                    boundingShape.Left + shape.Bottom - boundingShape.Bottom,
+                    boundingShape.Bottom + width - (shape.Right - boundingShape.Left),
+                    boundingShape.Left + shape.Top - boundingShape.Bottom,
+                    boundingShape.Bottom + width - (shape.Left - boundingShape.Left)),
+                Direction.North => new Box2i(
+                    boundingShape.Left + width - (shape.Right - boundingShape.Left),
+                    boundingShape.Bottom + height - (shape.Top - boundingShape.Bottom),
+                    boundingShape.Left + width - (shape.Left - boundingShape.Left),
+                    boundingShape.Bottom + height - (shape.Bottom - boundingShape.Bottom)),
+                Direction.West => new Box2i(
+                    boundingShape.Left + height - (shape.Top - boundingShape.Bottom),
+                    boundingShape.Bottom + shape.Left - boundingShape.Left,
+                    boundingShape.Left + height - (shape.Bottom - boundingShape.Bottom),
+                    boundingShape.Bottom + shape.Right - boundingShape.Left),
+                _ => shape,
+            };
 
-            adjustedShapes.Add(translated);
+            adjustedShapes.Add(adjusted.Translated(position));
         }
     }
 

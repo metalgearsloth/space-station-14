@@ -51,6 +51,18 @@ namespace Content.Shared.Storage
         public List<Box2i> Grid = new();
 
         /// <summary>
+        /// Cached bounding box for <see cref="Grid"/>.
+        /// </summary>
+        [ViewVariables(VVAccess.ReadOnly)]
+        public Box2i GridBounds;
+
+        /// <summary>
+        /// Cached tile area for <see cref="Grid"/>.
+        /// </summary>
+        [ViewVariables(VVAccess.ReadOnly)]
+        public int GridArea;
+
+        /// <summary>
         /// The maximum size item that can be inserted into this storage,
         /// </summary>
         [DataField, ViewVariables(VVAccess.ReadWrite)]
@@ -194,6 +206,57 @@ namespace Content.Shared.Storage
         {
             InteractedItemUid = interactedItemUid;
             StorageUid = storageUid;
+        }
+    }
+
+    [Serializable, NetSerializable]
+    public sealed class StorageDropItemEvent : EntityEventArgs
+    {
+        public readonly NetEntity ItemUid;
+
+        public readonly NetEntity StorageUid;
+
+        public readonly NetCoordinates Coordinates;
+
+        public StorageDropItemEvent(NetEntity itemUid, NetEntity storageUid, NetCoordinates coordinates)
+        {
+            ItemUid = itemUid;
+            StorageUid = storageUid;
+            Coordinates = coordinates;
+        }
+    }
+
+    [Serializable, NetSerializable]
+    public sealed class StoragePickupItemEvent : EntityEventArgs
+    {
+        public readonly NetEntity ItemUid;
+
+        public readonly NetEntity StorageUid;
+
+        public readonly string Hand;
+
+        public StoragePickupItemEvent(NetEntity itemUid, NetEntity storageUid, string hand)
+        {
+            ItemUid = itemUid;
+            StorageUid = storageUid;
+            Hand = hand;
+        }
+    }
+
+    [Serializable, NetSerializable]
+    public sealed class StorageEquipItemEvent : EntityEventArgs
+    {
+        public readonly NetEntity ItemUid;
+
+        public readonly NetEntity StorageUid;
+
+        public readonly string Slot;
+
+        public StorageEquipItemEvent(NetEntity itemUid, NetEntity storageUid, string slot)
+        {
+            ItemUid = itemUid;
+            StorageUid = storageUid;
+            Slot = slot;
         }
     }
 
