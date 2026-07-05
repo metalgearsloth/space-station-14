@@ -56051,8 +56051,6 @@ entities:
     - type: Transform
       pos: 58.5,16.5
       parent: 1
-    - type: CollisionWake
-      enabled: False
     - type: Conveyed
 - proto: FlashlightSeclite
   entities:
@@ -93277,8 +93275,6 @@ entities:
     - type: Transform
       pos: 20.5,79.5
       parent: 1
-    - type: CollisionWake
-      enabled: False
     - type: Conveyed
   - uid: 16697
     components:
@@ -93293,8 +93289,6 @@ entities:
     - type: Transform
       pos: 52.5,16.5
       parent: 1
-    - type: CollisionWake
-      enabled: False
     - type: Conveyed
 - proto: ShelfKitchen
   entities:

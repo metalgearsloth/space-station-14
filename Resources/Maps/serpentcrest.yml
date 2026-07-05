@@ -147753,8 +147753,6 @@ entities:
     - type: Transform
       pos: 49.30135,-17.257664
       parent: 2
-    - type: CollisionWake
-      enabled: False
     - type: Conveyed
   - uid: 24524
     components:

@@ -211,8 +211,6 @@ entities:
     - type: Transform
       pos: -2.484375,-2.265625
       parent: 1
-    - type: CollisionWake
-      enabled: False
 - proto: FoodMeatClown
   entities:
   - uid: 165
