@@ -25,26 +25,30 @@ namespace Content.Client.Clickable
 
         [Dependency] private IResourceCache _resourceCache = default!;
 
-        [ViewVariables]
-        private readonly Dictionary<Texture, ClickMap> _textureMaps = new();
-
-        [ViewVariables] private readonly Dictionary<RSI, RsiClickMapData> _rsiMaps =
-            new();
+        [ViewVariables] private readonly Dictionary<Texture, ClickMap> _textureMaps = new();
+        [ViewVariables] private readonly Dictionary<RSI, RsiClickMapData> _rsiMaps = new();
 
         public void PostInject()
         {
             _resourceCache.OnRawTextureLoaded += OnRawTextureLoaded;
-            _resourceCache.OnRsiLoaded += OnOnRsiLoaded;
+            _resourceCache.OnRawTextureUnloaded += OnRawTextureUnloaded;
+            _resourceCache.OnRsiLoaded += OnRsiLoaded;
+            _resourceCache.OnRsiUnloaded += OnRsiUnloaded;
         }
 
-        private void OnOnRsiLoaded(RsiLoadedEventArgs obj)
+        private void OnRawTextureUnloaded(Texture texture) => _textureMaps.Remove(texture);
+
+        private void OnRsiUnloaded(RSI rsi) => _rsiMaps.Remove(rsi);
+
+        private void OnRsiLoaded(RsiLoadedEventArgs obj)
         {
             if (obj.Atlas is Image<Rgba32> rgba)
             {
                 var clickMap = ClickMap.FromImage(rgba, Threshold);
-
-                var rsiData = new RsiClickMapData(clickMap, obj.AtlasOffsets);
-                _rsiMaps[obj.Resource.RSI] = rsiData;
+                if (clickMap.IsFullyTransparent)
+                    _rsiMaps.Remove(obj.Resource.RSI);
+                else
+                    _rsiMaps[obj.Resource.RSI] = new RsiClickMapData(clickMap, obj.AtlasOffset);
             }
         }
 
@@ -59,7 +63,7 @@ namespace Content.Client.Clickable
                         return;
                 }
 
-                _textureMaps[obj.Resource] = ClickMap.FromImage(rgba, Threshold);
+                UpdateClickMap(_textureMaps, obj.Resource.Texture, ClickMap.FromImage(rgba, Threshold));
             }
         }
 
@@ -80,25 +84,42 @@ namespace Content.Client.Clickable
                 return false;
             }
 
-            if (!rsiData.Offsets.TryGetValue(state, out var stateDat) || stateDat.Length <= (int) dir)
+            if (!rsi.TryGetState(state, out var rsiState))
             {
                 return false;
             }
 
-            var dirDat = stateDat[(int) dir];
-            if (dirDat.Length <= frame)
+            var direction = (int) dir;
+            if ((uint) direction >= (uint) rsiState.Icons.Length)
             {
                 return false;
             }
 
-            var offset = dirDat[frame];
-            return SampleClickMap(rsiData.ClickMap, pos, rsi.Size, offset);
+            var frames = rsiState.Icons[direction];
+            if ((uint) frame >= (uint) frames.Length || frames[frame] is not AtlasTexture atlasTexture)
+            {
+                return false;
+            }
+
+            return SampleClickMap(rsiData.ClickMap, pos, rsi.Size, (Vector2i) atlasTexture.SubRegion.TopLeft - rsiData.AtlasOffset);
+        }
+
+        private static void UpdateClickMap<TKey>(Dictionary<TKey, ClickMap> maps, TKey key, ClickMap clickMap)
+            where TKey : class
+        {
+            if (clickMap.IsFullyTransparent)
+                maps.Remove(key);
+            else
+                maps[key] = clickMap;
         }
 
         private static bool SampleClickMap(ClickMap map, Vector2i pos, Vector2i bounds, Vector2i offset)
         {
             var (width, height) = bounds;
             var (px, py) = pos;
+
+            if (offset.X < 0 || offset.Y < 0 || offset.X + width > map.Width || offset.Y + height > map.Height)
+                return false;
 
             for (var x = -ClickRadius; x <= ClickRadius; x++)
             {
@@ -127,28 +148,33 @@ namespace Content.Client.Clickable
             return false;
         }
 
-        private sealed class RsiClickMapData
+        private readonly struct RsiClickMapData
         {
             public readonly ClickMap ClickMap;
-            public readonly Dictionary<RSI.StateId, Vector2i[][]> Offsets;
+            public readonly Vector2i AtlasOffset;
 
-            public RsiClickMapData(ClickMap clickMap, Dictionary<RSI.StateId, Vector2i[][]> offsets)
+            public RsiClickMapData(ClickMap clickMap, Vector2i atlasOffset)
             {
                 ClickMap = clickMap;
-                Offsets = offsets;
+                AtlasOffset = atlasOffset;
             }
         }
 
         internal sealed class ClickMap
         {
-            [ViewVariables] private readonly byte[] _data;
+            [ViewVariables] private readonly byte[]? _data;
+            private readonly bool _uniformOcclusion;
 
             public int Width { get; }
             public int Height { get; }
             [ViewVariables] public Vector2i Size => (Width, Height);
+            public bool IsFullyTransparent => _data == null && !_uniformOcclusion;
 
             public bool IsOccluded(int x, int y)
             {
+                if (_data == null)
+                    return _uniformOcclusion;
+
                 var i = y * Width + x;
                 return (_data[i / 8] & (1 << (i % 8))) != 0;
             }
@@ -159,11 +185,12 @@ namespace Content.Client.Clickable
                 return IsOccluded(x, y);
             }
 
-            private ClickMap(byte[] data, int width, int height)
+            private ClickMap(byte[]? data, int width, int height, bool uniformOcclusion)
             {
                 Width = width;
                 Height = height;
                 _data = data;
+                _uniformOcclusion = uniformOcclusion;
             }
 
             public static ClickMap FromImage<T>(Image<T> image, float threshold) where T : unmanaged, IPixel<T>
@@ -171,23 +198,48 @@ namespace Content.Client.Clickable
                 var threshByte = (byte) (threshold * 255);
                 var width = image.Width;
                 var height = image.Height;
-
-                var dataSize = (int) Math.Ceiling(width * height / 8f);
-                var data = new byte[dataSize];
-
                 var pixelSpan = image.GetPixelSpan();
+                byte[]? data = null;
+                var firstPixelOccluded = false;
+                var hasFirstPixel = false;
 
                 for (var i = 0; i < pixelSpan.Length; i++)
                 {
                     Rgba32 rgba = default;
                     pixelSpan[i].ToRgba32(ref rgba);
-                    if (rgba.A >= threshByte)
+
+                    var occluded = rgba.A >= threshByte;
+                    if (!hasFirstPixel)
+                    {
+                        firstPixelOccluded = occluded;
+                        hasFirstPixel = true;
+                        continue;
+                    }
+
+                    if (data == null && occluded != firstPixelOccluded)
+                    {
+                        data = new byte[(pixelSpan.Length + 7) / 8];
+                        if (firstPixelOccluded)
+                            SetInitialOpaqueBits(data, i);
+                    }
+
+                    if (data != null && occluded)
                     {
                         data[i / 8] |= (byte) (1 << (i % 8));
                     }
                 }
 
-                return new ClickMap(data, width, height);
+                return new ClickMap(data, width, height, firstPixelOccluded);
+            }
+
+            private static void SetInitialOpaqueBits(byte[] data, int count)
+            {
+                var fullBytes = count / 8;
+                Array.Fill(data, byte.MaxValue, 0, fullBytes);
+
+                var remainingBits = count % 8;
+                if (remainingBits != 0)
+                    data[fullBytes] = (byte) ((1 << remainingBits) - 1);
             }
 
             public string DumpText()
