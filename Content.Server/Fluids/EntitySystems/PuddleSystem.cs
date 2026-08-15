@@ -1,4 +1,3 @@
-using Content.Server.Fluids.Components;
 using Content.Server.Spreader;
 using Content.Shared.Chemistry;
 using Content.Shared.Chemistry.Components;
@@ -18,6 +17,8 @@ using Robust.Shared.Map;
 using Robust.Shared.Map.Components;
 using Robust.Shared.Player;
 using Robust.Shared.Random;
+
+using EvaporationSparkleComponent = Content.Server.Fluids.Components.EvaporationSparkleComponent;
 
 namespace Content.Server.Fluids.EntitySystems;
 
@@ -46,9 +47,15 @@ public sealed partial class PuddleSystem : SharedPuddleSystem
     public override void Initialize()
     {
         base.Initialize();
+        InitializeSharedPuddle();
 
         SubscribeLocalEvent<PuddleComponent, SpreadNeighborsEvent>(OnPuddleSpread);
         SubscribeLocalEvent<PuddleComponent, SlipEvent>(OnPuddleSlip);
+    }
+
+    protected override void TickEvaporation()
+    {
+        TickEvaporation(_puddleQuery);
     }
 
     // TODO: This can be predicted once https://github.com/space-wizards/RobustToolbox/pull/5849 is merged

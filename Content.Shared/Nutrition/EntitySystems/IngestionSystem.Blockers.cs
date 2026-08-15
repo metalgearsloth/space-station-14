@@ -1,8 +1,7 @@
-﻿using System.Linq;
+using System.Linq;
 using Content.Shared.Chemistry.Components;
 using Content.Shared.Clothing;
 using Content.Shared.Containers.ItemSlots;
-using Content.Shared.Fluids.Components;
 using Content.Shared.Interaction.Components;
 using Content.Shared.Inventory;
 using Content.Shared.Nutrition.Components;
@@ -31,7 +30,6 @@ public sealed partial class IngestionSystem
         // Digestion Events
         SubscribeLocalEvent<EdibleComponent, IsDigestibleEvent>(OnEdibleIsDigestible);
         SubscribeLocalEvent<DrainableSolutionComponent, IsDigestibleEvent>(OnDrainableIsDigestible);
-        SubscribeLocalEvent<PuddleComponent, IsDigestibleEvent>(OnPuddleIsDigestible);
 
         SubscribeLocalEvent<PillComponent, BeforeIngestedEvent>(OnPillBeforeEaten);
     }
@@ -143,9 +141,10 @@ public sealed partial class IngestionSystem
         args.UniversalDigestion();
     }
 
-    private void OnPuddleIsDigestible(Entity<PuddleComponent> ent, ref IsDigestibleEvent args)
+    private void AddPuddleDigestibility(EntityUid uid, ref IsDigestibleEvent args)
     {
-        args.UniversalDigestion();
+        if (_puddle.TryGetPuddle(uid, out _))
+            args.UniversalDigestion();
     }
 
     /// <remarks>

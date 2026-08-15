@@ -11,6 +11,7 @@ using Content.Shared.Cloning.Events;
 using Content.Shared.Coordinates;
 using Content.Shared.Database;
 using Content.Shared.FixedPoint;
+using Content.Shared.Fluids;
 using Content.Shared.Fluids.Components;
 using Content.Shared.Gravity;
 using Content.Shared.Mobs;
@@ -42,9 +43,9 @@ public sealed partial class RootableSystem : EntitySystem
     [Dependency] private BloodstreamSystem _blood = default!;
     [Dependency] private SharedGravitySystem _gravity = default!;
     [Dependency] private SharedPhysicsSystem _physics = default!;
+    [Dependency] private SharedPuddleSystem _puddle = default!;
     [Dependency] private SharedSolutionContainerSystem _solutionContainer = default!;
 
-    [Dependency] private EntityQuery<PuddleComponent> _puddleQuery = default!;
     [Dependency] private EntityQuery<PhysicsComponent> _physicsQuery = default!;
 
     public override void Initialize()
@@ -71,7 +72,7 @@ public sealed partial class RootableSystem : EntitySystem
         var curTime = _timing.CurTime;
         while (query.MoveNext(out var uid, out var rooted, out var bloodstream))
         {
-            if (!rooted.Rooted || rooted.PuddleEntity == null || curTime < rooted.NextUpdate || !_puddleQuery.TryComp(rooted.PuddleEntity, out var puddleComp))
+            if (!rooted.Rooted || rooted.PuddleEntity == null || curTime < rooted.NextUpdate || !_puddle.TryGetPuddle(rooted.PuddleEntity.Value, out var puddleComp))
                 continue;
 
             rooted.NextUpdate += rooted.TransferFrequency;
@@ -213,7 +214,7 @@ public sealed partial class RootableSystem : EntitySystem
 
     private void OnStartCollide(Entity<RootableComponent> ent, ref StartCollideEvent args)
     {
-        if (!_puddleQuery.HasComp(args.OtherEntity))
+        if (!_puddle.TryGetPuddle(args.OtherEntity, out _))
             return;
 
         ent.Comp.PuddleEntity = args.OtherEntity;
@@ -239,7 +240,7 @@ public sealed partial class RootableSystem : EntitySystem
             if (exists && entContact == args.OtherEntity)
                 continue;
 
-            if (!_puddleQuery.HasComponent(entContact))
+            if (!_puddle.TryGetPuddle(entContact, out _))
                 continue;
 
             ent.Comp.PuddleEntity = ent;

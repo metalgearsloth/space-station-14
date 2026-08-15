@@ -9,6 +9,12 @@ using static Robust.Client.GameObjects.SpriteComponent;
 
 namespace Content.Client.IconSmoothing
 {
+    /// <summary>
+    /// Raised directed on an entity when its icon smoothing changes.
+    /// </summary>
+    [ByRefEvent]
+    public readonly record struct IconSmoothChangedEvent;
+
     // TODO: just make this set appearance data?
     /// <summary>
     ///     Entity system implementing the logic for <see cref="IconSmoothComponent"/>
@@ -33,6 +39,9 @@ namespace Content.Client.IconSmoothing
 
             component.Enabled = value;
             DirtyNeighbours(uid, component);
+
+            var ev = new IconSmoothChangedEvent();
+            RaiseLocalEvent(uid, ref ev);
         }
 
         public override void Initialize()
@@ -284,6 +293,9 @@ namespace Content.Client.IconSmoothing
                 default:
                     throw new ArgumentOutOfRangeException();
             }
+
+            var ev = new IconSmoothChangedEvent();
+            RaiseLocalEvent(uid, ref ev);
         }
 
         private void CalculateNewSpriteDiagonal(Entity<MapGridComponent>? gridEntity, IconSmoothComponent smooth,

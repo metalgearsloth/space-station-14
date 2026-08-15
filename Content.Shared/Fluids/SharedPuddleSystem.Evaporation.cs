@@ -33,13 +33,16 @@ public abstract partial class SharedPuddleSystem
         RemComp<EvaporationComponent>(uid);
     }
 
-    private void TickEvaporation()
+    protected void TickEvaporation(EntityQuery<PuddleComponent> puddleQuery)
     {
-        var query = EntityQueryEnumerator<EvaporationComponent, PuddleComponent>();
+        var query = EntityQueryEnumerator<EvaporationComponent>();
         var curTime = _timing.CurTime;
-        while (query.MoveNext(out var uid, out var evaporation, out var puddle))
+        while (query.MoveNext(out var uid, out var evaporation))
         {
             if (evaporation.NextTick > curTime)
+                continue;
+
+            if (!puddleQuery.TryComp(uid, out var puddle))
                 continue;
 
             // Necessary to keep client and server in sync so they don't drift

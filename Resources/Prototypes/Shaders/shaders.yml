@@ -84,6 +84,17 @@
     removeTransparency: false
 
 - type: shader
+  id: Puddle
+  kind: source
+  path: "/Textures/Shaders/puddle.swsl"
+  params:
+    color: 1, 1, 1, 1
+    northColor: 1, 1, 1, 1
+    southColor: 1, 1, 1, 1
+    eastColor: 1, 1, 1, 1
+    westColor: 1, 1, 1, 1
+
+- type: shader
   id: BlurryVisionX
   kind: source
   path: "/Textures/Shaders/blurryx.swsl"

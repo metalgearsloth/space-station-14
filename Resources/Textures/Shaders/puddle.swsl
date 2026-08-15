@@ -1,0 +1,94 @@
+uniform highp vec4 color;
+uniform highp vec4 northColor;
+uniform highp vec4 southColor;
+uniform highp vec4 eastColor;
+uniform highp vec4 westColor;
+uniform highp vec4 northEastColor;
+uniform highp vec4 northWestColor;
+uniform highp vec4 southEastColor;
+uniform highp vec4 southWestColor;
+
+// x/y/z/w are north/south/east/west.
+uniform highp vec4 cardinalBlendMask;
+
+// x/y/z/w are north-east/north-west/south-east/south-west.
+uniform highp vec4 diagonalBlendMask;
+
+// The transition extends this many source pixels into each tile.
+uniform highp float blendRangePixels;
+uniform highp vec2 spritePixelSize;
+
+highp float smootherstep(highp float value)
+{
+    highp float x = clamp(value, 0.0, 1.0);
+    return x * x * x * (x * (x * 6.0 - 15.0) + 10.0);
+}
+
+highp float edgeBlend(highp float edgeDistance, highp float blendWidth, highp float noise)
+{
+    highp float t = clamp(1.0 - edgeDistance / max(blendWidth, 0.0001), 0.0, 1.0);
+
+    // Break up the otherwise perfectly uniform tile-wide colour ramp, while
+    // keeping exact tile borders and the end of the blend band stable.
+    t = clamp(t + noise * 0.45 * t * (1.0 - t), 0.0, 1.0);
+
+    return smootherstep(t);
+}
+
+void fragment() {
+    highp vec4 textureColor = zTexture(UV);
+
+    // This is a layer shader, so UV2 is the original sprite's 0-1 local
+    // coordinate (rather than a padded post-shader render target).
+    highp vec2 tileUv = UV2;
+
+    highp vec2 blendWidth = min(
+        vec2(0.5),
+        vec2(blendRangePixels) / max(spritePixelSize, vec2(1.0)));
+
+    highp float blendNoise = zNoise(tileUv * spritePixelSize * vec2(0.13, 0.19)) - 0.5;
+
+    highp float westEdge = edgeBlend(tileUv.x, blendWidth.x, blendNoise);
+    highp float eastEdge = edgeBlend(1.0 - tileUv.x, blendWidth.x, blendNoise);
+    highp float southEdge = edgeBlend(tileUv.y, blendWidth.y, blendNoise);
+    highp float northEdge = edgeBlend(1.0 - tileUv.y, blendWidth.y, blendNoise);
+
+    highp float northWeight = northEdge * cardinalBlendMask.x;
+    highp float southWeight = southEdge * cardinalBlendMask.y;
+    highp float eastWeight = eastEdge * cardinalBlendMask.z;
+    highp float westWeight = westEdge * cardinalBlendMask.w;
+
+    highp float northEastWeight = northEdge * eastEdge * diagonalBlendMask.x * max(cardinalBlendMask.x, cardinalBlendMask.z);
+    highp float northWestWeight = northEdge * westEdge * diagonalBlendMask.y * max(cardinalBlendMask.x, cardinalBlendMask.w);
+    highp float southEastWeight = southEdge * eastEdge * diagonalBlendMask.z * max(cardinalBlendMask.y, cardinalBlendMask.z);
+    highp float southWestWeight = southEdge * westEdge * diagonalBlendMask.w * max(cardinalBlendMask.y, cardinalBlendMask.w);
+
+    // Normalize over only the neighbours that really exist. Missing cells are
+    // not treated as extra samples of the current tile, which keeps concave and
+    // three-tile corners from resolving to different colours on each sprite.
+    highp float colorWeight = 1.0;
+    highp float totalWeight =
+        colorWeight +
+        northWeight +
+        southWeight +
+        eastWeight +
+        westWeight +
+        northEastWeight +
+        northWestWeight +
+        southEastWeight +
+        southWestWeight;
+
+    highp vec4 blendedColor = (
+        color * colorWeight +
+        northColor * northWeight +
+        southColor * southWeight +
+        eastColor * eastWeight +
+        westColor * westWeight +
+        northEastColor * northEastWeight +
+        northWestColor * northWestWeight +
+        southEastColor * southEastWeight +
+        southWestColor * southWestWeight)
+        / totalWeight;
+
+    COLOR = vec4(textureColor.rgb * blendedColor.rgb, textureColor.a * blendedColor.a);
+}

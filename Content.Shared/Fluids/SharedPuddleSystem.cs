@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Diagnostics.CodeAnalysis;
 using Content.Shared.Administration.Logs;
 using Content.Shared.Chemistry;
 using Content.Shared.Chemistry.Components;
@@ -49,8 +50,7 @@ public abstract partial class SharedPuddleSystem : EntitySystem
     [Dependency] private EntityQuery<StepTriggerComponent> _stepTriggerQuery = default!;
     [Dependency] private EntityQuery<ReactiveComponent> _reactiveQuery = default!;
     [Dependency] private EntityQuery<EvaporationComponent> _evaporationQuery = default!;
-    [Dependency] private EntityQuery<PuddleComponent> _puddleQuery = default!;
-
+    [Dependency] private EntityQuery<PuddleComponent> _puddleCompQuery = default!;
     private ProtoId<ReagentPrototype>[] _standoutReagents = [];
 
     /// <summary>
@@ -67,12 +67,6 @@ public abstract partial class SharedPuddleSystem : EntitySystem
     public override void Initialize()
     {
         base.Initialize();
-        // Shouldn't need re-anchoring.
-        SubscribeLocalEvent<PuddleComponent, AnchorStateChangedEvent>(OnAnchorChanged);
-        SubscribeLocalEvent<PuddleComponent, SolutionChangedEvent>(OnSolutionUpdate);
-        SubscribeLocalEvent<PuddleComponent, GetFootstepSoundEvent>(OnGetFootstepSound);
-        SubscribeLocalEvent<PuddleComponent, ExaminedEvent>(HandlePuddleExamined);
-        SubscribeLocalEvent<PuddleComponent, EntRemovedFromContainerMessage>(OnEntRemoved);
 
         SubscribeLocalEvent<EvaporationComponent, MapInitEvent>(OnEvaporationMapInit);
 
@@ -80,6 +74,16 @@ public abstract partial class SharedPuddleSystem : EntitySystem
 
         CacheStandsout();
         InitializeSpillable();
+    }
+
+    protected void InitializeSharedPuddle()
+    {
+        // Shouldn't need re-anchoring.
+        SubscribeLocalEvent<PuddleComponent, AnchorStateChangedEvent>(OnAnchorChanged);
+        SubscribeLocalEvent<PuddleComponent, SolutionChangedEvent>(OnSolutionUpdate);
+        SubscribeLocalEvent<PuddleComponent, GetFootstepSoundEvent>(OnGetFootstepSound);
+        SubscribeLocalEvent<PuddleComponent, ExaminedEvent>(HandlePuddleExamined);
+        SubscribeLocalEvent<PuddleComponent, EntRemovedFromContainerMessage>(OnEntRemoved);
     }
 
     public override void Update(float frameTime)
@@ -104,6 +108,13 @@ public abstract partial class SharedPuddleSystem : EntitySystem
         if (ev.WasModified<ReagentPrototype>())
             CacheStandsout();
     }
+
+    public bool TryGetPuddle(EntityUid uid, [NotNullWhen(true)] out PuddleComponent? puddle)
+    {
+        return _puddleCompQuery.TryComp(uid, out puddle);
+    }
+
+    protected abstract void TickEvaporation();
 
     /// <summary>
     /// Used to cache standout reagents for future use.
@@ -199,10 +210,12 @@ public abstract partial class SharedPuddleSystem : EntitySystem
             var anchored = _map.GetAnchoredEntitiesEnumerator(ev.Entity, ev.Entity.Comp, change.GridIndices);
             while (anchored.MoveNext(out var ent))
             {
-                if (!_puddleQuery.HasComponent(ent))
+                var uid = ent.Value;
+
+                if (!TryGetPuddle(uid, out _))
                     continue;
 
-                PredictedQueueDel(ent);
+                PredictedQueueDel(uid);
             }
         }
     }

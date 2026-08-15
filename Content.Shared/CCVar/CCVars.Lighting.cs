@@ -19,6 +19,12 @@ public sealed partial class CCVars
     public static readonly Color DefaultAmbientOcclusionColor = Color.FromHex("#04080FAA");
 
     /// <summary>
+    /// Controls whether puddles should blend with each other via shaders.
+    /// </summary>
+    public static readonly CVarDef<bool> PuddleShaders =
+        CVarDef.Create("graphics.puddle_shaders", true, CVar.CLIENTONLY | CVar.ARCHIVE);
+
+    /// <summary>
     /// Color of ambient occlusion.
     /// </summary>
     public static readonly CVarDef<string> AmbientOcclusionColor =

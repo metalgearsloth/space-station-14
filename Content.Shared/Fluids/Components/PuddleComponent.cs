@@ -2,6 +2,7 @@ using Content.Shared.Chemistry.Components;
 using Content.Shared.FixedPoint;
 using Robust.Shared.Audio;
 using Robust.Shared.GameStates;
+using Robust.Shared.Maths;
 
 namespace Content.Shared.Fluids.Components
 {
@@ -27,5 +28,9 @@ namespace Content.Shared.Fluids.Components
 
         [ViewVariables]
         public Entity<SolutionComponent>? Solution;
+
+        public Color SolutionColor = Color.White;
+
+        public (EntityUid GridUid, Vector2i GridIndices)? LastPosition;
     }
 }

@@ -10,6 +10,7 @@ using Content.Shared.Database;
 using Content.Shared.Destructible;
 using Content.Shared.DoAfter;
 using Content.Shared.FixedPoint;
+using Content.Shared.Fluids;
 using Content.Shared.Forensics.Systems;
 using Content.Shared.Hands.EntitySystems;
 using Content.Shared.IdentityManagement;
@@ -53,6 +54,7 @@ public sealed partial class IngestionSystem : EntitySystem
     [Dependency] private SharedAudioSystem _audio = default!;
     [Dependency] private SharedDoAfterSystem _doAfter = default!;
     [Dependency] private SharedHandsSystem _hands = default!;
+    [Dependency] private SharedPuddleSystem _puddle = default!;
     [Dependency] private SharedPopupSystem _popup = default!;
     [Dependency] private SharedSolutionContainerSystem _solutionContainer = default!;
     [Dependency] private SharedTransformSystem _transform = default!;
@@ -183,6 +185,7 @@ public sealed partial class IngestionSystem : EntitySystem
         popup = false;
         var ev = new IsDigestibleEvent();
         RaiseLocalEvent(food, ref ev);
+        AddPuddleDigestibility(food, ref ev);
 
         if (!ev.Digestible)
             return false;
@@ -225,6 +228,7 @@ public sealed partial class IngestionSystem : EntitySystem
     {
         var ev = new IsDigestibleEvent();
         RaiseLocalEvent(food, ref ev);
+        AddPuddleDigestibility(food, ref ev);
 
         if (!ev.Digestible)
             return false;

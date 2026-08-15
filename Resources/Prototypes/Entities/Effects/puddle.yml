@@ -141,6 +141,8 @@
   placement:
     mode: SnapgridCenter
   components:
+  - type: PlacementReplacement
+    key: puddle
   - type: Clickable
   - type: Slippery
     staminaDamage: 0
