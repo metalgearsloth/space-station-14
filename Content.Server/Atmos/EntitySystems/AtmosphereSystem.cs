@@ -65,9 +65,6 @@ public sealed partial class AtmosphereSystem : SharedAtmosphereSystem
         InitializeGridAtmosphere();
         InitializeMap();
 
-        SubscribeLocalEvent<TileChangedEvent>(OnTileChanged);
-        SubscribeLocalEvent<PrototypesReloadedEventArgs>(OnPrototypesReloaded);
-
         CacheDecals();
         CacheGases();
     }
@@ -79,14 +76,25 @@ public sealed partial class AtmosphereSystem : SharedAtmosphereSystem
         ShutdownCommands();
     }
 
+    [SubscribeLocalEvent]
     private void OnTileChanged(ref TileChangedEvent ev)
     {
+        if (!_gridAtmosQuery.TryComp(ev.Entity, out var atmosphere))
+            return;
+
         foreach (var change in ev.Changes)
         {
-            InvalidateTile(ev.Entity.Owner, change.GridIndices);
+            atmosphere.InvalidatedCoords.Add(change.GridIndices);
+
+            for (var i = 0; i < Atmospherics.Directions; i++)
+            {
+                var direction = (AtmosDirection) (1 << i);
+                atmosphere.InvalidatedCoords.Add(change.GridIndices.Offset(direction));
+            }
         }
     }
 
+    [SubscribeLocalEvent]
     private void OnPrototypesReloaded(PrototypesReloadedEventArgs ev)
     {
         if (ev.WasModified<DecalPrototype>())

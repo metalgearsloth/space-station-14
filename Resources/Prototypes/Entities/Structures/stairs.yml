@@ -109,3 +109,97 @@
     sprite: Structures/stairs.rsi
     state: stairs_stage_wood
     drawdepth: FloorTiles
+
+- type: entity
+  abstract: true
+  parent: Stairs
+  id: BaseZLevelRamp
+  name: z-level ramp
+  description: A short ramp connecting aligned z-levels.
+  placement:
+    mode: SnapgridCenter
+  components:
+  - type: Physics
+    bodyType: Static
+  - type: Fixtures
+    fixtures:
+      zLevelRampFixture:
+        shape:
+          !type:PhysShapeAabb
+          bounds: "-0.5,-0.5,0.5,0.5"
+        mask:
+        - FullTileMask
+        - GhostImpassable
+        layer:
+        - WallLayer
+        hard: false
+  - type: ZLevelHighGround
+    heightCurve: [0.1, 1.05]
+    stick: true
+
+- type: entity
+  parent: BaseZLevelRamp
+  id: ZLevelRampUp
+  suffix: Steel, up
+
+- type: entity
+  parent: BaseZLevelRamp
+  id: ZLevelRampDown
+  suffix: Steel, down
+  components:
+  - type: ZLevelHighGround
+    heightCurve: [1.05, 0.1]
+
+- type: entity
+  parent: BaseZLevelRamp
+  id: ZLevelRampUpWhite
+  suffix: White, up
+  components:
+  - type: Sprite
+    sprite: Structures/stairs.rsi
+    state: stairs_white
+    drawdepth: FloorTiles
+
+- type: entity
+  parent: ZLevelRampUpWhite
+  id: ZLevelRampDownWhite
+  suffix: White, down
+  components:
+  - type: ZLevelHighGround
+    heightCurve: [1.05, 0.1]
+
+- type: entity
+  parent: BaseZLevelRamp
+  id: ZLevelRampUpDark
+  suffix: Dark, up
+  components:
+  - type: Sprite
+    sprite: Structures/stairs.rsi
+    state: stairs_dark
+    drawdepth: FloorTiles
+
+- type: entity
+  parent: ZLevelRampUpDark
+  id: ZLevelRampDownDark
+  suffix: Dark, down
+  components:
+  - type: ZLevelHighGround
+    heightCurve: [1.05, 0.1]
+
+- type: entity
+  parent: BaseZLevelRamp
+  id: ZLevelRampUpWood
+  suffix: Wood, up
+  components:
+  - type: Sprite
+    sprite: Structures/stairs.rsi
+    state: stairs_wood
+    drawdepth: FloorTiles
+
+- type: entity
+  parent: ZLevelRampUpWood
+  id: ZLevelRampDownWood
+  suffix: Wood, down
+  components:
+  - type: ZLevelHighGround
+    heightCurve: [1.05, 0.1]

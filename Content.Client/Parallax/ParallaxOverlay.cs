@@ -37,7 +37,9 @@ public sealed partial class ParallaxOverlay : Overlay
         if (args.MapId == MapId.Nullspace || _entManager.HasComponent<BiomeComponent>(_mapSystem.GetMapOrInvalid(args.MapId)))
             return false;
 
-        return true;
+        // A z-level viewport renders this overlay once on its farthest visible layer. Map-specific overlays in
+        // the same overlay space still render independently on every layer.
+        return args.IsZLevelBackground;
     }
 
     protected override void Draw(in OverlayDrawArgs args)

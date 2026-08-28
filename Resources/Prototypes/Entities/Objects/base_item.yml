@@ -46,6 +46,8 @@
   - type: DamageExaminable
   - type: Rotatable
     increment: 30
+  - type: ZLevelPhysics
+    airborneDrawDepth: OverMobs
 
 - type: entity
   abstract: true

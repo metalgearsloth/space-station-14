@@ -36,6 +36,8 @@
   - type: ContentEye
   - type: CameraRecoil
   - type: MindContainer
+  - type: ZLevelPhysics
+    airborneDrawDepth: OverMobs
   - type: RequireProjectileTarget
     active: False
 

@@ -17,6 +17,9 @@ namespace Content.Shared.Movement.Systems;
 public abstract partial class SharedContentEyeSystem : EntitySystem
 {
     [Dependency] private ISharedAdminManager _admin = default!;
+    [Dependency] private EntityQuery<ContentEyeComponent> _contentEyeQuery = default!;
+    [Dependency] private EntityQuery<EyeComponent> _eyeQuery = default!;
+    [Dependency] private EntityQuery<GhostComponent> _ghostQuery = default!;
 
     // Admin flags required to ignore normal eye restrictions.
     public const AdminFlags EyeFlag = AdminFlags.Debug;
@@ -30,7 +33,6 @@ public abstract partial class SharedContentEyeSystem : EntitySystem
     public override void Initialize()
     {
         base.Initialize();
-        SubscribeLocalEvent<ContentEyeComponent, ComponentStartup>(OnContentEyeStartup);
         SubscribeAllEvent<RequestTargetZoomEvent>(OnContentZoomRequest);
         SubscribeAllEvent<RequestPvsScaleEvent>(OnPvsScale);
         SubscribeAllEvent<RequestEyeEvent>(OnRequestEye);
@@ -53,20 +55,20 @@ public abstract partial class SharedContentEyeSystem : EntitySystem
 
     private void ResetZoom(ICommonSession? session)
     {
-        if (TryComp(session?.AttachedEntity, out ContentEyeComponent? eye))
-            ResetZoom(session.AttachedEntity.Value, eye);
+        if (session?.AttachedEntity is { } player && _contentEyeQuery.TryComp(player, out var eye))
+            ResetZoom(player, eye);
     }
 
     private void ZoomOut(ICommonSession? session)
     {
-        if (TryComp(session?.AttachedEntity, out ContentEyeComponent? eye))
-            SetZoom(session.AttachedEntity.Value, eye.TargetZoom * ZoomMod, eye: eye);
+        if (session?.AttachedEntity is { } player && _contentEyeQuery.TryComp(player, out var eye))
+            SetZoom(player, eye.TargetZoom * ZoomMod, eye: eye);
     }
 
     private void ZoomIn(ICommonSession? session)
     {
-        if (TryComp(session?.AttachedEntity, out ContentEyeComponent? eye))
-            SetZoom(session.AttachedEntity.Value, eye.TargetZoom / ZoomMod, eye: eye);
+        if (session?.AttachedEntity is { } player && _contentEyeQuery.TryComp(player, out var eye))
+            SetZoom(player, eye.TargetZoom / ZoomMod, eye: eye);
     }
 
     private Vector2 Clamp(Vector2 zoom, ContentEyeComponent component)
@@ -90,8 +92,8 @@ public abstract partial class SharedContentEyeSystem : EntitySystem
     {
         var ignoreLimit = msg.IgnoreLimit && _admin.HasAdminFlag(args.SenderSession, EyeFlag);
 
-        if (TryComp<ContentEyeComponent>(args.SenderSession.AttachedEntity, out var content))
-            SetZoom(args.SenderSession.AttachedEntity.Value, msg.TargetZoom, ignoreLimit, eye: content);
+        if (args.SenderSession.AttachedEntity is { } player && _contentEyeQuery.TryComp(player, out var content))
+            SetZoom(player, msg.TargetZoom, ignoreLimit, eye: content);
     }
 
     private void OnPvsScale(RequestPvsScaleEvent ev, EntitySessionEventArgs args)
@@ -105,23 +107,24 @@ public abstract partial class SharedContentEyeSystem : EntitySystem
         if (args.SenderSession.AttachedEntity is not { } player)
             return;
 
-        if (!HasComp<GhostComponent>(player) && !_admin.IsAdmin(player))
+        if (!_ghostQuery.HasComp(player) && !_admin.IsAdmin(player))
             return;
 
-        if (TryComp<EyeComponent>(player, out var eyeComp))
+        if (_eyeQuery.TryComp(player, out var eyeComp))
         {
             _eye.SetDrawFov(player, msg.DrawFov, eyeComp);
             _eye.SetDrawLight((player, eyeComp), msg.DrawLight);
         }
     }
 
-    private void OnContentEyeStartup(EntityUid uid, ContentEyeComponent component, ComponentStartup args)
+    [SubscribeLocalEvent]
+    private void OnContentEyeStartup(Entity<ContentEyeComponent> entity, ref ComponentStartup args)
     {
-        if (!TryComp<EyeComponent>(uid, out var eyeComp))
+        if (!_eyeQuery.TryComp(entity.Owner, out var eyeComp))
             return;
 
-        _eye.SetZoom(uid, component.TargetZoom, eyeComp);
-        Dirty(uid, component);
+        _eye.SetZoom(entity.Owner, entity.Comp.TargetZoom, eyeComp);
+        Dirty(entity);
     }
 
     public void ResetZoom(EntityUid uid, ContentEyeComponent? component = null)

@@ -1,13 +1,40 @@
 using System.Numerics;
+using Content.Shared.Camera;
 using Content.Shared.Movement.Components;
 using Content.Shared.Movement.Systems;
+using Robust.Client.GameObjects;
+using Robust.Client.Graphics;
 using Robust.Client.Player;
+using Robust.Shared;
+using Robust.Shared.Configuration;
+using Robust.Shared.Physics.Components;
 
 namespace Content.Client.Movement.Systems;
 
 public sealed partial class ContentEyeSystem : SharedContentEyeSystem
 {
     [Dependency] private IPlayerManager _player = default!;
+    [Dependency] private IEyeManager _eye = default!;
+    [Dependency] private IConfigurationManager _configuration = default!;
+    [Dependency] private ZLevelPhysicsVisualSystem _zPhysicsVisuals = default!;
+
+    private float _zLevelVerticalOffset = CVars.RenderZLevelVerticalOffset.DefaultValue;
+
+    public override void Initialize()
+    {
+        base.Initialize();
+
+        Subs.CVar(_configuration, CVars.RenderZLevelVerticalOffset,
+            value => _zLevelVerticalOffset = MathF.Max(0f, value), true);
+    }
+
+    [SubscribeLocalEvent]
+    private void OnZLevelPhysicsGetEyeOffset(Entity<ZLevelPhysicsComponent> entity, ref GetEyeOffsetEvent args)
+    {
+        var rotation = -_eye.CurrentEye.Rotation;
+        var renderPosition = _zPhysicsVisuals.GetVisualRenderPosition(entity.Owner, entity.Comp);
+        args.Offset += rotation.RotateVec(new Vector2(0f, renderPosition * _zLevelVerticalOffset));
+    }
 
     public void RequestZoom(EntityUid uid, Vector2 zoom, bool ignoreLimit, bool scalePvs, ContentEyeComponent? content = null)
     {

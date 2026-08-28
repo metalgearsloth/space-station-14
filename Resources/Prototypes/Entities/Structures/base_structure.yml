@@ -26,6 +26,8 @@
   - type: Tag
     tags:
       - Structure
+  - type: ZLevelPhysics
+    airborneDrawDepth: OverMobs
 
 - type: entity
   # This means that it's not anchored on spawn.

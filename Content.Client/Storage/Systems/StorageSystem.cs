@@ -117,15 +117,25 @@ public sealed partial class StorageSystem : SharedStorageSystem
         if (!_timing.IsFirstTimePredicted)
             return;
 
-        PickupAnimation(uid, initialCoordinates, finalCoordinates, initialRotation);
+        PickupAnimation(uid, initialCoordinates, finalCoordinates, initialRotation, user);
     }
 
     private void HandlePickupAnimation(PickupAnimationEvent msg)
     {
-        PickupAnimation(GetEntity(msg.ItemUid), GetCoordinates(msg.InitialPosition), GetCoordinates(msg.FinalPosition), msg.InitialAngle);
+        PickupAnimation(
+            GetEntity(msg.ItemUid),
+            GetCoordinates(msg.InitialPosition),
+            GetCoordinates(msg.FinalPosition),
+            msg.InitialAngle,
+            GetEntity(msg.TargetUid));
     }
 
-    public void PickupAnimation(EntityUid item, EntityCoordinates initialCoords, EntityCoordinates finalCoords, Angle initialAngle)
+    public void PickupAnimation(
+        EntityUid item,
+        EntityCoordinates initialCoords,
+        EntityCoordinates finalCoords,
+        Angle initialAngle,
+        EntityUid? target = null)
     {
         if (!_timing.IsFirstTimePredicted)
             return;
@@ -138,8 +148,11 @@ public sealed partial class StorageSystem : SharedStorageSystem
 
         var finalMapPos = TransformSystem.ToMapCoordinates(finalCoords).Position;
         var finalPos = Vector2.Transform(finalMapPos, TransformSystem.GetInvWorldMatrix(initialCoords.EntityId));
+        var animationTarget = target is { } targetUid && Exists(targetUid)
+            ? targetUid
+            : finalCoords.EntityId;
 
-        _entityPickupAnimation.AnimateEntityPickup(item, initialCoords, finalPos, initialAngle);
+        _entityPickupAnimation.AnimateEntityPickup(item, initialCoords, finalPos, initialAngle, animationTarget);
     }
 
     /// <summary>
@@ -148,7 +161,8 @@ public sealed partial class StorageSystem : SharedStorageSystem
     /// <param name="msg"></param>
     public void HandleAnimatingInsertingEntities(AnimateInsertingEntitiesEvent msg)
     {
-        TryComp(GetEntity(msg.Storage), out TransformComponent? transformComp);
+        var storage = GetEntity(msg.Storage);
+        TryComp(storage, out TransformComponent? transformComp);
 
         for (var i = 0; msg.StoredEntities.Count > i; i++)
         {
@@ -157,7 +171,7 @@ public sealed partial class StorageSystem : SharedStorageSystem
             var initialPosition = msg.EntityPositions[i];
             if (Exists(entity) && transformComp != null)
             {
-                _entityPickupAnimation.AnimateEntityPickup(entity, GetCoordinates(initialPosition), transformComp.LocalPosition, msg.EntityAngles[i]);
+                _entityPickupAnimation.AnimateEntityPickup(entity, GetCoordinates(initialPosition), transformComp.LocalPosition, msg.EntityAngles[i], storage);
             }
         }
     }

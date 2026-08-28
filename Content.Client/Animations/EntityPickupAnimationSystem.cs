@@ -16,7 +16,9 @@ public sealed partial class EntityPickupAnimationSystem : EntitySystem
     [Dependency] private AnimationPlayerSystem _animations = default!;
     [Dependency] private MetaDataSystem _metaData = default!;
     [Dependency] private SpriteSystem _sprite = default!;
+    [Dependency] private EntityQuery<SpriteComponent> _spriteQuery = default!;
     [Dependency] private TransformSystem _transform = default!;
+    [Dependency] private ZLevelPhysicsVisualSystem _zPhysicsVisuals = default!;
 
     public override void Initialize()
     {
@@ -35,7 +37,12 @@ public sealed partial class EntityPickupAnimationSystem : EntitySystem
     ///     being deleted.
     ///     Used when the player picks up an entity.
     /// </summary>
-    public void AnimateEntityPickup(EntityUid uid, EntityCoordinates initial, Vector2 final, Angle initialAngle)
+    public void AnimateEntityPickup(
+        EntityUid uid,
+        EntityCoordinates initial,
+        Vector2 final,
+        Angle initialAngle,
+        EntityUid? target = null)
     {
         if (Deleted(uid) || !initial.IsValid(EntityManager))
             return;
@@ -50,7 +57,7 @@ public sealed partial class EntityPickupAnimationSystem : EntitySystem
         var val = metadata.EntityName;
         _metaData.SetEntityName(animatableClone, val);
 
-        if (!TryComp(uid, out SpriteComponent? sprite0))
+        if (!_spriteQuery.TryComp(uid, out var sprite0))
         {
             Log.Error("Entity ({0}) couldn't be animated for pickup since it doesn't have a {1}!", metadata.EntityName, nameof(SpriteComponent));
             return;
@@ -66,7 +73,15 @@ public sealed partial class EntityPickupAnimationSystem : EntitySystem
         despawn.Lifetime = 0.25f;
         _transform.SetLocalRotationNoLerp(animatableClone, initialAngle);
 
-        _animations.Play(new Entity<AnimationPlayerComponent>(animatableClone, animations), new Animation
+        var baseOffset = _zPhysicsVisuals.GetBaseSpriteOffset(uid, sprite0);
+        var initialSpriteOffset = baseOffset + _zPhysicsVisuals.GetLocalRenderOffset(uid, initialAngle, sprite.NoRotation);
+        var finalSpriteOffset = baseOffset + (target is { } targetUid && Exists(targetUid)
+            ? _zPhysicsVisuals.GetLocalRenderOffset(targetUid, initialAngle, sprite.NoRotation)
+            : Vector2.Zero);
+
+        _sprite.SetOffset((animatableClone, sprite), initialSpriteOffset);
+
+        var animation = new Animation
         {
             Length = TimeSpan.FromMilliseconds(125),
             AnimationTracks =
@@ -83,6 +98,23 @@ public sealed partial class EntityPickupAnimationSystem : EntitySystem
                     }
                 },
             }
-        }, "fancy_pickup_anim");
+        };
+
+        if (initialSpriteOffset != finalSpriteOffset)
+        {
+            animation.AnimationTracks.Add(new AnimationTrackComponentProperty
+            {
+                ComponentType = typeof(SpriteComponent),
+                Property = nameof(SpriteComponent.Offset),
+                InterpolationMode = AnimationInterpolationMode.Linear,
+                KeyFrames =
+                {
+                    new KeyFrame(initialSpriteOffset, 0),
+                    new KeyFrame(finalSpriteOffset, 0.125f)
+                }
+            });
+        }
+
+        _animations.Play(new Entity<AnimationPlayerComponent>(animatableClone, animations), animation, "fancy_pickup_anim");
     }
 }

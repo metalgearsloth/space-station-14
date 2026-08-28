@@ -93,6 +93,14 @@
       Asphyxiation: 1
     prefix: "ghost_"
   - type: GhostHearing
+  - type: ZLevelPhysics
+    autoStep: false
+    velocityGravity: false
+    fallable: false
+  - type: ActionGrant
+    actions:
+    - ActionZLevelGhostUp
+    - ActionZLevelGhostDown
   - type: ShowElectrocutionHUD
   - type: IntrinsicRadioReceiver
   - type: ActiveRadio
@@ -135,6 +143,34 @@
     - texture: Interface/Actions/scream.png
   - type: InstantAction
     event: !type:BooActionEvent
+
+- type: entity
+  parent: BaseMentalAction
+  id: ActionZLevelGhostUp
+  name: Move up
+  description: Move up one z-level.
+  components:
+  - type: Action
+    checkCanInteract: false
+    icon:
+      sprite: Actions/ZLevels.rsi
+      state: up
+  - type: InstantAction
+    event: !type:ZLevelGhostMoveUpActionEvent
+
+- type: entity
+  parent: BaseMentalAction
+  id: ActionZLevelGhostDown
+  name: Move down
+  description: Move down one z-level.
+  components:
+  - type: Action
+    checkCanInteract: false
+    icon:
+      sprite: Actions/ZLevels.rsi
+      state: down
+  - type: InstantAction
+    event: !type:ZLevelGhostMoveDownActionEvent
 
 - type: entity
   parent: BaseMentalAction
