@@ -1,7 +1,9 @@
 #nullable enable
+using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using Content.Client.Animations;
+using Content.Shared.CCVar;
 using Content.IntegrationTests.Fixtures.Attributes;
 using Content.IntegrationTests.Tests.Helpers;
 using Content.IntegrationTests.Tests.Interaction;
@@ -12,11 +14,14 @@ using Robust.Client.GameObjects;
 using Robust.Shared;
 using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
+using Robust.Shared.Map;
 using Robust.Shared.Map.Components;
 using Robust.Shared.Maths;
+using Robust.Shared.Physics;
 using Robust.Shared.Physics.Components;
 using Robust.Shared.Physics.Systems;
 using Robust.Shared.Prototypes;
+using Robust.Shared.Random;
 
 namespace Content.IntegrationTests.Tests.ZLevels;
 
@@ -25,10 +30,38 @@ namespace Content.IntegrationTests.Tests.ZLevels;
 public sealed class ZLevelPhysicsContentTest : InteractionTest
 {
     private static readonly ProtoId<GameMapPrototype> DevMapId = "Dev";
+    private const int ThrowComparisonSeed = 0x5A17;
 
     private sealed class LandListenerSystem : TestListenerSystem<LandEvent>;
+    private readonly record struct ThrowVisualSample(
+        int Tick,
+        float TickFraction,
+        Vector2 WorldPosition,
+        Vector2 RenderedPosition,
+        Vector2 GlobalRenderedPosition,
+        Angle WorldRotation,
+        Vector2 LinearVelocity,
+        float RenderAbsoluteZ,
+        float LocalZ,
+        int RenderZLevel,
+        int SourceZLevel,
+        BodyStatus BodyStatus,
+        bool Thrown,
+        bool Disabled);
+
+    [TestPrototypes]
+    private const string ZLevelThrowTestPrototypes = @"
+- type: entity
+  id: ZLevelThrowTestHighGround
+  components:
+  - type: Transform
+    anchored: true
+  - type: ZLevelHighGround
+    heightCurve: [1.05, 1.05]
+";
 
     [SidedDependency(Side.Server)] private readonly ThrowingSystem _throwing = default!;
+    [SidedDependency(Side.Server)] private readonly IRobustRandom _random = default!;
 
     [Test]
     public void DevMapUsesRandomOffsetAndRotation()
@@ -300,6 +333,74 @@ public sealed class ZLevelPhysicsContentTest : InteractionTest
         });
     }
 
+    [Test]
+    public async Task ThrownEntityPreservesClientXyAndRotationAcrossZLevelHandoff()
+    {
+        await OverrideCVar(Side.Server, CVars.NetTickrate, 10);
+        await OverrideCVar(Side.Server, CCVars.TileFrictionModifier, 0f);
+        await OverrideCVar(Side.Server, CCVars.AirFriction, 0f);
+        await OverrideCVar(Side.Server, CCVars.OffgridFriction, 0f);
+        await OverrideCVar(Side.Server, CCVars.MinFriction, 0f);
+        await CreateZStack(2);
+        await BuildThrowRunway();
+
+        var flatSamples = await RecordThrowVisualSamples();
+
+        await SpawnZLevelThrowHighGround();
+        var zSamples = await RecordThrowVisualSamples();
+
+        Assert.That(zSamples, Has.Count.EqualTo(flatSamples.Count));
+        Assert.That(zSamples.Any(sample => sample.SourceZLevel == 1 || sample.RenderZLevel == 1),
+            Is.True,
+            "The z-level comparison throw never crossed or rendered on the upper z-level.");
+        Assert.That(zSamples.Any(sample => !sample.Thrown && sample.LinearVelocity.LengthSquared() > 0.01f),
+            Is.True,
+            "The z-level comparison throw never sampled the post-land sliding phase.");
+
+        AssertRenderLayerDoesNotBacktrackDuringUpwardThrow(zSamples);
+
+        for (var i = 0; i < flatSamples.Count; i++)
+        {
+            var flat = flatSamples[i];
+            var z = zSamples[i];
+            var positionDelta = Vector2.Distance(flat.WorldPosition, z.WorldPosition);
+            var rotationDelta = Math.Abs(Angle.ShortestDistance(flat.WorldRotation, z.WorldRotation).Theta);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(z.Tick, Is.EqualTo(flat.Tick));
+                Assert.That(z.TickFraction, Is.EqualTo(flat.TickFraction));
+                Assert.That(positionDelta,
+                    Is.LessThan(0.025f),
+                    $"sample {i}, tick {flat.Tick}+{flat.TickFraction:0.00}: flat XY {flat.WorldPosition}, z XY {z.WorldPosition}, flat z {flat.RenderAbsoluteZ}, z absolute {z.RenderAbsoluteZ}, render layer {z.RenderZLevel}, source layer {z.SourceZLevel}");
+                Assert.That(rotationDelta,
+                    Is.LessThan(0.025f),
+                    $"sample {i}, tick {flat.Tick}+{flat.TickFraction:0.00}: flat rot {flat.WorldRotation}, z rot {z.WorldRotation}, render layer {z.RenderZLevel}, source layer {z.SourceZLevel}");
+                Assert.That(Vector2.Distance(
+                        z.GlobalRenderedPosition,
+                        z.WorldPosition + new Vector2(0f, z.RenderAbsoluteZ * CVars.RenderZLevelVerticalOffset.DefaultValue)),
+                    Is.LessThan(0.025f),
+                    $"sample {i}, tick {z.Tick}+{z.TickFraction:0.00}: rendered sprite center {z.GlobalRenderedPosition} did not match absolute z {z.RenderAbsoluteZ:0.000}; pass-local render {z.RenderedPosition}, render/source layer {z.RenderZLevel}/{z.SourceZLevel}, local z {z.LocalZ:0.000}");
+            });
+        }
+    }
+
+    private static void AssertRenderLayerDoesNotBacktrackDuringUpwardThrow(IReadOnlyList<ThrowVisualSample> samples)
+    {
+        for (var i = 1; i < samples.Count; i++)
+        {
+            var previous = samples[i - 1];
+            var current = samples[i];
+
+            if (current.RenderAbsoluteZ + 0.001f < previous.RenderAbsoluteZ)
+                continue;
+
+            Assert.That(current.RenderZLevel,
+                Is.GreaterThanOrEqualTo(previous.RenderZLevel),
+                $"render layer moved backwards at sample {i}, tick {current.Tick}+{current.TickFraction:0.00}: previous abs/layer {previous.RenderAbsoluteZ:0.000}/{previous.RenderZLevel}, current abs/layer {current.RenderAbsoluteZ:0.000}/{current.RenderZLevel}, source layer {current.SourceZLevel}, thrown={current.Thrown}, disabled={current.Disabled}, body={current.BodyStatus}, linear velocity={current.LinearVelocity}");
+        }
+    }
+
     private async Task CreateZStack(int levels)
     {
         await Server.WaitPost(() =>
@@ -310,6 +411,159 @@ public sealed class ZLevelPhysicsContentTest : InteractionTest
                 maps[i] = MapSystem.CreateMap(out _);
 
             Assert.That(SEntMan.System<ZLevelSystem>().TryCreateMapNetwork(maps, out _), Is.True);
+        });
+    }
+
+    private async Task BuildThrowRunway()
+    {
+        await Server.WaitPost(() =>
+        {
+            var tile = new Tile(TileMan[Plating].TileId);
+            for (var x = 0; x <= 10; x++)
+                MapSystem.SetTile(MapData.Grid.Owner, MapData.Grid.Comp, new Vector2i(x, 0), tile);
+        });
+
+        await RunUntilSynced();
+    }
+
+    private async Task SpawnZLevelThrowHighGround()
+    {
+        await Server.WaitPost(() =>
+        {
+            for (var x = 4; x <= 10; x++)
+            {
+                var highGround = SEntMan.SpawnEntity(
+                    "ZLevelThrowTestHighGround",
+                    new EntityCoordinates(MapData.Grid, new Vector2(x + 0.5f, 0.5f)));
+
+                Transform.SetLocalRotation(highGround, Angle.Zero);
+            }
+        });
+
+        await RunUntilSynced();
+    }
+
+    private async Task<List<ThrowVisualSample>> RecordThrowVisualSamples()
+    {
+        EntityUid item = default;
+        NetEntity netItem = default;
+
+        await Server.WaitPost(() =>
+        {
+            item = SEntMan.SpawnEntity(
+                "Crowbar",
+                MapData.GridCoords.Offset(new Vector2(0.5f, 0.5f)));
+            netItem = SEntMan.GetNetEntity(item);
+
+            var zSystem = SEntMan.System<ZLevelPhysicsSystem>();
+            var zPhysics = SEntMan.GetComponent<ZLevelPhysicsComponent>(item);
+            zSystem.SetZPosition((item, zPhysics), 0f, snapRender: true);
+            zSystem.SetZVelocity((item, zPhysics), 0f);
+        });
+
+        await RunUntilSynced();
+
+        await Server.WaitPost(() =>
+        {
+            _random.SetSeed(ThrowComparisonSeed);
+            Assert.That(_throwing.TryThrow(
+                item,
+                new Vector2(4f, 0f),
+                baseThrowSpeed: 8f,
+                user: SPlayer,
+                playSound: false), Is.True);
+        });
+
+        var samples = new List<ThrowVisualSample>();
+        var fractions = new[] { 0f, 0.25f, 0.5f, 0.75f };
+
+        for (var tick = 0; tick < 14; tick++)
+        {
+            await Pair.RunTicksSync(1);
+
+            foreach (var fraction in fractions)
+                await RecordClientThrowSample(netItem, tick, fraction, samples);
+        }
+
+        await Server.WaitPost(() =>
+        {
+            if (SEntMan.EntityExists(item))
+                SEntMan.DeleteEntity(item);
+        });
+        await RunUntilSynced();
+
+        return samples;
+    }
+
+    private async Task RecordClientThrowSample(
+        NetEntity netItem,
+        int tick,
+        float tickFraction,
+        List<ThrowVisualSample> samples)
+    {
+        await Client.WaitPost(() =>
+        {
+            var clientItem = CEntMan.GetEntity(netItem);
+            var xform = CEntMan.GetComponent<TransformComponent>(clientItem);
+            var sprite = CEntMan.GetComponent<SpriteComponent>(clientItem);
+            var transforms = CEntMan.System<SharedTransformSystem>();
+            var zVisuals = CEntMan.System<ZLevelPhysicsVisualSystem>();
+
+            CTiming.TickRemainder = TimeSpan.FromTicks((long) (CTiming.TickPeriod.Ticks * tickFraction));
+            CEntMan.FrameUpdate((float) CTiming.TickPeriod.TotalSeconds);
+
+            var (worldPosition, worldRotation) = transforms.GetWorldPositionRotation(xform);
+            var renderedPosition = worldPosition + ZLevelPhysicsVisualSystem.GetWorldRenderOffset(
+                sprite.Offset,
+                worldRotation,
+                Angle.Zero,
+                sprite.NoRotation);
+            var globalRenderedPosition = renderedPosition;
+            var linearVelocity = Vector2.Zero;
+            var renderAbsoluteZ = 0f;
+            var localZ = 0f;
+            var renderZLevel = 0;
+            var sourceZLevel = 0;
+            var bodyStatus = BodyStatus.OnGround;
+
+            if (CEntMan.TryGetComponent<PhysicsComponent>(clientItem, out var physics))
+            {
+                linearVelocity = physics.LinearVelocity;
+                bodyStatus = physics.BodyStatus;
+            }
+
+            if (CEntMan.TryGetComponent<ZLevelPhysicsComponent>(clientItem, out var zPhysics))
+            {
+                localZ = zPhysics.LocalPosition;
+                var renderData = zVisuals.GetVisualRenderData(clientItem, zPhysics, xform);
+                renderAbsoluteZ = renderData.RenderAbsolutePosition;
+                renderZLevel = renderData.RenderZLevel;
+                sourceZLevel = renderData.SourceZLevel;
+                renderedPosition = zVisuals.GetSpriteRenderWorldPosition(
+                    worldPosition,
+                    sprite.Offset,
+                    renderData,
+                    worldRotation,
+                    Angle.Zero,
+                    sprite.NoRotation);
+                globalRenderedPosition = renderedPosition + new Vector2(0f, renderZLevel * CVars.RenderZLevelVerticalOffset.DefaultValue);
+            }
+
+            samples.Add(new ThrowVisualSample(
+                tick,
+                tickFraction,
+                worldPosition,
+                renderedPosition,
+                globalRenderedPosition,
+                worldRotation,
+                linearVelocity,
+                renderAbsoluteZ,
+                localZ,
+                renderZLevel,
+                sourceZLevel,
+                bodyStatus,
+                CEntMan.HasComponent<ThrownItemComponent>(clientItem),
+                CEntMan.TryGetComponent<ZLevelPhysicsComponent>(clientItem, out var sampledZPhysics) && sampledZPhysics.Disabled));
         });
     }
 
