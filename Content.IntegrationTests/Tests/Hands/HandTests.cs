@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Numerics;
 using Content.IntegrationTests.Fixtures;
 using Content.Server.Storage.EntitySystems;
 using Content.Shared.Hands.Components;
@@ -7,6 +8,7 @@ using Robust.Server.GameObjects;
 using Robust.Server.Player;
 using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
+using Robust.Shared.Map;
 
 namespace Content.IntegrationTests.Tests.Hands;
 
@@ -72,6 +74,64 @@ public sealed class HandTests : GameTest
         Assert.That(sys.GetActiveItem((player, hands)), Is.Null);
 
         await server.WaitPost(() => mapSystem.DeleteMap(data.MapId));
+    }
+
+    [Test]
+    public async Task ClientTryDropSnapsAfterTargetPlacement()
+    {
+        var pair = Pair;
+        var server = pair.Server;
+        var client = pair.Client;
+        var data = await pair.CreateTestMap();
+        await pair.RunTicksSync(5);
+
+        EntityUid serverItem = default;
+        EntityUid serverPlayer = default;
+        NetEntity netItem = default;
+        NetEntity netPlayer = default;
+        await server.WaitPost(() =>
+        {
+            serverPlayer = server.PlayerMan.Sessions.First().AttachedEntity!.Value;
+            var hands = server.EntMan.GetComponent<HandsComponent>(serverPlayer);
+            var transforms = server.System<TransformSystem>();
+            serverItem = server.EntMan.SpawnEntity("Crowbar", transforms.GetMapCoordinates(serverPlayer));
+            Assert.That(server.System<SharedHandsSystem>()
+                .TryPickup(serverPlayer, serverItem, hands.ActiveHandId!), Is.True);
+            netItem = server.EntMan.GetNetEntity(serverItem);
+            netPlayer = server.EntMan.GetNetEntity(serverPlayer);
+        });
+
+        await pair.RunTicksSync(5);
+
+        await client.WaitAssertion(() =>
+        {
+            var player = client.EntMan.GetEntity(netPlayer);
+            var item = client.EntMan.GetEntity(netItem);
+            var hands = client.EntMan.GetComponent<HandsComponent>(player);
+            var handsSystem = client.System<Content.Client.Hands.Systems.HandsSystem>();
+            var transforms = client.System<Robust.Client.GameObjects.TransformSystem>();
+            var playerXform = client.EntMan.GetComponent<TransformComponent>(player);
+            var target = playerXform.Coordinates.Offset(Vector2.UnitX);
+
+            Assert.That(handsSystem.TryDrop((player, hands), item, target,
+                checkActionBlocker: false,
+                doDropInteraction: false), Is.True);
+            Assert.Multiple(() =>
+            {
+                Assert.That(transforms.TryGetRenderPoseDebugData(item, out _), Is.False);
+                Assert.That(transforms.GetRenderWorldPosition(item), Is.EqualTo(transforms.GetWorldPosition(item)));
+            });
+        });
+
+        await server.WaitPost(() =>
+        {
+            Assert.That(server.System<SharedHandsSystem>().TryDrop(
+                serverPlayer,
+                serverItem,
+                checkActionBlocker: false,
+                doDropInteraction: false), Is.True);
+            server.System<SharedMapSystem>().DeleteMap(data.MapId);
+        });
     }
 
     [Test]
