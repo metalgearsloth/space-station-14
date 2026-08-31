@@ -123,6 +123,12 @@ public sealed partial class ContentTileDefinition : IPrototype, IInheritingProto
     [DataField] public bool Weather = false;
 
     /// <summary>
+    /// Whether maps below this tile remain visible through it during z-level rendering.
+    /// </summary>
+    [DataField("transparent")]
+    public bool ZLevelTransparent { get; private set; }
+
+    /// <summary>
     /// Is this tile immune to RCD deconstruct.
     /// </summary>
     [DataField] public bool Indestructible = false;
