@@ -1,13 +1,17 @@
 using System.Linq;
 using System.Numerics;
 using Content.IntegrationTests.Fixtures;
+using Content.IntegrationTests.Fixtures.Attributes;
 using Content.Server.Storage.EntitySystems;
 using Content.Shared.Hands.Components;
 using Content.Shared.Hands.EntitySystems;
+using Content.Shared.Input;
+using Robust.Client.Input;
 using Robust.Server.GameObjects;
 using Robust.Server.Player;
 using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
+using Robust.Shared.Input;
 using Robust.Shared.Map;
 
 namespace Content.IntegrationTests.Tests.Hands;
@@ -77,6 +81,10 @@ public sealed class HandTests : GameTest
     }
 
     [Test]
+    [EnsureCVar(Side.Client,
+        typeof(Robust.Shared.CVars),
+        nameof(Robust.Shared.CVars.NetInterpCorrectionHalfLife),
+        10f)]
     public async Task ClientTryDropSnapsAfterTargetPlacement()
     {
         var pair = Pair;
@@ -103,19 +111,25 @@ public sealed class HandTests : GameTest
 
         await pair.RunTicksSync(5);
 
+        EntityCoordinates clientTarget = default;
         await client.WaitAssertion(() =>
         {
             var player = client.EntMan.GetEntity(netPlayer);
             var item = client.EntMan.GetEntity(netItem);
-            var hands = client.EntMan.GetComponent<HandsComponent>(player);
-            var handsSystem = client.System<Content.Client.Hands.Systems.HandsSystem>();
             var transforms = client.System<Robust.Client.GameObjects.TransformSystem>();
             var playerXform = client.EntMan.GetComponent<TransformComponent>(player);
-            var target = playerXform.Coordinates.Offset(Vector2.UnitX);
+            clientTarget = playerXform.Coordinates.Offset(Vector2.UnitX);
+            var inputManager = client.ResolveDependency<IInputManager>();
+            var inputSystem = client.System<Robust.Client.GameObjects.InputSystem>();
+            var players = client.ResolveDependency<Robust.Client.Player.IPlayerManager>();
+            var functionId = inputManager.NetworkBindMap.KeyFunctionID(ContentKeyFunctions.Drop);
+            var message = new ClientFullInputCmdMessage(client.Timing.CurTick, client.Timing.TickFraction, functionId)
+            {
+                State = BoundKeyState.Down,
+                Coordinates = clientTarget,
+            };
 
-            Assert.That(handsSystem.TryDrop((player, hands), item, target,
-                checkActionBlocker: false,
-                doDropInteraction: false), Is.True);
+            inputSystem.HandleInputCommand(players.LocalSession, ContentKeyFunctions.Drop, message);
             Assert.Multiple(() =>
             {
                 Assert.That(transforms.TryGetRenderPoseDebugData(item, out _), Is.False);
@@ -123,15 +137,42 @@ public sealed class HandTests : GameTest
             });
         });
 
-        await server.WaitPost(() =>
+        await pair.RunTicksSync(4);
+
+        await server.WaitAssertion(() =>
         {
-            Assert.That(server.System<SharedHandsSystem>().TryDrop(
-                serverPlayer,
-                serverItem,
-                checkActionBlocker: false,
-                doDropInteraction: false), Is.True);
-            server.System<SharedMapSystem>().DeleteMap(data.MapId);
+            var hands = server.EntMan.GetComponent<HandsComponent>(serverPlayer);
+            Assert.That(server.System<SharedHandsSystem>().GetActiveItem((serverPlayer, hands)), Is.Null);
         });
+
+        await client.WaitAssertion(() =>
+        {
+            var item = client.EntMan.GetEntity(netItem);
+            var transforms = client.System<Robust.Client.GameObjects.TransformSystem>();
+            Assert.Multiple(() =>
+            {
+                Assert.That(transforms.TryGetRenderPoseDebugData(item, out _), Is.False);
+                Assert.That(transforms.GetRenderWorldPosition(item), Is.EqualTo(transforms.GetWorldPosition(item)));
+            });
+        });
+
+        await client.WaitPost(() =>
+        {
+            var inputManager = client.ResolveDependency<IInputManager>();
+            var inputSystem = client.System<Robust.Client.GameObjects.InputSystem>();
+            var players = client.ResolveDependency<Robust.Client.Player.IPlayerManager>();
+            var functionId = inputManager.NetworkBindMap.KeyFunctionID(ContentKeyFunctions.Drop);
+            var message = new ClientFullInputCmdMessage(client.Timing.CurTick, client.Timing.TickFraction, functionId)
+            {
+                State = BoundKeyState.Up,
+                Coordinates = clientTarget,
+            };
+
+            inputSystem.HandleInputCommand(players.LocalSession, ContentKeyFunctions.Drop, message);
+        });
+
+        await pair.RunTicksSync(1);
+        await server.WaitPost(() => server.System<SharedMapSystem>().DeleteMap(data.MapId));
     }
 
     [Test]
