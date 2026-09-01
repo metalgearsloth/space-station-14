@@ -49,6 +49,11 @@ namespace Content.Client.Viewport
         public int CurrentRenderScale => _curRenderScale;
 
         /// <summary>
+        /// The exact z-map set composited by this viewport. Projected picking must use the same set as rendering.
+        /// </summary>
+        public IReadOnlySet<EntityUid>? VisibleZMaps => _viewport?.VisibleZMaps;
+
+        /// <summary>
         ///     The eye to render.
         /// </summary>
         public IEye? Eye

@@ -10,6 +10,7 @@ using Content.Shared.Damage.Systems;
 using Content.Shared.Maps;
 using Content.Shared.Throwing;
 using Content.Shared.ZLevels;
+using Robust.Client.GameObjects;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Map;
 using Robust.Shared.Map.Components;
@@ -336,6 +337,13 @@ public sealed class ZLevelPhysicsContentTest : InteractionTest
             var presentation = CEntMan.GetComponent<ZLevelPresentationComponent>(clientItem);
             var beforeHeight = presentation.LocalHeight;
             var beforeMap = CEntMan.GetComponent<TransformComponent>(clientItem).MapUid;
+            var transforms = CEntMan.System<TransformSystem>();
+            var predictedPosition = transforms.GetWorldPosition(clientItem) + new Vector2(0.1f, 0f);
+            transforms.SetWorldPosition(clientItem, predictedPosition);
+            var beforeSupport = CEntMan.GetComponent<ZLevelPhysicsComponent>(clientItem);
+            var supportProvider = beforeSupport.SupportProvider;
+            var supportHeight = beforeSupport.SupportHeight;
+            var groundState = beforeSupport.GroundState;
 
             CEntMan.System<ZLevelPhysicsSystem>().Update(1f);
 
@@ -343,6 +351,11 @@ public sealed class ZLevelPhysicsContentTest : InteractionTest
             {
                 Assert.That(presentation.LocalHeight, Is.EqualTo(beforeHeight));
                 Assert.That(CEntMan.GetComponent<TransformComponent>(clientItem).MapUid, Is.EqualTo(beforeMap));
+                Assert.That(transforms.GetWorldPosition(clientItem), Is.EqualTo(predictedPosition),
+                    "server-authoritative z simulation disabled or rewound ordinary predicted XY movement");
+                Assert.That(beforeSupport.SupportProvider, Is.EqualTo(supportProvider));
+                Assert.That(beforeSupport.SupportHeight, Is.EqualTo(supportHeight));
+                Assert.That(beforeSupport.GroundState, Is.EqualTo(groundState));
             });
         });
     }

@@ -135,7 +135,7 @@
         hard: false
   - type: ZLevelHighGround
     heightCurve: [0.1, 1.05]
-    stick: true
+    solidVolume: false
 
 - type: entity
   parent: BaseZLevelRamp

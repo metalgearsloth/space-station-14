@@ -30,6 +30,20 @@ public sealed partial class ClickableSystem : EntitySystem
     /// </param>
     /// <returns>True if the click worked, false otherwise.</returns>
     public bool CheckClick(Entity<ClickableComponent?, SpriteComponent, TransformComponent?, FadingSpriteComponent?> entity, Vector2 worldPos, IEye eye, bool excludeFaded, out int drawDepth, out uint renderOrder, out float bottom)
+        => CheckClick(entity, worldPos, eye, null, excludeFaded, out drawDepth, out renderOrder, out bottom);
+
+    /// <summary>
+    /// Checks a sprite at the same projected pose used to render it into <paramref name="viewedMap"/>.
+    /// </summary>
+    public bool CheckClick(
+        Entity<ClickableComponent?, SpriteComponent, TransformComponent?, FadingSpriteComponent?> entity,
+        Vector2 worldPos,
+        IEye eye,
+        EntityUid? viewedMap,
+        bool excludeFaded,
+        out int drawDepth,
+        out uint renderOrder,
+        out float bottom)
     {
         if (!_clickableQuery.Resolve(entity.Owner, ref entity.Comp1, false))
         {
@@ -68,7 +82,11 @@ public sealed partial class ClickableSystem : EntitySystem
 
         drawDepth = sprite.DrawDepth;
         renderOrder = sprite.RenderOrder;
-        var (spritePos, spriteRot) = _transforms.GetRenderWorldPositionRotation(entity.Owner, transform);
+        var pose = viewedMap is { } map
+            ? _transforms.GetRenderWorldPoseForLayer(entity.Owner, map, transform)
+            : _transforms.GetRenderWorldPose(entity.Owner, transform);
+        var spritePos = pose.Position;
+        var spriteRot = pose.Rotation;
         var spriteBB = _sprites.CalculateBounds((entity.Owner, sprite), spritePos, spriteRot, eye.Rotation);
         bottom = Matrix3Helpers.CreateRotation(eye.Rotation).TransformBox(spriteBB).Bottom;
 

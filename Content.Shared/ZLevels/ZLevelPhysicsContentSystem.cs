@@ -1,9 +1,7 @@
-using Content.Shared.Climbing.Components;
 using Content.Shared.Throwing;
 using Robust.Shared.Map.Components;
 using Robust.Shared.Network;
 using Robust.Shared.Physics.Components;
-using Robust.Shared.Physics.Events;
 using Robust.Shared.Physics.Systems;
 
 namespace Content.Shared.ZLevels;
@@ -17,7 +15,6 @@ public sealed partial class ZLevelPhysicsContentSystem : EntitySystem
     [Dependency] private ThrownItemSystem _thrown = default!;
     [Dependency] private INetManager _net = default!;
 
-    [Dependency] private EntityQuery<ClimbableComponent> _climbableQuery = default!;
     [Dependency] private EntityQuery<PhysicsComponent> _physicsQuery = default!;
     [Dependency] private EntityQuery<ZLevelMapComponent> _zMapQuery = default!;
 
@@ -52,7 +49,7 @@ public sealed partial class ZLevelPhysicsContentSystem : EntitySystem
             _zPhysics.SetZVelocity(entity, MathF.Max(entity.Comp.Velocity, launchVelocity));
         }
 
-        _zPhysics.RefreshGround(entity, true);
+        _zPhysics.RefreshSupport(entity, true);
         _zPhysics.RefreshBody(entity);
     }
 
@@ -74,20 +71,5 @@ public sealed partial class ZLevelPhysicsContentSystem : EntitySystem
 
         var land = new LandEvent(null, true);
         RaiseLocalEvent(entity.Owner, ref land);
-    }
-
-    [SubscribeLocalEvent]
-    private void OnPreventCollide(Entity<ZLevelPhysicsComponent> entity, ref PreventCollideEvent args)
-    {
-        // Fully manual presentation bodies (notably observers) are not ordinary falling bodies.
-        if (!entity.Comp.Fallable && !entity.Comp.AutoStep)
-            return;
-
-        if (_physicsQuery.TryComp(entity.Owner, out var physics) &&
-            physics.BodyStatus == BodyStatus.InAir &&
-            _climbableQuery.HasComp(args.OtherEntity))
-        {
-            args.Cancelled = true;
-        }
     }
 }

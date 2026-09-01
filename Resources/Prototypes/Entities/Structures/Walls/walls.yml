@@ -25,6 +25,7 @@
   - type: Wall
   - type: IsRoof
   - type: ZLevelHighGround
+  - type: ZLevelTopSurfaceVisual
   - type: Sprite
     drawdepth: Walls
   - type: Icon

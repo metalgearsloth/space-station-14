@@ -145,7 +145,7 @@ public sealed partial class InteractionOutlineSystem : EntitySystem
             if (vp is ScalingViewport svp)
             {
                 renderScale = svp.CurrentRenderScale;
-                entityToClick = screen.GetClickedEntity(mousePosWorld, svp.Eye);
+                entityToClick = screen.GetClickedEntity(mousePosWorld, svp.Eye, svp.VisibleZMaps);
             }
             else
             {
