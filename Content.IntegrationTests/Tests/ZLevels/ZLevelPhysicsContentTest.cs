@@ -44,6 +44,57 @@ public sealed class ZLevelPhysicsContentTest : InteractionTest
 ";
 
     [Test]
+    public async Task ProjectedLowerLayerDropUsesCanonicalPositionOnViewedMap()
+    {
+        var maps = await CreateZStack(3);
+
+        await Server.WaitPost(() =>
+        {
+            var zLevels = SEntMan.System<ZLevelSystem>();
+            Assert.That(zLevels.TryGetMapData(maps[2], out var viewedZ, out _), Is.True);
+            zLevels.SetProjectionOffset(viewedZ!.Network, new Vector2(0f, 0.7f));
+
+            var canonicalTarget = new Vector2(0.5f, 0.75f);
+            var displayedTarget = ZLevelProjection.Project(canonicalTarget, 0f, 2, new Vector2(0f, 0.7f));
+            var clickedLowerEntity = SEntMan.SpawnEntity(null, new EntityCoordinates(maps[0], canonicalTarget));
+            var item = SEntMan.SpawnEntity("Pen", new EntityCoordinates(maps[2], Vector2.Zero));
+            Transform.SetCoordinates(SPlayer, new EntityCoordinates(maps[2], Vector2.Zero));
+
+            Assert.That(HandSys.TryPickupAnyHand(
+                SPlayer,
+                item,
+                checkActionBlocker: false,
+                animate: false), Is.True);
+
+            var displayedCoordinates = new EntityCoordinates(maps[2], displayedTarget);
+            var resolvedCoordinates = HandSys.ResolveProjectedDropCoordinates(
+                displayedCoordinates,
+                clickedLowerEntity);
+            var resolvedMapCoordinates = Transform.ToMapCoordinates(resolvedCoordinates);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(resolvedMapCoordinates.MapId,
+                    Is.EqualTo(SEntMan.GetComponent<MapComponent>(maps[2]).MapId));
+                Assert.That(resolvedMapCoordinates.Position.X, Is.EqualTo(canonicalTarget.X).Within(0.001f));
+                Assert.That(resolvedMapCoordinates.Position.Y, Is.EqualTo(canonicalTarget.Y).Within(0.001f));
+            });
+
+            Assert.That(HandSys.TryDrop(
+                SPlayer,
+                resolvedCoordinates,
+                checkActionBlocker: false,
+                doDropInteraction: false), Is.True);
+            Assert.Multiple(() =>
+            {
+                Assert.That(Transform.GetMap(item), Is.EqualTo(maps[2]));
+                Assert.That(Transform.GetWorldPosition(item).X, Is.EqualTo(canonicalTarget.X).Within(0.001f));
+                Assert.That(Transform.GetWorldPosition(item).Y, Is.EqualTo(canonicalTarget.Y).Within(0.001f));
+            });
+        });
+    }
+
+    [Test]
     public async Task CeilingContactDoesNotRaiseContentLandEvent()
     {
         await Server.WaitPost(() =>

@@ -98,10 +98,43 @@ public abstract partial class SharedHandsSystem : EntitySystem
     private bool DropPressed(ICommonSession? session, EntityCoordinates coords, EntityUid netEntity)
     {
         if (TryComp(session?.AttachedEntity, out HandsComponent? hands) && hands.ActiveHandId != null)
-            TryDrop((session.AttachedEntity.Value, hands), hands.ActiveHandId, coords);
+            TryDrop(
+                (session.AttachedEntity.Value, hands),
+                hands.ActiveHandId,
+                ResolveProjectedDropCoordinates(coords, netEntity));
 
         // always send to server.
         return false;
+    }
+
+    /// <summary>
+    /// Converts pointer coordinates over a projected z layer back to that layer's canonical XY position while
+    /// keeping the resulting drop on the map currently controlled by the user.
+    /// </summary>
+    public EntityCoordinates ResolveProjectedDropCoordinates(EntityCoordinates displayedCoordinates, EntityUid clickedEntity)
+    {
+        if (!displayedCoordinates.IsValid(EntityManager) ||
+            !TryComp(clickedEntity, out TransformComponent? clickedXform) ||
+            clickedXform.MapUid is not { } sourceMap ||
+            TransformSystem.GetMap(displayedCoordinates) is not { } viewedMap ||
+            viewedMap == sourceMap)
+        {
+            return displayedCoordinates;
+        }
+
+        var displayedMapCoordinates = TransformSystem.ToMapCoordinates(displayedCoordinates, logError: false);
+        if (!_zLevels.TryUnprojectMapLayerPosition(
+                viewedMap,
+                sourceMap,
+                displayedMapCoordinates.Position,
+                out var canonicalPosition))
+        {
+            return displayedCoordinates;
+        }
+
+        return TransformSystem.ToCoordinates(
+            displayedCoordinates.EntityId,
+            new MapCoordinates(canonicalPosition, displayedMapCoordinates.MapId));
     }
     #endregion
 

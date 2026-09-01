@@ -27,6 +27,7 @@ public abstract partial class SharedHandsSystem
     [Dependency] protected SharedTransformSystem TransformSystem = default!;
     [Dependency] private SharedVirtualItemSystem _virtualSystem = default!;
     [Dependency] private EntityWhitelistSystem _entityWhitelist = default!;
+    [Dependency] private ZLevelSystem _zLevels = default!;
 
     public event Action<Entity<HandsComponent>, string, HandLocation>? OnPlayerAddHand;
     public event Action<Entity<HandsComponent>, string>? OnPlayerRemoveHand;
