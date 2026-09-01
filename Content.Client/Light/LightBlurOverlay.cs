@@ -26,7 +26,7 @@ public sealed partial class LightBlurOverlay : Overlay
 
     protected override void Draw(in OverlayDrawArgs args)
     {
-        if (args.Viewport.Eye == null)
+        if (args.LayerEye == null)
             return;
 
         var beforeOverlay = _overlay.GetOverlay<BeforeLightTargetOverlay>();
@@ -43,7 +43,7 @@ public sealed partial class LightBlurOverlay : Overlay
 
         var target = beforeLightRes.EnlargedLightTarget;
         // Yeah that's all this does keep walkin.
-        _clyde.BlurRenderTarget(args.Viewport, target, res.BlurTarget, args.Viewport.Eye, 14f * 5f);
+        _clyde.BlurRenderTarget(args.Viewport, target, res.BlurTarget, args.LayerEye, 14f * 5f);
     }
 
     protected override void DisposeBehavior()

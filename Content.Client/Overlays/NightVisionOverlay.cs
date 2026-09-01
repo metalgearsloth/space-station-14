@@ -24,7 +24,7 @@ public sealed partial class NightVisionOverlay : Overlay
 
     public bool DisableNoise = false;
 
-    public override OverlaySpace Space => OverlaySpace.BeforeLighting | OverlaySpace.WorldSpace;
+    public override OverlaySpace Space => OverlaySpace.BeforeLighting | OverlaySpace.PostZLevel;
     public override bool RequestScreenTexture => true;
 
     public NightVisionOverlay()
@@ -53,7 +53,7 @@ public sealed partial class NightVisionOverlay : Overlay
             return;
 
         var handle = args.WorldHandle;
-        var isSpace = args.Space == OverlaySpace.WorldSpace;
+        var isSpace = args.Space == OverlaySpace.PostZLevel;
 
         if (isSpace)
         {

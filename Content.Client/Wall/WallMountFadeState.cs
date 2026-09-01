@@ -78,6 +78,12 @@ public sealed class ViewportFadeState(SpriteSystem sprite, EntityQuery<SpriteCom
     public readonly HashSet<EntityUid> SeenThisFrame = [];
 
     /// <summary>
+    /// Render frame in which <see cref="SeenThisFrame"/> is being accumulated. A z-level viewport invokes
+    /// world overlays once per visible map, so the set must not be cleared between layer passes.
+    /// </summary>
+    public uint Frame;
+
+    /// <summary>
     /// Whether FOV was enabled during the previous frame.
     /// </summary>
     public bool WasFovEnabled = true;
@@ -95,5 +101,6 @@ public sealed class ViewportFadeState(SpriteSystem sprite, EntityQuery<SpriteCom
 
         FadeStates.Clear();
         SeenThisFrame.Clear();
+        Frame = 0;
     }
 }

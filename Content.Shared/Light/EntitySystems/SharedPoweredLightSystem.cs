@@ -168,7 +168,13 @@ public abstract partial class SharedPoweredLightSystem : EntitySystem
         if (playAnimation && TryComp(user, out TransformComponent? xform))
         {
             var itemXform = Transform(uid);
-            _storage.PlayPickupAnimation(bulbUid, xform.Coordinates, itemXform.Coordinates, itemXform.LocalRotation, user: user);
+            _storage.PlayPickupAnimation(
+                bulbUid,
+                xform.Coordinates,
+                itemXform.Coordinates,
+                itemXform.LocalRotation,
+                user,
+                visualTarget: uid);
         }
 
         return true;

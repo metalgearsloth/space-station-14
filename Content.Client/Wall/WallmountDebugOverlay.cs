@@ -1,5 +1,7 @@
 using Content.Shared.Interaction;
 using Content.Shared.Wall;
+using Content.Client.Graphics;
+using Robust.Client.GameObjects;
 using Robust.Client.Graphics;
 using Robust.Shared.Enums;
 using System.Numerics;
@@ -12,7 +14,6 @@ namespace Content.Client.Wall;
 public sealed partial class WallmountDebugOverlay : Overlay
 {
     [Dependency] private IEntityManager _entManager = default!;
-    private readonly SharedTransformSystem _transform;
     private readonly EntityLookupSystem _lookup;
     private readonly HashSet<Entity<WallMountComponent>> _intersecting = [];
 
@@ -22,22 +23,27 @@ public sealed partial class WallmountDebugOverlay : Overlay
     {
         IoCManager.InjectDependencies(this);
 
-        _transform = _entManager.System<SharedTransformSystem>();
         _lookup = _entManager.System<EntityLookupSystem>();
     }
 
     protected override void Draw(in OverlayDrawArgs args)
     {
-        _intersecting.Clear();
-        _lookup.GetEntitiesIntersecting(args.MapId, args.WorldBounds, _intersecting);
+        args.FindRenderEntities(_lookup, _intersecting);
         foreach (var ent in _intersecting)
         {
-            var (worldPos, worldRot) = _transform.GetWorldPositionRotation(ent.Owner);
-            DrawArc(args.WorldHandle, worldPos, SharedInteractionSystem.InteractionRange, worldRot + ent.Comp.Direction, ent.Comp.Arc);
+            if (!args.TryGetEntityRenderLayer(ent.Owner, out var renderLayer))
+                continue;
+
+            DrawArc(args.WorldHandle,
+                renderLayer.Position,
+                SharedInteractionSystem.InteractionRange,
+                renderLayer.Rotation + ent.Comp.Direction,
+                ent.Comp.Arc,
+                renderLayer.Opacity);
         }
     }
 
-    private static void DrawArc(DrawingHandleWorld handle, Vector2 position, float radius, Angle rot, Angle arc)
+    private static void DrawArc(DrawingHandleWorld handle, Vector2 position, float radius, Angle rot, Angle arc, float opacity)
     {
         // 32 segments for a full circle, but 2 at least
         var segments = Math.Max((int)(arc.Theta / Math.Tau * 32), 2);
@@ -53,6 +59,6 @@ public sealed partial class WallmountDebugOverlay : Overlay
             verts[i + 1] = position + pos * radius;
         }
 
-        handle.DrawPrimitives(DrawPrimitiveTopology.TriangleFan, verts, Color.Green.WithAlpha(0.5f));
+        handle.DrawPrimitives(DrawPrimitiveTopology.TriangleFan, verts, Color.Green.WithAlpha(0.5f * opacity));
     }
 }

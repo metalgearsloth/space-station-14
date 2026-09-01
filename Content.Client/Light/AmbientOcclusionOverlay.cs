@@ -4,10 +4,13 @@ using Content.Client.Graphics;
 using Content.Client.Light.EntitySystems;
 using Content.Shared.CCVar;
 using Content.Shared.Light.Components;
+using Robust.Client.GameObjects;
 using Robust.Shared.ComponentTrees;
 using Robust.Client.Graphics;
 using Robust.Shared.Configuration;
 using Robust.Shared.Enums;
+using Robust.Shared.Graphics;
+using Robust.Shared.Map;
 using Robust.Shared.Physics;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Utility;
@@ -37,7 +40,7 @@ public sealed partial class AmbientOcclusionOverlay : Overlay
     private readonly OverlayResourceCache<CachedResources> _resources = new ();
     private readonly OccluderSystem _occluders;
     private readonly GridStencilSystem _gridStencil;
-    private readonly SharedTransformSystem _xformSystem;
+    private readonly TransformSystem _xformSystem;
 
     private Color _color;
 
@@ -48,7 +51,7 @@ public sealed partial class AmbientOcclusionOverlay : Overlay
 
         _occluders = _entManager.System<OccluderSystem>();
         _gridStencil = _entManager.System<GridStencilSystem>();
-        _xformSystem = _entManager.System<SharedTransformSystem>();
+        _xformSystem = _entManager.System<TransformSystem>();
 
         _cfgManager.OnValueChanged(CCVars.AmbientOcclusionColor, OnColorChanged, true);
     }
@@ -78,8 +81,13 @@ public sealed partial class AmbientOcclusionOverlay : Overlay
             Math.Max(1, (int) MathF.Ceiling(target.Size.Y * resolutionScale)));
         var lightScale = aoSize / (Vector2) viewport.Size;
         var scale = viewport.RenderScale / (Vector2.One / lightScale);
-        var expandedBounds = worldBounds.Enlarged(GetBlurMargin(viewport, distance));
+        if (args.LayerEye is not { } layerEye)
+            return;
+
+        var expandedBounds = worldBounds.Enlarged(GetBlurMargin(viewport, layerEye, distance));
         var polygonExpansion = distance / EyeManager.PixelsPerMeter;
+        var layerMap = args.MapUid;
+        var visibleMaps = args.VisibleMaps;
 
         var res = _resources.GetForViewport(args.Viewport, static _ => new CachedResources());
 
@@ -101,19 +109,42 @@ public sealed partial class AmbientOcclusionOverlay : Overlay
             {
                 worldHandle.UseShader(_proto.Index(UnshadedShader).Instance());
                 worldHandle.SetTransform(Matrix3x2.Identity);
-                var worldToTargetMatrix = res.AOTarget.GetWorldToLocalMatrix(viewport.Eye!, scale);
-                var state = new AmbientOcclusionQueryState(this, worldHandle, worldToTargetMatrix, polygonExpansion);
+                var worldToTargetMatrix = res.AOTarget.GetWorldToLocalMatrix(layerEye, scale);
+                var state = new AmbientOcclusionQueryState(
+                    this,
+                    worldHandle,
+                    worldToTargetMatrix,
+                    polygonExpansion,
+                    layerMap);
 
-                _occluders.QueryAabb(ref state, static (ref AmbientOcclusionQueryState state, in ComponentTreeEntry<OccluderComponent> entry) =>
+                QueryOccluders(ref state, mapId, expandedBounds);
+
+                // During a map handoff the component tree has already moved to the simulation map, while the
+                // renderer can still have a complementary sample on this layer. Query every rendered map tree
+                // and express this layer's bounds in that map so both samples remain present through the crossing.
+                foreach (var visibleMap in visibleMaps)
                 {
-                    state.Overlay.AppendAmbientOcclusionPolygon(entry, ref state);
-                    return true;
-                }, mapId, expandedBounds);
+                    if (visibleMap == layerMap ||
+                        !_xformSystem.TryGetMapRenderBoundsForLayer(
+                            visibleMap,
+                            layerMap,
+                            worldBounds,
+                            out var visibleMapId,
+                            out var visibleBounds))
+                    {
+                        continue;
+                    }
+
+                    QueryOccluders(
+                        ref state,
+                        visibleMapId,
+                        visibleBounds.Enlarged(GetBlurMargin(viewport, layerEye, distance)));
+                }
 
                 FlushAmbientOcclusionPolygons(worldHandle);
             }, Color.Transparent);
 
-        _clyde.BlurRenderTarget(viewport, res.AOTarget, res.AOBlurBuffer, viewport.Eye!, BlurMultiplier);
+        _clyde.BlurRenderTarget(viewport, res.AOTarget, res.AOBlurBuffer, layerEye, BlurMultiplier);
 
         // Draw the stencil texture to depth buffer.
         var stencil = _gridStencil.GetNonSpaceStencil(args);
@@ -137,12 +168,9 @@ public sealed partial class AmbientOcclusionOverlay : Overlay
         _color = Color.FromHex(value);
     }
 
-    private static float GetBlurMargin(IClydeViewport viewport, float distance)
+    private static float GetBlurMargin(IClydeViewport viewport, IEye eye, float distance)
     {
-        if (viewport.Eye == null)
-            return distance / EyeManager.PixelsPerMeter;
-
-        var cameraSize = viewport.Eye.Zoom.Y * viewport.Size.Y * (1 / viewport.RenderScale.Y) / EyeManager.PixelsPerMeter;
+        var cameraSize = eye.Zoom.Y * viewport.Size.Y * (1 / viewport.RenderScale.Y) / EyeManager.PixelsPerMeter;
 
         // Matches Clyde's BlurRenderTarget radius calculation closely enough to include off-screen AO contributors.
         return distance / EyeManager.PixelsPerMeter + BlurMultiplier / cameraSize;
@@ -162,45 +190,50 @@ public sealed partial class AmbientOcclusionOverlay : Overlay
     {
         DebugTools.Assert(entry.Component.Enabled);
 
-        var localToTargetMatrix = GetLocalToTargetMatrix(entry, ref state);
+        if (!_xformSystem.TryGetRenderLayerSample(entry.Uid, state.LayerMap, out var renderLayer))
+            return;
+
+        var localToTargetMatrix = Matrix3x2.Multiply(
+            Matrix3Helpers.CreateTransform(renderLayer.Position, renderLayer.Rotation),
+            state.WorldToTargetMatrix);
 
         AppendAmbientOcclusionPolygon(
             state.WorldHandle,
             entry.Component.Polygon,
             localToTargetMatrix,
-            state.Expansion);
+            state.Expansion,
+            renderLayer.Opacity);
     }
 
-    private Matrix3x2 GetLocalToTargetMatrix(
-        in ComponentTreeEntry<OccluderComponent> entry,
-        ref AmbientOcclusionQueryState state)
+    private void QueryOccluders(
+        ref AmbientOcclusionQueryState state,
+        MapId mapId,
+        Box2Rotated bounds)
     {
-        // OccluderSystem's tree invariant is that occluders are parented directly to their map/grid tree.
-        // In that case LocalMatrix is already local-to-tree, so avoid resolving a recursive world matrix per occluder.
-        if (entry.Transform.ParentUid == entry.Component.TreeUid)
-        {
-            if (state.TreeUid != entry.Transform.ParentUid)
+        _occluders.QueryAabb(
+            ref state,
+            static (ref AmbientOcclusionQueryState queryState, in ComponentTreeEntry<OccluderComponent> entry) =>
             {
-                state.TreeUid = entry.Transform.ParentUid;
-                state.TreeToTargetMatrix = Matrix3x2.Multiply(
-                    _xformSystem.GetWorldMatrix(entry.Transform.ParentUid),
-                    state.WorldToTargetMatrix);
-            }
-
-            return Matrix3x2.Multiply(entry.Transform.LocalMatrix, state.TreeToTargetMatrix);
-        }
-
-        return Matrix3x2.Multiply(_xformSystem.GetWorldMatrix(entry.Transform), state.WorldToTargetMatrix);
+                queryState.Overlay.AppendAmbientOcclusionPolygon(entry, ref queryState);
+                return true;
+            },
+            mapId,
+            bounds);
     }
 
     private void AppendAmbientOcclusionPolygon(
         DrawingHandleWorld worldHandle,
         ReadOnlySpan<Vector2> polygon,
         Matrix3x2 localToTargetMatrix,
-        float expansion)
+        float expansion,
+        float opacity)
     {
         if (polygon.Length < 3)
             return;
+
+        var isolatedOpacity = opacity < 1f - ZLevelProjection.BoundaryEpsilon;
+        if (isolatedOpacity)
+            FlushAmbientOcclusionPolygons(worldHandle);
 
         // Keep indices representable as ushort for DrawingHandleBase.DrawPrimitives().
         if (_aoVertices.Count + polygon.Length > ushort.MaxValue)
@@ -236,9 +269,12 @@ public sealed partial class AmbientOcclusionOverlay : Overlay
             _aoIndices.Add((ushort) (indexBase + i));
             _aoIndices.Add((ushort) (indexBase + i + 1));
         }
+
+        if (isolatedOpacity)
+            FlushAmbientOcclusionPolygons(worldHandle, Color.White.WithAlpha(opacity));
     }
 
-    private void FlushAmbientOcclusionPolygons(DrawingHandleWorld worldHandle)
+    private void FlushAmbientOcclusionPolygons(DrawingHandleWorld worldHandle, Color? color = null)
     {
         if (_aoVertices.Count == 0)
             return;
@@ -247,7 +283,7 @@ public sealed partial class AmbientOcclusionOverlay : Overlay
             DrawPrimitiveTopology.TriangleList,
             CollectionsMarshal.AsSpan(_aoIndices),
             CollectionsMarshal.AsSpan(_aoVertices),
-            Color.White);
+            color ?? Color.White);
 
         _aoVertices.Clear();
         _aoIndices.Clear();
@@ -259,21 +295,20 @@ public sealed partial class AmbientOcclusionOverlay : Overlay
         public DrawingHandleWorld WorldHandle;
         public Matrix3x2 WorldToTargetMatrix;
         public float Expansion;
-        public EntityUid? TreeUid;
-        public Matrix3x2 TreeToTargetMatrix;
+        public EntityUid LayerMap;
 
         public AmbientOcclusionQueryState(
             AmbientOcclusionOverlay overlay,
             DrawingHandleWorld worldHandle,
             Matrix3x2 worldToTargetMatrix,
-            float expansion)
+            float expansion,
+            EntityUid layerMap)
         {
             Overlay = overlay;
             WorldHandle = worldHandle;
             WorldToTargetMatrix = worldToTargetMatrix;
             Expansion = expansion;
-            TreeUid = null;
-            TreeToTargetMatrix = Matrix3x2.Identity;
+            LayerMap = layerMap;
         }
     }
 

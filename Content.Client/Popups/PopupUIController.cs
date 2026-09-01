@@ -47,12 +47,18 @@ public sealed class PopupUIController : UIController, IOnStateEntered<GameplaySt
         _popupControl = null;
     }
 
-    public void DrawPopup(PopupSystem.PopupLabel popup, DrawingHandleScreen handle, Vector2 position, float scale)
+    public void DrawPopup(
+        PopupSystem.PopupLabel popup,
+        DrawingHandleScreen handle,
+        Vector2 position,
+        float scale,
+        float presentationOpacity = 1f)
     {
         var lifetime = PopupSystem.GetPopupLifetime(popup);
 
         // Keep alpha at 1 until TotalTime passes half its lifetime, then gradually decrease to 0.
-        var alpha = MathF.Min(1f, 1f - MathF.Max(0f, popup.TotalTime - lifetime / 2) * 2 / lifetime);
+        var alpha = MathF.Min(1f, 1f - MathF.Max(0f, popup.TotalTime - lifetime / 2) * 2 / lifetime)
+            * presentationOpacity;
 
         var updatedPosition = position - new Vector2(0f, MathF.Min(8f, 12f * (popup.TotalTime * popup.TotalTime + popup.TotalTime)));
         var font = _smallFont;

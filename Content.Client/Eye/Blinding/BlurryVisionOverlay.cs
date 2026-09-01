@@ -19,7 +19,7 @@ namespace Content.Client.Eye.Blinding
         [Dependency] private IConfigurationManager _configManager = default!;
 
         public override bool RequestScreenTexture => true;
-        public override OverlaySpace Space => OverlaySpace.WorldSpace;
+        public override OverlaySpace Space => OverlaySpace.PostZLevel;
         private readonly ShaderInstance _cataractsShader;
         private readonly ShaderInstance _circleMaskShader;
         private float _magnitude;

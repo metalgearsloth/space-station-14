@@ -1,5 +1,7 @@
 using System.Numerics;
 using Content.Shared.Light.Components;
+using Content.Client.Graphics;
+using Robust.Client.GameObjects;
 using Robust.Client.Graphics;
 using Robust.Shared.Enums;
 using Robust.Shared.Map;
@@ -14,7 +16,7 @@ public sealed partial class TileEmissionOverlay : Overlay
     [Dependency] private IOverlayManager _overlay = default!;
 
     private SharedMapSystem _mapSystem;
-    private SharedTransformSystem _xformSystem;
+    private TransformSystem _xformSystem;
 
     private readonly EntityLookupSystem _lookup;
 
@@ -31,7 +33,7 @@ public sealed partial class TileEmissionOverlay : Overlay
 
         _lookup = entManager.System<EntityLookupSystem>();
         _mapSystem = entManager.System<SharedMapSystem>();
-        _xformSystem = entManager.System<SharedTransformSystem>();
+        _xformSystem = entManager.System<TransformSystem>();
 
         _xformQuery = entManager.GetEntityQuery<TransformComponent>();
         ZIndex = ContentZIndex;
@@ -39,7 +41,7 @@ public sealed partial class TileEmissionOverlay : Overlay
 
     protected override void Draw(in OverlayDrawArgs args)
     {
-        if (args.Viewport.Eye == null)
+        if (args.LayerEye is not { } eye)
             return;
 
         var mapId = args.MapId;
@@ -48,8 +50,8 @@ public sealed partial class TileEmissionOverlay : Overlay
         var bounds = lightoverlay.EnlargedBounds;
         var target = lightoverlay.GetCachedForViewport(args.Viewport).EnlargedLightTarget;
         var viewport = args.Viewport;
-        _grids.Clear();
-        _mapSystem.FindGridsIntersecting(mapId, bounds, ref _grids, approx: true);
+        var layerMap = args.MapUid;
+        args.FindRenderGrids(_mapSystem, ref _grids, enlargement: 1f, approx: true);
 
         if (_grids.Count == 0)
             return;
@@ -60,19 +62,27 @@ public sealed partial class TileEmissionOverlay : Overlay
         args.WorldHandle.RenderInRenderTarget(target,
         () =>
         {
-            var invMatrix = target.GetWorldToLocalMatrix(viewport.Eye, scale);
+            var invMatrix = target.GetWorldToLocalMatrix(eye, scale);
 
             foreach (var grid in _grids)
             {
-                var gridInvMatrix = _xformSystem.GetInvWorldMatrix(grid);
+                if (!_xformSystem.TryGetRenderLayerSample(grid.Owner, layerMap, out var renderLayer))
+                    continue;
+
+                var gridMatrix = Matrix3Helpers.CreateTransform(renderLayer.Position, renderLayer.Rotation);
+                if (!Matrix3x2.Invert(gridMatrix, out var gridInvMatrix))
+                {
+                    continue;
+                }
+
+                var opacity = renderLayer.Opacity;
+
                 var localBounds = gridInvMatrix.TransformBox(bounds);
                 _entities.Clear();
                 _lookup.GetLocalEntitiesIntersecting(grid.Owner, localBounds, _entities);
 
                 if (_entities.Count == 0)
                     continue;
-
-                var gridMatrix = _xformSystem.GetWorldMatrix(grid.Owner);
 
                 foreach (var ent in _entities)
                 {
@@ -87,7 +97,7 @@ public sealed partial class TileEmissionOverlay : Overlay
                     // to turn the squares into polys.
                     // Additionally no shadows so if you make it too big it's going to go through a 1x wall.
                     var local = _lookup.GetLocalBounds(tile, grid.Comp.TileSize).Enlarged(ent.Comp.Range);
-                    worldHandle.DrawRect(local, ent.Comp.Color);
+                    worldHandle.DrawRect(local, ent.Comp.Color.WithAlpha(ent.Comp.Color.A * opacity));
                 }
             }
         }, null);

@@ -8,6 +8,7 @@ using Content.Shared.CCVar;
 using Content.Shared.Ghost.Components;
 using Content.Shared.Mind;
 using Content.Shared.Roles;
+using Robust.Client.GameObjects;
 using Robust.Client.Graphics;
 using Robust.Client.ResourceManagement;
 using Robust.Client.UserInterface;
@@ -23,6 +24,7 @@ internal sealed class AdminNameOverlay : Overlay
     private readonly IEntityManager _entityManager;
     private readonly IEyeManager _eyeManager;
     private readonly EntityLookupSystem _entityLookup;
+    private readonly TransformSystem _transformSystem;
     private readonly IUserInterfaceManager _userInterfaceManager;
     private readonly SharedRoleSystem _roles;
     private readonly IPrototypeManager _prototypeManager;
@@ -59,6 +61,7 @@ internal sealed class AdminNameOverlay : Overlay
         _entityManager = entityManager;
         _eyeManager = eyeManager;
         _entityLookup = entityLookup;
+        _transformSystem = entityManager.System<TransformSystem>();
         _userInterfaceManager = userInterfaceManager;
         _roles = roles;
         _prototypeManager = prototypeManager;
@@ -98,24 +101,27 @@ internal sealed class AdminNameOverlay : Overlay
     protected override void Draw(in OverlayDrawArgs args)
     {
         var viewport = args.WorldAABB;
-        var colorDisconnected = Color.White;
         var uiScale = _userInterfaceManager.RootControl.UIScale;
         var lineoffset = new Vector2(0f, 14f) * uiScale;
         var drawnOverlays = new List<(Vector2,Vector2)>() ; // A saved list of the overlays already drawn
 
         // Get all player positions before drawing overlays, so they can be sorted before iteration
-        var sortable = new List<(PlayerInfo, Box2, EntityUid, Vector2)>();
+        var sortable = new List<(PlayerInfo, Box2, EntityUid, Vector2, float)>();
         foreach (var info in _system.PlayerList)
         {
             var entity = _entityManager.GetEntity(info.NetEntity);
 
             // If entity does not exist or is on a different map, skip
-            if (entity == null
-                || !_entityManager.EntityExists(entity)
-                || _entityManager.GetComponent<TransformComponent>(entity.Value).MapID != args.MapId)
+            if (entity == null || !_entityManager.EntityExists(entity))
                 continue;
 
-            var aabb = _entityLookup.GetWorldAABB(entity.Value);
+            if (!args.TryGetEntityPresentedView(entity.Value, out var presented))
+                continue;
+
+            var xform = _entityManager.GetComponent<TransformComponent>(entity.Value);
+            var canonicalPosition = _transformSystem.GetWorldPosition(xform);
+            var aabb = _entityLookup.GetWorldAABB(entity.Value)
+                .Translated(presented.Position - canonicalPosition);
             // if not on screen, skip
             if (!aabb.Intersects(in viewport))
                 continue;
@@ -123,7 +129,7 @@ internal sealed class AdminNameOverlay : Overlay
             // Get on-screen coordinates of player
             var screenCoordinates = _eyeManager.WorldToScreen(aabb.Center).Rounded();
 
-            sortable.Add((info, aabb, entity.Value, screenCoordinates));
+            sortable.Add((info, aabb, entity.Value, screenCoordinates, presented.Opacity));
         }
 
         // Draw overlays for visible players, starting from the top of the screen
@@ -144,7 +150,8 @@ internal sealed class AdminNameOverlay : Overlay
             //the center position is kept separately, for simpler position comparison later
             var centerOffset = new Vector2(28f, -18f) * uiScale;
             var screenCoordinates = screenCoordinatesCenter + centerOffset;
-            var alpha = 1f;
+            var alpha = info.Item5;
+            var colorDisconnected = Color.White.WithAlpha(alpha);
 
             //TODO make a smarter system where the starting offset can be modified by the predicted position and size of already-drawn overlays/stacks?
             var currentOffset = Vector2.Zero;
@@ -162,7 +169,7 @@ internal sealed class AdminNameOverlay : Overlay
                 if (dist < _ghostHideDistance)
                     continue;
 
-                alpha = Math.Clamp((dist - _ghostHideDistance) / (_ghostFadeDistance - _ghostHideDistance), 0f, 1f);
+                alpha *= Math.Clamp((dist - _ghostHideDistance) / (_ghostFadeDistance - _ghostHideDistance), 0f, 1f);
                 colorDisconnected.A = alpha;
             }
 

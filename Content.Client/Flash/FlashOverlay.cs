@@ -23,7 +23,7 @@ public sealed partial class FlashOverlay : Overlay
 
     private readonly StatusEffectsSystem _statusSys;
 
-    public override OverlaySpace Space => OverlaySpace.WorldSpace;
+    public override OverlaySpace Space => OverlaySpace.PostZLevel;
     private readonly ShaderInstance _shader;
     private bool _reducedMotion;
     public float PercentComplete;

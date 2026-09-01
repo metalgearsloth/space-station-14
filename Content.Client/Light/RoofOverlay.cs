@@ -2,6 +2,8 @@ using System.Numerics;
 using Content.Shared.Light.Components;
 using Content.Shared.Light.EntitySystems;
 using Content.Shared.Maps;
+using Content.Client.Graphics;
+using Robust.Client.GameObjects;
 using Robust.Client.Graphics;
 using Robust.Shared.Enums;
 using Robust.Shared.Map;
@@ -19,7 +21,7 @@ public sealed partial class RoofOverlay : Overlay
     private readonly EntityLookupSystem _lookup;
     private readonly SharedMapSystem _mapSystem;
     private readonly SharedRoofSystem _roof = default!;
-    private readonly SharedTransformSystem _xformSystem;
+    private readonly TransformSystem _xformSystem;
     private readonly TurfSystem _turf;
 
     private List<Entity<MapGridComponent>> _grids = new();
@@ -36,7 +38,7 @@ public sealed partial class RoofOverlay : Overlay
         _lookup = _entManager.System<EntityLookupSystem>();
         _mapSystem = _entManager.System<SharedMapSystem>();
         _roof = _entManager.System<SharedRoofSystem>();
-        _xformSystem = _entManager.System<SharedTransformSystem>();
+        _xformSystem = _entManager.System<TransformSystem>();
         _turf = _entManager.System<TurfSystem>();
 
         ZIndex = ContentZIndex;
@@ -44,20 +46,20 @@ public sealed partial class RoofOverlay : Overlay
 
     protected override void Draw(in OverlayDrawArgs args)
     {
-        if (args.Viewport.Eye == null || !_entManager.HasComponent<MapLightComponent>(args.MapUid))
+        if (args.LayerEye == null || !_entManager.HasComponent<MapLightComponent>(args.MapUid))
             return;
 
         var viewport = args.Viewport;
-        var eye = args.Viewport.Eye;
+        var eye = args.LayerEye;
 
         var worldHandle = args.WorldHandle;
         var lightoverlay = _overlay.GetOverlay<BeforeLightTargetOverlay>();
         var lightRes = lightoverlay.GetCachedForViewport(args.Viewport);
         var bounds = lightoverlay.EnlargedBounds;
         var target = lightRes.EnlargedLightTarget;
+        var layerMap = args.MapUid;
 
-        _grids.Clear();
-        _mapSystem.FindGridsIntersecting(args.MapId, bounds, ref _grids, approx: true, includeMap: true);
+        args.FindRenderGrids(_mapSystem, ref _grids, enlargement: 1f, approx: true, includeMap: true);
         var lightScale = viewport.LightRenderTarget.Size / (Vector2) viewport.Size;
         var scale = viewport.RenderScale / (Vector2.One / lightScale);
 
@@ -73,13 +75,21 @@ public sealed partial class RoofOverlay : Overlay
                     if (!_entManager.TryGetComponent(grid.Owner, out ImplicitRoofComponent? roof))
                         continue;
 
-                    var gridMatrix = _xformSystem.GetWorldMatrix(grid.Owner);
+                    if (!_xformSystem.TryGetRenderLayerSample(grid.Owner, layerMap, out var renderLayer))
+                        continue;
+
+                    var gridMatrix = Matrix3Helpers.CreateTransform(renderLayer.Position, renderLayer.Rotation);
+                    var gridInvMatrix = Matrix3Helpers.CreateInverseTransform(renderLayer.Position, renderLayer.Rotation);
+                    var opacity = renderLayer.Opacity;
                     var matty = Matrix3x2.Multiply(gridMatrix, invMatrix);
 
                     worldHandle.SetTransform(matty);
 
-                    var tileEnumerator = _mapSystem.GetTilesIntersecting(grid.Owner, grid, bounds);
-                    var color = roof.Color;
+                    var tileEnumerator = _mapSystem.GetLocalTilesIntersecting(
+                        grid.Owner,
+                        grid,
+                        gridInvMatrix.TransformBox(bounds));
+                    var color = roof.Color.WithAlpha(roof.Color.A * opacity);
 
                     while (tileEnumerator.MoveNext(out var tileRef))
                     {
@@ -106,12 +116,20 @@ public sealed partial class RoofOverlay : Overlay
                     if (!_entManager.TryGetComponent(grid.Owner, out RoofComponent? roof))
                         continue;
 
-                    var gridMatrix = _xformSystem.GetWorldMatrix(grid.Owner);
+                    if (!_xformSystem.TryGetRenderLayerSample(grid.Owner, layerMap, out var renderLayer))
+                        continue;
+
+                    var gridMatrix = Matrix3Helpers.CreateTransform(renderLayer.Position, renderLayer.Rotation);
+                    var gridInvMatrix = Matrix3Helpers.CreateInverseTransform(renderLayer.Position, renderLayer.Rotation);
+                    var opacity = renderLayer.Opacity;
                     var matty = Matrix3x2.Multiply(gridMatrix, invMatrix);
 
                     worldHandle.SetTransform(matty);
 
-                    var tileEnumerator = _mapSystem.GetTilesIntersecting(grid.Owner, grid, bounds);
+                    var tileEnumerator = _mapSystem.GetLocalTilesIntersecting(
+                        grid.Owner,
+                        grid,
+                        gridInvMatrix.TransformBox(bounds));
                     var roofEnt = (grid.Owner, grid.Comp, roof);
 
                     // Due to stencilling we essentially draw on unrooved tiles
@@ -128,7 +146,7 @@ public sealed partial class RoofOverlay : Overlay
                         }
 
                         var local = _lookup.GetLocalBounds(tileRef, grid.Comp.TileSize);
-                        worldHandle.DrawRect(local, color.Value);
+                        worldHandle.DrawRect(local, color.Value.WithAlpha(color.Value.A * opacity));
                     }
                 }
             }, null);

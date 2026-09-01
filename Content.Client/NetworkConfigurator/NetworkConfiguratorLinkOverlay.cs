@@ -69,10 +69,17 @@ public sealed partial class NetworkConfiguratorLinkOverlay : Overlay
                     continue;
                 }
 
+                if (!args.TryGetEntityRenderLayer(uid, out var sourceLayer) ||
+                    !args.TryGetEntityRenderLayer(device, out var targetLayer))
+                {
+                    continue;
+                }
+
+                var opacity = Math.Min(sourceLayer.Opacity, targetLayer.Opacity);
                 args.WorldHandle.DrawLine(
-                    _transformSystem.GetRenderWorldPosition(uid, sourceTransform),
-                    _transformSystem.GetRenderWorldPosition(device, linkTransform),
-                    Colors[uid]);
+                    sourceLayer.Position,
+                    targetLayer.Position,
+                    Colors[uid].WithAlpha(Colors[uid].A * opacity));
             }
         }
     }

@@ -16,6 +16,8 @@ public sealed partial class ExplosionDebugOverlay : Overlay
     [Dependency] private IEntityManager _entityManager = default!;
     [Dependency] private IEyeManager _eyeManager = default!;
 
+    private readonly SharedMapSystem _mapSystem;
+
     public Dictionary<int, List<Vector2i>>? SpaceTiles;
     public Dictionary<EntityUid, Dictionary<int, List<Vector2i>>> Tiles = new();
     public List<float> Intensity = new();
@@ -34,14 +36,22 @@ public sealed partial class ExplosionDebugOverlay : Overlay
     {
         IoCManager.InjectDependencies(this);
 
+        _mapSystem = _entityManager.System<SharedMapSystem>();
+
         var cache = IoCManager.Resolve<IResourceCache>();
         _font = new VectorFont(cache.GetResource<FontResource>("/Fonts/NotoSans/NotoSans-Regular.ttf"), 8);
     }
 
     protected override void Draw(in OverlayDrawArgs args)
     {
-        if (Map != args.Viewport.Eye?.Position.MapId)
+        if (args.Space == OverlaySpace.WorldSpace && Map != args.MapId)
             return;
+
+        if (args.Space == OverlaySpace.ScreenSpace &&
+            !args.VisibleMaps.Contains(_mapSystem.GetMapOrInvalid(Map)))
+        {
+            return;
+        }
 
         if (Tiles.Count == 0 && SpaceTiles == null)
             return;
@@ -61,27 +71,36 @@ public sealed partial class ExplosionDebugOverlay : Overlay
     {
         var handle = args.ScreenHandle;
         Box2 gridBounds;
-        var xformQuery = _entityManager.GetEntityQuery<TransformComponent>();
-        var xformSystem = _entityManager.System<TransformSystem>();
 
         foreach (var (gridId, tileSets) in Tiles)
         {
             if (!_entityManager.TryGetComponent(gridId, out MapGridComponent? grid))
                 continue;
 
-            var gridXform = xformQuery.GetComponent(gridId);
-            var (_, _, matrix, invMatrix) = xformSystem.GetWorldPositionRotationMatrixWithInv(gridXform, xformQuery);
+            if (!args.TryGetEntityPresentedViewMatrix(gridId, out var matrix, out var opacity) ||
+                !Matrix3x2.Invert(matrix, out var invMatrix))
+            {
+                continue;
+            }
+
             gridBounds = invMatrix.TransformBox(args.WorldBounds).Enlarged(grid.TileSize * 2);
-            DrawText(handle, gridBounds, matrix, tileSets, grid.TileSize);
+            DrawText(handle, gridBounds, matrix, tileSets, grid.TileSize, opacity);
         }
 
         if (SpaceTiles == null)
             return;
 
-        Matrix3x2.Invert(SpaceMatrix, out var invSpace);
+        if (!args.TryProjectMapCoordinates(new MapCoordinates(SpaceMatrix.Translation, Map), out var projectedOrigin))
+            return;
+
+        var projectedSpaceMatrix = SpaceMatrix;
+        projectedSpaceMatrix.Translation = projectedOrigin;
+        if (!Matrix3x2.Invert(projectedSpaceMatrix, out var invSpace))
+            return;
+
         gridBounds = invSpace.TransformBox(args.WorldBounds);
 
-        DrawText(handle, gridBounds, SpaceMatrix, SpaceTiles, SpaceTileSize);
+        DrawText(handle, gridBounds, projectedSpaceMatrix, SpaceTiles, SpaceTileSize, 1f);
     }
 
     private void DrawText(
@@ -89,8 +108,11 @@ public sealed partial class ExplosionDebugOverlay : Overlay
         Box2 gridBounds,
         Matrix3x2 transform,
         Dictionary<int, List<Vector2i>> tileSets,
-        ushort tileSize)
+        ushort tileSize,
+        float opacity)
     {
+        var color = Color.White.WithAlpha(opacity);
+
         for (var i = 1; i < Intensity.Count; i++)
         {
             if (!tileSets.TryGetValue(i, out var tiles))
@@ -113,7 +135,7 @@ public sealed partial class ExplosionDebugOverlay : Overlay
                 else
                     screenCenter += new Vector2(-8, -8);
 
-                handle.DrawString(_font, screenCenter, Intensity[i].ToString("F2"));
+                handle.DrawString(_font, screenCenter, Intensity[i].ToString("F2"), color: color);
             }
         }
 
@@ -123,7 +145,7 @@ public sealed partial class ExplosionDebugOverlay : Overlay
             var worldCenter = Vector2.Transform((epicenter + Vector2Helpers.Half) * tileSize, transform);
             var screenCenter = _eyeManager.WorldToScreen(worldCenter) + new Vector2(-24, -24);
             var text = $"{Intensity[0]:F2}\nΣ={TotalIntensity:F1}\nΔ={Slope:F1}";
-            handle.DrawString(_font, screenCenter, text);
+            handle.DrawString(_font, screenCenter, text, color: color);
         }
     }
 
@@ -131,19 +153,21 @@ public sealed partial class ExplosionDebugOverlay : Overlay
     {
         var handle = args.WorldHandle;
         Box2 gridBounds;
-        var xformQuery = _entityManager.GetEntityQuery<TransformComponent>();
-        var xformSystem = _entityManager.System<TransformSystem>();
 
         foreach (var (gridId, tileSets) in Tiles)
         {
             if (!_entityManager.TryGetComponent(gridId, out MapGridComponent? grid))
                 continue;
 
-            var gridXform = xformQuery.GetComponent(gridId);
-            var (_, _, worldMatrix, invWorldMatrix) = xformSystem.GetWorldPositionRotationMatrixWithInv(gridXform, xformQuery);
+            if (!args.TryGetEntityRenderMatrix(gridId, out var worldMatrix, out var opacity) ||
+                !Matrix3x2.Invert(worldMatrix, out var invWorldMatrix))
+            {
+                continue;
+            }
+
             gridBounds = invWorldMatrix.TransformBox(args.WorldBounds).Enlarged(grid.TileSize * 2);
             handle.SetTransform(worldMatrix);
-            DrawTiles(handle, gridBounds, tileSets, SpaceTileSize);
+            DrawTiles(handle, gridBounds, tileSets, SpaceTileSize, opacity);
         }
 
         if (SpaceTiles == null)
@@ -153,7 +177,7 @@ public sealed partial class ExplosionDebugOverlay : Overlay
         gridBounds = invSpace.TransformBox(args.WorldBounds).Enlarged(2);
         handle.SetTransform(SpaceMatrix);
 
-        DrawTiles(handle, gridBounds, SpaceTiles, SpaceTileSize);
+        DrawTiles(handle, gridBounds, SpaceTiles, SpaceTileSize, 1f);
         handle.SetTransform(Matrix3x2.Identity);
     }
 
@@ -161,13 +185,14 @@ public sealed partial class ExplosionDebugOverlay : Overlay
         DrawingHandleWorld handle,
         Box2 gridBounds,
         Dictionary<int, List<Vector2i>> tileSets,
-        ushort tileSize)
+        ushort tileSize,
+        float opacity)
     {
         for (var i = 0; i < Intensity.Count; i++)
         {
             var color = ColorMap(Intensity[i]);
             var colorTransparent = color;
-            colorTransparent.A = 0.2f;
+            colorTransparent.A = 0.2f * opacity;
 
             if (!tileSets.TryGetValue(i, out var tiles))
                 continue;

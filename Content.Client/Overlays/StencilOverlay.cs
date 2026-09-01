@@ -61,7 +61,10 @@ public sealed partial class StencilOverlay : Overlay
     protected override void Draw(in OverlayDrawArgs args)
     {
         var mapUid = _map.GetMapOrInvalid(args.MapId);
-        var invMatrix = args.Viewport.GetWorldToLocalMatrix();
+        if (args.LayerEye is not { } layerEye)
+            return;
+
+        var invMatrix = args.Viewport.RenderTarget.GetWorldToLocalMatrix(layerEye, args.Viewport.RenderScale);
 
         var res = _resources.GetForViewport(args.Viewport, static _ => new CachedResources());
 

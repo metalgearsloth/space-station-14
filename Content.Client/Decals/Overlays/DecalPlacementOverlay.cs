@@ -29,6 +29,9 @@ public sealed partial class DecalPlacementOverlay : Overlay
 
     protected override void Draw(in OverlayDrawArgs args)
     {
+        if (!args.IsViewedMap)
+            return;
+
         var (decal, snap, rotation, color) = _placement.GetActiveDecal();
 
         if (decal == null)
@@ -46,8 +49,12 @@ public sealed partial class DecalPlacementOverlay : Overlay
             return;
         }
 
-        var worldMatrix = _transform.GetWorldMatrix(gridUid);
-        var invMatrix = _transform.GetInvWorldMatrix(gridUid);
+        if (!args.TryGetEntityRenderMatrix(gridUid, out var worldMatrix, out _) ||
+            !Matrix3x2.Invert(worldMatrix, out var invMatrix))
+        {
+            return;
+        }
+
 
         var handle = args.WorldHandle;
         handle.SetTransform(worldMatrix);

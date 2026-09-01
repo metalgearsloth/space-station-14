@@ -1,9 +1,8 @@
 using System.Numerics;
-using Content.Client.Physics.Controllers;
-using Content.Client.PhysicsSystem.Controllers;
 using Content.Shared.Movement.Components;
 using Content.Shared.NPC;
 using Content.Shared.NPC.Events;
+using Robust.Client.GameObjects;
 using Robust.Client.Graphics;
 using Robust.Shared.Enums;
 
@@ -82,34 +81,45 @@ public sealed class NPCSteeringOverlay : Overlay
     public override OverlaySpace Space => OverlaySpace.WorldSpace;
 
     private readonly IEntityManager _entManager;
-    private readonly SharedTransformSystem _transformSystem;
+    private readonly TransformSystem _transformSystem;
 
     public NPCSteeringOverlay(IEntityManager entManager)
     {
         _entManager = entManager;
-        _transformSystem = _entManager.System<SharedTransformSystem>();
+        _transformSystem = _entManager.System<TransformSystem>();
     }
 
     protected override void Draw(in OverlayDrawArgs args)
     {
         foreach (var (comp, mover, xform) in _entManager.EntityQuery<NPCSteeringComponent, InputMoverComponent, TransformComponent>(true))
         {
-            if (xform.MapID != args.MapId)
-            {
+            if (!args.TryGetEntityRenderLayer(comp.Owner, out var renderLayer))
                 continue;
-            }
 
-            var (worldPos, worldRot) = _transformSystem.GetWorldPositionRotation(xform);
+            var (canonicalPosition, _) = _transformSystem.GetWorldPositionRotation(xform);
+            var worldPos = renderLayer.Position;
+            var canonicalToPresented = Matrix3x2.CreateTranslation(worldPos - canonicalPosition);
+            var rotationOffset = mover.RelativeRotation;
+
+            if (mover.RelativeEntity is { } relative)
+            {
+                rotationOffset += _transformSystem.GetRenderWorldRotation(relative);
+                if (args.TryGetEntityRenderMatrix(relative, out var renderMatrix, out _) &&
+                    Matrix3x2.Invert(_transformSystem.GetWorldMatrix(relative), out var invCanonicalMatrix))
+                {
+                    canonicalToPresented = invCanonicalMatrix * renderMatrix;
+                }
+            }
 
             if (!args.WorldAABB.Contains(worldPos))
                 continue;
 
-            args.WorldHandle.DrawCircle(worldPos, 1f, Color.Green, false);
-            var rotationOffset = _entManager.System<MoverController>().GetParentGridAngle(mover);
+            args.WorldHandle.DrawCircle(worldPos, 1f, Color.Green.WithAlpha(renderLayer.Opacity), false);
 
             foreach (var point in comp.DangerPoints)
             {
-                args.WorldHandle.DrawCircle(point, 0.1f, Color.Red.WithAlpha(0.6f));
+                var presentedPoint = Vector2.Transform(point, canonicalToPresented);
+                args.WorldHandle.DrawCircle(presentedPoint, 0.1f, Color.Red.WithAlpha(0.6f * renderLayer.Opacity));
             }
 
             for (var i = 0; i < SharedNPCSteeringSystem.InterestDirections; i++)
@@ -117,11 +127,11 @@ public sealed class NPCSteeringOverlay : Overlay
                 var danger = comp.DangerMap[i];
                 var interest = comp.InterestMap[i];
                 var angle = Angle.FromDegrees(i * (360 / SharedNPCSteeringSystem.InterestDirections));
-                args.WorldHandle.DrawLine(worldPos, worldPos + (rotationOffset + angle).RotateVec(new Vector2(interest, 0f)), Color.LimeGreen);
-                args.WorldHandle.DrawLine(worldPos, worldPos + (rotationOffset + angle).RotateVec(new Vector2(danger, 0f)), Color.Red);
+                args.WorldHandle.DrawLine(worldPos, worldPos + (rotationOffset + angle).RotateVec(new Vector2(interest, 0f)), Color.LimeGreen.WithAlpha(renderLayer.Opacity));
+                args.WorldHandle.DrawLine(worldPos, worldPos + (rotationOffset + angle).RotateVec(new Vector2(danger, 0f)), Color.Red.WithAlpha(renderLayer.Opacity));
             }
 
-            args.WorldHandle.DrawLine(worldPos, worldPos + rotationOffset.RotateVec(comp.Direction), Color.Cyan);
+            args.WorldHandle.DrawLine(worldPos, worldPos + rotationOffset.RotateVec(comp.Direction), Color.Cyan.WithAlpha(renderLayer.Opacity));
         }
     }
 }

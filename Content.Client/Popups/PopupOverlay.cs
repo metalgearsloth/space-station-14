@@ -1,5 +1,6 @@
 using System.Numerics;
 using Content.Shared.Examine;
+using Robust.Client.GameObjects;
 using Robust.Client.Graphics;
 using Robust.Client.Player;
 using Robust.Client.UserInterface;
@@ -25,7 +26,7 @@ public sealed class PopupOverlay : Overlay
     private readonly PopupSystem _popup;
     private readonly PopupUIController _controller;
     private readonly ExamineSystemShared _examine;
-    private readonly SharedTransformSystem _transform;
+    private readonly TransformSystem _transform;
     private readonly ShaderInstance _shader;
 
     public override OverlaySpace Space => OverlaySpace.ScreenSpace;
@@ -38,7 +39,7 @@ public sealed class PopupOverlay : Overlay
         IUserInterfaceManager uiManager,
         PopupUIController controller,
         ExamineSystemShared examine,
-        SharedTransformSystem transform,
+        TransformSystem transform,
         PopupSystem popup)
     {
         _configManager = configManager;
@@ -89,18 +90,31 @@ public sealed class PopupOverlay : Overlay
         {
             var mapPos = _transform.ToMapCoordinates(popup.InitialPos);
 
-            if (mapPos.MapId != args.MapId)
-                continue;
-
             var distance = (mapPos.Position - ourPos).Length();
 
-            // Should handle fade here too wyci.
-            if (!args.WorldBounds.Contains(mapPos.Position) || !_examine.InRangeUnOccluded(viewPos, mapPos, distance,
-                    e => e == popup.InitialPos.EntityId || e == ourEntity))
+            if (!args.TryGetEntityPresentedViewMatrix(
+                    popup.InitialPos.EntityId,
+                    out var parentMatrix,
+                    out var presentationOpacity))
+            {
+                continue;
+            }
+
+            var renderPosition = Vector2.Transform(popup.InitialPos.Position, parentMatrix);
+            var unobstructed = mapPos.MapId != viewPos.MapId ||
+                _examine.InRangeUnOccluded(
+                    viewPos,
+                    mapPos,
+                    distance,
+                    e => e == popup.InitialPos.EntityId || e == ourEntity);
+
+            // Range remains a canonical gameplay query. Occlusion is only meaningful within the popup's map;
+            // compatible lower-map popups are selected by renderer-visible presentation samples above.
+            if (!args.WorldBounds.Contains(renderPosition) || !unobstructed)
                 continue;
 
-            var pos = Vector2.Transform(mapPos.Position, matrix);
-            _controller.DrawPopup(popup, worldHandle, pos, scale);
+            var pos = Vector2.Transform(renderPosition, matrix);
+            _controller.DrawPopup(popup, worldHandle, pos, scale, presentationOpacity);
         }
     }
 }

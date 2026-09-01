@@ -15,7 +15,7 @@ public sealed partial class StencilOverlay
         var worldHandle = args.WorldHandle;
         var worldAABB = args.WorldAABB;
         var worldBounds = args.WorldBounds;
-        var position = args.Viewport.Eye?.Position.Position ?? Vector2.Zero;
+        var position = args.LayerEye?.Position.Position ?? Vector2.Zero;
 
         // Cut out the irrelevant bits via stencil
         // This is why we don't just use parallax; we might want specific tiles to get drawn over

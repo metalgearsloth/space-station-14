@@ -8,6 +8,7 @@ using Robust.Client.GameObjects;
 using Robust.Client.UserInterface;
 using Robust.Client.UserInterface.Controls;
 using Robust.Shared.Configuration;
+using Robust.Shared.Map;
 using Robust.Shared.Timing;
 using Robust.Shared.Utility;
 
@@ -18,6 +19,8 @@ namespace Content.Client.Chat.UI
         [Dependency] private IGameTiming _timing = default!;
         [Dependency] private IEyeManager _eyeManager = default!;
         [Dependency] private IEntityManager _entityManager = default!;
+        [Dependency] private SharedMapSystem _mapSystem = default!;
+        [Dependency] private IUserInterfaceManager _uiManager = default!;
         [Dependency] protected IConfigurationManager ConfigManager = default!;
         private readonly TransformSystem _transformSystem;
 
@@ -131,22 +134,30 @@ namespace Content.Client.Chat.UI
                 _verticalOffsetAchieved = MathHelper.Lerp(_verticalOffsetAchieved, VerticalOffset, 10 * args.DeltaSeconds);
             }
 
-            if (!_entityManager.TryGetComponent<TransformComponent>(_senderEntity, out var xform) || xform.MapID != _eyeManager.CurrentEye.Position.MapId)
+            var layerMap = _mapSystem.GetMapOrInvalid(_eyeManager.CurrentEye.Position.MapId);
+            var visibleMaps = _uiManager.MainViewport.Viewport?.VisibleZMaps;
+            if (!_entityManager.TryGetComponent<TransformComponent>(_senderEntity, out var xform) ||
+                layerMap == EntityUid.Invalid ||
+                visibleMaps == null ||
+                !_transformSystem.TryGetPresentedViewSample(
+                    _senderEntity,
+                    layerMap,
+                    visibleMaps,
+                    out var presented,
+                    xform))
             {
                 Modulate = Color.White.WithAlpha(0);
                 return;
             }
 
+            var presentationAlpha = presented.Opacity;
             if (timeLeft <= FadeTime.TotalSeconds)
             {
                 // Update alpha if we're fading.
-                Modulate = Color.White.WithAlpha(timeLeft / (float)FadeTime.TotalSeconds);
+                presentationAlpha *= timeLeft / (float)FadeTime.TotalSeconds;
             }
-            else
-            {
-                // Make opaque otherwise, because it might have been hidden before
-                Modulate = Color.White;
-            }
+
+            Modulate = Color.White.WithAlpha(presentationAlpha);
 
             var baseOffset = 0f;
 
@@ -154,7 +165,7 @@ namespace Content.Client.Chat.UI
                 baseOffset = speech.SpeechBubbleOffset;
 
             var offset = (-_eyeManager.CurrentEye.Rotation).ToWorldVec() * -(EntityVerticalOffset + baseOffset);
-            var worldPos = _transformSystem.GetRenderWorldPosition(_senderEntity, xform) + offset;
+            var worldPos = presented.Position + offset;
 
             var lowerCenter = _eyeManager.WorldToScreen(worldPos) / UIScale;
             var screenPos = lowerCenter - new Vector2(ContentSize.X / 2, ContentSize.Y + _verticalOffsetAchieved);

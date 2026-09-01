@@ -16,7 +16,6 @@ public sealed partial class MiningOverlay : Overlay
     [Dependency] private IPlayerManager _player = default!;
     private readonly EntityLookupSystem _lookup;
     private readonly SpriteSystem _sprite;
-    private readonly TransformSystem _xform;
 
     private readonly EntityQuery<SpriteComponent> _spriteQuery;
     private readonly EntityQuery<TransformComponent> _xformQuery;
@@ -32,8 +31,6 @@ public sealed partial class MiningOverlay : Overlay
 
         _lookup = _entityManager.System<EntityLookupSystem>();
         _sprite = _entityManager.System<SpriteSystem>();
-        _xform = _entityManager.System<TransformSystem>();
-
         _spriteQuery = _entityManager.GetEntityQuery<SpriteComponent>();
         _xformQuery = _entityManager.GetEntityQuery<TransformComponent>();
     }
@@ -59,7 +56,7 @@ public sealed partial class MiningOverlay : Overlay
                 !_spriteQuery.TryComp(ore, out var sprite))
                 continue;
 
-            if (xform.MapID != args.MapId || !sprite.Visible)
+            if (!args.TryGetEntityRenderLayer(ore, out var renderLayer) || !sprite.Visible)
                 continue;
 
             if (!_sprite.LayerMapTryGet((ore, sprite), MiningScannerVisualLayers.Overlay, out var idx, false))
@@ -69,10 +66,13 @@ public sealed partial class MiningOverlay : Overlay
             if (layer.ActualRsi?.Path == null || layer.RsiState.Name == null)
                 continue;
 
-            var gridRot = xform.GridUid == null ? 0 : _xformQuery.CompOrNull(xform.GridUid.Value)?.LocalRotation ?? 0;
+            var gridRot = xform.GridUid is { } grid &&
+                args.TryGetEntityRenderLayer(grid, out var gridLayer)
+                    ? gridLayer.Rotation
+                    : Angle.Zero;
             var rotationMatrix = Matrix3Helpers.CreateRotation(gridRot);
 
-            var worldMatrix = Matrix3Helpers.CreateTranslation(_xform.GetRenderWorldPosition(ore, xform));
+            var worldMatrix = Matrix3Helpers.CreateTranslation(renderLayer.Position);
             var scaledWorld = Matrix3x2.Multiply(scaleMatrix, worldMatrix);
             var matty = Matrix3x2.Multiply(rotationMatrix, scaledWorld);
             handle.SetTransform(matty);
@@ -86,7 +86,7 @@ public sealed partial class MiningOverlay : Overlay
             var alpha = animTime < viewerComp.AnimationDuration
                 ? 0
                 : (float)Math.Clamp((animTime - viewerComp.AnimationDuration) / viewerComp.AnimationDuration, 0f, 1f);
-            var color = Color.White.WithAlpha(alpha);
+            var color = Color.White.WithAlpha(alpha * renderLayer.Opacity);
 
             handle.DrawTexture(texture, -(Vector2)texture.Size / 2f / EyeManager.PixelsPerMeter, layer.Rotation, modulate: color);
 

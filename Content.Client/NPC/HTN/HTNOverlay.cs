@@ -9,7 +9,6 @@ public sealed class HTNOverlay : Overlay
 {
     private readonly IEntityManager _entManager = default!;
     private readonly Font _font = default!;
-    private readonly SharedTransformSystem _transformSystem;
 
     public override OverlaySpace Space => OverlaySpace.ScreenSpace;
 
@@ -17,7 +16,6 @@ public sealed class HTNOverlay : Overlay
     {
         _entManager = entManager;
         _font = new VectorFont(resourceCache.GetResource<FontResource>("/Fonts/NotoSans/NotoSans-Regular.ttf"), 10);
-        _transformSystem = _entManager.System<SharedTransformSystem>();
     }
 
     protected override void Draw(in OverlayDrawArgs args)
@@ -27,18 +25,24 @@ public sealed class HTNOverlay : Overlay
 
         var handle = args.ScreenHandle;
 
-        foreach (var (comp, xform) in _entManager.EntityQuery<HTNComponent, TransformComponent>(true))
+        var query = _entManager.AllEntityQueryEnumerator<HTNComponent, TransformComponent>();
+        while (query.MoveNext(out var uid, out var comp, out _))
         {
-            if (string.IsNullOrEmpty(comp.DebugText) || xform.MapID != args.MapId)
+            if (string.IsNullOrEmpty(comp.DebugText))
                 continue;
 
-            var worldPos = _transformSystem.GetWorldPosition(xform);
-
-            if (!args.WorldAABB.Contains(worldPos))
+            if (!args.TryGetEntityPresentedView(uid, out var presented))
                 continue;
 
-            var screenPos = args.ViewportControl.WorldToScreen(worldPos);
-            handle.DrawString(_font, screenPos + new Vector2(0, 10f), comp.DebugText, Color.White);
+            if (!args.WorldAABB.Contains(presented.Position))
+                continue;
+
+            var screenPos = args.ViewportControl.WorldToScreen(presented.Position);
+            handle.DrawString(
+                _font,
+                screenPos + new Vector2(0, 10f),
+                comp.DebugText,
+                Color.White.WithAlpha(presented.Opacity));
         }
     }
 }

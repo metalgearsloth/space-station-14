@@ -1,5 +1,4 @@
 ﻿using Content.Shared.MapText;
-using Robust.Client.GameObjects;
 using Robust.Client.Graphics;
 using Robust.Client.ResourceManagement;
 using Robust.Client.UserInterface;
@@ -15,7 +14,6 @@ public sealed partial class MapTextSystem : SharedMapTextSystem
 {
     [Dependency] private IConfigurationManager _configManager = default!;
     [Dependency] private IUserInterfaceManager _uiManager = default!;
-    [Dependency] private TransformSystem _transform = default!;
     [Dependency] private IResourceCache _resourceCache = default!;
     [Dependency] private IOverlayManager _overlayManager = default!;
 
@@ -27,7 +25,7 @@ public sealed partial class MapTextSystem : SharedMapTextSystem
         SubscribeLocalEvent<MapTextComponent, ComponentStartup>(OnComponentStartup);
         SubscribeLocalEvent<MapTextComponent, ComponentHandleState>(HandleCompState);
 
-        _overlay = new MapTextOverlay(_configManager, EntityManager, _uiManager, _transform, _resourceCache, ProtoMan);
+        _overlay = new MapTextOverlay(_configManager, EntityManager, _uiManager, _resourceCache, ProtoMan);
         _overlayManager.AddOverlay(_overlay);
 
         // TODO move font prototype to robust.shared, then use ProtoId<FontPrototype>

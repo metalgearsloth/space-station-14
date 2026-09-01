@@ -51,26 +51,23 @@ public sealed class MeleeArcOverlay : Overlay
         var mousePos = _inputManager.MouseScreenPosition;
         var mapPos = _eyeManager.PixelToMap(mousePos);
 
-        if (mapPos.MapId != args.MapId)
+        if (!args.TryGetEntityRenderLayer(player.Value, out var renderLayer) ||
+            !args.TryProjectMapCoordinates(mapPos, out var projectedMouse))
             return;
 
-        var playerPos = _transform.GetMapCoordinates(player.Value, xform: xform);
-
-        if (mapPos.MapId != playerPos.MapId)
-            return;
-
-        var diff = mapPos.Position - playerPos.Position;
+        var playerPos = renderLayer.Position;
+        var diff = projectedMouse - playerPos;
 
         if (diff.Equals(Vector2.Zero))
             return;
 
         diff = diff.Normalized() * Math.Min(weapon.Range, diff.Length());
-        args.WorldHandle.DrawLine(playerPos.Position, playerPos.Position + diff, Color.Aqua);
+        args.WorldHandle.DrawLine(playerPos, playerPos + diff, Color.Aqua.WithAlpha(renderLayer.Opacity));
 
         if (weapon.Angle.Theta == 0)
             return;
 
-        args.WorldHandle.DrawLine(playerPos.Position, playerPos.Position + new Angle(-weapon.Angle / 2).RotateVec(diff), Color.Orange);
-        args.WorldHandle.DrawLine(playerPos.Position, playerPos.Position + new Angle(weapon.Angle / 2).RotateVec(diff), Color.Orange);
+        args.WorldHandle.DrawLine(playerPos, playerPos + new Angle(-weapon.Angle / 2).RotateVec(diff), Color.Orange.WithAlpha(renderLayer.Opacity));
+        args.WorldHandle.DrawLine(playerPos, playerPos + new Angle(weapon.Angle / 2).RotateVec(diff), Color.Orange.WithAlpha(renderLayer.Opacity));
     }
 }

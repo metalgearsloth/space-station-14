@@ -1,6 +1,5 @@
 ﻿using System.Numerics;
 using Content.Shared.MapText;
-using Robust.Client.GameObjects;
 using Robust.Client.Graphics;
 using Robust.Client.ResourceManagement;
 using Robust.Client.UserInterface;
@@ -20,20 +19,17 @@ public sealed class MapTextOverlay : Overlay
     private readonly IConfigurationManager _configManager;
     private readonly IEntityManager _entManager;
     private readonly IUserInterfaceManager _uiManager;
-    private readonly TransformSystem _transform;
     public override OverlaySpace Space => OverlaySpace.ScreenSpace;
 
     public MapTextOverlay(IConfigurationManager configManager,
         IEntityManager entManager,
         IUserInterfaceManager uiManager,
-        TransformSystem transform,
         IResourceCache resourceCache,
         IPrototypeManager prototypeManager)
     {
         _configManager = configManager;
         _entManager = entManager;
         _uiManager = uiManager;
-        _transform = transform;
     }
 
     protected override void Draw(in OverlayDrawArgs args)
@@ -66,20 +62,25 @@ public sealed class MapTextOverlay : Overlay
 
         while(query.MoveNext(out var uid, out var mapText))
         {
-            var mapPos = _transform.GetRenderMapCoordinates(uid);
-
-            if (mapPos.MapId != args.MapId)
+            if (!args.TryGetEntityPresentedView(uid, out var presented))
                 continue;
 
-            if (!bounds.Contains(mapPos.Position))
+            if (!bounds.Contains(presented.Position))
                 continue;
 
             if (mapText.CachedFont == null)
                 continue;
 
-            var pos = Vector2.Transform(mapPos.Position, matrix) + mapText.Offset;
+            var pos = Vector2.Transform(presented.Position, matrix) + mapText.Offset;
             var dimensions = handle.GetDimensions(mapText.CachedFont, mapText.CachedText, scale);
-            handle.DrawString(mapText.CachedFont, pos - dimensions / 2f, mapText.CachedText, scale, mapText.Color);
+            var color = mapText.Color;
+            color.A *= presented.Opacity;
+            handle.DrawString(
+                mapText.CachedFont,
+                pos - dimensions / 2f,
+                mapText.CachedText,
+                scale,
+                color);
         }
     }
 }

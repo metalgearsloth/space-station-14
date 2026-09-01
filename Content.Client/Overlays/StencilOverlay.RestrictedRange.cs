@@ -16,7 +16,7 @@ public sealed partial class StencilOverlay
         var worldHandle = args.WorldHandle;
         var renderScale = args.Viewport.RenderScale.X;
         // TODO: This won't handle non-standard zooms so uhh yeah, not sure how to structure it on the shader side.
-        var zoom = args.Viewport.Eye?.Zoom ?? Vector2.One;
+        var zoom = args.LayerEye?.Zoom ?? Vector2.One;
         var length = zoom.X;
         var bufferRange = MathF.Min(10f, rangeComp.Range);
 
@@ -36,7 +36,7 @@ public sealed partial class StencilOverlay
 
         var worldAABB = args.WorldAABB;
         var worldBounds = args.WorldBounds;
-        var position = args.Viewport.Eye?.Position.Position ?? Vector2.Zero;
+        var position = args.LayerEye?.Position.Position ?? Vector2.Zero;
         var localAABB = invMatrix.TransformBox(worldAABB);
 
         // Cut out the irrelevant bits via stencil

@@ -5,6 +5,7 @@ using Content.Shared.Atmos;
 using Content.Shared.Atmos.Components;
 using Content.Shared.Atmos.EntitySystems;
 using Content.Shared.CCVar;
+using Robust.Client.GameObjects;
 using Robust.Client.Graphics;
 using Robust.Client.ResourceManagement;
 using Robust.Shared.Configuration;
@@ -34,7 +35,7 @@ public sealed partial class GasTileHeatBlurOverlay : Overlay
     [Dependency] private IResourceCache _resourceCache = default!;
 
     private readonly SharedMapSystem _maps;
-    private readonly SharedTransformSystem _xformSys;
+    private readonly TransformSystem _xformSys;
     private readonly ShaderInstance _shader;
 
     private readonly Texture _noiseTexture;
@@ -64,7 +65,7 @@ public sealed partial class GasTileHeatBlurOverlay : Overlay
     {
         IoCManager.InjectDependencies(this);
         _maps = _entManager.System<SharedMapSystem>();
-        _xformSys = _entManager.System<SharedTransformSystem>();
+        _xformSys = _entManager.System<TransformSystem>();
 
         _noiseTexture = _resourceCache.GetTexture("/Textures/Effects/HeatBlur/perlin_noise.png");
         _heatGradientTexture = _resourceCache.GetTexture("/Textures/Effects/HeatBlur/soft_circle.png");
@@ -117,6 +118,8 @@ public sealed partial class GasTileHeatBlurOverlay : Overlay
         var worldBounds = args.WorldBounds;
         var worldHandle = args.WorldHandle;
         var worldToViewportLocal = args.Viewport.GetWorldToLocalMatrix();
+        var layerMap = args.MapUid;
+        args.FindRenderGrids(_maps, ref _intersectingGrids);
 
         // If there is no distortion after checking all visible tiles, we can bail early
         var anyDistortion = false;
@@ -126,14 +129,22 @@ public sealed partial class GasTileHeatBlurOverlay : Overlay
         args.WorldHandle.RenderInRenderTarget(res.HeatTarget,
             () =>
             {
-                _intersectingGrids.Clear();
-                _maps.FindGridsIntersecting(mapId, worldAABB, ref _intersectingGrids);
                 foreach (var grid in _intersectingGrids)
                 {
                     if (!overlayQuery.TryGetComponent(grid.Owner, out var comp))
                         continue;
 
-                    var gridEntToWorld = _xformSys.GetWorldMatrix(grid.Owner);
+                    if (!_xformSys.TryGetRenderLayerSample(grid.Owner, layerMap, out var renderLayer))
+                        continue;
+
+                    var gridEntToWorld = Matrix3Helpers.CreateTransform(renderLayer.Position, renderLayer.Rotation);
+                    var opacity = renderLayer.Opacity;
+                    if (
+                        !Matrix3x2.Invert(gridEntToWorld, out var worldToGridLocal))
+                    {
+                        continue;
+                    }
+
                     var gridEntToViewportLocal = gridEntToWorld * worldToViewportLocal;
 
                     if (!Matrix3x2.Invert(gridEntToViewportLocal, out var viewportLocalToGridEnt))
@@ -153,7 +164,6 @@ public sealed partial class GasTileHeatBlurOverlay : Overlay
                     worldHandle.SetTransform(gridEntToViewportLocal);
 
                     // We only care about tiles that fit in these bounds
-                    var worldToGridLocal = _xformSys.GetInvWorldMatrix(grid.Owner);
                     var floatBounds = worldToGridLocal.TransformBox(worldBounds).Enlarged(grid.Comp.TileSize);
 
                     var localBounds = new Box2i(
@@ -187,7 +197,7 @@ public sealed partial class GasTileHeatBlurOverlay : Overlay
                                 _heatGradientTexture,
                                 Box2.CenteredAround(tilePosition + grid.Comp.TileSizeHalfVector,
                                     grid.Comp.TileSizeVector * ShaderSpilling),
-                                new Color(strength, 0f, 0f));
+                                new Color(strength * opacity, 0f, 0f));
                         }
                     }
                 }

@@ -45,15 +45,17 @@ namespace Content.Client.Decals.Overlays
                 return;
             }
 
-            if (xform.MapID != args.MapId)
+            if (!args.TryGetEntityRenderMatrix(owner, out var worldMatrix, out var opacity) ||
+                !args.TryGetEntityRenderLayer(owner, out var renderLayer))
                 return;
 
             // Shouldn't need to clear cached textures unless the prototypes get reloaded.
             var handle = args.WorldHandle;
             var xformSystem = _entManager.System<TransformSystem>();
-            var eyeAngle = args.Viewport.Eye?.Rotation ?? Angle.Zero;
+            var eyeAngle = args.LayerEye?.Rotation ?? Angle.Zero;
 
-            var gridAABB = xformSystem.GetInvWorldMatrix(xform).TransformBox(args.WorldBounds.Enlarged(1f));
+            var invWorldMatrix = Matrix3Helpers.CreateInverseTransform(renderLayer.Position, renderLayer.Rotation);
+            var gridAABB = invWorldMatrix.TransformBox(args.WorldBounds.Enlarged(1f));
             _decals.Clear();
 
             foreach (var chunkEnt in _chunkEntities.GetChunksIntersecting(owner, gridAABB))
@@ -83,7 +85,7 @@ namespace Content.Client.Decals.Overlays
                 return CompareDecalIndex(x.Index, y.Index);
             });
 
-            var (_, worldRot, worldMatrix) = xformSystem.GetWorldPositionRotationMatrix(xform);
+            var worldRot = renderLayer.Rotation;
             handle.SetTransform(worldMatrix);
 
             foreach (var (_, decal) in _decals)
@@ -110,10 +112,11 @@ namespace Content.Client.Decals.Overlays
 
                 var angle = decal.Angle - cardinal;
 
+                var color = (decal.Color ?? Color.White).WithAlpha((decal.Color ?? Color.White).A * opacity);
                 if (angle.Equals(Angle.Zero))
-                    handle.DrawTexture(cache.Texture, decal.Coordinates, decal.Color);
+                    handle.DrawTexture(cache.Texture, decal.Coordinates, color);
                 else
-                    handle.DrawTexture(cache.Texture, decal.Coordinates, angle, decal.Color);
+                    handle.DrawTexture(cache.Texture, decal.Coordinates, angle, color);
             }
 
             handle.SetTransform(Matrix3x2.Identity);

@@ -43,18 +43,14 @@ public sealed class GunSpreadOverlay : Overlay
             return;
         }
 
-        var mapPos = _transform.GetMapCoordinates(player.Value, xform: xform);
-
-        if (mapPos.MapId == MapId.Nullspace)
-            return;
-
         if (!_guns.TryGetGun(player.Value, out var gun))
             return;
 
         var mouseScreenPos = _input.MouseScreenPosition;
         var mousePos = _eye.PixelToMap(mouseScreenPos);
 
-        if (mapPos.MapId != mousePos.MapId)
+        if (!args.TryGetEntityRenderLayer(player.Value, out var renderLayer) ||
+            !args.TryProjectMapCoordinates(mousePos, out var projectedMouse))
             return;
 
         // (☞ﾟヮﾟ)☞
@@ -63,20 +59,22 @@ public sealed class GunSpreadOverlay : Overlay
         var timeSinceLastFire = (_timing.CurTime - gun.Comp.NextFire).TotalSeconds;
         var currentAngle = new Angle(MathHelper.Clamp(gun.Comp.CurrentAngle.Theta - gun.Comp.AngleDecayModified.Theta * timeSinceLastFire,
             gun.Comp.MinAngleModified.Theta, gun.Comp.MaxAngleModified.Theta));
-        var direction = mousePos.Position - mapPos.Position;
+        var mapPos = renderLayer.Position;
+        var direction = projectedMouse - mapPos;
+        var opacity = renderLayer.Opacity;
 
-        worldHandle.DrawLine(mapPos.Position, mousePos.Position + direction, Color.Orange);
+        worldHandle.DrawLine(mapPos, projectedMouse + direction, Color.Orange.WithAlpha(opacity));
 
         // Show max spread either side
-        worldHandle.DrawLine(mapPos.Position, mousePos.Position + maxSpread.RotateVec(direction), Color.Red);
-        worldHandle.DrawLine(mapPos.Position, mousePos.Position + (-maxSpread).RotateVec(direction), Color.Red);
+        worldHandle.DrawLine(mapPos, projectedMouse + maxSpread.RotateVec(direction), Color.Red.WithAlpha(opacity));
+        worldHandle.DrawLine(mapPos, projectedMouse + (-maxSpread).RotateVec(direction), Color.Red.WithAlpha(opacity));
 
         // Show min spread either side
-        worldHandle.DrawLine(mapPos.Position, mousePos.Position + minSpread.RotateVec(direction), Color.Green);
-        worldHandle.DrawLine(mapPos.Position, mousePos.Position + (-minSpread).RotateVec(direction), Color.Green);
+        worldHandle.DrawLine(mapPos, projectedMouse + minSpread.RotateVec(direction), Color.Green.WithAlpha(opacity));
+        worldHandle.DrawLine(mapPos, projectedMouse + (-minSpread).RotateVec(direction), Color.Green.WithAlpha(opacity));
 
         // Show current angle
-        worldHandle.DrawLine(mapPos.Position, mousePos.Position + currentAngle.RotateVec(direction), Color.Yellow);
-        worldHandle.DrawLine(mapPos.Position, mousePos.Position + (-currentAngle).RotateVec(direction), Color.Yellow);
+        worldHandle.DrawLine(mapPos, projectedMouse + currentAngle.RotateVec(direction), Color.Yellow.WithAlpha(opacity));
+        worldHandle.DrawLine(mapPos, projectedMouse + (-currentAngle).RotateVec(direction), Color.Yellow.WithAlpha(opacity));
     }
 }

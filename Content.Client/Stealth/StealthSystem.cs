@@ -4,6 +4,7 @@ using Content.Shared.Stealth;
 using Content.Shared.Stealth.Components;
 using Robust.Client.GameObjects;
 using Robust.Client.Graphics;
+using Robust.Shared.Map;
 using Robust.Shared.Prototypes;
 
 namespace Content.Client.Stealth;
@@ -12,7 +13,8 @@ public sealed partial class StealthSystem : SharedStealthSystem
 {
     private static readonly ProtoId<ShaderPrototype> Shader = "Stealth";
 
-    [Dependency] private SharedTransformSystem _transformSystem = default!;
+    [Dependency] private TransformSystem _transformSystem = default!;
+    [Dependency] private SharedMapSystem _mapSystem = default!;
     [Dependency] private SpriteSystem _sprite = default!;
 
     private ShaderInstance _shader = default!;
@@ -90,8 +92,17 @@ public sealed partial class StealthSystem : SharedStealthSystem
         var parent = Transform(uid).ParentUid;
         if (!parent.IsValid())
             return; // should never happen, but lets not kill the client.
-        var parentXform = Transform(parent);
-        var reference = args.Viewport.WorldToLocal(_transformSystem.GetWorldPosition(parentXform));
+
+        var layerMap = args.Viewport.Eye is { } eye
+            ? _mapSystem.GetMapOrInvalid(eye.Position.MapId)
+            : EntityUid.Invalid;
+        if (layerMap == EntityUid.Invalid ||
+            !_transformSystem.TryGetRenderLayerSample(parent, layerMap, out var parentLayer))
+        {
+            return;
+        }
+
+        var reference = args.Viewport.WorldToLocal(parentLayer.Position);
         reference.X = -reference.X;
         var visibility = GetVisibility(uid, component);
 

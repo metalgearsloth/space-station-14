@@ -42,6 +42,9 @@ public sealed partial class MappingOverlay : Overlay
 
     protected override void Draw(in OverlayDrawArgs args)
     {
+        if (!args.IsViewedMap)
+            return;
+
         foreach (var (id, color) in _oldColors)
         {
             if (!_entities.TryGetComponent(id, out SpriteComponent? sprite))

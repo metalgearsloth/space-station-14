@@ -14,7 +14,6 @@ public sealed partial class PuddleOverlay : Overlay
     [Dependency] private IEntityManager _entityManager = default!;
     [Dependency] private IEntitySystemManager _entitySystemManager = default!;
     private readonly PuddleDebugOverlaySystem _debugOverlaySystem;
-    private readonly SharedTransformSystem _transformSystem;
 
     private readonly Color _heavyPuddle = new(0, 255, 255, 50);
     private readonly Color _mediumPuddle = new(0, 150, 255, 50);
@@ -30,7 +29,6 @@ public sealed partial class PuddleOverlay : Overlay
         _debugOverlaySystem = _entitySystemManager.GetEntitySystem<PuddleDebugOverlaySystem>();
         var cache = IoCManager.Resolve<IResourceCache>();
         _font = new VectorFont(cache.GetResource<FontResource>("/Fonts/NotoSans/NotoSans-Regular.ttf"), 8);
-        _transformSystem = _entityManager.System<SharedTransformSystem>();
     }
 
     protected override void Draw(in OverlayDrawArgs args)
@@ -50,15 +48,17 @@ public sealed partial class PuddleOverlay : Overlay
     {
         var drawHandle = args.WorldHandle;
         Box2 gridBounds;
-        var xformQuery = _entityManager.GetEntityQuery<TransformComponent>();
-
         foreach (var gridId in _debugOverlaySystem.TileData.Keys)
         {
             if (!_entityManager.TryGetComponent(gridId, out MapGridComponent? mapGrid))
                 continue;
 
-            var gridXform = xformQuery.GetComponent(gridId);
-            var (_, _, worldMatrix, invWorldMatrix) = _transformSystem.GetWorldPositionRotationMatrixWithInv(gridXform, xformQuery);
+            if (!args.TryGetEntityRenderMatrix(gridId, out var worldMatrix, out var opacity) ||
+                !Matrix3x2.Invert(worldMatrix, out var invWorldMatrix))
+            {
+                continue;
+            }
+
             gridBounds = invWorldMatrix.TransformBox(args.WorldBounds).Enlarged(mapGrid.TileSize * 2);
             drawHandle.SetTransform(worldMatrix);
 
@@ -71,8 +71,9 @@ public sealed partial class PuddleOverlay : Overlay
                     continue;
 
                 var box = Box2.UnitCentered.Translated(centre);
-                drawHandle.DrawRect(box, Color.Blue, false);
-                drawHandle.DrawRect(box, ColorMap(debugOverlayData.CurrentVolume));
+                drawHandle.DrawRect(box, Color.Blue.WithAlpha(opacity), false);
+                var color = ColorMap(debugOverlayData.CurrentVolume);
+                drawHandle.DrawRect(box, color.WithAlpha(color.A * opacity));
             }
         }
 
@@ -82,16 +83,17 @@ public sealed partial class PuddleOverlay : Overlay
     private void DrawScreen(in OverlayDrawArgs args)
     {
         var drawHandle = args.ScreenHandle;
-        var xformQuery = _entityManager.GetEntityQuery<TransformComponent>();
-
-
         foreach (var gridId in _debugOverlaySystem.TileData.Keys)
         {
             if (!_entityManager.TryGetComponent(gridId, out MapGridComponent? mapGrid))
                 continue;
 
-            var gridXform = xformQuery.GetComponent(gridId);
-            var (_, _, matrix, invMatrix) = _transformSystem.GetWorldPositionRotationMatrixWithInv(gridXform, xformQuery);
+            if (!args.TryGetEntityPresentedViewMatrix(gridId, out var matrix, out var opacity) ||
+                !Matrix3x2.Invert(matrix, out var invMatrix))
+            {
+                continue;
+            }
+
             var gridBounds = invMatrix.TransformBox(args.WorldBounds).Enlarged(mapGrid.TileSize * 2);
 
             foreach (var debugOverlayData in _debugOverlaySystem.GetData(gridId))
@@ -104,7 +106,11 @@ public sealed partial class PuddleOverlay : Overlay
 
                 var screenCenter = _eyeManager.WorldToScreen(Vector2.Transform(centre, matrix));
 
-                drawHandle.DrawString(_font, screenCenter, debugOverlayData.CurrentVolume.ToString(), Color.White);
+                drawHandle.DrawString(
+                    _font,
+                    screenCenter,
+                    debugOverlayData.CurrentVolume.ToString(),
+                    Color.White.WithAlpha(opacity));
             }
         }
     }

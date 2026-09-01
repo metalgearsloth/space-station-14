@@ -20,7 +20,7 @@ public sealed partial class DrunkOverlay : Overlay
     [Dependency] private IConfigurationManager _configManager = default!;
     private readonly Shared.StatusEffectNew.StatusEffectsSystem _statusEffectsSystem;
 
-    public override OverlaySpace Space => OverlaySpace.WorldSpace;
+    public override OverlaySpace Space => OverlaySpace.PostZLevel;
     public override bool RequestScreenTexture => true;
     private readonly ShaderInstance _drunkShader;
 

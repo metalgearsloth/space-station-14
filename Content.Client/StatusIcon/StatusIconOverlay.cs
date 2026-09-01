@@ -38,7 +38,7 @@ public sealed partial class StatusIconOverlay : Overlay
     {
         var handle = args.WorldHandle;
 
-        var eyeRot = args.Viewport.Eye?.Rotation ?? default;
+        var eyeRot = args.LayerEye?.Rotation ?? default;
 
         var scaleMatrix = Matrix3Helpers.CreateScale(new Vector2(1, 1));
         var rotationMatrix = Matrix3Helpers.CreateRotation(-eyeRot);
@@ -46,12 +46,12 @@ public sealed partial class StatusIconOverlay : Overlay
         var query = _entity.AllEntityQueryEnumerator<StatusIconComponent, SpriteComponent, TransformComponent, MetaDataComponent>();
         while (query.MoveNext(out var uid, out var comp, out var sprite, out var xform, out var meta))
         {
-            if (xform.MapID != args.MapId || !sprite.Visible)
+            if (!args.TryGetEntityRenderLayer(uid, out var renderLayer) || !sprite.Visible)
                 continue;
 
             var bounds = comp.Bounds ?? _sprite.GetLocalBounds((uid, sprite));
 
-            var worldPos = _transform.GetRenderWorldPosition(uid, xform);
+            var worldPos = renderLayer.Position;
 
             if (!bounds.Translated(worldPos).Intersects(args.WorldAABB))
                 continue;
@@ -118,7 +118,7 @@ public sealed partial class StatusIconOverlay : Overlay
                     handle.UseShader(_unshadedShader);
 
                 var position = new Vector2(xOffset, yOffset);
-                handle.DrawTexture(texture, position);
+                handle.DrawTexture(texture, position, Color.White.WithAlpha(renderLayer.Opacity));
             }
 
             handle.UseShader(null);

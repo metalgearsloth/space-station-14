@@ -54,7 +54,7 @@ namespace Content.Client.Singularity
         {
             if (_reducedMotion)
                 return false;
-            if (args.Viewport.Eye == null)
+            if (args.LayerEye == null)
                 return false;
             if (_xformSystem is null && !_entMan.TrySystem(out _xformSystem))
                 return false;
@@ -63,10 +63,10 @@ namespace Content.Client.Singularity
             var query = _entMan.EntityQueryEnumerator<SingularityDistortionComponent, TransformComponent>();
             while (query.MoveNext(out var uid, out var distortion, out var xform))
             {
-                if (xform.MapID != args.MapId)
+                if (!args.TryGetEntityRenderLayer(uid, out var renderLayer))
                     continue;
 
-                var mapPos = _xformSystem.GetRenderWorldPosition(uid, xform);
+                var mapPos = renderLayer.Position;
 
                 // is the distortion in range?
                 if ((mapPos - args.WorldAABB.ClosestPoint(mapPos)).LengthSquared() > MaxDistance * MaxDistance)
@@ -78,7 +78,7 @@ namespace Content.Client.Singularity
                 tempCoords.Y = args.Viewport.Size.Y - tempCoords.Y; // Local space to fragment space.
 
                 _positions[_count] = tempCoords;
-                _intensities[_count] = distortion.Intensity;
+                _intensities[_count] = distortion.Intensity * renderLayer.Opacity;
                 _falloffPowers[_count] = distortion.FalloffPower;
                 _count++;
 
@@ -91,10 +91,10 @@ namespace Content.Client.Singularity
 
         protected override void Draw(in OverlayDrawArgs args)
         {
-            if (ScreenTexture == null || args.Viewport.Eye == null)
+            if (ScreenTexture == null || args.LayerEye == null)
                 return;
 
-            _shader?.SetParameter("renderScale", args.Viewport.RenderScale * args.Viewport.Eye.Scale);
+            _shader?.SetParameter("renderScale", args.Viewport.RenderScale * args.LayerEye.Scale);
             _shader?.SetParameter("count", _count);
             _shader?.SetParameter("position", _positions);
             _shader?.SetParameter("intensity", _intensities);

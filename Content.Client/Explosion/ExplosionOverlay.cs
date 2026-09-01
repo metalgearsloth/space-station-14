@@ -18,7 +18,6 @@ public sealed partial class ExplosionOverlay : Overlay
     [Dependency] private IRobustRandom _robustRandom = default!;
     [Dependency] private IEntityManager _entMan = default!;
     [Dependency] private IPrototypeManager _proto = default!;
-    private readonly SharedTransformSystem _transformSystem;
     private SharedAppearanceSystem _appearance;
 
     public override OverlaySpace Space => OverlaySpace.WorldSpaceBelowFOV;
@@ -29,7 +28,6 @@ public sealed partial class ExplosionOverlay : Overlay
     {
         IoCManager.InjectDependencies(this);
         _shader = _proto.Index(UnshadedShader).Instance();
-        _transformSystem = _entMan.System<SharedTransformSystem>();
         _appearance = appearanceSystem;
     }
 
@@ -38,7 +36,6 @@ public sealed partial class ExplosionOverlay : Overlay
         var drawHandle = args.WorldHandle;
         drawHandle.UseShader(_shader);
 
-        var xforms = _entMan.GetEntityQuery<TransformComponent>();
         var query = _entMan.EntityQueryEnumerator<ExplosionVisualsComponent, ExplosionVisualsTexturesComponent>();
 
         while (query.MoveNext(out var uid, out var visuals, out var textures))
@@ -50,7 +47,7 @@ public sealed partial class ExplosionOverlay : Overlay
                 continue;
 
             index = Math.Min(index, visuals.Intensity.Count - 1);
-            DrawExplosion(drawHandle, args.WorldBounds, visuals, index, xforms, textures);
+            DrawExplosion(args, drawHandle, args.WorldBounds, visuals, index, textures);
         }
 
         drawHandle.SetTransform(Matrix3x2.Identity);
@@ -58,11 +55,11 @@ public sealed partial class ExplosionOverlay : Overlay
     }
 
     private void DrawExplosion(
+        in OverlayDrawArgs args,
         DrawingHandleWorld drawHandle,
         Box2Rotated worldBounds,
         ExplosionVisualsComponent visuals,
         int index,
-        EntityQuery<TransformComponent> xforms,
         ExplosionVisualsTexturesComponent textures)
     {
         Box2 gridBounds;
@@ -71,13 +68,16 @@ public sealed partial class ExplosionOverlay : Overlay
             if (!_entMan.TryGetComponent(gridId, out MapGridComponent? grid))
                 continue;
 
-            var xform = xforms.GetComponent(gridId);
-            var (_, _, worldMatrix, invWorldMatrix) = _transformSystem.GetWorldPositionRotationMatrixWithInv(xform, xforms);
+            if (!args.TryGetEntityRenderMatrix(gridId, out var worldMatrix, out var opacity) ||
+                !Matrix3x2.Invert(worldMatrix, out var invWorldMatrix))
+            {
+                continue;
+            }
 
             gridBounds = invWorldMatrix.TransformBox(worldBounds).Enlarged(grid.TileSize * 2);
             drawHandle.SetTransform(worldMatrix);
 
-            DrawTiles(drawHandle, gridBounds, index, tiles, visuals, grid.TileSize, textures);
+            DrawTiles(drawHandle, gridBounds, index, tiles, visuals, grid.TileSize, textures, opacity);
         }
 
         if (visuals.SpaceTiles == null)
@@ -87,7 +87,7 @@ public sealed partial class ExplosionOverlay : Overlay
         gridBounds = invSpace.TransformBox(worldBounds).Enlarged(2);
         drawHandle.SetTransform(visuals.SpaceMatrix);
 
-        DrawTiles(drawHandle, gridBounds, index, visuals.SpaceTiles, visuals, visuals.SpaceTileSize, textures);
+        DrawTiles(drawHandle, gridBounds, index, visuals.SpaceTiles, visuals, visuals.SpaceTileSize, textures, 1f);
     }
 
     private void DrawTiles(
@@ -97,7 +97,8 @@ public sealed partial class ExplosionOverlay : Overlay
         Dictionary<int, List<Vector2i>> tileSets,
         ExplosionVisualsComponent visuals,
         ushort tileSize,
-        ExplosionVisualsTexturesComponent textures)
+        ExplosionVisualsTexturesComponent textures,
+        float opacity)
     {
         for (var j = 0; j <= index; j++)
         {
@@ -115,7 +116,11 @@ public sealed partial class ExplosionOverlay : Overlay
                     continue;
 
                 var texture = _robustRandom.Pick(frames);
-                drawHandle.DrawTextureRect(texture, Box2.CenteredAround(centre, new Vector2(tileSize, tileSize)), textures.FireColor);
+                var color = textures.FireColor ?? Color.White;
+                drawHandle.DrawTextureRect(
+                    texture,
+                    Box2.CenteredAround(centre, new Vector2(tileSize, tileSize)),
+                    color.WithAlpha(color.A * opacity));
             }
         }
     }

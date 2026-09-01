@@ -56,6 +56,8 @@ public sealed partial class ContentEyeSystem : SharedContentEyeSystem
     public override void FrameUpdate(float frameTime)
     {
         base.FrameUpdate(frameTime);
+        // Robust's EyeSystem already places the eye from the controlled entity's presented render pose. Content
+        // eye offsets are authored effects only; applying z projection here again would desynchronize the camera.
         var eyeEntities = AllEntityQuery<ContentEyeComponent, EyeComponent>();
         while (eyeEntities.MoveNext(out var entity, out ContentEyeComponent? contentComponent, out EyeComponent? eyeComponent))
         {

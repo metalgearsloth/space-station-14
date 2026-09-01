@@ -23,9 +23,14 @@ public sealed partial class StorageSystem : SharedStorageSystem
 
     /// <inheritdoc />
     public override void PlayPickupAnimation(EntityUid uid, EntityCoordinates initialCoordinates, EntityCoordinates finalCoordinates,
-        Angle initialRotation, EntityUid? user = null)
+        Angle initialRotation, EntityUid? user = null, EntityUid? visualTarget = null)
     {
         var filter = Filter.Pvs(uid).RemoveWhereAttachedEntity(e => e == user);
-        RaiseNetworkEvent(new PickupAnimationEvent(GetNetEntity(uid), GetNetCoordinates(initialCoordinates), GetNetCoordinates(finalCoordinates), initialRotation), filter);
+        RaiseNetworkEvent(new PickupAnimationEvent(
+            GetNetEntity(uid),
+            GetNetCoordinates(initialCoordinates),
+            GetNetCoordinates(finalCoordinates),
+            initialRotation,
+            GetNetEntity(visualTarget ?? user)), filter);
     }
 }

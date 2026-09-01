@@ -11,46 +11,42 @@ public sealed class AmbientSoundOverlay : Overlay
 {
     private readonly IEntityManager _entManager;
     private readonly AmbientSoundSystem _ambient;
-    private readonly EntityLookupSystem _lookup;
 
     public override OverlaySpace Space => OverlaySpace.WorldSpace;
 
-    public AmbientSoundOverlay(IEntityManager entManager, AmbientSoundSystem ambient, EntityLookupSystem lookup)
+    public AmbientSoundOverlay(IEntityManager entManager, AmbientSoundSystem ambient)
     {
         _entManager = entManager;
         _ambient = ambient;
-        _lookup = lookup;
     }
 
     protected override void Draw(in OverlayDrawArgs args)
     {
         var worldHandle = args.WorldHandle;
-        var ambientQuery = _entManager.GetEntityQuery<AmbientSoundComponent>();
-        var xformQuery = _entManager.GetEntityQuery<TransformComponent>();
-        var xformSystem = _entManager.System<SharedTransformSystem>();
-
         const float Size = 0.25f;
         const float Alpha = 0.25f;
 
-        foreach (var ent in _lookup.GetEntitiesIntersecting(args.MapId, args.WorldBounds))
+        var query = _entManager.EntityQueryEnumerator<AmbientSoundComponent>();
+        while (query.MoveNext(out var ent, out var ambientSound))
         {
-            if (!ambientQuery.TryGetComponent(ent, out var ambientSound) ||
-                !xformQuery.TryGetComponent(ent, out var xform)) continue;
+            if (!args.TryGetEntityRenderLayer(ent, out var renderLayer) ||
+                !args.WorldBounds.Contains(renderLayer.Position))
+                continue;
 
             if (ambientSound.Enabled)
             {
                 if (_ambient.IsActive((ent, ambientSound)))
                 {
-                    worldHandle.DrawCircle(xformSystem.GetWorldPosition(xform), Size, Color.LightGreen.WithAlpha(Alpha * 2f));
+                    worldHandle.DrawCircle(renderLayer.Position, Size, Color.LightGreen.WithAlpha(Alpha * 2f * renderLayer.Opacity));
                 }
                 else
                 {
-                    worldHandle.DrawCircle(xformSystem.GetWorldPosition(xform), Size, Color.Orange.WithAlpha(Alpha));
+                    worldHandle.DrawCircle(renderLayer.Position, Size, Color.Orange.WithAlpha(Alpha * renderLayer.Opacity));
                 }
             }
             else
             {
-                worldHandle.DrawCircle(xformSystem.GetWorldPosition(xform), Size, Color.Red.WithAlpha(Alpha));
+                worldHandle.DrawCircle(renderLayer.Position, Size, Color.Red.WithAlpha(Alpha * renderLayer.Opacity));
             }
         }
     }

@@ -22,7 +22,7 @@ public sealed partial class RainbowOverlay : Overlay
     [Dependency] private IGameTiming _timing = default!;
     private readonly StatusEffectsSystem _statusEffects = default!;
 
-    public override OverlaySpace Space => OverlaySpace.WorldSpace;
+    public override OverlaySpace Space => OverlaySpace.PostZLevel;
     public override bool RequestScreenTexture => true;
     private readonly ShaderInstance _rainbowShader;
 

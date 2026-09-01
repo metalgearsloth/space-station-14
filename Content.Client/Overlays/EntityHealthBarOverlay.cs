@@ -54,8 +54,7 @@ public sealed class EntityHealthBarOverlay : Overlay
     protected override void Draw(in OverlayDrawArgs args)
     {
         var handle = args.WorldHandle;
-        var rotation = args.Viewport.Eye?.Rotation ?? Angle.Zero;
-        var xformQuery = _entManager.GetEntityQuery<TransformComponent>();
+        var rotation = args.LayerEye?.Rotation ?? Angle.Zero;
         var spriteQuery = _entManager.GetEntityQuery<SpriteComponent>();
 
         const float scale = 1f;
@@ -73,9 +72,9 @@ public sealed class EntityHealthBarOverlay : Overlay
             if (statusIcon != null && !_statusIconSystem.IsVisible((uid, _entManager.GetComponent<MetaDataComponent>(uid)), statusIcon))
                 continue;
 
-            // We want the stealth user to still be able to see his health bar himself
-            if (!xformQuery.TryGetComponent(uid, out var xform) ||
-                xform.MapID != args.MapId)
+            // We want the stealth user to still be able to see his health bar himself.
+            // Use the renderer's selected layer so cross-level handoffs do not duplicate or pop the attachment.
+            if (!args.TryGetEntityRenderLayer(uid, out var renderLayer))
                 continue;
 
             if (injurableComponent.DamageContainer == null || !DamageContainers.Contains(injurableComponent.DamageContainer))
@@ -87,7 +86,7 @@ public sealed class EntityHealthBarOverlay : Overlay
             // we use the status icon component bounds if specified otherwise use sprite
             var bounds = _entManager.GetComponentOrNull<StatusIconComponent>(uid)?.Bounds ?? _spriteSystem.GetLocalBounds(
                 (uid, sprite));
-            var worldPos = _transform.GetRenderWorldPosition(uid, xform);
+            var worldPos = renderLayer.Position;
 
             if (!bounds.Translated(worldPos).Intersects(args.WorldAABB))
                 continue;
@@ -108,7 +107,8 @@ public sealed class EntityHealthBarOverlay : Overlay
             var widthOfMob = bounds.Width * EyeManager.PixelsPerMeter;
 
             var position = new Vector2(sprite.Offset.X - widthOfMob / EyeManager.PixelsPerMeter / 2, sprite.Offset.Y + yOffset / EyeManager.PixelsPerMeter);
-            var color = GetProgressColor(deathProgress.ratio, deathProgress.inCrit);
+            var color = GetProgressColor(deathProgress.ratio, deathProgress.inCrit)
+                .WithAlpha(renderLayer.Opacity);
 
             // Hardcoded width of the progress bar because it doesn't match the texture.
             const float startX = 8f;
@@ -118,7 +118,7 @@ public sealed class EntityHealthBarOverlay : Overlay
 
             var boxBackground = new Box2(new Vector2(startX, 0f) / EyeManager.PixelsPerMeter, new Vector2(endX, 3f) / EyeManager.PixelsPerMeter);
             boxBackground = boxBackground.Translated(position);
-            handle.DrawRect(boxBackground, Black.WithAlpha(192));
+            handle.DrawRect(boxBackground, Black.WithAlpha(192f / 255f * renderLayer.Opacity));
 
             var boxMain = new Box2(new Vector2(startX, 0f) / EyeManager.PixelsPerMeter, new Vector2(xProgress, 3f) / EyeManager.PixelsPerMeter);
             boxMain = boxMain.Translated(position);
@@ -126,7 +126,7 @@ public sealed class EntityHealthBarOverlay : Overlay
 
             var pixelDarken = new Box2(new Vector2(startX, 2f) / EyeManager.PixelsPerMeter, new Vector2(xProgress, 3f) / EyeManager.PixelsPerMeter);
             pixelDarken = pixelDarken.Translated(position);
-            handle.DrawRect(pixelDarken, Black.WithAlpha(128));
+            handle.DrawRect(pixelDarken, Black.WithAlpha(128f / 255f * renderLayer.Opacity));
         }
 
         handle.SetTransform(Matrix3x2.Identity);

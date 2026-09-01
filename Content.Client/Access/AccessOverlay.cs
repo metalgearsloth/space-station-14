@@ -1,7 +1,6 @@
 using System.Text;
 using Content.Client.Resources;
 using Content.Shared.Access.Components;
-using Robust.Client.GameObjects;
 using Robust.Client.Graphics;
 using Robust.Client.ResourceManagement;
 using Robust.Shared.Enums;
@@ -14,15 +13,13 @@ public sealed class AccessOverlay : Overlay
     private const int TextFontSize = 12;
 
     private readonly IEntityManager _entityManager;
-    private readonly TransformSystem _transformSystem;
     private readonly Font _font;
 
     public override OverlaySpace Space => OverlaySpace.ScreenSpace;
 
-    public AccessOverlay(IEntityManager entityManager, IResourceCache resourceCache, TransformSystem transformSystem)
+    public AccessOverlay(IEntityManager entityManager, IResourceCache resourceCache)
     {
         _entityManager = entityManager;
-        _transformSystem = transformSystem;
         _font = resourceCache.GetFont(TextFontPath, TextFontSize);
     }
 
@@ -33,8 +30,14 @@ public sealed class AccessOverlay : Overlay
 
         var textBuffer = new StringBuilder();
         var query = _entityManager.EntityQueryEnumerator<AccessReaderComponent, TransformComponent>();
-        while (query.MoveNext(out var uid, out var accessReader, out var transform))
+        while (query.MoveNext(out var uid, out var accessReader, out _))
         {
+            if (!args.TryGetEntityPresentedView(uid, out var presented) ||
+                !args.WorldBounds.Contains(presented.Position))
+            {
+                continue;
+            }
+
             textBuffer.Clear();
 
             var entityName = _entityManager.ToPrettyString(uid);
@@ -88,8 +91,12 @@ public sealed class AccessOverlay : Overlay
             }
 
             var accessInfoText = textBuffer.ToString();
-            var screenPos = args.ViewportControl.WorldToScreen(_transformSystem.GetRenderWorldPosition(uid, transform));
-            args.ScreenHandle.DrawString(_font, screenPos, accessInfoText, Color.Gold);
+            var screenPos = args.ViewportControl.WorldToScreen(presented.Position);
+            args.ScreenHandle.DrawString(
+                _font,
+                screenPos,
+                accessInfoText,
+                Color.Gold.WithAlpha(presented.Opacity));
         }
     }
 }

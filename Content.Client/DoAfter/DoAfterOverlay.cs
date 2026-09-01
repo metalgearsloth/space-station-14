@@ -67,7 +67,7 @@ public sealed class DoAfterOverlay : Overlay
     protected override void Draw(in OverlayDrawArgs args)
     {
         var handle = args.WorldHandle;
-        var rotation = args.Viewport.Eye?.Rotation ?? Angle.Zero;
+        var rotation = args.LayerEye?.Rotation ?? Angle.Zero;
         // If you use the display UI scale then need to set max(1f, displayscale) because 0 is valid.
         const float scale = 1f;
         var scaleMatrix = Matrix3Helpers.CreateScale(new Vector2(scale, scale));
@@ -82,13 +82,13 @@ public sealed class DoAfterOverlay : Overlay
         var enumerator = _entManager.AllEntityQueryEnumerator<ActiveDoAfterComponent, DoAfterComponent, SpriteComponent, TransformComponent>();
         while (enumerator.MoveNext(out var uid, out _, out var comp, out var sprite, out var xform))
         {
-            if (xform.MapID != args.MapId)
+            if (!args.TryGetEntityRenderLayer(uid, out var renderLayer))
                 continue;
 
             if (comp.DoAfters.Count == 0)
                 continue;
 
-            var worldPosition = _transform.GetRenderWorldPosition(uid, xform);
+            var worldPosition = renderLayer.Position;
             if (!bounds.Contains(worldPosition))
                 continue;
 
@@ -117,14 +117,14 @@ public sealed class DoAfterOverlay : Overlay
             foreach (var doAfter in comp.DoAfters.Values)
             {
                 // Hide some DoAfters from other players for stealthy actions (ie: thieving gloves)
-                var maxAlpha = 1f;
+                var maxAlpha = renderLayer.Opacity;
                 if (doAfter.Args.Hidden || isInContainer)
                 {
                     if (uid != localEnt)
                         continue;
 
                     // Hints to the local player that this do-after is not visible to other players.
-                    maxAlpha = 0.5f;
+                    maxAlpha *= 0.5f;
                 }
 
                 var elapsed = time - doAfter.StartTime;

@@ -27,7 +27,7 @@ public sealed partial class StationAiOverlay : Overlay
     [Dependency] private IPlayerManager _player = default!;
     [Dependency] private IPrototypeManager _proto = default!;
 
-    public override OverlaySpace Space => OverlaySpace.WorldSpace;
+    public override OverlaySpace Space => OverlaySpace.PostZLevel;
 
     private readonly HashSet<Vector2i> _visibleTiles = new();
 
@@ -79,8 +79,6 @@ public sealed partial class StationAiOverlay : Overlay
         if (grid != null && broadphase != null)
         {
             var lookups = _entManager.System<EntityLookupSystem>();
-            var xforms = _entManager.System<SharedTransformSystem>();
-
             if (_accumulator <= 0f)
             {
                 _accumulator = MathF.Max(0f, _accumulator + _updateRate);
@@ -88,7 +86,9 @@ public sealed partial class StationAiOverlay : Overlay
                 _entManager.System<StationAiVisionSystem>().GetView((gridUid, broadphase, grid), worldBounds, _visibleTiles);
             }
 
-            var gridMatrix = xforms.GetWorldMatrix(gridUid);
+            if (!args.TryGetEntityRenderMatrix(gridUid, out var gridMatrix, out _))
+                return;
+
             var matty =  Matrix3x2.Multiply(gridMatrix, invMatrix);
 
             // Draw visible tiles to stencil

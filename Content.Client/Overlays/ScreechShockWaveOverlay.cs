@@ -57,7 +57,7 @@ public sealed partial class ScreechShockWaveOverlay : Overlay
 
     protected override bool BeforeDraw(in OverlayDrawArgs args)
     {
-        if (args.Viewport.Eye == null)
+        if (args.LayerEye == null)
             return false;
 
         if (_xformSystem is null && !_entMan.TrySystem(out _xformSystem))
@@ -74,13 +74,11 @@ public sealed partial class ScreechShockWaveOverlay : Overlay
             if (!_entMan.EntityExists(entityUid))
                 continue;
 
-            // if it's not on the same map, we don't care
-            var xform = _entMan.GetComponent<TransformComponent>(entityUid);
-            if (xform.MapID != args.MapId)
+            if (!args.TryGetEntityRenderLayer(entityUid, out var renderLayer))
                 continue;
 
             // shorthand
-            var mapPos = _xformSystem.GetRenderWorldPosition(entityUid, xform);
+            var mapPos = renderLayer.Position;
             var tempCoords = args.Viewport.WorldToLocal(mapPos);
 
             // normalized coords, 0 - 1 plane. This is pure hell, we subtract 1 because fragment calculates from the bottom and local goes from the top of the viewport
@@ -92,10 +90,10 @@ public sealed partial class ScreechShockWaveOverlay : Overlay
 
             var i = _currentCount;
             _positions[i] = tempCoords;
-            _waveStrengths[i] = distortion.WaveStrength;
+            _waveStrengths[i] = distortion.WaveStrength * renderLayer.Opacity;
             _waveSpeeds[i] = distortion.WaveSpeed;
             _downScales[i] = distortion.DownScale;
-            _fades[i] = fade;
+            _fades[i] = fade * renderLayer.Opacity;
             _times[i] = time;
 
             _currentCount += 1;
@@ -108,7 +106,7 @@ public sealed partial class ScreechShockWaveOverlay : Overlay
 
     protected override void Draw(in OverlayDrawArgs args)
     {
-        if (ScreenTexture == null || args.Viewport.Eye == null)
+        if (ScreenTexture == null || args.LayerEye == null)
             return;
 
         // set the parameters
@@ -120,7 +118,7 @@ public sealed partial class ScreechShockWaveOverlay : Overlay
         _shader.SetParameter("times", _times);
         _shader.SetParameter("count", _currentCount);
         _shader.SetParameter("SCREEN_TEXTURE", ScreenTexture);
-        _shader?.SetParameter("renderScale", args.Viewport.RenderScale * args.Viewport.Eye.Scale);
+        _shader?.SetParameter("renderScale", args.Viewport.RenderScale * args.LayerEye.Scale);
 
         // finally do the rendering
         var worldHandle = args.WorldHandle;

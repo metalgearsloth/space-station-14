@@ -35,11 +35,12 @@ public sealed class TetherGunOverlay : Overlay
                 continue;
             }
 
-            if (xform.MapID != gunXform.MapID)
+            if (!args.TryGetEntityRenderLayer(uid, out var tetheredLayer) ||
+                !args.TryGetEntityRenderLayer(gun, out var gunLayer))
                 continue;
 
-            var worldPos = xformSystem.GetRenderWorldPosition(uid, xform);
-            var gunWorldPos = xformSystem.GetRenderWorldPosition(gun, gunXform);
+            var worldPos = tetheredLayer.Position;
+            var gunWorldPos = gunLayer.Position;
             var diff = worldPos - gunWorldPos;
             var angle = diff.ToWorldAngle();
             var length = diff.Length() / 2f;
@@ -60,7 +61,8 @@ public sealed class TetherGunOverlay : Overlay
                 color = tether.LineColor;
             }
 
-            worldHandle.DrawRect(rotated, color.WithAlpha(0.3f));
+            var opacity = Math.Min(tetheredLayer.Opacity, gunLayer.Opacity);
+            worldHandle.DrawRect(rotated, color.WithAlpha(0.3f * opacity));
         }
     }
 }

@@ -42,19 +42,15 @@ public sealed partial class SunShadowOverlay : Overlay
     protected override void Draw(in OverlayDrawArgs args)
     {
         var viewport = args.Viewport;
-        var eye = viewport.Eye;
-
-        if (eye == null)
+        if (args.LayerEye is not { } eye)
             return;
 
-        _grids.Clear();
-        _mapSys.FindGridsIntersecting(args.MapId,
-            args.WorldBounds.Enlarged(SunShadowComponent.MaxLength),
-            ref _grids);
+        args.FindRenderGrids(_mapSys, ref _grids, SunShadowComponent.MaxLength);
 
         var worldHandle = args.WorldHandle;
         var mapId = args.MapId;
         var worldBounds = args.WorldBounds;
+        var layerMap = args.MapUid;
         var targetSize = viewport.LightRenderTarget.Size;
 
         var res = _resources.GetForViewport(args.Viewport, static _ => new CachedResources());
@@ -94,7 +90,10 @@ public sealed partial class SunShadowOverlay : Overlay
             // TODO: Jittering still not quite perfect
 
             var expandedBounds = worldBounds.Enlarged(direction.Length() + 0.01f);
-            _shadows.Clear();
+            args.FindRenderEntities(
+                _lookup,
+                _shadows,
+                direction.Length() + 0.01f);
 
             // Draw shadow polys to stencil
             args.WorldHandle.RenderInRenderTarget(res.Target,
@@ -115,12 +114,13 @@ public sealed partial class SunShadowOverlay : Overlay
                     // This is probably not noticeable most of the time but if you want something "accurate" you'll want to code a solution.
                     // Ideally the CPU would have its own shadow-map copy that we could just ray-cast each vert into though
                     // You might need to batch verts or the likes as this could get expensive.
-                    _lookup.GetEntitiesIntersecting(mapId, expandedBounds, _shadows);
-
                     foreach (var ent in _shadows)
                     {
-                        var xform = _entManager.GetComponent<TransformComponent>(ent.Owner);
-                        var (worldPos, worldRot) = _xformSys.GetRenderWorldPositionRotation(ent, xform);
+                        if (!_xformSys.TryGetRenderLayerSample(ent.Owner, layerMap, out var renderLayer))
+                            continue;
+
+                        var worldPos = renderLayer.Position;
+                        var worldRot = renderLayer.Rotation;
                         // Need no rotation on matrix as sun shadow direction doesn't care.
                         var worldMatrix = Matrix3x2.CreateTranslation(worldPos);
                         var renderMatrix = Matrix3x2.Multiply(worldMatrix, invMatrix);
@@ -140,7 +140,10 @@ public sealed partial class SunShadowOverlay : Overlay
                         var points = PhysicsHull.ComputePoints(indices, pointCount * 2);
                         worldHandle.SetTransform(renderMatrix);
 
-                        worldHandle.DrawPrimitives(DrawPrimitiveTopology.TriangleFan, points, Color.White);
+                        worldHandle.DrawPrimitives(
+                            DrawPrimitiveTopology.TriangleFan,
+                            points,
+                            Color.White.WithAlpha(renderLayer.Opacity));
                     }
                 },
                 Color.Transparent);

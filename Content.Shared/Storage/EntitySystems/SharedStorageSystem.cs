@@ -1920,7 +1920,10 @@ public abstract partial class SharedStorageSystem : EntitySystem
     /// Plays a clientside pickup animation for the specified uid.
     /// </summary>
     public abstract void PlayPickupAnimation(EntityUid uid, EntityCoordinates initialCoordinates,
-        EntityCoordinates finalCoordinates, Angle initialRotation, EntityUid? user = null);
+        EntityCoordinates finalCoordinates,
+        Angle initialRotation,
+        EntityUid? user = null,
+        EntityUid? visualTarget = null);
 
     private bool ValidateInput(
         EntitySessionEventArgs args,

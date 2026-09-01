@@ -110,7 +110,7 @@ internal sealed partial class BuckleSystem : SharedBuckleSystem
         if (!_spriteQuery.TryComp(ent.Owner, out SpriteComponent? buckledSprite))
             return;
 
-        var angle = _xformSystem.GetWorldRotation(args.Strap) + _eye.CurrentEye.Rotation; // Get true screen position, or close enough
+        var angle = _xformSystem.GetRenderWorldRotation(args.Strap) + _eye.CurrentEye.Rotation;
 
         if (angle.GetCardinalDir() != Direction.North)
             return;

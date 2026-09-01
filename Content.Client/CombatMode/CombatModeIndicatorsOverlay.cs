@@ -64,7 +64,8 @@ public sealed class CombatModeIndicatorsOverlay : Overlay
     {
         var mouseScreenPosition = _inputManager.MouseScreenPosition;
         var mousePosMap = _eye.PixelToMap(mouseScreenPosition);
-        if (mousePosMap.MapId != args.MapId)
+        // The crosshair belongs to the controlling view, not to every rendered map layer.
+        if (mousePosMap.MapId != args.ViewedMapId)
             return;
 
         var handEntity = _hands.GetActiveHandEntity();

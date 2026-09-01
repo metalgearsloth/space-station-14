@@ -26,7 +26,7 @@ public sealed partial class AfterLightTargetOverlay : Overlay
         var viewport = args.Viewport;
         var worldHandle = args.WorldHandle;
 
-        if (viewport.Eye == null)
+        if (args.LayerEye is not { } layerEye)
             return;
 
         var lightOverlay = _overlay.GetOverlay<BeforeLightTargetOverlay>();
@@ -38,7 +38,7 @@ public sealed partial class AfterLightTargetOverlay : Overlay
         var newScale = viewport.RenderScale / (Vector2.One / lightScale);
 
         var localMatrix =
-            viewport.LightRenderTarget.GetWorldToLocalMatrix(viewport.Eye, newScale);
+            viewport.LightRenderTarget.GetWorldToLocalMatrix(layerEye, newScale);
         var diff = (lightRes.EnlargedLightTarget.Size - viewport.LightRenderTarget.Size);
         var halfDiff = diff / 2;
 

@@ -30,7 +30,7 @@ public sealed partial class GasTileVisibleGasOverlay : Overlay
 
     private readonly SharedAtmosphereSystem _atmosphereSystem;
     private readonly SharedMapSystem _mapSystem;
-    private readonly SharedTransformSystem _xformSys;
+    private readonly TransformSystem _xformSys;
     private readonly SharedGasTileOverlaySystem _gasTileOverlaySystem;
     private readonly SpriteSystem _spriteSystem;
 
@@ -54,7 +54,7 @@ public sealed partial class GasTileVisibleGasOverlay : Overlay
         IoCManager.InjectDependencies(this);
         _atmosphereSystem = _entManager.System<SharedAtmosphereSystem>();
         _mapSystem = _entManager.System<SharedMapSystem>();
-        _xformSys = _entManager.System<SharedTransformSystem>();
+        _xformSys = _entManager.System<TransformSystem>();
         _gasTileOverlaySystem = _entManager.System<SharedGasTileOverlaySystem>();
         _spriteSystem = _entManager.System<SpriteSystem>();
 
@@ -130,7 +130,8 @@ public sealed partial class GasTileVisibleGasOverlay : Overlay
             _shader,
             overlayQuery,
             xformQuery,
-            _xformSys);
+            _xformSys,
+            args.MapUid);
 
         var mapUid = _mapSystem.GetMapOrInvalid(args.MapId);
 
@@ -140,70 +141,78 @@ public sealed partial class GasTileVisibleGasOverlay : Overlay
         if (args.Space != OverlaySpace.WorldSpaceEntities)
             return;
 
-        // TODO: WorldBounds callback.
-        _mapSystem.FindGridsIntersecting(args.MapId,
-            args.WorldAABB,
-            ref gridState,
-            static (EntityUid uid,
-                MapGridComponent grid,
-                ref (Box2Rotated WorldBounds,
-                    DrawingHandleWorld drawHandle,
-                    int gasCount,
-                    Texture[][] frames,
-                    int[] frameCounter,
-                    ShaderInstance shader,
-                    EntityQuery<GasTileOverlayComponent> overlayQuery,
-                    EntityQuery<TransformComponent> xformQuery,
-                    SharedTransformSystem xformSys) state) =>
-            {
-                if (!state.overlayQuery.TryGetComponent(uid, out var comp) ||
-                    !state.xformQuery.TryGetComponent(uid, out var gridXform))
-                {
-                    return true;
-                }
+        foreach (var visibleMap in args.VisibleMaps)
+        {
+            if (!args.TryGetMapRenderBounds(visibleMap, out var queryMapId, out var queryBounds))
+                continue;
 
-                var (_, _, worldMatrix, invMatrix) = state.xformSys.GetWorldPositionRotationMatrixWithInv(gridXform);
-                state.drawHandle.SetTransform(worldMatrix);
-                var floatBounds = invMatrix.TransformBox(state.WorldBounds).Enlarged(grid.TileSize);
-                var localBounds = new Box2i(
-                    (int)MathF.Floor(floatBounds.Left),
-                    (int)MathF.Floor(floatBounds.Bottom),
-                    (int)MathF.Ceiling(floatBounds.Right),
-                    (int)MathF.Ceiling(floatBounds.Top));
+            _mapSystem.FindGridsIntersecting(queryMapId,
+                queryBounds,
+                ref gridState,
+                static (EntityUid uid,
+                    MapGridComponent grid,
+                    ref (Box2Rotated WorldBounds,
+                        DrawingHandleWorld drawHandle,
+                        int gasCount,
+                        Texture[][] frames,
+                        int[] frameCounter,
+                        ShaderInstance shader,
+                        EntityQuery<GasTileOverlayComponent> overlayQuery,
+                        EntityQuery<TransformComponent> xformQuery,
+                        TransformSystem xformSys,
+                        EntityUid layerMap) state) =>
+                {
+                    if (!state.overlayQuery.TryGetComponent(uid, out var comp) ||
+                        !state.xformQuery.TryGetComponent(uid, out _) ||
+                        !state.xformSys.TryGetRenderLayerSample(uid, state.layerMap, out var renderLayer))
+                    {
+                        return true;
+                    }
+
+                    var worldMatrix = Matrix3Helpers.CreateTransform(renderLayer.Position, renderLayer.Rotation);
+                    var invMatrix = Matrix3Helpers.CreateInverseTransform(renderLayer.Position, renderLayer.Rotation);
+                    state.drawHandle.SetTransform(worldMatrix);
+                    var floatBounds = invMatrix.TransformBox(state.WorldBounds).Enlarged(grid.TileSize);
+                    var localBounds = new Box2i(
+                        (int)MathF.Floor(floatBounds.Left),
+                        (int)MathF.Floor(floatBounds.Bottom),
+                        (int)MathF.Ceiling(floatBounds.Right),
+                        (int)MathF.Ceiling(floatBounds.Top));
 
                 // Currently it would be faster to group drawing by gas rather than by chunk, but if the textures are
                 // ever moved to a single atlas, that should no longer be the case. So this is just grouping draw calls
                 // by chunk, even though its currently slower.
 
-                state.drawHandle.UseShader(null);
-                foreach (var chunk in comp.Chunks.Values)
-                {
-                    var enumerator = new GasChunkEnumerator(chunk);
-
-                    while (enumerator.MoveNext(out var gas))
+                    state.drawHandle.UseShader(null);
+                    foreach (var chunk in comp.Chunks.Values)
                     {
-                        if (gas.Opacity == null!)
-                            continue;
+                        var enumerator = new GasChunkEnumerator(chunk);
 
-                        var tilePosition = chunk.Origin + (enumerator.X, enumerator.Y);
-                        if (!localBounds.Contains(tilePosition))
-                            continue;
-
-                        for (var i = 0; i < state.gasCount; i++)
+                        while (enumerator.MoveNext(out var gas))
                         {
-                            var opacity = gas.Opacity[i];
-                            if (opacity > 0)
+                            if (gas.Opacity == null!)
+                                continue;
+
+                            var tilePosition = chunk.Origin + (enumerator.X, enumerator.Y);
+                            if (!localBounds.Contains(tilePosition))
+                                continue;
+
+                            for (var i = 0; i < state.gasCount; i++)
                             {
-                                state.drawHandle.DrawTexture(state.frames[i][state.frameCounter[i]],
-                                    tilePosition,
-                                    Color.White.WithAlpha(opacity));
+                                var opacity = gas.Opacity[i];
+                                if (opacity > 0)
+                                {
+                                    state.drawHandle.DrawTexture(state.frames[i][state.frameCounter[i]],
+                                        tilePosition,
+                                        Color.White.WithAlpha(opacity * renderLayer.Opacity));
+                                }
                             }
                         }
                     }
-                }
 
-                return true;
-            });
+                    return true;
+                });
+        }
 
         drawHandle.UseShader(null);
         drawHandle.SetTransform(Matrix3x2.Identity);

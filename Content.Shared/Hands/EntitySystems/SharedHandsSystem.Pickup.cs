@@ -96,7 +96,6 @@ public abstract partial class SharedHandsSystem
         if (animate)
         {
             var xform = Transform(uid);
-            var coordinateEntity = xform.ParentUid.IsValid() ? xform.ParentUid : uid;
             var itemXform = Transform(entity);
             var itemPos = TransformSystem.GetMapCoordinates(entity, xform: itemXform);
 
@@ -104,7 +103,9 @@ public abstract partial class SharedHandsSystem
                 && (itemPos.Position - TransformSystem.GetMapCoordinates(uid, xform: xform).Position).Length() <= MaxAnimationRange
                 && MetaData(entity).VisibilityMask == MetaData(uid).VisibilityMask) // Don't animate aghost pickups.
             {
-                var initialPosition = TransformSystem.ToCoordinates(coordinateEntity, itemPos);
+                // Preserve the actual source parent so presentation can keep sampling a moving or rotating source
+                // grid instead of freezing a one-time conversion into the user's parent space.
+                var initialPosition = itemXform.Coordinates;
                 _storage.PlayPickupAnimation(entity, initialPosition, xform.Coordinates, itemXform.LocalRotation, uid);
             }
         }

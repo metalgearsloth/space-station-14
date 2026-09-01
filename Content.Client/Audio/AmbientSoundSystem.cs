@@ -69,7 +69,7 @@ public sealed partial class AmbientSoundSystem : SharedAmbientSoundSystem
 
             if (_overlayEnabled)
             {
-                _overlay = new AmbientSoundOverlay(EntityManager, this, EntityManager.System<EntityLookupSystem>());
+                _overlay = new AmbientSoundOverlay(EntityManager, this);
                 _overlayManager.AddOverlay(_overlay);
             }
             else

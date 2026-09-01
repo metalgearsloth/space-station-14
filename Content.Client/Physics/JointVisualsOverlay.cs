@@ -25,39 +25,30 @@ public sealed class JointVisualsOverlay : Overlay
         var worldHandle = args.WorldHandle;
 
         var spriteSystem = _entManager.System<SpriteSystem>();
-        var xformSystem = _entManager.System<SharedTransformSystem>();
         var joints = _entManager.EntityQueryEnumerator<JointVisualsComponent, TransformComponent>();
         var xformQuery = _entManager.GetEntityQuery<TransformComponent>();
 
         args.DrawingHandle.SetTransform(Matrix3x2.Identity);
 
-        while (joints.MoveNext(out var visuals, out var xform))
+        while (joints.MoveNext(out var uid, out var visuals, out var xform))
         {
-            if (xform.MapID != args.MapId)
+            if (!args.TryGetEntityRenderLayer(uid, out var layerA))
                 continue;
 
-            var other = visuals.Target;
+            if (visuals.Target is not { } other)
+                continue;
 
             if (!xformQuery.TryGetComponent(other, out var otherXform))
                 continue;
 
-            if (xform.MapID != otherXform.MapID)
+            if (!args.TryGetEntityRenderLayer(other, out var layerB))
                 continue;
 
             var texture = spriteSystem.Frame0(visuals.Sprite);
             var width = texture.Width / (float)EyeManager.PixelsPerMeter;
 
-            var coordsA = xform.Coordinates;
-            var coordsB = otherXform.Coordinates;
-
-            var rotA = xform.LocalRotation;
-            var rotB = otherXform.LocalRotation;
-
-            coordsA = coordsA.Offset(rotA.RotateVec(visuals.OffsetA));
-            coordsB = coordsB.Offset(rotB.RotateVec(visuals.OffsetB));
-
-            var posA = xformSystem.ToMapCoordinates(coordsA).Position;
-            var posB = xformSystem.ToMapCoordinates(coordsB).Position;
+            var posA = layerA.Position + layerA.Rotation.RotateVec(visuals.OffsetA);
+            var posB = layerB.Position + layerB.Rotation.RotateVec(visuals.OffsetB);
             var diff = posB - posA;
             var length = diff.Length();
 
@@ -66,7 +57,8 @@ public sealed class JointVisualsOverlay : Overlay
             var box = new Box2(-width / 2f, -length / 2f, width / 2f, length / 2f);
             var rotate = new Box2Rotated(box.Translated(midPoint), angle, midPoint);
 
-            worldHandle.DrawTextureRect(texture, rotate);
+            var opacity = Math.Min(layerA.Opacity, layerB.Opacity);
+            worldHandle.DrawTextureRect(texture, rotate, Color.White.WithAlpha(opacity));
         }
     }
 }

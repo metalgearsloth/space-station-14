@@ -51,7 +51,7 @@ public sealed partial class AtmosDebugOverlay : Overlay
         }
 
         var handle = args.WorldHandle;
-        GetGrids(args.MapId, args.WorldBounds);
+        GetRenderGrids(args);
 
         // IF YOU ARE ABOUT TO INTRODUCE CHUNKING OR SOME OTHER OPTIMIZATION INTO THIS CODE:
         //  -- THINK! --
@@ -62,8 +62,14 @@ public sealed partial class AtmosDebugOverlay : Overlay
 
         foreach (var (grid, msg) in _grids)
         {
-            handle.SetTransform(_transform.GetWorldMatrix(grid));
+            if (!args.TryGetEntityRenderMatrix(grid, out var matrix, out var opacity))
+                continue;
+
+            handle.SetTransform(matrix);
+            var oldModulate = handle.Modulate;
+            handle.Modulate = oldModulate * Color.White.WithAlpha(opacity);
             DrawData(msg, handle);
+            handle.Modulate = oldModulate;
         }
 
         handle.SetTransform(Matrix3x2.Identity);
@@ -261,6 +267,21 @@ public sealed partial class AtmosDebugOverlay : Overlay
     private void GetGrids(MapId mapId, Box2Rotated box)
     {
         _grids.Clear();
+        AppendGrids(mapId, box);
+    }
+
+    private void GetRenderGrids(in OverlayDrawArgs args)
+    {
+        _grids.Clear();
+        foreach (var visibleMap in args.VisibleMaps)
+        {
+            if (args.TryGetMapRenderBounds(visibleMap, out var mapId, out var bounds))
+                AppendGrids(mapId, bounds);
+        }
+    }
+
+    private void AppendGrids(MapId mapId, Box2Rotated box)
+    {
         _map.FindGridsIntersecting(
             mapId,
             box,

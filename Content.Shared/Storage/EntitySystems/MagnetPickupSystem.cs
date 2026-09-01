@@ -75,7 +75,6 @@ public sealed partial class MagnetPickupSystem : EntitySystem
 
             var playedSound = false;
             var finalCoords = xform.Coordinates;
-            var moverCoords = _transform.GetMoverCoordinates(uid, xform);
             _nearby.Clear();
             _nearby.AddRange(_lookup.GetEntitiesInRange(uid, comp.Range, LookupFlags.Dynamic | LookupFlags.Sundries));
             _nearby.Sort((a, b) => GetNetEntity(a).CompareTo(GetNetEntity(b)));
@@ -96,17 +95,26 @@ public sealed partial class MagnetPickupSystem : EntitySystem
                 // the problem is that stack pickups delete the original entity, which is fine, but due to
                 // game state handling we can't show a lerp animation for it.
                 var nearXform = Transform(near);
-                var nearMap = _transform.GetMapCoordinates(near, xform: nearXform);
-                var nearCoords = _transform.ToCoordinates(moverCoords.EntityId, nearMap);
+                var nearCoords = nearXform.Coordinates;
 
                 if (!_storage.Insert(uid, near, out var stacked, user: parentUid, storageComp: storage, playSound: !playedSound))
                     continue;
 
                 // Play pickup animation for either the stack entity or the original entity.
                 if (stacked != null)
-                    _storage.PlayPickupAnimation(stacked.Value, nearCoords, finalCoords, nearXform.LocalRotation, parentUid);
+                    _storage.PlayPickupAnimation(stacked.Value,
+                        nearCoords,
+                        finalCoords,
+                        nearXform.LocalRotation,
+                        parentUid,
+                        visualTarget: uid);
                 else
-                    _storage.PlayPickupAnimation(near, nearCoords, finalCoords, nearXform.LocalRotation, parentUid);
+                    _storage.PlayPickupAnimation(near,
+                        nearCoords,
+                        finalCoords,
+                        nearXform.LocalRotation,
+                        parentUid,
+                        visualTarget: uid);
 
                 playedSound = true;
             }

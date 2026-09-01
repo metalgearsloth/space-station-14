@@ -98,12 +98,17 @@ namespace Content.Client.NodeContainer
 
         private void DrawWorld(in OverlayDrawArgs overlayDrawArgs)
         {
+            // This is an interactive debug overlay driven by the controlling viewport's mouse, not a visual that
+            // belongs independently to every visible lower map.
+            if (!overlayDrawArgs.IsViewedMap)
+                return;
+
             const float nodeSize = 8f / 32;
             const float nodeOffset = 6f / 32;
 
             var handle = overlayDrawArgs.WorldHandle;
 
-            var map = overlayDrawArgs.Viewport.Eye?.Position.MapId ?? default;
+            var map = overlayDrawArgs.MapId;
             if (map == MapId.Nullspace)
                 return;
 
@@ -147,7 +152,11 @@ namespace Content.Client.NodeContainer
             foreach (var (gridId, gridDict) in _gridIndex)
             {
                 var grid = _entityManager.GetComponent<MapGridComponent>(gridId);
-                var (_, _, worldMatrix, invMatrix) = _transformSystem.GetWorldPositionRotationMatrixWithInv(gridId);
+                if (!overlayDrawArgs.TryGetEntityRenderMatrix(gridId, out var worldMatrix, out _) ||
+                    !Matrix3x2.Invert(worldMatrix, out var invMatrix))
+                {
+                    continue;
+                }
 
                 var lCursorBox = invMatrix.TransformBox(cursorBox);
                 foreach (var (pos, list) in gridDict)

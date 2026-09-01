@@ -198,7 +198,12 @@ namespace Content.Client.NPC
                     if (found || !_system.Breadcrumbs.TryGetValue(netGrid, out var crumbs) || !xformQuery.TryGetComponent(grid, out var gridXform))
                         continue;
 
-                    var (_, _, worldMatrix, invWorldMatrix) = _transformSystem.GetWorldPositionRotationMatrixWithInv(gridXform);
+                    if (!args.TryGetEntityRenderMatrix(grid.Owner, out var worldMatrix, out _) ||
+                        !Matrix3x2.Invert(worldMatrix, out var invWorldMatrix))
+                    {
+                        continue;
+                    }
+
                     var localAABB = invWorldMatrix.TransformBox(aabb.Enlarged(float.Epsilon - SharedPathfindingSystem.ChunkSize));
 
                     foreach (var chunk in crumbs)
@@ -282,7 +287,12 @@ namespace Content.Client.NPC
                     return;
                 }
 
-                var invGridMatrix = _transformSystem.GetInvWorldMatrix(gridXform);
+                if (!args.TryGetEntityRenderMatrix(gridUid, out var gridMatrix, out _) ||
+                    !Matrix3x2.Invert(gridMatrix, out var invGridMatrix))
+                {
+                    return;
+                }
+
                 DebugPathPoly? nearest = null;
 
                 foreach (var poly in tile)
@@ -333,6 +343,9 @@ namespace Content.Client.NPC
 
         private void DrawWorld(OverlayDrawArgs args, DrawingHandleWorld worldHandle)
         {
+            if (!args.IsViewedMap)
+                return;
+
             var mousePos = _inputManager.MouseScreenPosition;
             var mouseWorldPos = _eyeManager.PixelToMap(mousePos);
             var aabb = new Box2(mouseWorldPos.Position - Vector2.One / 4f, mouseWorldPos.Position + Vector2.One / 4f);
@@ -354,7 +367,12 @@ namespace Content.Client.NPC
                         continue;
                     }
 
-                    var (_, _, worldMatrix, invWorldMatrix) = _transformSystem.GetWorldPositionRotationMatrixWithInv(gridXform);
+                    if (!args.TryGetEntityRenderMatrix(grid.Owner, out var worldMatrix, out _) ||
+                        !Matrix3x2.Invert(worldMatrix, out var invWorldMatrix))
+                    {
+                        continue;
+                    }
+
                     worldHandle.SetTransform(worldMatrix);
                     var localAABB = invWorldMatrix.TransformBox(aabb);
 
@@ -414,7 +432,12 @@ namespace Content.Client.NPC
                         !xformQuery.TryGetComponent(grid, out var gridXform))
                         continue;
 
-                    var (_, _, worldMatrix, invWorldMatrix) = _transformSystem.GetWorldPositionRotationMatrixWithInv(gridXform);
+                    if (!args.TryGetEntityRenderMatrix(grid.Owner, out var worldMatrix, out _) ||
+                        !Matrix3x2.Invert(worldMatrix, out var invWorldMatrix))
+                    {
+                        continue;
+                    }
+
                     worldHandle.SetTransform(worldMatrix);
                     var localAABB = invWorldMatrix.TransformBox(aabb);
 
@@ -453,7 +476,12 @@ namespace Content.Client.NPC
                         !xformQuery.TryGetComponent(grid, out var gridXform))
                         continue;
 
-                    var (_, _, worldMatrix, invMatrix) = _transformSystem.GetWorldPositionRotationMatrixWithInv(gridXform);
+                    if (!args.TryGetEntityRenderMatrix(grid.Owner, out var worldMatrix, out _) ||
+                        !Matrix3x2.Invert(worldMatrix, out var invMatrix))
+                    {
+                        continue;
+                    }
+
                     worldHandle.SetTransform(worldMatrix);
                     var localAABB = invMatrix.TransformBox(aabb);
 
@@ -512,7 +540,12 @@ namespace Content.Client.NPC
                         !xformQuery.TryGetComponent(grid, out var gridXform))
                         continue;
 
-                    var (_, _, worldMatrix, invWorldMatrix) = _transformSystem.GetWorldPositionRotationMatrixWithInv(gridXform);
+                    if (!args.TryGetEntityRenderMatrix(grid.Owner, out var worldMatrix, out _) ||
+                        !Matrix3x2.Invert(worldMatrix, out var invWorldMatrix))
+                    {
+                        continue;
+                    }
+
                     worldHandle.SetTransform(worldMatrix);
                     var localAABB = invWorldMatrix.TransformBox(args.WorldBounds);
 
@@ -536,10 +569,11 @@ namespace Content.Client.NPC
                 {
                     foreach (var node in route.Message.Path)
                     {
-                        if (!_entManager.TryGetComponent<TransformComponent>(_entManager.GetEntity(node.GraphUid), out var graphXform))
+                        var graph = _entManager.GetEntity(node.GraphUid);
+                        if (!args.TryGetEntityRenderMatrix(graph, out var graphMatrix, out _))
                             continue;
 
-                        worldHandle.SetTransform(_transformSystem.GetWorldMatrix(graphXform));
+                        worldHandle.SetTransform(graphMatrix);
                         worldHandle.DrawRect(node.Box, Color.Orange.WithAlpha(0.10f));
                     }
                 }
@@ -559,11 +593,11 @@ namespace Content.Client.NPC
 
                         if (matrix != graph)
                         {
-                            if (!_entManager.TryGetComponent<TransformComponent>(graph, out var graphXform))
+                            if (!args.TryGetEntityRenderMatrix(graph, out var graphMatrix, out _))
                                 continue;
 
                             matrix = graph;
-                            worldHandle.SetTransform(_transformSystem.GetWorldMatrix(graphXform));
+                            worldHandle.SetTransform(graphMatrix);
                         }
 
                         worldHandle.DrawRect(node.Box, new Color(0f, cost / highestGScore, 1f - (cost / highestGScore), 0.10f));

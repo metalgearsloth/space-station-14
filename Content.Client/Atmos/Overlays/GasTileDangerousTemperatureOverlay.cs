@@ -3,6 +3,7 @@ using Content.Client.Graphics;
 using Content.Shared.Atmos;
 using Content.Shared.Atmos.Components;
 using Content.Shared.Atmos.EntitySystems;
+using Robust.Client.GameObjects;
 using Robust.Client.Graphics;
 using Robust.Shared.Enums;
 using Robust.Shared.Map;
@@ -23,7 +24,7 @@ public sealed partial class GasTileDangerousTemperatureOverlay : Overlay
 
     private GasTileOverlaySystem? _gasTileOverlay;
     private readonly SharedMapSystem _mapSys;
-    private readonly SharedTransformSystem _xformSys;
+    private readonly TransformSystem _xformSys;
     private EntityQuery<GasTileOverlayComponent> _overlayQuery;
 
     private readonly OverlayResourceCache<CachedResources> _resources = new();
@@ -38,7 +39,7 @@ public sealed partial class GasTileDangerousTemperatureOverlay : Overlay
     {
         IoCManager.InjectDependencies(this);
         _mapSys = _entManager.System<SharedMapSystem>();
-        _xformSys = _entManager.System<SharedTransformSystem>();
+        _xformSys = _entManager.System<TransformSystem>();
 
         _overlayQuery = _entManager.GetEntityQuery<GasTileOverlayComponent>();
 
@@ -170,13 +171,12 @@ public sealed partial class GasTileDangerousTemperatureOverlay : Overlay
         var worldAABB = args.WorldAABB;
         var mapId = args.MapId;
         var worldToViewportLocal = args.Viewport.GetWorldToLocalMatrix();
+        var layerMap = args.MapUid;
+        args.FindRenderGrids(_mapSys, ref _grids);
 
         drawHandle.RenderInRenderTarget(res.TemperatureTarget,
             () =>
             {
-                _grids.Clear();
-                _mapSys.FindGridsIntersecting(mapId, worldAABB, ref _grids);
-
                 foreach (var grid in _grids)
                 {
                     if (!_overlayQuery.TryGetComponent(grid.Owner, out var comp))
@@ -184,12 +184,21 @@ public sealed partial class GasTileDangerousTemperatureOverlay : Overlay
 
                     var gridTileSizeVec = grid.Comp.TileSizeVector;
                     var gridTileCenterVec = grid.Comp.TileSizeHalfVector;
-                    var gridEntToWorld = _xformSys.GetWorldMatrix(grid.Owner);
+                    if (!_xformSys.TryGetRenderLayerSample(grid.Owner, layerMap, out var renderLayer))
+                        continue;
+
+                    var gridEntToWorld = Matrix3Helpers.CreateTransform(renderLayer.Position, renderLayer.Rotation);
+                    var opacity = renderLayer.Opacity;
+                    if (
+                        !Matrix3x2.Invert(gridEntToWorld, out var worldToGridLocal))
+                    {
+                        continue;
+                    }
+
                     var gridEntToViewportLocal = gridEntToWorld * worldToViewportLocal;
 
                     drawHandle.SetTransform(gridEntToViewportLocal);
 
-                    var worldToGridLocal = _xformSys.GetInvWorldMatrix(grid.Owner);
                     var floatBounds = worldToGridLocal.TransformBox(worldBounds).Enlarged(grid.Comp.TileSize);
 
                     var localBounds = new Box2i(
@@ -214,7 +223,7 @@ public sealed partial class GasTileDangerousTemperatureOverlay : Overlay
 
                             drawHandle.DrawRect(
                                 Box2.CenteredAround(tilePosition + gridTileCenterVec, gridTileSizeVec),
-                                gasColor
+                                gasColor.WithAlpha(gasColor.A * opacity)
                             );
                         }
                     }

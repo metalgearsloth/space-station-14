@@ -21,7 +21,6 @@ public sealed partial class WallMountVisibilityOverlay : Overlay
 
     private readonly SharedMapSystem _map;
     private readonly SpriteSystem _sprite;
-    private readonly TransformSystem _xform;
     private readonly WallMountTreeSystem _tree;
     private readonly WallMountVisibilitySystem _visibility;
 
@@ -34,7 +33,6 @@ public sealed partial class WallMountVisibilityOverlay : Overlay
 
         _map = _entManager.System<SharedMapSystem>();
         _sprite = _entManager.System<SpriteSystem>();
-        _xform = _entManager.System<TransformSystem>();
         _tree = _entManager.System<WallMountTreeSystem>();
         _visibility = _entManager.System<WallMountVisibilitySystem>();
 
@@ -69,10 +67,11 @@ public sealed partial class WallMountVisibilityOverlay : Overlay
         if (!_visibility.DirectionalVisibilityEnabled)
             return;
 
-        if (args.Viewport.Eye is not { } eye)
+        if (args.LayerEye is not { } eye)
             return;
 
         var viewportState = _fadeCache.GetForViewport(args.Viewport, _ => new ViewportFadeState(_sprite, _spriteQuery));
+        BeginFrame(viewportState);
 
         if (!eye.DrawFov)
         {
@@ -83,24 +82,40 @@ public sealed partial class WallMountVisibilityOverlay : Overlay
         viewportState.WasFovEnabled = true;
 
         var fadeStep = _visibility.FadeEnabled ? FadeSpeed * (float)_timing.FrameTime.TotalSeconds : 1f;
-        var matrix = args.Viewport.GetWorldToLocalMatrix();
+        var matrix = args.Viewport.RenderTarget.GetWorldToLocalMatrix(eye, args.Viewport.RenderScale);
 
-        viewportState.SeenThisFrame.Clear();
         ProcessVisibleEntities(args, eye, matrix, fadeStep, viewportState);
 
-        // Remove entities that left the viewport this frame.
-        _toRemove.Clear();
-        foreach (var uid in viewportState.FadeStates.Keys)
+        ApplyFadeToVisibleEntities(viewportState);
+    }
+
+    /// <summary>
+    /// Finishes cleanup for the preceding render frame, then starts accumulating all visible z-map passes for
+    /// the new one. Doing this per overlay invocation would discard lower-map wall mounts before the current map
+    /// is drawn and make their fade state restart every frame.
+    /// </summary>
+    private void BeginFrame(ViewportFadeState viewportState)
+    {
+        if (viewportState.Frame == _timing.CurFrame)
+            return;
+
+        if (viewportState.Frame != 0)
         {
-            if (!viewportState.SeenThisFrame.Contains(uid))
-                _toRemove.Add(uid);
-        }
-        foreach (var uid in _toRemove)
-        {
-            RemoveTrackedEntity(uid, viewportState);
+            _toRemove.Clear();
+            foreach (var uid in viewportState.FadeStates.Keys)
+            {
+                if (!viewportState.SeenThisFrame.Contains(uid))
+                    _toRemove.Add(uid);
+            }
+
+            foreach (var uid in _toRemove)
+            {
+                RemoveTrackedEntity(uid, viewportState);
+            }
         }
 
-        ApplyFadeToVisibleEntities(viewportState);
+        viewportState.SeenThisFrame.Clear();
+        viewportState.Frame = _timing.CurFrame;
     }
 
     /// <summary>
@@ -116,16 +131,25 @@ public sealed partial class WallMountVisibilityOverlay : Overlay
         }
 
         // Restore alpha modified by other viewports.
-        foreach (var entity in _tree.QueryAabb(args.MapId, args.WorldBounds))
+        foreach (var visibleMap in args.VisibleMaps)
         {
-            var uid = entity.Uid;
-            if (!_spriteQuery.TryGetComponent(uid, out var sprite))
+            if (!args.TryGetMapRenderBounds(visibleMap, out var mapId, out var bounds))
                 continue;
 
-            if (_originalAlphas.Remove(uid, out var origAlpha))
-                _sprite.SetColor((uid, sprite), sprite.Color.WithAlpha(origAlpha));
+            foreach (var entity in _tree.QueryAabb(mapId, bounds))
+            {
+                var uid = entity.Uid;
+                if (!_spriteQuery.TryGetComponent(uid, out var sprite))
+                    continue;
 
-            _sprite.SetVisible((uid, sprite), true);
+                if (!args.TryGetEntityRenderLayer(uid, out _))
+                    continue;
+
+                if (_originalAlphas.Remove(uid, out var origAlpha))
+                    _sprite.SetColor((uid, sprite), sprite.Color.WithAlpha(origAlpha));
+
+                _sprite.SetVisible((uid, sprite), true);
+            }
         }
     }
 
@@ -134,29 +158,44 @@ public sealed partial class WallMountVisibilityOverlay : Overlay
     /// </summary>
     private void ProcessVisibleEntities(in OverlayDrawArgs args, IEye eye, Matrix3x2 matrix, float fadeStep, ViewportFadeState viewportState)
     {
-        foreach (var entity in _tree.QueryAabb(args.MapId, args.WorldBounds))
+        foreach (var visibleMap in args.VisibleMaps)
         {
-            var (wallmount, xform) = entity;
-            var uid = entity.Uid;
-
-            if (!_spriteQuery.TryGetComponent(uid, out var sprite))
+            if (!args.TryGetMapRenderBounds(visibleMap, out var mapId, out var bounds))
                 continue;
 
-            // Capture original alpha before any viewport modifies it.
-            if (!_originalAlphas.TryGetValue(uid, out var originalAlpha))
-                _originalAlphas[uid] = originalAlpha = sprite.Color.A;
+            foreach (var entity in _tree.QueryAabb(mapId, bounds))
+            {
+                var (wallmount, xform) = entity;
+                var uid = entity.Uid;
 
-            viewportState.SeenThisFrame.Add(uid);
+                if (!_spriteQuery.TryGetComponent(uid, out var sprite))
+                    continue;
 
-            var targetAlpha = ComputeTargetAlpha(uid, wallmount, xform, eye, matrix);
-            UpdateFadeState(uid, originalAlpha, targetAlpha, fadeStep, viewportState);
+                if (!args.TryGetEntityRenderLayer(uid, out var renderLayer) ||
+                    !viewportState.SeenThisFrame.Add(uid))
+                {
+                    continue;
+                }
+
+                // Capture original alpha before any viewport modifies it.
+                if (!_originalAlphas.TryGetValue(uid, out var originalAlpha))
+                    _originalAlphas[uid] = originalAlpha = sprite.Color.A;
+
+                var targetAlpha = ComputeTargetAlpha(wallmount, xform, renderLayer, eye, matrix);
+                UpdateFadeState(uid, originalAlpha, targetAlpha, fadeStep, viewportState);
+            }
         }
     }
 
     /// <summary>
     /// Returns 1 if the entity is within its facing arc relative to the eye, 0 otherwise.
     /// </summary>
-    private float ComputeTargetAlpha(EntityUid uid, WallMountComponent wallmount, TransformComponent xform, IEye eye, Matrix3x2 matrix)
+    private float ComputeTargetAlpha(
+        WallMountComponent wallmount,
+        TransformComponent xform,
+        RenderLayerSample renderLayer,
+        IEye eye,
+        Matrix3x2 matrix)
     {
         if (!wallmount.DirectionalVisibility || wallmount.Arc >= Math.Tau)
             return 1f;
@@ -168,10 +207,9 @@ public sealed partial class WallMountVisibilityOverlay : Overlay
         if (!_visibility.IsTileBlocked((gridUid, grid), tile))
             return 1f;
 
-        var (pos, rot) = _xform.GetRenderWorldPositionRotation(uid, xform);
-        var facingAngle = rot + eye.Rotation + wallmount.Direction;
+        var facingAngle = renderLayer.Rotation + eye.Rotation + wallmount.Direction;
 
-        var entityScreenPos = Vector2.Transform(pos, matrix);
+        var entityScreenPos = Vector2.Transform(renderLayer.Position, matrix);
         var eyeScreenPos = Vector2.Transform(eye.Position.Position, matrix);
         var toEntity = entityScreenPos - eyeScreenPos;
         var eyeToEntityAngle = (toEntity with { X = -toEntity.X }).ToWorldAngle();
