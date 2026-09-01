@@ -37,7 +37,9 @@ public sealed partial class ParallaxOverlay : Overlay
         if (args.MapId == MapId.Nullspace || _entManager.HasComponent<BiomeComponent>(_mapSystem.GetMapOrInvalid(args.MapId)))
             return false;
 
-        return true;
+        // Draw the background once, behind the farthest visible z-level. Drawing an opaque parallax into every
+        // layer target would cover lower grids when the nearer layers are composited over them.
+        return args.IsZLevelBackground;
     }
 
     protected override void Draw(in OverlayDrawArgs args)
