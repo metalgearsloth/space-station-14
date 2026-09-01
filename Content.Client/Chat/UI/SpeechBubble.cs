@@ -19,7 +19,7 @@ namespace Content.Client.Chat.UI
         [Dependency] private IGameTiming _timing = default!;
         [Dependency] private IEyeManager _eyeManager = default!;
         [Dependency] private IEntityManager _entityManager = default!;
-        [Dependency] private SharedMapSystem _mapSystem = default!;
+        private SharedMapSystem _mapSystem = default!;
         [Dependency] private IUserInterfaceManager _uiManager = default!;
         [Dependency] protected IConfigurationManager ConfigManager = default!;
         private readonly TransformSystem _transformSystem;
@@ -94,6 +94,7 @@ namespace Content.Client.Chat.UI
             IoCManager.InjectDependencies(this);
             _senderEntity = senderEntity;
             _transformSystem = _entityManager.System<TransformSystem>();
+            _mapSystem = _entityManager.System<SharedMapSystem>();
 
             // Use text clipping so new messages don't overlap old ones being pushed up.
             RectClipContent = true;
