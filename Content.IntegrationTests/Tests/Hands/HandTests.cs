@@ -13,6 +13,9 @@ using Robust.Shared.Containers;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Input;
 using Robust.Shared.Map;
+using Robust.Shared.Map.Components;
+using Robust.Shared.Physics.Components;
+using Robust.Shared.Physics.Systems;
 
 namespace Content.IntegrationTests.Tests.Hands;
 
@@ -78,6 +81,76 @@ public sealed class HandTests : GameTest
         Assert.That(sys.GetActiveItem((player, hands)), Is.Null);
 
         await server.WaitPost(() => mapSystem.DeleteMap(data.MapId));
+    }
+
+    [Test]
+    public async Task RapidCrowbarPickupDropDoesNotReuseFallVelocity()
+    {
+        var pair = Pair;
+        var server = pair.Server;
+        var entMan = server.EntMan;
+        var mapSystem = server.System<SharedMapSystem>();
+        var handsSystem = server.System<SharedHandsSystem>();
+        var transforms = server.System<TransformSystem>();
+        var zLevels = server.System<ZLevelSystem>();
+        var zPhysics = server.System<ZLevelPhysicsSystem>();
+        var data = await pair.CreateTestMap();
+        await pair.RunTicksSync(5);
+
+        EntityUid lowerMap = default;
+        EntityUid playerMap = default;
+        EntityUid crowbar = default;
+        EntityUid player = default;
+        await server.WaitPost(() =>
+        {
+            lowerMap = mapSystem.CreateMap(out _);
+            player = server.PlayerMan.Sessions.First().AttachedEntity!.Value;
+            playerMap = transforms.GetMap(player)!.Value;
+            Assert.That(zLevels.TryCreateMapNetwork([lowerMap, playerMap], out _), Is.True);
+
+            crowbar = entMan.SpawnEntity("Crowbar", transforms.GetMapCoordinates(player));
+            var vertical = entMan.GetComponent<ZLevelPhysicsComponent>(crowbar);
+            var presentation = entMan.GetComponent<ZLevelPresentationComponent>(crowbar);
+
+            zPhysics.SetZPosition((crowbar, vertical), 0.4f);
+            zPhysics.SetZVelocity((crowbar, vertical), -6f);
+            Assert.That(handsSystem.TryPickupAnyHand(player, crowbar), Is.True);
+            Assert.Multiple(() =>
+            {
+                Assert.That(vertical.Velocity, Is.Zero);
+                Assert.That(presentation.LocalHeight, Is.Zero.Within(0.0001f));
+            });
+
+            Assert.That(handsSystem.TryDrop(player, crowbar), Is.True);
+            Assert.That(vertical.Velocity, Is.Zero);
+
+            zPhysics.SetZPosition((crowbar, vertical), 0.2f);
+            zPhysics.SetZVelocity((crowbar, vertical), -3f);
+            Assert.That(handsSystem.TryPickupAnyHand(player, crowbar), Is.True);
+            Assert.That(handsSystem.TryDrop(player, crowbar), Is.True);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vertical.Velocity, Is.Zero, "the second drop reused velocity from the first fall");
+                Assert.That(presentation.LocalHeight, Is.Zero.Within(0.0001f));
+                Assert.That(transforms.GetMap(crowbar), Is.EqualTo(playerMap));
+            });
+        });
+
+        await pair.RunTicksSync(5);
+        await server.WaitPost(() =>
+        {
+            var vertical = entMan.GetComponent<ZLevelPhysicsComponent>(crowbar);
+            var presentation = entMan.GetComponent<ZLevelPresentationComponent>(crowbar);
+            Assert.Multiple(() =>
+            {
+                Assert.That(vertical.Velocity, Is.Zero);
+                Assert.That(presentation.LocalHeight, Is.Zero.Within(0.0001f));
+            });
+
+            mapSystem.DeleteMap(entMan.GetComponent<MapComponent>(lowerMap).MapId);
+            mapSystem.DeleteMap(data.MapId);
+        });
     }
 
     [Test]
