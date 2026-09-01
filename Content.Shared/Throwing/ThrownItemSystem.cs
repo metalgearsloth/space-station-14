@@ -80,6 +80,10 @@ namespace Content.Shared.Throwing
 
         private void OnSleep(EntityUid uid, ThrownItemComponent thrownItem, ref PhysicsSleepEvent @event)
         {
+            // XY sleep is not a landing while the authoritative vertical arc is still airborne.
+            if (thrownItem.VerticalPhysics && !thrownItem.Landed)
+                return;
+
             StopThrow(uid, thrownItem);
         }
 
@@ -115,9 +119,17 @@ namespace Content.Shared.Throwing
             RemComp<ThrownItemComponent>(uid);
         }
 
-        public void LandComponent(EntityUid uid, ThrownItemComponent thrownItem, PhysicsComponent physics, bool playSound)
+        public void LandComponent(
+            EntityUid uid,
+            ThrownItemComponent thrownItem,
+            PhysicsComponent physics,
+            bool playSound,
+            bool ignoreWeightlessness = false)
         {
-            if (thrownItem.Landed || thrownItem.Deleted || _gravity.IsWeightless(uid) || Deleted(uid))
+            if (thrownItem.Landed ||
+                thrownItem.Deleted ||
+                (!ignoreWeightlessness && _gravity.IsWeightless(uid)) ||
+                Deleted(uid))
                 return;
 
             thrownItem.Landed = true;
@@ -153,6 +165,11 @@ namespace Content.Shared.Throwing
             var query = EntityQueryEnumerator<ThrownItemComponent, PhysicsComponent>();
             while (query.MoveNext(out var uid, out var thrown, out var physics))
             {
+                // Map crossings do not end a throw. Z-enabled throws land only when the server solver resolves a
+                // real floor impact, so clients also avoid replaying the legacy timer as authoritative state.
+                if (thrown.VerticalPhysics && (_netMan.IsClient || !thrown.Landed))
+                    continue;
+
                 // If you remove this check verify slipping for other entities is networked properly.
                 if (_netMan.IsClient && !physics.Predict)
                     continue;

@@ -40,6 +40,13 @@ namespace Content.Shared.Throwing
         public bool Landed;
 
         /// <summary>
+        /// The server-authoritative z solver, rather than <see cref="LandTime"/>, owns this throw's landing.
+        /// Horizontal throw movement and hit handling continue through the ordinary throwing systems.
+        /// </summary>
+        [DataField, AutoNetworkedField]
+        public bool VerticalPhysics;
+
+        /// <summary>
         ///     Whether or not to play a sound when the entity lands.
         /// </summary>
         [DataField, ViewVariables(VVAccess.ReadWrite), AutoNetworkedField]
