@@ -24,6 +24,7 @@ public sealed class ZLevelSurfaceOverlay : Overlay
     private readonly EntityQuery<ZLevelHighGroundComponent> _highGroundQuery;
     private readonly EntityQuery<InteractionOutlineComponent> _outlineQuery;
     private readonly HashSet<Entity<ZLevelTopSurfaceVisualComponent>> _surfaces = new();
+    private readonly Vector2[] _projectedSurface = new Vector2[4];
 
     public override OverlaySpace Space => OverlaySpace.WorldSpaceEntities;
 
@@ -69,7 +70,7 @@ public sealed class ZLevelSurfaceOverlay : Overlay
             return;
         }
 
-        Span<Vector2> projected = stackalloc Vector2[4];
+        var projected = _projectedSurface;
         if (!_projection.TryGetProjectedSurface(
                 (surface.Owner, highGround),
                 args.MapUid,
@@ -92,7 +93,7 @@ public sealed class ZLevelSurfaceOverlay : Overlay
             fillColor = edgeColor.WithAlpha(0.28f);
         }
 
-        handle.DrawPrimitives(DrawPrimitiveTopology.TriangleFan, projected[..count], fillColor);
-        handle.DrawPrimitives(DrawPrimitiveTopology.LineLoop, projected[..count], edgeColor);
+        handle.DrawPrimitives(DrawPrimitiveTopology.TriangleFan, projected.AsSpan(0, count), fillColor);
+        handle.DrawPrimitives(DrawPrimitiveTopology.LineLoop, projected.AsSpan(0, count), edgeColor);
     }
 }

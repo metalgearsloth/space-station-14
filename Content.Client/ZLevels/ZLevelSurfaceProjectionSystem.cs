@@ -18,6 +18,8 @@ public sealed partial class ZLevelSurfaceProjectionSystem : EntitySystem
     [Dependency] private EntityQuery<TransformComponent> _xformQuery = default!;
     [Dependency] private EntityQuery<ZLevelHighGroundComponent> _highGroundQuery = default!;
 
+    private readonly ZLevelSupportPoint[] _supportPoints = new ZLevelSupportPoint[4];
+
     public bool TryGetProjectedSurface(
         Entity<ZLevelHighGroundComponent?> provider,
         EntityUid viewedMap,
@@ -34,7 +36,7 @@ public sealed partial class ZLevelSurfaceProjectionSystem : EntitySystem
             return false;
         }
 
-        Span<ZLevelSupportPoint> support = stackalloc ZLevelSupportPoint[4];
+        var support = _supportPoints;
         if (!_zPhysics.TryGetSupportSurfacePoints((provider.Owner, provider.Comp), support, out count))
             return false;
 

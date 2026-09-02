@@ -23,6 +23,8 @@ public sealed class ZLevelSupportDebugOverlay : Overlay
     private readonly EntityQuery<ZLevelHighGroundComponent> _highGroundQuery;
     private readonly Font _font;
     private readonly HashSet<EntityUid> _drawnProviders = new();
+    private readonly Vector2[] _contactLines = new Vector2[6];
+    private readonly Vector2[] _projectedSurface = new Vector2[4];
 
     public override OverlaySpace Space => OverlaySpace.WorldSpace | OverlaySpace.ScreenSpace;
 
@@ -50,8 +52,8 @@ public sealed class ZLevelSupportDebugOverlay : Overlay
             return;
 
         _drawnProviders.Clear();
-        Span<Vector2> lines = stackalloc Vector2[6];
-        Span<Vector2> polygon = stackalloc Vector2[4];
+        var lines = _contactLines;
+        var polygon = _projectedSurface;
         var query = _entities.EntityQueryEnumerator<ZLevelPhysicsComponent>();
         while (query.MoveNext(out var uid, out var physics))
         {
@@ -91,7 +93,7 @@ public sealed class ZLevelSupportDebugOverlay : Overlay
             {
                 args.WorldHandle.DrawPrimitives(
                     DrawPrimitiveTopology.LineLoop,
-                    polygon[..count],
+                    polygon.AsSpan(0, count),
                     Color.Yellow.WithAlpha(0.9f));
             }
         }

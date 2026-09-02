@@ -49,6 +49,7 @@ namespace Content.Client.Gameplay
         [Dependency] private IConfigurationManager _configurationManager = default!;
 
         private ClickableEntityComparer _comparer = default!;
+        private readonly Vector2[] _zSurfacePolygon = new Vector2[4];
 
         private (ViewVariablesPath? path, string[] segments) ResolveVvHoverObject(string path)
         {
@@ -193,7 +194,7 @@ namespace Content.Client.Gameplay
             var lookup = _entityManager.System<EntityLookupSystem>();
             var foundEntities = new Dictionary<EntityUid, ProjectedClickHit>();
             var surfaceCandidates = new HashSet<Entity<ZLevelTopSurfaceVisualComponent>>();
-            Span<Vector2> surfacePolygon = stackalloc Vector2[4];
+            var surfacePolygon = _zSurfacePolygon;
 
             foreach (var layer in layers)
             {
@@ -266,7 +267,7 @@ namespace Content.Client.Gameplay
                             out var absoluteHeight) ||
                         !surfaceProjection.TryGetSurfaceLayer(surface.Owner, absoluteHeight, out var surfaceLayer) ||
                         !VisibleMapsOrViewedContains(visibleMaps, viewedMap, surfaceLayer) ||
-                        !ZLevelSurfaceProjectionSystem.ContainsPoint(surfacePolygon[..count], coordinates.Position))
+                        !ZLevelSurfaceProjectionSystem.ContainsPoint(surfacePolygon.AsSpan(0, count), coordinates.Position))
                     {
                         continue;
                     }
@@ -404,14 +405,14 @@ namespace Content.Client.Gameplay
                 if (_entityManager.HasComponent<ZLevelTopSurfaceVisualComponent>(target))
                 {
                     var surfaceProjection = _entityManager.System<ZLevelSurfaceProjectionSystem>();
-                    Span<Vector2> polygon = stackalloc Vector2[4];
+                    var polygon = _zSurfacePolygon;
                     if (surfaceProjection.TryGetProjectedSurface(
                             (target, null),
                             viewedMap,
                             polygon,
                             out var count,
                             out var surfaceHeight) &&
-                        ZLevelSurfaceProjectionSystem.ContainsPoint(polygon[..count], displayed.Position))
+                        ZLevelSurfaceProjectionSystem.ContainsPoint(polygon.AsSpan(0, count), displayed.Position))
                     {
                         absoluteHeight = surfaceHeight;
                     }
