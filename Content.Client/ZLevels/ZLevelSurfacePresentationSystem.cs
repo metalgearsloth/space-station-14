@@ -3,7 +3,7 @@ using Robust.Client.Graphics;
 namespace Content.Client.ZLevels;
 
 /// <summary>
-/// Owns the always-on, content-authored presentation of walkable high-ground surfaces.
+/// Keeps the projected-surface overlay type available to support tooling without enabling coder-art in gameplay.
 /// </summary>
 public sealed partial class ZLevelSurfacePresentationSystem : EntitySystem
 {
@@ -12,7 +12,6 @@ public sealed partial class ZLevelSurfacePresentationSystem : EntitySystem
     public override void Initialize()
     {
         base.Initialize();
-        _overlays.AddOverlay(new ZLevelSurfaceOverlay(EntityManager));
     }
 
     public override void Shutdown()

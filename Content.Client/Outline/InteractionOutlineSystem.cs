@@ -145,11 +145,11 @@ public sealed partial class InteractionOutlineSystem : EntitySystem
             if (vp is ScalingViewport svp)
             {
                 renderScale = svp.CurrentRenderScale;
-                entityToClick = screen.GetClickedEntity(mousePosWorld, svp.Eye, svp.VisibleZMaps);
+                entityToClick = screen.GetClickedInteractableEntity(mousePosWorld, svp.Eye, svp.VisibleZMaps);
             }
             else
             {
-                entityToClick = screen.GetClickedEntity(mousePosWorld);
+                entityToClick = screen.GetClickedInteractableEntity(mousePosWorld, _eyeManager.CurrentEye);
             }
         }
         else if (_uiManager.CurrentlyHovered is EntityMenuElement element)
@@ -164,7 +164,13 @@ public sealed partial class InteractionOutlineSystem : EntitySystem
 
         var inRange = false;
         if (localSession.AttachedEntity != null && !Deleted(entityToClick))
-            inRange = _interactionSystem.InRangeUnobstructed(localSession.AttachedEntity.Value, entityToClick.Value);
+        {
+            var user = localSession.AttachedEntity.Value;
+            if (!_interactionSystem.ShouldShowProjectedInteraction(user, entityToClick.Value))
+                entityToClick = null;
+            else
+                inRange = _interactionSystem.InRangeUnobstructed(user, entityToClick.Value);
+        }
 
         InteractionOutlineComponent? outline;
 

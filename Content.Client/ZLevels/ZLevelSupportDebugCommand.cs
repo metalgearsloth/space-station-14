@@ -15,8 +15,12 @@ public sealed partial class ZLevelSupportDebugCommand : LocalizedCommands
     public override void Execute(IConsoleShell shell, string argStr, string[] args)
     {
         var enabled = !_overlays.RemoveOverlay<ZLevelSupportDebugOverlay>();
+        _overlays.RemoveOverlay<ZLevelSurfaceOverlay>();
         if (enabled)
+        {
             _overlays.AddOverlay(new ZLevelSupportDebugOverlay(_entities, _resources));
+            _overlays.AddOverlay(new ZLevelSurfaceOverlay(_entities));
+        }
 
         shell.WriteLine(Loc.GetString("cmd-showzsupport-status", ("status", enabled)));
     }

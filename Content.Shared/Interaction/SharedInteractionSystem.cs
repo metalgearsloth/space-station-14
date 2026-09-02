@@ -34,6 +34,7 @@ using Robust.Shared.Containers;
 using Robust.Shared.Input;
 using Robust.Shared.Input.Binding;
 using Robust.Shared.Map;
+using Robust.Shared.Map.Components;
 using Robust.Shared.Physics;
 using Robust.Shared.Physics.Components;
 using Robust.Shared.Physics.Systems;
@@ -64,6 +65,7 @@ namespace Content.Shared.Interaction
         [Dependency] private SharedMapSystem _map = default!;
         [Dependency] private SharedPhysicsSystem _broadphase = default!;
         [Dependency] private SharedTransformSystem _transform = default!;
+        [Dependency] private ZLevelSystem _zLevels = default!;
         [Dependency] private SharedVerbSystem _verbSystem = default!;
         [Dependency] private SharedPopupSystem _popupSystem = default!;
         [Dependency] private SharedUserInterfaceSystem _ui = default!;
@@ -82,6 +84,7 @@ namespace Content.Shared.Interaction
         [Dependency] private EntityQuery<WallMountComponent> _wallMountQuery = default!;
         [Dependency] private EntityQuery<UseDelayComponent> _delayQuery = default!;
         [Dependency] private EntityQuery<ActivatableUIComponent> _uiQuery = default!;
+        [Dependency] private EntityQuery<ZLevelPresentationComponent> _zPresentationQuery = default!;
 
         /// <summary>
         /// The collision mask used by default for
@@ -414,7 +417,7 @@ namespace Content.Shared.Interaction
                     return;
             }
 
-            if (!ValidateInteractAndFace(user, coordinates))
+            if (!ValidateInteractAndFace(user, coordinates, target))
                 return;
 
             if (altInteract && target != null)
@@ -577,11 +580,21 @@ namespace Content.Shared.Interaction
             InteractDoAfter(user, used, target, clickLocation, inRangeUnobstructed, checkDeletion: false);
         }
 
-        protected bool ValidateInteractAndFace(EntityUid user, EntityCoordinates coordinates)
+        protected bool ValidateInteractAndFace(EntityUid user, EntityCoordinates coordinates, EntityUid? target)
         {
-            // Verify user is on the same map as the entity they clicked on
-            if (_transform.GetMapId(coordinates) != Transform(user).MapID)
-                return false;
+            var coordinateMap = _transform.GetMapId(coordinates);
+            var userMap = Transform(user).MapID;
+            if (coordinateMap != userMap)
+            {
+                // Projected input retains the selected entity's canonical lower-map coordinates. Accept those only
+                // when the target agrees with that map and the same z-aware reachability check used by highlighting
+                // succeeds.
+                if (target is not { } targetUid ||
+                    !TryComp(targetUid, out TransformComponent? targetXform) ||
+                    targetXform.MapID != coordinateMap ||
+                    !InRangeUnobstructed(user, targetUid))
+                    return false;
+            }
 
             // Only rotate to face if they're not moving.
             if (!HasComp<NoRotateOnInteractComponent>(user) && (!TryComp(user, out InputMoverComponent? mover) || (mover.HeldMoveButtons & MoveButtons.AnyDirection) == 0x0))
@@ -705,6 +718,9 @@ namespace Content.Shared.Interaction
                 return ev.InRange;
             }
 
+            if (Resolve(origin, ref origin.Comp, false) && origin.Comp.MapID != other.Comp.MapID)
+                return InRangeUnobstructedAcrossZ(origin, other, range, collisionMask, predicate, popup);
+
             return InRangeUnobstructed(origin,
                 other,
                 other.Comp.Coordinates,
@@ -755,10 +771,16 @@ namespace Content.Shared.Interaction
             bool popup = false,
             bool overlapCheck = true)
         {
+            if (!Resolve(origin, ref origin.Comp, false) || !Resolve(other, ref other.Comp, false))
+                return false;
+
+            var targetPos = _transform.ToMapCoordinates(otherCoordinates);
+            if (origin.Comp.MapID != targetPos.MapId)
+                return InRangeUnobstructedAcrossZ(origin, other, range, collisionMask, predicate, popup, targetPos);
+
             Ignored combinedPredicate = e => e == origin.Owner || (predicate?.Invoke(e) ?? false);
             var inRange = true;
             MapCoordinates originPos = default;
-            var targetPos = _transform.ToMapCoordinates(otherCoordinates);
             Angle targetRot = _transform.GetWorldRotation(otherCoordinates.EntityId) + otherAngle;
 
             // So essentially:
@@ -836,6 +858,114 @@ namespace Content.Shared.Interaction
             }
 
             return inRange;
+        }
+
+        /// <summary>
+        /// Whether a projected cross-z target should receive the normal interaction affordance. Same-map targets
+        /// retain the standard in-range/out-of-range outline distinction.
+        /// </summary>
+        public bool ShouldShowProjectedInteraction(EntityUid user, EntityUid target)
+        {
+            if (!TryComp(user, out TransformComponent? userXform) ||
+                !TryComp(target, out TransformComponent? targetXform))
+                return false;
+
+            return userXform.MapID == targetXform.MapID || InRangeUnobstructed(user, target);
+        }
+
+        private bool InRangeUnobstructedAcrossZ(
+            Entity<TransformComponent?> origin,
+            Entity<TransformComponent?> other,
+            float range,
+            CollisionGroup collisionMask,
+            Ignored? predicate,
+            bool popup,
+            MapCoordinates? overriddenTarget = null)
+        {
+            if (!Resolve(origin, ref origin.Comp, false) ||
+                !Resolve(other, ref other.Comp, false) ||
+                origin.Comp.MapUid is not { } originMap ||
+                other.Comp.MapUid is not { } targetMap ||
+                !_zLevels.TryGetMapDepthOffset(originMap, targetMap, out _) ||
+                !_zLevels.TryGetMapData(originMap, out var originZMap, out var network) ||
+                !_zLevels.TryGetMapData(targetMap, out var targetZMap, out _) ||
+                originZMap.Network != targetZMap.Network)
+                return false;
+
+            if (!ShouldCheckAccess(origin))
+                return true;
+
+            var originCoordinates = _transform.GetMapCoordinates(origin, origin.Comp);
+            var targetCoordinates = overriddenTarget ?? _transform.GetMapCoordinates(other, other.Comp);
+            var originHeight = originZMap.Depth + (_zPresentationQuery.TryComp(origin.Owner, out var originPresentation)
+                ? originPresentation.LocalHeight
+                : 0f);
+            var targetHeight = targetZMap.Depth + (_zPresentationQuery.TryComp(other.Owner, out var targetPresentation)
+                ? targetPresentation.LocalHeight
+                : 0f);
+            var horizontal = targetCoordinates.Position - originCoordinates.Position;
+            var vertical = targetHeight - originHeight;
+            var distanceSquared = horizontal.LengthSquared() + vertical * vertical;
+            if (range > 0f && distanceSquared > range * range)
+                return ShowUnreachable(origin, popup);
+
+            Ignored combinedPredicate = entity =>
+                entity == origin.Owner || entity == other.Owner || (predicate?.Invoke(entity) ?? false);
+
+            // A blocking wall on any traversed layer prevents the cross-level reach. Both client and server run this
+            // exact canonical-map query, so projected selection cannot advertise an interaction the server rejects.
+            var minimumDepth = Math.Min(originZMap.Depth, targetZMap.Depth);
+            var maximumDepth = Math.Max(originZMap.Depth, targetZMap.Depth);
+            for (var depth = minimumDepth; depth <= maximumDepth; depth++)
+            {
+                if (!_zLevels.TryGetMapAtDepth(originZMap.Network, depth, out var layerMap) ||
+                    layerMap is not { } mapUid ||
+                    !TryComp(mapUid, out MapComponent? mapComp))
+                    return ShowUnreachable(origin, popup);
+
+                var layerOrigin = new MapCoordinates(originCoordinates.Position, mapComp.MapId);
+                var layerTarget = new MapCoordinates(targetCoordinates.Position, mapComp.MapId);
+                if (!InRangeUnobstructed(
+                        layerOrigin,
+                        layerTarget,
+                        0f,
+                        collisionMask,
+                        combinedPredicate,
+                        checkAccess: true))
+                    return ShowUnreachable(origin, popup);
+            }
+
+            // At every crossed horizontal plane, require an authored opening rather than reaching through a floor.
+            if (!MathHelper.CloseTo(vertical, 0f))
+            {
+                for (var boundaryDepth = minimumDepth + 1; boundaryDepth <= maximumDepth; boundaryDepth++)
+                {
+                    var fraction = (boundaryDepth - originHeight) / vertical;
+                    if (fraction < 0f || fraction > 1f)
+                        continue;
+
+                    if (!_zLevels.TryGetMapAtDepth(originZMap.Network, boundaryDepth, out var upperMap) ||
+                        upperMap is not { } upperMapUid)
+                        return ShowUnreachable(origin, popup);
+
+                    var crossingPoint = originCoordinates.Position + horizontal * fraction;
+                    if (!_zLevels.IsOpenToLowerLevel(upperMapUid, crossingPoint))
+                        return ShowUnreachable(origin, popup);
+                }
+            }
+
+            return true;
+        }
+
+        private bool ShowUnreachable(EntityUid origin, bool popup)
+        {
+            if (popup && _gameTiming.IsFirstTimePredicted)
+            {
+                var message = Loc.GetString("interaction-system-user-interaction-cannot-reach");
+                _popupSystem.PopupEntity(message, origin, origin);
+            }
+
+            return false;
         }
 
         public bool InRangeUnobstructed(

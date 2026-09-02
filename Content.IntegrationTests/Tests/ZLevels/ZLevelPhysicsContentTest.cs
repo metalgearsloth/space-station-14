@@ -8,8 +8,10 @@ using Content.IntegrationTests.Tests.Interaction;
 using Content.Shared.CCVar;
 using Content.Shared.Damage.Systems;
 using Content.Shared.Maps;
+using Content.Shared.Interaction;
 using Content.Shared.Throwing;
 using Content.Shared.ZLevels;
+using Robust.Client.Graphics;
 using Robust.Client.GameObjects;
 using Robust.Shared.GameObjects;
 using Robust.Shared.Map;
@@ -26,6 +28,8 @@ namespace Content.IntegrationTests.Tests.ZLevels;
 public sealed class ZLevelPhysicsContentTest : InteractionTest
 {
     private sealed class LandListenerSystem : TestListenerSystem<LandEvent>;
+    private sealed class FallSoundListenerSystem : TestListenerSystem<ZLevelFallSoundPlayedEvent>;
+    private sealed class InteractHandListenerSystem : TestListenerSystem<InteractHandEvent>;
 
     [SidedDependency(Side.Server)] private readonly ThrowingSystem _throwing = default!;
     [SidedDependency(Side.Server)] private readonly ThrownItemSystem _thrown = default!;
@@ -43,6 +47,113 @@ public sealed class ZLevelPhysicsContentTest : InteractionTest
         Piercing: 3
 
 ";
+
+    [Test]
+    public async Task ProjectedSafeSurfacePrevisIsDisabledByDefault()
+    {
+        await Client.WaitAssertion(() =>
+        {
+            var overlays = Client.ResolveDependency<IOverlayManager>();
+            Assert.That(overlays.HasOverlay<Content.Client.ZLevels.ZLevelSurfaceOverlay>(), Is.False);
+        });
+    }
+
+    [TestCase(0f)]
+    [TestCase(0.7f)]
+    public async Task LowerLevelInteractionCandidatesAgreeAcrossClientAndServer(float projectionOffset)
+    {
+        var maps = await CreateZStack(2);
+        NetEntity targetNet = default;
+        EntityUid target = default;
+
+        await Server.WaitPost(() =>
+        {
+            var zLevels = SEntMan.System<ZLevelSystem>();
+            Assert.That(zLevels.TryGetMapData(maps[1], out var upper, out _), Is.True);
+            zLevels.SetProjectionOffset(upper!.Network, new Vector2(0f, projectionOffset));
+
+            Transform.SetCoordinates(SPlayer, new EntityCoordinates(maps[1], Vector2.Zero));
+            target = SEntMan.SpawnEntity("Pen", MapData.GridCoords.Offset(new Vector2(0.5f, 0f)));
+            SEntMan.EnsureComponent<TestListenerComponent>(target);
+            targetNet = SEntMan.GetNetEntity(target);
+            Assert.That(InteractSys.InRangeUnobstructed(SPlayer, target), Is.True);
+            InteractSys.UserInteraction(SPlayer, SEntMan.GetComponent<TransformComponent>(target).Coordinates, target);
+
+            var farTarget = SEntMan.SpawnEntity("Pen", MapData.GridCoords.Offset(new Vector2(2f, 0f)));
+            Assert.That(InteractSys.InRangeUnobstructed(SPlayer, farTarget), Is.False);
+            Assert.That(InteractSys.ShouldShowProjectedInteraction(SPlayer, farTarget), Is.False);
+        });
+        AssertEvent<InteractHandEvent>(target);
+
+        await RunUntilSynced();
+        await Client.WaitAssertion(() =>
+        {
+            var target = CEntMan.GetEntity(targetNet);
+            var interactions = CEntMan.System<Content.Client.Interactable.InteractionSystem>();
+            Assert.Multiple(() =>
+            {
+                Assert.That(interactions.InRangeUnobstructed(CPlayer, target), Is.True);
+                Assert.That(interactions.ShouldShowProjectedInteraction(CPlayer, target), Is.True);
+            });
+        });
+    }
+
+    [Test]
+    public async Task LinkedMovingGridInteractionAgreesAcrossClientAndServer()
+    {
+        var maps = await CreateZStack(2);
+        NetEntity targetNet = default;
+
+        await Server.WaitPost(() =>
+        {
+            var zLevels = SEntMan.System<ZLevelSystem>();
+            var upperMap = SEntMan.GetComponent<MapComponent>(maps[1]);
+            var upperGrid = MapSystem.CreateGridEntity(upperMap.MapId);
+            Assert.That(zLevels.TryLinkGrids(MapData.Grid, upperGrid), Is.True);
+            Assert.That(zLevels.TryMoveLinkedGrids(
+                MapData.Grid,
+                new Vector2(4f, -2f),
+                Angle.FromDegrees(90f)), Is.True);
+
+            Transform.SetCoordinates(SPlayer, new EntityCoordinates(upperGrid, new Vector2(0.5f, 0.5f)));
+            var target = SEntMan.SpawnEntity("Pen", new EntityCoordinates(MapData.Grid, new Vector2(0.5f, 0.5f)));
+            targetNet = SEntMan.GetNetEntity(target);
+            Assert.Multiple(() =>
+            {
+                Assert.That(InteractSys.InRangeUnobstructed(SPlayer, target), Is.True);
+                Assert.That(InteractSys.ShouldShowProjectedInteraction(SPlayer, target), Is.True);
+            });
+        });
+
+        await RunUntilSynced();
+        await Client.WaitAssertion(() =>
+        {
+            var target = CEntMan.GetEntity(targetNet);
+            var interactions = CEntMan.System<Content.Client.Interactable.InteractionSystem>();
+            Assert.Multiple(() =>
+            {
+                Assert.That(interactions.InRangeUnobstructed(CPlayer, target), Is.True);
+                Assert.That(interactions.ShouldShowProjectedInteraction(CPlayer, target), Is.True);
+            });
+        });
+    }
+
+    [Test]
+    public async Task SolidUpperFloorRejectsLowerLevelInteractionCandidate()
+    {
+        await Server.WaitPost(() =>
+        {
+            var lower = MapSystem.CreateMap(out _);
+            Assert.That(SEntMan.System<ZLevelSystem>().TryCreateMapNetwork([lower, MapData.MapUid], out _), Is.True);
+            Transform.SetCoordinates(SPlayer, MapData.GridCoords.Offset(new Vector2(0.5f, 0.5f)));
+            var target = SEntMan.SpawnEntity(null, new EntityCoordinates(lower, new Vector2(0.5f, 0.5f)));
+            Assert.Multiple(() =>
+            {
+                Assert.That(InteractSys.InRangeUnobstructed(SPlayer, target), Is.False);
+                Assert.That(InteractSys.ShouldShowProjectedInteraction(SPlayer, target), Is.False);
+            });
+        });
+    }
 
     [Test]
     public async Task ProjectedLowerLayerDropUsesCanonicalPositionOnViewedMap()
@@ -167,6 +278,7 @@ public sealed class ZLevelPhysicsContentTest : InteractionTest
             });
         });
         ClearEvents<LandEvent>(item);
+        ClearEvents<ZLevelFallSoundPlayedEvent>(item);
 
         await Pair.RunTicksSync(120);
         await Server.WaitAssertion(() =>
@@ -181,9 +293,71 @@ public sealed class ZLevelPhysicsContentTest : InteractionTest
             });
         });
         AssertEvent<LandEvent>(item, count: 1);
+        AssertEvent<ZLevelFallSoundPlayedEvent>(item, count: 5);
 
         await Pair.RunTicksSync(60);
         AssertEvent<LandEvent>(item, count: 1);
+        AssertEvent<ZLevelFallSoundPlayedEvent>(item, count: 5);
+    }
+
+    [Test]
+    public async Task OrdinaryHandDropDoesNotProduceZFallSound()
+    {
+        await CreateZStack(2);
+        EntityUid item = default;
+        await Server.WaitPost(() =>
+        {
+            item = SEntMan.SpawnEntity("Pen", MapData.GridCoords.Offset(new Vector2(0.5f, 0.5f)));
+            SEntMan.EnsureComponent<TestListenerComponent>(item);
+            Assert.That(HandSys.TryPickupAnyHand(SPlayer, item, checkActionBlocker: false, animate: false), Is.True);
+            ClearEvents<ZLevelFallSoundPlayedEvent>(item);
+            Assert.That(HandSys.TryDrop(
+                SPlayer,
+                MapData.GridCoords.Offset(new Vector2(0.25f, 0.25f)),
+                checkActionBlocker: false,
+                doDropInteraction: false), Is.True);
+        });
+
+        await Pair.RunTicksSync(5);
+        AssertEvent<ZLevelFallSoundPlayedEvent>(item, count: 0);
+    }
+
+    [Test]
+    public async Task SameLevelThrowDoesNotProduceZFallSound()
+    {
+        await CreateZStack(2);
+        EntityUid item = default;
+        await Server.WaitPost(() =>
+        {
+            item = SEntMan.SpawnEntity("Pen", MapData.GridCoords.Offset(new Vector2(0.5f, 0.5f)));
+            SEntMan.EnsureComponent<TestListenerComponent>(item);
+            var vertical = SEntMan.GetComponent<ZLevelPhysicsComponent>(item);
+            vertical.VelocityGravity = false;
+            Assert.That(_throwing.TryThrow(item, Vector2.UnitX, baseThrowSpeed: 1f, playSound: false), Is.True);
+        });
+
+        await Pair.RunTicksSync(30);
+        AssertEvent<ZLevelFallSoundPlayedEvent>(item, count: 0);
+    }
+
+    [Test]
+    public async Task OneDownwardCrossingProducesOneZFallSound()
+    {
+        var maps = await CreateZStack(2);
+        EntityUid item = default;
+        await Server.WaitPost(() =>
+        {
+            var position = Transform.ToMapCoordinates(MapData.GridCoords.Offset(new Vector2(0.5f, 0.5f))).Position;
+            var upperMapId = SEntMan.GetComponent<MapComponent>(maps[1]).MapId;
+            item = SEntMan.SpawnEntity("Pen", new MapCoordinates(position, upperMapId));
+            SEntMan.EnsureComponent<TestListenerComponent>(item);
+            ClearEvents<ZLevelFallSoundPlayedEvent>(item);
+        });
+
+        await Pair.RunTicksSync(60);
+        AssertEvent<ZLevelFallSoundPlayedEvent>(item, count: 1);
+        await Pair.RunTicksSync(30);
+        AssertEvent<ZLevelFallSoundPlayedEvent>(item, count: 1);
     }
 
     [Test]

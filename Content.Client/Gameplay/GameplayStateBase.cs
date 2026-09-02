@@ -7,6 +7,7 @@ using Content.Client.Viewport;
 using Content.Client.ZLevels;
 using Content.Shared.CCVar;
 using Content.Shared.Input;
+using Content.Shared.Interaction;
 using Content.Shared.ZLevels;
 using Robust.Client.ComponentTrees;
 using Robust.Client.GameObjects;
@@ -147,6 +148,35 @@ namespace Content.Client.Gameplay
                 visibleMaps: visibleMaps).FirstOrDefault();
             return first.IsValid() ? first : null;
         }
+
+        /// <summary>
+        /// Selects the first projected candidate that the local controlled entity can actually interact with.
+        /// Inaccessible cross-z candidates are skipped so an overlapping reachable candidate receives the same
+        /// affordance and input target that the server will validate.
+        /// </summary>
+        public EntityUid? GetClickedInteractableEntity(
+            MapCoordinates coordinates,
+            IEye? eye,
+            IReadOnlySet<EntityUid>? visibleMaps)
+        {
+            if (eye == null ||
+                _playerManager.LocalSession?.AttachedEntity is not { } user ||
+                !_entitySystemManager.TryGetEntitySystem(out SharedInteractionSystem? interactions))
+            {
+                return null;
+            }
+
+            foreach (var candidate in GetClickableEntities(coordinates, eye, excludeFaded: true, visibleMaps))
+            {
+                if (interactions.ShouldShowProjectedInteraction(user, candidate))
+                    return candidate;
+            }
+
+            return null;
+        }
+
+        public EntityUid? GetClickedInteractableEntity(MapCoordinates coordinates, IEye? eye)
+            => GetClickedInteractableEntity(coordinates, eye, GetDefaultVisibleMaps());
 
         public IEnumerable<EntityUid> GetClickableEntities(EntityCoordinates coordinates, bool excludeFaded = true)
         {
@@ -424,10 +454,12 @@ namespace Content.Client.Gameplay
                         absoluteHeight,
                         out var canonical))
                 {
-                    return ToEntityCoordinates(
-                        new MapCoordinates(canonical, targetXform.MapID),
-                        mapSystem,
-                        sharedTransforms);
+                    var canonicalMap = new MapCoordinates(canonical, targetXform.MapID);
+                    // Keep entity interactions in the selected target's canonical parent space. A spatial grid
+                    // lookup here could silently choose a different overlapping grid on moving z layers.
+                    return targetXform.GridUid is { } targetGrid
+                        ? sharedTransforms.ToCoordinates(targetGrid, canonicalMap)
+                        : new EntityCoordinates(targetXform.MapUid!.Value, canonical);
                 }
             }
 
@@ -490,12 +522,16 @@ namespace Content.Client.Gameplay
                 if (vp is ScalingViewport svp)
                 {
                     visibleMaps = svp.VisibleZMaps;
-                    entityToClick = GetClickedEntity(mousePosWorld, svp.Eye, visibleMaps);
+                    entityToClick = IsInteractionBind(func)
+                        ? GetClickedInteractableEntity(mousePosWorld, svp.Eye, visibleMaps)
+                        : GetClickedEntity(mousePosWorld, svp.Eye, visibleMaps);
                 }
                 else
                 {
-                    entityToClick = GetClickedEntity(mousePosWorld);
                     visibleMaps = GetDefaultVisibleMaps();
+                    entityToClick = IsInteractionBind(func)
+                        ? GetClickedInteractableEntity(mousePosWorld, _eyeManager.CurrentEye, visibleMaps)
+                        : GetClickedEntity(mousePosWorld);
                 }
 
                 coordinates = ResolveProjectedCoordinates(mousePosWorld, entityToClick, visibleMaps);
@@ -519,6 +555,14 @@ namespace Content.Client.Gameplay
             {
                 kArgs.Handle();
             }
+        }
+
+        private static bool IsInteractionBind(BoundKeyFunction function)
+        {
+            return function == EngineKeyFunctions.Use ||
+                   function == ContentKeyFunctions.ActivateItemInWorld ||
+                   function == ContentKeyFunctions.AltActivateItemInWorld ||
+                   function == ContentKeyFunctions.TryPullObject;
         }
     }
 }
