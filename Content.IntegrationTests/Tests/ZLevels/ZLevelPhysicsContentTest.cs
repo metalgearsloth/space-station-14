@@ -11,6 +11,7 @@ using Content.Shared.Damage.Systems;
 using Content.Shared.Hands.EntitySystems;
 using Content.Shared.Maps;
 using Content.Shared.Interaction;
+using Content.Shared.Movement.Components;
 using Content.Shared.Throwing;
 using Content.Shared.ZLevels;
 using Robust.Client.Graphics;
@@ -46,6 +47,25 @@ public sealed class ZLevelPhysicsContentTest : InteractionTest
     damage:
       types:
         Piercing: 3
+
+- type: entity
+  id: ZLevelFlatSupportTestPlatform
+  components:
+  - type: Transform
+    anchored: true
+  - type: Physics
+    bodyType: Static
+  - type: Fixtures
+    fixtures:
+      zLevelTop:
+        shape:
+          !type:PhysShapeAabb
+          bounds: ""-0.5,-0.5,0.5,0.5""
+        hard: false
+  - type: ZLevelHighGround
+    surfaceFixture: zLevelTop
+    height: 0.2
+    solidVolume: false
 
 ";
 
@@ -104,68 +124,237 @@ public sealed class ZLevelPhysicsContentTest : InteractionTest
     }
 
     [Test]
-    public async Task PredictedMovementTracksConfirmedRampHeight()
+    public async Task PredictedMovementKeepsConfirmedFlatSupportUntilServerReconciles()
     {
-        await CreateZStack(2);
-        NetEntity rampNet = default;
+        await CreateZStack(1);
+        NetEntity platformNet = default;
 
         await Server.WaitPost(() =>
         {
-            var ramp = SEntMan.SpawnEntity(
-                "ZLevelRampUp",
-                new EntityCoordinates(MapData.Grid, new Vector2(0.5f)));
-            rampNet = SEntMan.GetNetEntity(ramp);
-            Transform.SetCoordinates(SPlayer, new EntityCoordinates(MapData.Grid, new Vector2(0.5f, 0.75f)));
+            var platform = SpawnFlatPlatform(
+                SEntMan,
+                MapData.Grid,
+                new Vector2(0.5f),
+                0.2f,
+                solidVolume: false);
+            platformNet = SEntMan.GetNetEntity(platform);
+
+            Transform.SetCoordinates(SPlayer, new EntityCoordinates(MapData.Grid, new Vector2(0.5f)));
             SEntMan.System<SharedPhysicsSystem>().SetBodyType(SPlayer, BodyType.Dynamic);
 
             var vertical = SEntMan.EnsureComponent<ZLevelPhysicsComponent>(SPlayer);
             var zPhysics = SEntMan.System<ZLevelPhysicsSystem>();
-            zPhysics.SetZPosition((SPlayer, vertical), 0.3375f);
+            zPhysics.SetZPosition((SPlayer, vertical), 0.2f);
             vertical.GroundState = ZLevelGroundState.Grounded;
+            zPhysics.RefreshSupport((SPlayer, vertical));
+        });
+        await RunUntilSynced();
+
+        await Client.WaitAssertion(() =>
+        {
+            var platform = CEntMan.GetEntity(platformNet);
+            var vertical = CEntMan.GetComponent<ZLevelPhysicsComponent>(CPlayer);
+            var presentation = CEntMan.GetComponent<ZLevelPresentationComponent>(CPlayer);
+            var transforms = CEntMan.System<Robust.Client.GameObjects.TransformSystem>();
+            var oldAuthoritativeHeight = vertical.SupportHeight;
+
+            Assert.That(vertical.SupportProvider, Is.EqualTo(platform));
+            // InteractionTestMob's bare Physics component defaults to Static independently on each side.
+            CEntMan.System<SharedPhysicsSystem>().SetBodyType(CPlayer, BodyType.Dynamic);
+            transforms.SetWorldPosition(CPlayer, new Vector2(0.55f, 0.5f));
+            CEntMan.System<ZLevelPhysicsSystem>().Update(1f);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(presentation.LocalHeight, Is.EqualTo(0.2f).Within(0.001f),
+                    "flat same-provider predicted XY movement must not mutate replicated vertical presentation");
+                Assert.That(vertical.SupportHeight, Is.EqualTo(oldAuthoritativeHeight).Within(0.001f),
+                    "prediction must not overwrite the replicated confirmed support state");
+                Assert.That(vertical.GroundState, Is.EqualTo(ZLevelGroundState.Grounded));
+            });
         });
 
-        // Anchored fixture insertion is deferred until the broadphase processes the spawn.
+        await Server.WaitPost(() =>
+        {
+            var platform = SEntMan.GetEntity(platformNet);
+            var highGround = SEntMan.GetComponent<ZLevelHighGroundComponent>(platform);
+            var zPhysics = SEntMan.System<ZLevelPhysicsSystem>();
+            zPhysics.SetSupportHeight((platform, highGround), 0.24f);
+
+            var vertical = SEntMan.GetComponent<ZLevelPhysicsComponent>(SPlayer);
+            Transform.SetCoordinates(SPlayer, new EntityCoordinates(MapData.Grid, new Vector2(0.55f, 0.5f)));
+            vertical.GroundState = ZLevelGroundState.Grounded;
+            zPhysics.RefreshSupport((SPlayer, vertical));
+        });
+        await RunUntilSynced();
+
+        await Client.WaitAssertion(() =>
+        {
+            var vertical = CEntMan.GetComponent<ZLevelPhysicsComponent>(CPlayer);
+            var presentation = CEntMan.GetComponent<ZLevelPresentationComponent>(CPlayer);
+            Assert.Multiple(() =>
+            {
+                Assert.That(vertical.SupportHeight, Is.EqualTo(0.24f).Within(0.001f));
+                Assert.That(presentation.LocalHeight, Is.EqualTo(0.24f).Within(0.001f));
+                Assert.That(vertical.GroundState, Is.EqualTo(ZLevelGroundState.Grounded));
+            });
+        });
+    }
+
+    [Test]
+    public async Task AuthoritativeFallAndLandingNeverToggleControlledPlayerPrediction()
+    {
+        var maps = await CreateZStack(2);
+        await BuildRunway(2);
+        NetEntity platformNet = default;
+        EntityUid upperGrid = default;
+
+        await Server.WaitPost(() =>
+        {
+            var upperMap = SEntMan.GetComponent<MapComponent>(maps[1]);
+            upperGrid = MapSystem.CreateGridEntity(upperMap.MapId).Owner;
+            Assert.That(SEntMan.System<ZLevelSystem>().TryLinkGrids(MapData.Grid.Owner, upperGrid), Is.True);
+            var platform = SpawnFlatPlatform(
+                SEntMan,
+                upperGrid,
+                new Vector2(0.5f),
+                0.8f,
+                solidVolume: false);
+            platformNet = SEntMan.GetNetEntity(platform);
+        });
+
+        // Let the anchored support fixture enter the broadphase before placing the controlled body on it.
         await Server.WaitRunTicks(1);
         await Server.WaitPost(() =>
         {
-            var ramp = SEntMan.GetEntity(rampNet);
-            var vertical = SEntMan.GetComponent<ZLevelPhysicsComponent>(SPlayer);
+            Transform.SetCoordinates(SPlayer, new EntityCoordinates(upperGrid, new Vector2(0.5f)));
+            var physics = SEntMan.GetComponent<PhysicsComponent>(SPlayer);
+            SEntMan.System<SharedPhysicsSystem>().SetBodyType(
+                SPlayer,
+                BodyType.KinematicController,
+                body: physics);
+
+            var vertical = SEntMan.EnsureComponent<ZLevelPhysicsComponent>(SPlayer);
             var zPhysics = SEntMan.System<ZLevelPhysicsSystem>();
-            Transform.SetCoordinates(SPlayer, new EntityCoordinates(MapData.Grid, new Vector2(0.5f, 0.75f)));
-            zPhysics.SetZPosition((SPlayer, vertical), 0.3375f);
+            zPhysics.SetZPosition((SPlayer, vertical), 0.8f);
             vertical.GroundState = ZLevelGroundState.Grounded;
-            zPhysics.RefreshSupport((SPlayer, vertical));
             zPhysics.RefreshSupport((SPlayer, vertical));
 
             Assert.Multiple(() =>
             {
-                Assert.That(vertical.SupportProvider, Is.EqualTo(ramp));
-                Assert.That(vertical.SupportHeight, Is.EqualTo(0.3375f).Within(0.001f));
-                Assert.That(vertical.ReconciliationState, Is.EqualTo(ZLevelReconciliationState.Confirmed));
+                Assert.That(vertical.SupportProvider, Is.EqualTo(SEntMan.GetEntity(platformNet)));
+                Assert.That(vertical.GroundState, Is.EqualTo(ZLevelGroundState.Grounded));
+            });
+        });
+        await RunUntilSynced();
+
+        EntityUid confirmedSupport = default;
+        EntityUid confirmedMap = default;
+        await Client.WaitAssertion(() =>
+        {
+            var platform = CEntMan.GetEntity(platformNet);
+            var physics = CEntMan.GetComponent<PhysicsComponent>(CPlayer);
+            var clientPhysics = CEntMan.System<Robust.Client.Physics.PhysicsSystem>();
+            clientPhysics.SetBodyType(CPlayer, BodyType.KinematicController, body: physics);
+            CEntMan.EnsureComponent<InputMoverComponent>(CPlayer);
+            clientPhysics.UpdateIsPredicted(CPlayer, physics);
+            clientPhysics.Update(0f);
+
+            var vertical = CEntMan.GetComponent<ZLevelPhysicsComponent>(CPlayer);
+            var xform = CEntMan.GetComponent<TransformComponent>(CPlayer);
+            confirmedSupport = vertical.SupportProvider!.Value;
+            confirmedMap = xform.MapUid!.Value;
+            Assert.Multiple(() =>
+            {
+                Assert.That(physics.Predict, Is.True,
+                    "ordinary movement on confirmed high ground must be predicted");
+                Assert.That(vertical.SupportProvider, Is.EqualTo(platform));
+                Assert.That(vertical.GroundState, Is.EqualTo(ZLevelGroundState.Grounded));
+            });
+
+            // Model the unacknowledged XY result visible under latency. The client is deliberately outside the
+            // confirmed footprint, but the client-side z system must not infer support loss or begin gravity.
+            CEntMan.System<TransformSystem>().SetWorldPosition(CPlayer, new Vector2(1.2f, 0.5f));
+            CEntMan.System<ZLevelPhysicsSystem>().Update(1f);
+            Assert.Multiple(() =>
+            {
+                Assert.That(CEntMan.System<TransformSystem>().GetWorldPosition(CPlayer).X,
+                    Is.EqualTo(1.2f).Within(0.001f),
+                    "walking off the confirmed edge must retain immediate predicted XY response");
+                Assert.That(vertical.SupportProvider, Is.EqualTo(confirmedSupport));
+                Assert.That(vertical.GroundState, Is.EqualTo(ZLevelGroundState.Grounded),
+                    "the client must not locally begin the fall");
+                Assert.That(xform.MapUid, Is.EqualTo(confirmedMap));
+                Assert.That(physics.Predict, Is.True);
+            });
+        });
+
+        // The server reaches the same XY point, authoritatively selects the lower floor, and begins the fall.
+        await Server.WaitPost(() =>
+        {
+            Transform.SetCoordinates(SPlayer, new EntityCoordinates(maps[1], new Vector2(1.2f, 0.5f)));
+            var vertical = SEntMan.GetComponent<ZLevelPhysicsComponent>(SPlayer);
+            SEntMan.System<ZLevelPhysicsSystem>().RefreshSupport((SPlayer, vertical));
+            Assert.Multiple(() =>
+            {
+                Assert.That(vertical.GroundState, Is.EqualTo(ZLevelGroundState.Airborne));
+                Assert.That(vertical.SupportProvider, Is.EqualTo(MapData.Grid.Owner));
             });
         });
         await RunUntilSynced();
 
         await Client.WaitAssertion(() =>
         {
-            var ramp = CEntMan.GetEntity(rampNet);
+            var physics = CEntMan.GetComponent<PhysicsComponent>(CPlayer);
             var vertical = CEntMan.GetComponent<ZLevelPhysicsComponent>(CPlayer);
-            var presentation = CEntMan.GetComponent<ZLevelPresentationComponent>(CPlayer);
-            var transforms = CEntMan.System<Robust.Client.GameObjects.TransformSystem>();
-            var oldAuthoritativeHeight = vertical.SupportHeight;
-
-            Assert.That(vertical.SupportProvider, Is.EqualTo(ramp));
-            // InteractionTestMob's bare Physics component defaults to Static independently on each side.
-            CEntMan.System<SharedPhysicsSystem>().SetBodyType(CPlayer, BodyType.Dynamic);
-            transforms.SetWorldPosition(CPlayer, new Vector2(0.5f, 0.65f));
-
+            var xform = CEntMan.GetComponent<TransformComponent>(CPlayer);
             Assert.Multiple(() =>
             {
-                Assert.That(presentation.LocalHeight, Is.EqualTo(0.4325f).Within(0.001f),
-                    "same-provider ramp height should follow predicted XY immediately");
-                Assert.That(vertical.SupportHeight, Is.EqualTo(oldAuthoritativeHeight).Within(0.001f),
-                    "prediction must not overwrite the replicated confirmed support state");
+                Assert.That(vertical.GroundState, Is.EqualTo(ZLevelGroundState.Airborne));
+                Assert.That(vertical.SupportProvider, Is.EqualTo(MapData.CGridUid));
+                Assert.That(xform.MapUid, Is.EqualTo(confirmedMap),
+                    "the client must wait for the authoritative z-map crossing");
+                Assert.That(physics.Predict, Is.True,
+                    "receiving an authoritative fall must not disable normal XY prediction");
+            });
+
+            // Replaying the same state cannot turn the authoritative lower support back into the old platform.
+            CEntMan.System<ZLevelPhysicsSystem>().Update(1f);
+            Assert.Multiple(() =>
+            {
+                Assert.That(vertical.GroundState, Is.EqualTo(ZLevelGroundState.Airborne));
+                Assert.That(vertical.SupportProvider, Is.EqualTo(MapData.CGridUid));
+                Assert.That(physics.Predict, Is.True);
+            });
+        });
+
+        // Allow the authoritative vertical solver to cross maps and land on the lower runway.
+        await RunSeconds(1f);
+        await RunUntilSynced();
+
+        await Client.WaitAssertion(() =>
+        {
+            var physics = CEntMan.GetComponent<PhysicsComponent>(CPlayer);
+            var vertical = CEntMan.GetComponent<ZLevelPhysicsComponent>(CPlayer);
+            var xform = CEntMan.GetComponent<TransformComponent>(CPlayer);
+            var transforms = CEntMan.System<TransformSystem>();
+            Assert.Multiple(() =>
+            {
+                Assert.That(xform.MapUid, Is.EqualTo(MapData.CMapUid));
                 Assert.That(vertical.GroundState, Is.EqualTo(ZLevelGroundState.Grounded));
+                Assert.That(vertical.SupportProvider, Is.EqualTo(MapData.CGridUid));
+                Assert.That(physics.Predict, Is.True,
+                    "authoritative landing must not re-enable a mode that was never disabled");
+            });
+
+            var landedX = transforms.GetWorldPosition(CPlayer).X;
+            transforms.SetWorldPosition(CPlayer, new Vector2(landedX + 0.1f, 0.5f));
+            Assert.Multiple(() =>
+            {
+                Assert.That(transforms.GetWorldPosition(CPlayer).X, Is.EqualTo(landedX + 0.1f).Within(0.001f),
+                    "movement immediately after landing must stay responsive");
+                Assert.That(vertical.GroundState, Is.EqualTo(ZLevelGroundState.Grounded));
+                Assert.That(physics.Predict, Is.True);
             });
         });
     }
@@ -622,6 +811,27 @@ public sealed class ZLevelPhysicsContentTest : InteractionTest
     {
         typeof(ZLevelPhysicsComponent)
             .GetField(nameof(ZLevelPhysicsComponent.VelocityGravity))!
+            .SetValue(component, value);
+    }
+
+    private static EntityUid SpawnFlatPlatform(
+        IEntityManager entities,
+        EntityUid parent,
+        Vector2 localPosition,
+        float height,
+        bool solidVolume)
+    {
+        var uid = entities.SpawnEntity("ZLevelFlatSupportTestPlatform", new EntityCoordinates(parent, localPosition));
+        var highGround = entities.GetComponent<ZLevelHighGroundComponent>(uid);
+        SetHighGroundField(highGround, nameof(ZLevelHighGroundComponent.Height), height);
+        SetHighGroundField(highGround, nameof(ZLevelHighGroundComponent.SolidVolume), solidVolume);
+        return uid;
+    }
+
+    private static void SetHighGroundField<T>(ZLevelHighGroundComponent component, string field, T value)
+    {
+        typeof(ZLevelHighGroundComponent)
+            .GetField(field)!
             .SetValue(component, value);
     }
 }

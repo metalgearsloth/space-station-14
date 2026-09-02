@@ -4,20 +4,22 @@ using Content.Shared.ZLevels;
 using Robust.Client.Graphics;
 using Robust.Client.ResourceManagement;
 using Robust.Shared.Enums;
+using Robust.Shared.GameObjects;
 using Robust.Shared.Physics.Components;
 
 namespace Content.Client.ZLevels;
 
 /// <summary>
 /// Visual half of support diagnostics. The server-side zphysics_debug command supplies the bounded candidate list
-/// and rejection reasons; this overlay shows the confirmed contact, projected safe polygon, and replicated
-/// reconciliation state at exactly the positions used by presentation and picking.
+/// and rejection reasons; this overlay shows the confirmed contact and projected safe polygon at the positions used
+/// by presentation and picking.
 /// </summary>
 public sealed class ZLevelSupportDebugOverlay : Overlay
 {
     private const float CrossSize = 0.12f;
 
     private readonly IEntityManager _entities;
+    private readonly SharedTransformSystem _transform;
     private readonly ZLevelSystem _zLevels;
     private readonly ZLevelSurfaceProjectionSystem _surfaces;
     private readonly EntityQuery<ZLevelHighGroundComponent> _highGroundQuery;
@@ -31,6 +33,7 @@ public sealed class ZLevelSupportDebugOverlay : Overlay
     public ZLevelSupportDebugOverlay(IEntityManager entities, IResourceCache resources)
     {
         _entities = entities;
+        _transform = entities.System<SharedTransformSystem>();
         _zLevels = entities.System<ZLevelSystem>();
         _surfaces = entities.System<ZLevelSurfaceProjectionSystem>();
         _highGroundQuery = entities.GetEntityQuery<ZLevelHighGroundComponent>();
@@ -59,16 +62,17 @@ public sealed class ZLevelSupportDebugOverlay : Overlay
         {
             if (!args.TryGetEntityPresentedView(uid, out var body) ||
                 physics.SupportSurface == ZLevelSupportSurface.None ||
+                !_entities.TryGetComponent(uid, out TransformComponent? xform) ||
                 !_zLevels.TryProjectAbsolutePosition(
                     args.ViewedMapUid,
-                    physics.SupportPoint,
+                    _transform.GetWorldPosition(xform),
                     physics.SupportHeight,
                     out var contact))
             {
                 continue;
             }
 
-            var color = GetReconciliationColor(physics.ReconciliationState);
+            var color = GetGroundColor(physics.GroundState);
             lines[0] = body.Position;
             lines[1] = contact;
             lines[2] = contact - new Vector2(CrossSize, 0f);
@@ -115,22 +119,20 @@ public sealed class ZLevelSupportDebugOverlay : Overlay
 
             var screen = args.ViewportControl.WorldToScreen(body.Position) + new Vector2(10f, -24f);
             var label = $"{uid} {physics.GroundState}\n" +
-                        $"{physics.SupportSurface} z={physics.SupportHeight:F3} {physics.ReconciliationState}";
+                        $"{physics.SupportSurface} z={physics.SupportHeight:F3}";
             args.ScreenHandle.DrawString(
                 _font,
                 screen,
                 label,
-                color: GetReconciliationColor(physics.ReconciliationState));
+                color: GetGroundColor(physics.GroundState));
         }
     }
 
-    private static Color GetReconciliationColor(ZLevelReconciliationState state)
+    private static Color GetGroundColor(ZLevelGroundState state)
         => state switch
         {
-            ZLevelReconciliationState.Confirmed => Color.Lime,
-            ZLevelReconciliationState.AuthoritativeLanding => Color.Cyan,
-            ZLevelReconciliationState.AuthoritativeFall => Color.Orange,
-            ZLevelReconciliationState.AuthoritativeMapTransition => Color.Magenta,
+            ZLevelGroundState.Grounded => Color.Lime,
+            ZLevelGroundState.Airborne => Color.Orange,
             _ => Color.Yellow,
         };
 }

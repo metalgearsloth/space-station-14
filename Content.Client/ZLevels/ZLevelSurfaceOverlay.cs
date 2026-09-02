@@ -1,9 +1,10 @@
 using System.Numerics;
-using System.Linq;
 using Content.Client.Interactable.Components;
 using Content.Shared.ZLevels;
 using Robust.Client.Graphics;
+using Robust.Client.Player;
 using Robust.Shared.Enums;
+using Robust.Shared.GameObjects;
 using Robust.Shared.Map.Components;
 using Robust.Shared.Physics.Components;
 
@@ -15,12 +16,17 @@ namespace Content.Client.ZLevels;
 /// </summary>
 public sealed class ZLevelSurfaceOverlay : Overlay
 {
-    private const float QueryEnlargement = 2f;
+    private const float NearbyRadius = 1.75f;
+    private static readonly Color FillColor = new(160, 160, 160, 24);
+    private static readonly Color EdgeColor = new(160, 160, 160, 100);
 
     private readonly EntityLookupSystem _lookup;
+    private readonly IPlayerManager _players;
     private readonly ZLevelSurfaceProjectionSystem _projection;
+    private readonly SharedTransformSystem _transform;
     private readonly ZLevelSystem _zLevels;
     private readonly EntityQuery<MapComponent> _mapQuery;
+    private readonly EntityQuery<TransformComponent> _xformQuery;
     private readonly EntityQuery<ZLevelHighGroundComponent> _highGroundQuery;
     private readonly EntityQuery<InteractionOutlineComponent> _outlineQuery;
     private readonly HashSet<Entity<ZLevelTopSurfaceVisualComponent>> _surfaces = new();
@@ -28,12 +34,15 @@ public sealed class ZLevelSurfaceOverlay : Overlay
 
     public override OverlaySpace Space => OverlaySpace.WorldSpaceEntities;
 
-    public ZLevelSurfaceOverlay(IEntityManager entities)
+    public ZLevelSurfaceOverlay(IEntityManager entities, IPlayerManager players)
     {
         _lookup = entities.System<EntityLookupSystem>();
+        _players = players;
         _projection = entities.System<ZLevelSurfaceProjectionSystem>();
+        _transform = entities.System<SharedTransformSystem>();
         _zLevels = entities.System<ZLevelSystem>();
         _mapQuery = entities.GetEntityQuery<MapComponent>();
+        _xformQuery = entities.GetEntityQuery<TransformComponent>();
         _highGroundQuery = entities.GetEntityQuery<ZLevelHighGroundComponent>();
         _outlineQuery = entities.GetEntityQuery<InteractionOutlineComponent>();
         ZIndex = (int) Content.Shared.DrawDepth.DrawDepth.WallTops;
@@ -41,10 +50,16 @@ public sealed class ZLevelSurfaceOverlay : Overlay
 
     protected override void Draw(in OverlayDrawArgs args)
     {
-        if (!_zLevels.TryGetMapData(args.MapUid, out _, out _))
+        if (!_zLevels.TryGetMapData(args.MapUid, out _, out _) ||
+            _players.LocalSession?.AttachedEntity is not { } controlled ||
+            !_xformQuery.TryComp(controlled, out var controlledXform) ||
+            controlledXform.MapUid == null)
+        {
             return;
+        }
 
-        foreach (var sourceMap in args.VisibleMaps.OrderBy(uid => uid.Id))
+        var controlledPosition = _transform.GetWorldPosition(controlledXform);
+        foreach (var sourceMap in args.VisibleMaps)
         {
             if (!_mapQuery.TryComp(sourceMap, out _) ||
                 !args.TryGetMapRenderBounds(sourceMap, out var sourceMapId, out var sourceBounds))
@@ -55,10 +70,11 @@ public sealed class ZLevelSurfaceOverlay : Overlay
             _surfaces.Clear();
             _lookup.GetEntitiesIntersecting(
                 sourceMapId,
-                sourceBounds.CalcBoundingBox().Enlarged(QueryEnlargement),
+                new Box2(controlledPosition - new Vector2(NearbyRadius), controlledPosition + new Vector2(NearbyRadius))
+                    .Intersect(sourceBounds.CalcBoundingBox()),
                 _surfaces);
 
-            foreach (var surface in _surfaces.OrderBy(entity => entity.Owner.Id))
+            foreach (var surface in _surfaces)
                 DrawSurface(args, surface);
         }
     }
@@ -85,8 +101,8 @@ public sealed class ZLevelSurfaceOverlay : Overlay
         }
 
         var handle = args.WorldHandle;
-        var fillColor = surface.Comp.FillColor;
-        var edgeColor = surface.Comp.EdgeColor;
+        var fillColor = FillColor;
+        var edgeColor = EdgeColor;
         if (_outlineQuery.TryComp(surface.Owner, out var outline) && outline.Active)
         {
             edgeColor = outline.InRange ? Color.Lime : Color.Orange;

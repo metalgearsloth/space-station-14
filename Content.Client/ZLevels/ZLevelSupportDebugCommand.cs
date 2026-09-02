@@ -1,4 +1,5 @@
 using Robust.Client.Graphics;
+using Robust.Client.Player;
 using Robust.Client.ResourceManagement;
 using Robust.Shared.Console;
 
@@ -7,6 +8,7 @@ namespace Content.Client.ZLevels;
 public sealed partial class ZLevelSupportDebugCommand : LocalizedCommands
 {
     [Dependency] private IOverlayManager _overlays = default!;
+    [Dependency] private IPlayerManager _players = default!;
     [Dependency] private IResourceCache _resources = default!;
     [Dependency] private IEntityManager _entities = default!;
 
@@ -19,7 +21,7 @@ public sealed partial class ZLevelSupportDebugCommand : LocalizedCommands
         if (enabled)
         {
             _overlays.AddOverlay(new ZLevelSupportDebugOverlay(_entities, _resources));
-            _overlays.AddOverlay(new ZLevelSurfaceOverlay(_entities));
+            _overlays.AddOverlay(new ZLevelSurfaceOverlay(_entities, _players));
         }
 
         shell.WriteLine(Loc.GetString("cmd-showzsupport-status", ("status", enabled)));

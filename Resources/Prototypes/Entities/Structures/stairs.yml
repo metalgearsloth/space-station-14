@@ -115,91 +115,195 @@
   parent: Stairs
   id: BaseZLevelRamp
   name: z-level ramp
-  description: A short ramp connecting aligned z-levels.
+  description: A directional transition between two aligned z-levels.
   placement:
     mode: SnapgridCenter
   components:
+  - type: Transform
+    anchored: false
+  - type: Rotatable
   - type: Physics
     bodyType: Static
-  - type: Fixtures
-    fixtures:
-      zLevelRampFixture:
-        shape:
-          !type:PhysShapeAabb
-          bounds: "-0.5,-0.5,0.5,0.5"
-        mask:
-        - FullTileMask
-        - GhostImpassable
-        layer:
-        - WallLayer
-        hard: false
-  - type: ZLevelHighGround
-    heightCurve: [0.1, 1.05]
-    solidVolume: false
 
 - type: entity
   parent: BaseZLevelRamp
   id: ZLevelRampUp
   suffix: Steel, up
+  components:
+  - type: ZLevelPortalTrigger
+    transitionFixture: zLevelTransition
+    direction: 0,1
+  - type: ZLevelPortal
+    destinationOffset: 1
+    counterpartPrototype: ZLevelRampDown
+  - type: SpeedModifierContacts
+    walkSpeedModifier: 0.45
+    sprintSpeedModifier: 0.45
+  - type: Fixtures
+    fixtures:
+      zLevelTransition:
+        shape:
+          !type:PhysShapeAabb
+          bounds: "-0.5,0,0.5,0.25"
+        hard: false
+      zLevelSlowdown:
+        shape:
+          !type:PhysShapeAabb
+          bounds: "-0.5,-0.5,0.5,0.5"
+        hard: false
+        mask:
+        - ItemMask
+        layer:
+        - SlipLayer
+      zLevelExitGate:
+        shape:
+          !type:PhysShapeAabb
+          bounds: "-0.5,0.25,0.5,0.5"
+        mask:
+        - FullTileMask
+        layer:
+        - WallLayer
 
 - type: entity
   parent: BaseZLevelRamp
   id: ZLevelRampDown
   suffix: Steel, down
   components:
-  - type: ZLevelHighGround
-    heightCurve: [1.05, 0.1]
+  - type: ZLevelPortalTrigger
+    transitionFixture: zLevelTransition
+    direction: 0,1
+  - type: ZLevelPortal
+    destinationOffset: -1
+    counterpartPrototype: ZLevelRampUp
+  - type: SpeedModifierContacts
+    walkSpeedModifier: 0.45
+    sprintSpeedModifier: 0.45
+  - type: Fixtures
+    fixtures:
+      zLevelTransition:
+        shape:
+          !type:PhysShapeAabb
+          bounds: "-0.5,-0.25,0.5,0"
+        hard: false
+      zLevelSlowdown:
+        shape:
+          !type:PhysShapeAabb
+          bounds: "-0.5,-0.5,0.5,0.5"
+        hard: false
+        mask:
+        - ItemMask
+        layer:
+        - SlipLayer
+      zLevelExitGate:
+        shape:
+          !type:PhysShapeAabb
+          bounds: "-0.5,-0.5,0.5,-0.25"
+        mask:
+        - FullTileMask
+        layer:
+        - WallLayer
 
 - type: entity
-  parent: BaseZLevelRamp
+  parent: ZLevelRampUp
   id: ZLevelRampUpWhite
   suffix: White, up
   components:
+  - type: ZLevelPortal
+    counterpartPrototype: ZLevelRampDownWhite
   - type: Sprite
     sprite: Structures/stairs.rsi
     state: stairs_white
     drawdepth: FloorTiles
 
 - type: entity
-  parent: ZLevelRampUpWhite
+  parent: ZLevelRampDown
   id: ZLevelRampDownWhite
   suffix: White, down
   components:
-  - type: ZLevelHighGround
-    heightCurve: [1.05, 0.1]
+  - type: ZLevelPortal
+    counterpartPrototype: ZLevelRampUpWhite
+  - type: Sprite
+    sprite: Structures/stairs.rsi
+    state: stairs_white
+    drawdepth: FloorTiles
 
 - type: entity
-  parent: BaseZLevelRamp
+  parent: ZLevelRampUp
   id: ZLevelRampUpDark
   suffix: Dark, up
   components:
+  - type: ZLevelPortal
+    counterpartPrototype: ZLevelRampDownDark
   - type: Sprite
     sprite: Structures/stairs.rsi
     state: stairs_dark
     drawdepth: FloorTiles
 
 - type: entity
-  parent: ZLevelRampUpDark
+  parent: ZLevelRampDown
   id: ZLevelRampDownDark
   suffix: Dark, down
   components:
-  - type: ZLevelHighGround
-    heightCurve: [1.05, 0.1]
+  - type: ZLevelPortal
+    counterpartPrototype: ZLevelRampUpDark
+  - type: Sprite
+    sprite: Structures/stairs.rsi
+    state: stairs_dark
+    drawdepth: FloorTiles
 
 - type: entity
-  parent: BaseZLevelRamp
+  parent: ZLevelRampUp
   id: ZLevelRampUpWood
   suffix: Wood, up
   components:
+  - type: ZLevelPortal
+    counterpartPrototype: ZLevelRampDownWood
   - type: Sprite
     sprite: Structures/stairs.rsi
     state: stairs_wood
     drawdepth: FloorTiles
 
 - type: entity
-  parent: ZLevelRampUpWood
+  parent: ZLevelRampDown
   id: ZLevelRampDownWood
   suffix: Wood, down
   components:
-  - type: ZLevelHighGround
-    heightCurve: [1.05, 0.1]
+  - type: ZLevelPortal
+    counterpartPrototype: ZLevelRampUpWood
+  - type: Sprite
+    sprite: Structures/stairs.rsi
+    state: stairs_wood
+    drawdepth: FloorTiles
+
+- type: entity
+  abstract: true
+  parent: BaseFloorDecoration
+  id: BaseZLevelLadder
+  name: z-level ladder
+  description: A ladder connecting two aligned z-levels.
+  components:
+  - type: Transform
+    anchored: false
+  - type: Sprite
+    sprite: Structures/stairs.rsi
+    state: stairs_stage_steel
+    drawdepth: SmallObjects
+  - type: ZLevelLadder
+
+- type: entity
+  parent: BaseZLevelLadder
+  id: ZLevelLadderUp
+  suffix: up
+  components:
+  - type: ZLevelPortal
+    destinationOffset: 1
+    counterpartPrototype: ZLevelLadderDown
+
+- type: entity
+  parent: BaseZLevelLadder
+  id: ZLevelLadderDown
+  suffix: down
+  components:
+  - type: ZLevelPortal
+    destinationOffset: -1
+    counterpartPrototype: ZLevelLadderUp

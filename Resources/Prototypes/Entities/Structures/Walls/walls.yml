@@ -25,6 +25,7 @@
   - type: Wall
   - type: IsRoof
   - type: ZLevelHighGround
+    surfaceFixture: zLevelTop
   - type: ZLevelTopSurfaceVisual
   - type: Sprite
     drawdepth: Walls
@@ -45,6 +46,11 @@
         layer:
         - WallLayer
         density: 1000
+      zLevelTop:
+        shape:
+          !type:PhysShapeAabb
+          bounds: "-0.5,-0.5,0.5,0.5"
+        hard: false
   - type: Airtight
   - type: StaticPrice
     price: 75
@@ -102,6 +108,14 @@
         - FullTileMask
         layer:
         - WallLayer
+      zLevelTop:
+        shape:
+          !type:PolygonShape
+          vertices:
+          - "-0.5,-0.5"
+          - "0.5,0.5"
+          - "0.5,-0.5"
+        hard: false
 
 - type: entity
   parent: [ BaseWall, StructureHealthWallWeak ]
@@ -260,6 +274,11 @@
         layer:
         - WallLayer
         density: 4000
+      zLevelTop:
+        shape:
+          !type:PhysShapeAabb
+          bounds: "-0.5,-0.5,0.5,0.5"
+        hard: false
   - type: IconSmooth
     key: walls
     base: gold
@@ -321,6 +340,11 @@
         layer:
         - WallLayer
         density: 4000
+      zLevelTop:
+        shape:
+          !type:PhysShapeAabb
+          bounds: "-0.5,-0.5,0.5,0.5"
+        hard: false
   - type: RadiationBlocker
     resistance: 5
 
@@ -434,6 +458,11 @@
         layer:
         - WallLayer
         density: 2000
+      zLevelTop:
+        shape:
+          !type:PhysShapeAabb
+          bounds: "-0.5,-0.5,0.5,0.5"
+        hard: false
 
 - type: entity
   parent: WallReinforced
@@ -525,6 +554,11 @@
         layer:
         - WallLayer
         density: 4000
+      zLevelTop:
+        shape:
+          !type:PhysShapeAabb
+          bounds: "-0.5,-0.5,0.5,0.5"
+        hard: false
   - type: RadiationBlocker
     resistance: 5
 
@@ -594,6 +628,14 @@
         layer:
         - WallLayer
         density: 2000
+      zLevelTop:
+        shape:
+          !type:PolygonShape
+          vertices:
+          - "-0.5,-0.5"
+          - "0.5,0.5"
+          - "0.5,-0.5"
+        hard: false
   - type: Damageable
     damageModifierSet: PlasteelStaticMod
   - type: Destructible
@@ -665,6 +707,11 @@
         layer:
         - WallLayer
         density: 2000
+      zLevelTop:
+        shape:
+          !type:PhysShapeAabb
+          bounds: "-0.5,-0.5,0.5,0.5"
+        hard: false
 
 - type: entity
   parent: [ BaseWall, StructureHealthWall ]
@@ -870,6 +917,11 @@
         layer:
         - WallLayer
         density: 6000
+      zLevelTop:
+        shape:
+          !type:PhysShapeAabb
+          bounds: "-0.5,-0.5,0.5,0.5"
+        hard: false
   - type: IconSmooth
     key: walls
     base: uranium

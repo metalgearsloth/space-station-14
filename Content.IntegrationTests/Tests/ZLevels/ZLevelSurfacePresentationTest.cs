@@ -9,6 +9,7 @@ using Robust.Shared.GameObjects;
 using Robust.Shared.Map;
 using Robust.Shared.Map.Components;
 using Robust.Shared.Maths;
+using Robust.Shared.Physics;
 using Robust.Shared.Physics.Components;
 using Robust.Shared.Physics.Systems;
 
@@ -54,21 +55,18 @@ public sealed class ZLevelSurfacePresentationTest : GameTest
 
             var localContact = new Vector2(0.5f, 0.5f);
             var wall = entities.SpawnEntity("WallSolid", new EntityCoordinates(lowerGrid, localContact));
+            var wallGround = entities.GetComponent<ZLevelHighGroundComponent>(wall);
+            var wallFixtures = entities.GetComponent<FixturesComponent>(wall);
             Assert.Multiple(() =>
             {
                 Assert.That(entities.HasComponent<ZLevelTopSurfaceVisualComponent>(wall), Is.True,
                     "ordinary content walls must opt into a real safe-top presentation");
-                Assert.That(entities.GetComponent<ZLevelHighGroundComponent>(wall).SolidVolume, Is.True,
+                Assert.That(wallGround.SolidVolume, Is.True,
                     "the visual wall top must retain its solid volume");
-            });
-
-            var ramp = entities.SpawnEntity("ZLevelRampUp", new EntityCoordinates(lowerGrid, new Vector2(1.5f, 0.5f)));
-            var rampGround = entities.GetComponent<ZLevelHighGroundComponent>(ramp);
-            Assert.Multiple(() =>
-            {
-                Assert.That(rampGround.SolidVolume, Is.False,
-                    "content ramps must expose their continuous surface without creating a wall volume");
-                Assert.That(rampGround.HeightCurve, Is.EqualTo(new[] { 0.1f, 1.05f }));
+                Assert.That(wallGround.Height, Is.EqualTo(1.05f).Within(0.001f),
+                    "wall tops must expose one constant authored support height");
+                Assert.That(wallFixtures.Fixtures.ContainsKey(wallGround.SurfaceFixture), Is.True,
+                    "wall tops must use one explicit authored support fixture");
             });
 
             var feet = entities.SpawnEntity(null, new EntityCoordinates(upperGrid, localContact));
