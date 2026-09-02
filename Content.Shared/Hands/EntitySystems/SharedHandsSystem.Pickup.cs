@@ -98,9 +98,13 @@ public abstract partial class SharedHandsSystem
             var xform = Transform(uid);
             var itemXform = Transform(entity);
             var itemPos = TransformSystem.GetMapCoordinates(entity, xform: itemXform);
+            var userPos = TransformSystem.GetMapCoordinates(uid, xform: xform);
+            var sameRenderStack = itemXform.MapUid is { } itemMap &&
+                                  xform.MapUid is { } userMap &&
+                                  _zLevels.TryGetMapDepthOffset(itemMap, userMap, out _);
 
-            if (itemPos.MapId == xform.MapID
-                && (itemPos.Position - TransformSystem.GetMapCoordinates(uid, xform: xform).Position).Length() <= MaxAnimationRange
+            if ((itemPos.MapId == xform.MapID || sameRenderStack)
+                && (itemPos.Position - userPos.Position).Length() <= MaxAnimationRange
                 && MetaData(entity).VisibilityMask == MetaData(uid).VisibilityMask) // Don't animate aghost pickups.
             {
                 // Preserve the actual source parent so presentation can keep sampling a moving or rotating source

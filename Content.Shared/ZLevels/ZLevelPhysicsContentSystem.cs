@@ -1,6 +1,4 @@
 using Content.Shared.Throwing;
-using Robust.Shared.Audio;
-using Robust.Shared.Audio.Systems;
 using Robust.Shared.Map.Components;
 using Robust.Shared.Network;
 using Robust.Shared.Physics.Components;
@@ -13,12 +11,8 @@ namespace Content.Shared.ZLevels;
 /// </summary>
 public sealed partial class ZLevelPhysicsContentSystem : EntitySystem
 {
-    private static readonly SoundSpecifier ZLevelFallSound =
-        new SoundPathSpecifier("/Audio/Effects/falling.ogg");
-
     [Dependency] private ZLevelPhysicsSystem _zPhysics = default!;
     [Dependency] private ThrownItemSystem _thrown = default!;
-    [Dependency] private SharedAudioSystem _audio = default!;
     [Dependency] private INetManager _net = default!;
 
     [Dependency] private EntityQuery<PhysicsComponent> _physicsQuery = default!;
@@ -60,19 +54,6 @@ public sealed partial class ZLevelPhysicsContentSystem : EntitySystem
     }
 
     [SubscribeLocalEvent]
-    private void OnFallMap(Entity<ZLevelPhysicsComponent> entity, ref ZLevelFallMapEvent args)
-    {
-        if (_net.IsClient)
-            return;
-
-        // This event is raised by the authoritative solver exactly when a downward map plane is crossed. Generic
-        // DroppedEvent and same-level throw landing paths deliberately never reach this audio path.
-        _audio.PlayPvs(ZLevelFallSound, entity.Owner);
-        var played = new ZLevelFallSoundPlayedEvent();
-        RaiseLocalEvent(entity.Owner, ref played);
-    }
-
-    [SubscribeLocalEvent]
     private void OnLanding(Entity<ZLevelPhysicsComponent> entity, ref ZLevelLandingEvent args)
     {
         if (_net.IsClient || args.Surface != ZLevelImpactSurface.Floor)
@@ -92,9 +73,3 @@ public sealed partial class ZLevelPhysicsContentSystem : EntitySystem
         RaiseLocalEvent(entity.Owner, ref land);
     }
 }
-
-/// <summary>
-/// Raised with the authoritative downward crossing sound, primarily for deterministic regression coverage.
-/// </summary>
-[ByRefEvent]
-public struct ZLevelFallSoundPlayedEvent;

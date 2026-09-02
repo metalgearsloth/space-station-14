@@ -2,11 +2,13 @@
 using System.Numerics;
 using System.Reflection;
 using System.Linq;
+using Content.Client.Animations;
 using Content.IntegrationTests.Fixtures.Attributes;
 using Content.IntegrationTests.Tests.Helpers;
 using Content.IntegrationTests.Tests.Interaction;
 using Content.Shared.CCVar;
 using Content.Shared.Damage.Systems;
+using Content.Shared.Hands.EntitySystems;
 using Content.Shared.Maps;
 using Content.Shared.Interaction;
 using Content.Shared.Throwing;
@@ -28,7 +30,6 @@ namespace Content.IntegrationTests.Tests.ZLevels;
 public sealed class ZLevelPhysicsContentTest : InteractionTest
 {
     private sealed class LandListenerSystem : TestListenerSystem<LandEvent>;
-    private sealed class FallSoundListenerSystem : TestListenerSystem<ZLevelFallSoundPlayedEvent>;
     private sealed class InteractHandListenerSystem : TestListenerSystem<InteractHandEvent>;
 
     [SidedDependency(Side.Server)] private readonly ThrowingSystem _throwing = default!;
@@ -55,6 +56,117 @@ public sealed class ZLevelPhysicsContentTest : InteractionTest
         {
             var overlays = Client.ResolveDependency<IOverlayManager>();
             Assert.That(overlays.HasOverlay<Content.Client.ZLevels.ZLevelSurfaceOverlay>(), Is.False);
+        });
+    }
+
+    [Test]
+    public async Task PredictedHandPickupLerpsAcrossZLevels()
+    {
+        var maps = await CreateZStack(2);
+        NetEntity itemNet = default;
+
+        await Server.WaitPost(() =>
+        {
+            Transform.SetCoordinates(SPlayer, new EntityCoordinates(maps[1], new Vector2(0.5f)));
+            var playerPhysics = SEntMan.EnsureComponent<ZLevelPhysicsComponent>(SPlayer);
+            playerPhysics.VelocityGravity = false;
+            SEntMan.System<ZLevelPhysicsSystem>().SetZPosition((SPlayer, playerPhysics), 0f);
+            var item = SEntMan.SpawnEntity("Pen", MapData.GridCoords.Offset(new Vector2(0.5f, 0.5f)));
+            itemNet = SEntMan.GetNetEntity(item);
+        });
+        await RunUntilSynced();
+
+        await Client.WaitAssertion(() =>
+        {
+            var item = CEntMan.GetEntity(itemNet);
+            var hands = CEntMan.System<SharedHandsSystem>();
+            CEntMan.System<Robust.Client.GameObjects.TransformSystem>().SnapRenderPose(CPlayer);
+            Assert.That(hands.TryPickupAnyHand(
+                CPlayer,
+                item,
+                checkActionBlocker: false,
+                animate: true), Is.True);
+
+            var query = CEntMan.EntityQueryEnumerator<EntityPickupAnimationComponent, ZLevelPresentationComponent>();
+            Assert.That(query.MoveNext(out var clone, out var animation, out var presentation), Is.True,
+                "the live hand-pickup path must not discard a legal cross-z animation at its old same-map gate");
+
+            var pickup = CEntMan.System<EntityPickupAnimationSystem>();
+            pickup.UpdatePresentation(clone, animation!, presentation!, 0.5f);
+            var pose = CEntMan.System<Robust.Client.GameObjects.TransformSystem>().GetRenderWorldPose(clone);
+            Assert.Multiple(() =>
+            {
+                Assert.That(animation.StartAbsoluteZ, Is.EqualTo(0f).Within(0.001f));
+                Assert.That(pose.AbsoluteZ, Is.EqualTo(0.5f).Within(0.001f));
+                Assert.That(presentation.LocalHeight, Is.EqualTo(0.5f).Within(0.001f));
+            });
+        });
+    }
+
+    [Test]
+    public async Task PredictedMovementTracksConfirmedRampHeight()
+    {
+        await CreateZStack(2);
+        NetEntity rampNet = default;
+
+        await Server.WaitPost(() =>
+        {
+            var ramp = SEntMan.SpawnEntity(
+                "ZLevelRampUp",
+                new EntityCoordinates(MapData.Grid, new Vector2(0.5f)));
+            rampNet = SEntMan.GetNetEntity(ramp);
+            Transform.SetCoordinates(SPlayer, new EntityCoordinates(MapData.Grid, new Vector2(0.5f, 0.75f)));
+            SEntMan.System<SharedPhysicsSystem>().SetBodyType(SPlayer, BodyType.Dynamic);
+
+            var vertical = SEntMan.EnsureComponent<ZLevelPhysicsComponent>(SPlayer);
+            var zPhysics = SEntMan.System<ZLevelPhysicsSystem>();
+            zPhysics.SetZPosition((SPlayer, vertical), 0.3375f);
+            vertical.GroundState = ZLevelGroundState.Grounded;
+        });
+
+        // Anchored fixture insertion is deferred until the broadphase processes the spawn.
+        await Server.WaitRunTicks(1);
+        await Server.WaitPost(() =>
+        {
+            var ramp = SEntMan.GetEntity(rampNet);
+            var vertical = SEntMan.GetComponent<ZLevelPhysicsComponent>(SPlayer);
+            var zPhysics = SEntMan.System<ZLevelPhysicsSystem>();
+            Transform.SetCoordinates(SPlayer, new EntityCoordinates(MapData.Grid, new Vector2(0.5f, 0.75f)));
+            zPhysics.SetZPosition((SPlayer, vertical), 0.3375f);
+            vertical.GroundState = ZLevelGroundState.Grounded;
+            zPhysics.RefreshSupport((SPlayer, vertical));
+            zPhysics.RefreshSupport((SPlayer, vertical));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(vertical.SupportProvider, Is.EqualTo(ramp));
+                Assert.That(vertical.SupportHeight, Is.EqualTo(0.3375f).Within(0.001f));
+                Assert.That(vertical.ReconciliationState, Is.EqualTo(ZLevelReconciliationState.Confirmed));
+            });
+        });
+        await RunUntilSynced();
+
+        await Client.WaitAssertion(() =>
+        {
+            var ramp = CEntMan.GetEntity(rampNet);
+            var vertical = CEntMan.GetComponent<ZLevelPhysicsComponent>(CPlayer);
+            var presentation = CEntMan.GetComponent<ZLevelPresentationComponent>(CPlayer);
+            var transforms = CEntMan.System<Robust.Client.GameObjects.TransformSystem>();
+            var oldAuthoritativeHeight = vertical.SupportHeight;
+
+            Assert.That(vertical.SupportProvider, Is.EqualTo(ramp));
+            // InteractionTestMob's bare Physics component defaults to Static independently on each side.
+            CEntMan.System<SharedPhysicsSystem>().SetBodyType(CPlayer, BodyType.Dynamic);
+            transforms.SetWorldPosition(CPlayer, new Vector2(0.5f, 0.65f));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(presentation.LocalHeight, Is.EqualTo(0.4325f).Within(0.001f),
+                    "same-provider ramp height should follow predicted XY immediately");
+                Assert.That(vertical.SupportHeight, Is.EqualTo(oldAuthoritativeHeight).Within(0.001f),
+                    "prediction must not overwrite the replicated confirmed support state");
+                Assert.That(vertical.GroundState, Is.EqualTo(ZLevelGroundState.Grounded));
+            });
         });
     }
 
@@ -278,7 +390,6 @@ public sealed class ZLevelPhysicsContentTest : InteractionTest
             });
         });
         ClearEvents<LandEvent>(item);
-        ClearEvents<ZLevelFallSoundPlayedEvent>(item);
 
         await Pair.RunTicksSync(120);
         await Server.WaitAssertion(() =>
@@ -293,71 +404,9 @@ public sealed class ZLevelPhysicsContentTest : InteractionTest
             });
         });
         AssertEvent<LandEvent>(item, count: 1);
-        AssertEvent<ZLevelFallSoundPlayedEvent>(item, count: 5);
 
         await Pair.RunTicksSync(60);
         AssertEvent<LandEvent>(item, count: 1);
-        AssertEvent<ZLevelFallSoundPlayedEvent>(item, count: 5);
-    }
-
-    [Test]
-    public async Task OrdinaryHandDropDoesNotProduceZFallSound()
-    {
-        await CreateZStack(2);
-        EntityUid item = default;
-        await Server.WaitPost(() =>
-        {
-            item = SEntMan.SpawnEntity("Pen", MapData.GridCoords.Offset(new Vector2(0.5f, 0.5f)));
-            SEntMan.EnsureComponent<TestListenerComponent>(item);
-            Assert.That(HandSys.TryPickupAnyHand(SPlayer, item, checkActionBlocker: false, animate: false), Is.True);
-            ClearEvents<ZLevelFallSoundPlayedEvent>(item);
-            Assert.That(HandSys.TryDrop(
-                SPlayer,
-                MapData.GridCoords.Offset(new Vector2(0.25f, 0.25f)),
-                checkActionBlocker: false,
-                doDropInteraction: false), Is.True);
-        });
-
-        await Pair.RunTicksSync(5);
-        AssertEvent<ZLevelFallSoundPlayedEvent>(item, count: 0);
-    }
-
-    [Test]
-    public async Task SameLevelThrowDoesNotProduceZFallSound()
-    {
-        await CreateZStack(2);
-        EntityUid item = default;
-        await Server.WaitPost(() =>
-        {
-            item = SEntMan.SpawnEntity("Pen", MapData.GridCoords.Offset(new Vector2(0.5f, 0.5f)));
-            SEntMan.EnsureComponent<TestListenerComponent>(item);
-            var vertical = SEntMan.GetComponent<ZLevelPhysicsComponent>(item);
-            vertical.VelocityGravity = false;
-            Assert.That(_throwing.TryThrow(item, Vector2.UnitX, baseThrowSpeed: 1f, playSound: false), Is.True);
-        });
-
-        await Pair.RunTicksSync(30);
-        AssertEvent<ZLevelFallSoundPlayedEvent>(item, count: 0);
-    }
-
-    [Test]
-    public async Task OneDownwardCrossingProducesOneZFallSound()
-    {
-        var maps = await CreateZStack(2);
-        EntityUid item = default;
-        await Server.WaitPost(() =>
-        {
-            var position = Transform.ToMapCoordinates(MapData.GridCoords.Offset(new Vector2(0.5f, 0.5f))).Position;
-            var upperMapId = SEntMan.GetComponent<MapComponent>(maps[1]).MapId;
-            item = SEntMan.SpawnEntity("Pen", new MapCoordinates(position, upperMapId));
-            SEntMan.EnsureComponent<TestListenerComponent>(item);
-            ClearEvents<ZLevelFallSoundPlayedEvent>(item);
-        });
-
-        await Pair.RunTicksSync(60);
-        AssertEvent<ZLevelFallSoundPlayedEvent>(item, count: 1);
-        await Pair.RunTicksSync(30);
-        AssertEvent<ZLevelFallSoundPlayedEvent>(item, count: 1);
     }
 
     [Test]
