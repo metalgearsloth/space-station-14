@@ -5,6 +5,7 @@ using Content.Shared.Atmos;
 using Content.Shared.Atmos.Components;
 using Content.Shared.Atmos.EntitySystems;
 using Content.Shared.CCVar;
+using Robust.Client.GameObjects;
 using Robust.Client.Graphics;
 using Robust.Client.ResourceManagement;
 using Robust.Shared.Configuration;
@@ -34,7 +35,7 @@ public sealed partial class GasTileHeatBlurOverlay : Overlay
     [Dependency] private IResourceCache _resourceCache = default!;
 
     private readonly SharedMapSystem _maps;
-    private readonly SharedTransformSystem _xformSys;
+    private readonly TransformSystem _xformSys;
     private readonly ShaderInstance _shader;
 
     private readonly Texture _noiseTexture;
@@ -64,7 +65,7 @@ public sealed partial class GasTileHeatBlurOverlay : Overlay
     {
         IoCManager.InjectDependencies(this);
         _maps = _entManager.System<SharedMapSystem>();
-        _xformSys = _entManager.System<SharedTransformSystem>();
+        _xformSys = _entManager.System<TransformSystem>();
 
         _noiseTexture = _resourceCache.GetTexture("/Textures/Effects/HeatBlur/perlin_noise.png");
         _heatGradientTexture = _resourceCache.GetTexture("/Textures/Effects/HeatBlur/soft_circle.png");
@@ -133,7 +134,7 @@ public sealed partial class GasTileHeatBlurOverlay : Overlay
                     if (!overlayQuery.TryGetComponent(grid.Owner, out var comp))
                         continue;
 
-                    var gridEntToWorld = _xformSys.GetWorldMatrix(grid.Owner);
+                    var (gridEntToWorld, worldToGridLocal) = _xformSys.GetRenderWorldMatrixWithInv(grid.Owner);
                     var gridEntToViewportLocal = gridEntToWorld * worldToViewportLocal;
 
                     if (!Matrix3x2.Invert(gridEntToViewportLocal, out var viewportLocalToGridEnt))
@@ -153,7 +154,6 @@ public sealed partial class GasTileHeatBlurOverlay : Overlay
                     worldHandle.SetTransform(gridEntToViewportLocal);
 
                     // We only care about tiles that fit in these bounds
-                    var worldToGridLocal = _xformSys.GetInvWorldMatrix(grid.Owner);
                     var floatBounds = worldToGridLocal.TransformBox(worldBounds).Enlarged(grid.Comp.TileSize);
 
                     var localBounds = new Box2i(

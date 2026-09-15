@@ -140,3 +140,8 @@
   id: Sharpness
   kind: source
   path: "/Textures/Shaders/sharpness.swsl"
+
+- type: shader
+  id: ZLevelLowerLayer
+  kind: source
+  path: "/Textures/Shaders/zlevel_lower_layer.swsl"

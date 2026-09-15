@@ -270,9 +270,24 @@ namespace Content.Shared.Movement.Systems
             var oldMapId = args.OldMapId;
             var mapId = args.Transform.MapUid;
 
-            // If we change maps then reset eye rotation entirely.
+            // Keep input rotation stable between linked levels.
             if (oldMapId != mapId)
             {
+                if (oldMapId is { } oldMap &&
+                    mapId is { } newMap &&
+                    _zLevels.TryGetMapDepthOffset(oldMap, newMap, out _))
+                {
+                    if (!TryUpdateRelative(entity.Owner, entity.Comp, args.Transform))
+                    {
+                        entity.Comp.RelativeEntity = relative;
+                        Dirty(entity.Owner, entity.Comp);
+                    }
+
+                    entity.Comp.LerpTarget = TimeSpan.Zero;
+                    Dirty(entity.Owner, entity.Comp);
+                    return;
+                }
+
                 entity.Comp.RelativeEntity = relative;
                 entity.Comp.TargetRelativeRotation = Angle.Zero;
                 entity.Comp.RelativeRotation = Angle.Zero;

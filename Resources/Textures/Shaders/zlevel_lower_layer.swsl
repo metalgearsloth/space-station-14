@@ -1,0 +1,27 @@
+light_mode unshaded;
+blend_mode none;
+
+uniform sampler2D SCREEN_TEXTURE;
+uniform mediump float blur_radius;
+uniform mediump float darken_strength;
+uniform mediump vec3 blur_color;
+
+void fragment()
+{
+    highp vec2 texel = SCREEN_PIXEL_SIZE * blur_radius;
+    mediump vec4 color =
+        zTextureSpec(SCREEN_TEXTURE, UV + texel * vec2(-1.0, -1.0)) +
+        zTextureSpec(SCREEN_TEXTURE, UV + texel * vec2( 0.0, -1.0)) +
+        zTextureSpec(SCREEN_TEXTURE, UV + texel * vec2( 1.0, -1.0)) +
+        zTextureSpec(SCREEN_TEXTURE, UV + texel * vec2(-1.0,  0.0)) +
+        zTextureSpec(SCREEN_TEXTURE, UV) +
+        zTextureSpec(SCREEN_TEXTURE, UV + texel * vec2( 1.0,  0.0)) +
+        zTextureSpec(SCREEN_TEXTURE, UV + texel * vec2(-1.0,  1.0)) +
+        zTextureSpec(SCREEN_TEXTURE, UV + texel * vec2( 0.0,  1.0)) +
+        zTextureSpec(SCREEN_TEXTURE, UV + texel * vec2( 1.0,  1.0));
+
+    color *= 1.0 / 9.0;
+    color.rgb *= mix(vec3(1.0), blur_color, darken_strength);
+
+    COLOR = color;
+}

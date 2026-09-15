@@ -4,6 +4,7 @@ using System.Numerics;
 using Content.Client.Atmos.EntitySystems;
 using Content.Client.Resources;
 using Content.Shared.Atmos;
+using Robust.Client.GameObjects;
 using Robust.Client.Graphics;
 using Robust.Client.Input;
 using Robust.Client.ResourceManagement;
@@ -24,7 +25,7 @@ public sealed partial class AtmosDebugOverlay : Overlay
     [Dependency] private IInputManager _input = default!;
     [Dependency] private IUserInterfaceManager _ui = default!;
     [Dependency] private IResourceCache _cache = default!;
-    private readonly SharedTransformSystem _transform;
+    private readonly TransformSystem _transform;
     private readonly AtmosDebugOverlaySystem _system;
     private readonly SharedMapSystem _map;
     private readonly Font _font;
@@ -37,7 +38,7 @@ public sealed partial class AtmosDebugOverlay : Overlay
         IoCManager.InjectDependencies(this);
 
         _system = system;
-        _transform = _entManager.System<SharedTransformSystem>();
+        _transform = _entManager.System<TransformSystem>();
         _map = _entManager.System<SharedMapSystem>();
         _font = _cache.GetFont("/Fonts/NotoSans/NotoSans-Regular.ttf", 12);
     }
@@ -62,7 +63,7 @@ public sealed partial class AtmosDebugOverlay : Overlay
 
         foreach (var (grid, msg) in _grids)
         {
-            handle.SetTransform(_transform.GetWorldMatrix(grid));
+            handle.SetTransform(_transform.GetRenderWorldMatrix(grid.Owner));
             DrawData(msg, handle);
         }
 

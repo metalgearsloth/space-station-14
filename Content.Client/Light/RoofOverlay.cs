@@ -2,6 +2,7 @@ using System.Numerics;
 using Content.Shared.Light.Components;
 using Content.Shared.Light.EntitySystems;
 using Content.Shared.Maps;
+using Robust.Client.GameObjects;
 using Robust.Client.Graphics;
 using Robust.Shared.Enums;
 using Robust.Shared.Map;
@@ -19,7 +20,7 @@ public sealed partial class RoofOverlay : Overlay
     private readonly EntityLookupSystem _lookup;
     private readonly SharedMapSystem _mapSystem;
     private readonly SharedRoofSystem _roof = default!;
-    private readonly SharedTransformSystem _xformSystem;
+    private readonly TransformSystem _xformSystem;
     private readonly TurfSystem _turf;
 
     private List<Entity<MapGridComponent>> _grids = new();
@@ -36,7 +37,7 @@ public sealed partial class RoofOverlay : Overlay
         _lookup = _entManager.System<EntityLookupSystem>();
         _mapSystem = _entManager.System<SharedMapSystem>();
         _roof = _entManager.System<SharedRoofSystem>();
-        _xformSystem = _entManager.System<SharedTransformSystem>();
+        _xformSystem = _entManager.System<TransformSystem>();
         _turf = _entManager.System<TurfSystem>();
 
         ZIndex = ContentZIndex;
@@ -73,7 +74,7 @@ public sealed partial class RoofOverlay : Overlay
                     if (!_entManager.TryGetComponent(grid.Owner, out ImplicitRoofComponent? roof))
                         continue;
 
-                    var gridMatrix = _xformSystem.GetWorldMatrix(grid.Owner);
+                    var gridMatrix = _xformSystem.GetRenderWorldMatrix(grid.Owner);
                     var matty = Matrix3x2.Multiply(gridMatrix, invMatrix);
 
                     worldHandle.SetTransform(matty);
@@ -106,7 +107,7 @@ public sealed partial class RoofOverlay : Overlay
                     if (!_entManager.TryGetComponent(grid.Owner, out RoofComponent? roof))
                         continue;
 
-                    var gridMatrix = _xformSystem.GetWorldMatrix(grid.Owner);
+                    var gridMatrix = _xformSystem.GetRenderWorldMatrix(grid.Owner);
                     var matty = Matrix3x2.Multiply(gridMatrix, invMatrix);
 
                     worldHandle.SetTransform(matty);

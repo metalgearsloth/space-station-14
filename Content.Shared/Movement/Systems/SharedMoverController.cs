@@ -47,6 +47,7 @@ public abstract partial class SharedMoverController : VirtualController
     [Dependency] private SharedGravitySystem _gravity = default!;
     [Dependency] private SharedTransformSystem _transform = default!;
     [Dependency] private TagSystem _tags = default!;
+    [Dependency] private ZLevelSystem _zLevels = default!;
 
     [Dependency] protected EntityQuery<CanMoveInAirComponent> CanMoveInAirQuery = default!;
     [Dependency] protected EntityQuery<FootstepModifierComponent> FootstepModifierQuery = default!;
@@ -59,6 +60,7 @@ public abstract partial class SharedMoverController : VirtualController
     [Dependency] protected EntityQuery<MovementSpeedModifierComponent> ModifierQuery = default!;
     [Dependency] protected EntityQuery<NoRotateOnMoveComponent> NoRotateQuery = default!;
     [Dependency] protected EntityQuery<PhysicsComponent> PhysicsQuery = default!;
+    [Dependency] protected EntityQuery<ZLevelPhysicsComponent> ZLevelPhysicsQuery = default!;
     [Dependency] protected EntityQuery<PilotComponent> PilotQuery = default!;
     [Dependency] protected EntityQuery<PreventPilotComponent> PreventPilotQuery = default!;
     [Dependency] protected EntityQuery<RelayInputMoverComponent> RelayQuery = default!;
@@ -220,6 +222,7 @@ public abstract partial class SharedMoverController : VirtualController
                 UsedMobMovement[uid] = false;
                 return;
             }
+
             inAirHelpless = true;
         }
 
@@ -469,6 +472,13 @@ public abstract partial class SharedMoverController : VirtualController
     private bool IsAroundCollider(Entity<PhysicsComponent, MobMoverComponent, TransformComponent> entity)
     {
         var (uid, collider, mover, transform) = entity;
+        if (ZLevelPhysicsQuery.TryComp(uid, out var zPhysics) &&
+            zPhysics.GroundState == ZLevelGroundState.Grounded &&
+            zPhysics.SupportSurface == ZLevelSupportSurface.HighGround)
+        {
+            return true;
+        }
+
         var enlargedAABB = _lookup.GetWorldAABB(entity.Owner, transform).Enlarged(mover.GrabRange);
 
         _aroundColliderSet.Clear();

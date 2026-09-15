@@ -6,6 +6,7 @@ using Robust.Client.Animations;
 using Robust.Client.GameObjects;
 using Robust.Shared.Animations;
 using Robust.Shared.Map;
+using Robust.Shared.Map.Components;
 
 namespace Content.Client.Weapons.Melee;
 
@@ -242,7 +243,8 @@ public sealed partial class MeleeWeaponSystem
             if (arcComponent.User == null || EntityManager.Deleted(arcComponent.User))
                 continue;
 
-            var targetPos = TransformSystem.GetWorldPosition(arcComponent.User.Value);
+            var userPose = _renderTransforms.GetRenderWorldTransform(arcComponent.User.Value);
+            var targetPos = userPose.CanonicalPosition;
 
             if (arcComponent.Offset != Vector2.Zero)
             {
@@ -251,6 +253,10 @@ public sealed partial class MeleeWeaponSystem
             }
 
             TransformSystem.SetWorldPosition(uid, targetPos);
+            var effectPose = _renderTransforms.GetRenderWorldTransform(uid, xform);
+            var position = EnsureComp<ZLevelPositionComponent>(uid);
+            _zPosition.SetLocalHeight((uid, position), userPose.AbsoluteZ - effectPose.ReferenceDepth);
+            _renderTransforms.SnapRenderTransform(uid);
         }
     }
 }

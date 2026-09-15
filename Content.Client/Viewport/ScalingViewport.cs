@@ -49,6 +49,11 @@ namespace Content.Client.Viewport
         public int CurrentRenderScale => _curRenderScale;
 
         /// <summary>
+        /// Z-level maps drawn by this viewport.
+        /// </summary>
+        public IReadOnlySet<EntityUid>? VisibleZMaps => _viewport?.VisibleZMaps;
+
+        /// <summary>
         ///     The eye to render.
         /// </summary>
         public IEye? Eye

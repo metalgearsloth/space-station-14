@@ -1,5 +1,6 @@
 using System.Numerics;
 using Content.Shared.Examine;
+using Robust.Client.GameObjects;
 using Robust.Client.Graphics;
 using Robust.Client.Player;
 using Robust.Client.UserInterface;
@@ -19,30 +20,27 @@ public sealed class PopupOverlay : Overlay
     private static readonly ProtoId<ShaderPrototype> UnshadedShader = "unshaded";
 
     private readonly IConfigurationManager _configManager;
-    private readonly IEntityManager _entManager;
     private readonly IPlayerManager _playerMgr;
     private readonly IUserInterfaceManager _uiManager;
     private readonly PopupSystem _popup;
     private readonly PopupUIController _controller;
     private readonly ExamineSystemShared _examine;
-    private readonly SharedTransformSystem _transform;
+    private readonly TransformSystem _transform;
     private readonly ShaderInstance _shader;
 
     public override OverlaySpace Space => OverlaySpace.ScreenSpace;
 
     public PopupOverlay(
         IConfigurationManager configManager,
-        IEntityManager entManager,
         IPlayerManager playerMgr,
         IPrototypeManager protoManager,
         IUserInterfaceManager uiManager,
         PopupUIController controller,
         ExamineSystemShared examine,
-        SharedTransformSystem transform,
+        TransformSystem transform,
         PopupSystem popup)
     {
         _configManager = configManager;
-        _entManager = entManager;
         _playerMgr = playerMgr;
         _uiManager = uiManager;
         _examine = examine;
@@ -81,13 +79,17 @@ public sealed class PopupOverlay : Overlay
         var ourPos = args.WorldBounds.Center;
         if (ourEntity != null)
         {
-            viewPos = _transform.GetMapCoordinates(ourEntity.Value);
+            viewPos = _transform.GetRenderMapCoordinates(ourEntity.Value);
             ourPos = viewPos.Position;
         }
 
         foreach (var popup in _popup.WorldLabels)
         {
-            var mapPos = _transform.ToMapCoordinates(popup.InitialPos);
+            var parentPose = _transform.GetRenderWorldTransform(popup.InitialPos.EntityId);
+            var parentPos = _transform.GetRenderMapCoordinates(parentPose);
+            var mapPos = new MapCoordinates(
+                parentPos.Position + parentPose.Rotation.RotateVec(popup.InitialPos.Position),
+                parentPos.MapId);
 
             if (mapPos.MapId != args.MapId)
                 continue;

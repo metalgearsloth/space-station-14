@@ -37,9 +37,7 @@ public sealed partial class BiomeDebugOverlay : Overlay
 
     protected override bool BeforeDraw(in OverlayDrawArgs args)
     {
-        var mapUid = _maps.GetMapOrInvalid(args.MapId);
-
-        return _entManager.HasComponent<BiomeComponent>(mapUid);
+        return _entManager.HasComponent<BiomeComponent>(args.MapUid);
     }
 
     protected override void Draw(in OverlayDrawArgs args)
@@ -50,7 +48,7 @@ public sealed partial class BiomeDebugOverlay : Overlay
         if (mousePos.MapId == MapId.Nullspace || mousePos.MapId != args.MapId)
             return;
 
-        var mapUid = _maps.GetMapOrInvalid(args.MapId);
+        var mapUid = args.MapUid;
 
         if (!_entManager.TryGetComponent(mapUid, out BiomeComponent? biomeComp) || !_entManager.TryGetComponent(mapUid, out MapGridComponent? grid))
             return;

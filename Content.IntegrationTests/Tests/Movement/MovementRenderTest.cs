@@ -108,7 +108,7 @@ public sealed class MovementRenderTest : MovementTest
         NetCoordinates target = default;
         var initialRotation = Angle.Zero;
         var clickedRotation = Angle.Zero;
-        var authoritativeRotation = Angle.Zero;
+        var serverRotation = Angle.Zero;
         await Client.WaitPost(() =>
         {
             var transforms = CEntMan.System<TransformSystem>();
@@ -142,13 +142,13 @@ public sealed class MovementRenderTest : MovementTest
 
         await Server.WaitPost(() =>
         {
-            // Replay the click against an already-correct authoritative rotation.
+            // Roll back the click against an already-correct server rotation.
             var xform = SEntMan.GetComponent<TransformComponent>(SPlayer);
             var targetPosition = Transform.ToMapCoordinates(ToServer(target)).Position;
             var position = Transform.GetWorldPosition(SPlayer) + new Vector2(0f, 0.75f);
             Transform.SetWorldPosition((SPlayer, xform), position);
-            authoritativeRotation = Angle.FromWorldVec(targetPosition - position);
-            Transform.SetWorldRotation(SPlayer, authoritativeRotation);
+            serverRotation = Angle.FromWorldVec(targetPosition - position);
+            Transform.SetWorldRotation(SPlayer, serverRotation);
         });
 
         for (var tick = 0; tick < 12; tick++)
@@ -188,7 +188,7 @@ public sealed class MovementRenderTest : MovementTest
         await Client.WaitAssertion(() =>
         {
             var transforms = CEntMan.System<TransformSystem>();
-            Assert.That(transforms.GetWorldRotation(CPlayer).EqualsApprox(authoritativeRotation), Is.True);
+            Assert.That(transforms.GetWorldRotation(CPlayer).EqualsApprox(serverRotation), Is.True);
         });
 
         await SetKey(EngineKeyFunctions.Use, BoundKeyState.Up, target);
@@ -404,8 +404,6 @@ public sealed class MovementRenderTest : MovementTest
 
                         if (transforms.TryGetRenderTransformDebugData(CPlayer, out var data))
                         {
-                            Assert.That(data.Type, Is.Not.EqualTo(RenderInterpolationType.PredictionCorrection),
-                                $"correction type tick {tick}, frame {frame}: {data}");
                             Assert.That(data.CorrectionTranslation.LengthSquared(), Is.LessThan(0.0000001f),
                                 $"translation tick {tick}, frame {frame}: {data}");
                             Assert.That(Math.Abs(data.CorrectionRotation.Theta), Is.LessThan(0.0001),

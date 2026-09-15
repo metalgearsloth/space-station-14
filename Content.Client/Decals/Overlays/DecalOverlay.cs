@@ -52,8 +52,11 @@ namespace Content.Client.Decals.Overlays
             var handle = args.WorldHandle;
             var xformSystem = _entManager.System<TransformSystem>();
             var eyeAngle = args.Viewport.Eye?.Rotation ?? Angle.Zero;
+            var pose = xformSystem.GetRenderWorldTransform((owner, xform));
+            var worldRot = pose.Rotation;
+            var (worldMatrix, invWorldMatrix) = TransformSystem.GetRenderWorldMatrixWithInv(in pose);
 
-            var gridAABB = xformSystem.GetInvWorldMatrix(xform).TransformBox(args.WorldBounds.Enlarged(1f));
+            var gridAABB = invWorldMatrix.TransformBox(args.WorldBounds.Enlarged(1f));
             _decals.Clear();
 
             foreach (var chunkEnt in _chunkEntities.GetChunksIntersecting(owner, gridAABB))
@@ -83,7 +86,6 @@ namespace Content.Client.Decals.Overlays
                 return CompareDecalIndex(x.Index, y.Index);
             });
 
-            var (_, worldRot, worldMatrix) = xformSystem.GetWorldPositionRotationMatrix(xform);
             handle.SetTransform(worldMatrix);
 
             foreach (var (_, decal) in _decals)

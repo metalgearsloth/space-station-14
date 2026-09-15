@@ -36,6 +36,8 @@
   - type: ContentEye
   - type: CameraRecoil
   - type: MindContainer
+  - type: ZLevelPosition
+  - type: ZLevelPhysics
   - type: RequireProjectileTarget
     active: False
 

@@ -17,32 +17,38 @@ namespace Content.Shared.Throwing
         /// <summary>
         ///     The entity that threw this entity.
         /// </summary>
-        [DataField, ViewVariables(VVAccess.ReadWrite), AutoNetworkedField]
+        [DataField, AutoNetworkedField]
         public EntityUid? Thrower;
 
         /// <summary>
         ///     The <see cref="IGameTiming.CurTime"/> timestamp at which this entity was thrown.
         /// </summary>
-        [DataField, ViewVariables(VVAccess.ReadWrite), AutoNetworkedField]
+        [DataField, AutoNetworkedField]
         public TimeSpan? ThrownTime;
 
         /// <summary>
         ///     Compared to <see cref="IGameTiming.CurTime"/> to land this entity, if any.
         /// </summary>
-        [DataField, ViewVariables(VVAccess.ReadWrite), AutoNetworkedField]
+        [DataField, AutoNetworkedField]
         [AutoPausedField]
         public TimeSpan? LandTime;
 
         /// <summary>
         ///     Whether or not this entity was already landed.
         /// </summary>
-        [DataField, ViewVariables(VVAccess.ReadWrite), AutoNetworkedField]
+        [DataField, AutoNetworkedField]
         public bool Landed;
+
+        /// <summary>
+        /// Whether z-level physics controls this throw's landing.
+        /// </summary>
+        [DataField, AutoNetworkedField]
+        public bool VerticalPhysics;
 
         /// <summary>
         ///     Whether or not to play a sound when the entity lands.
         /// </summary>
-        [DataField, ViewVariables(VVAccess.ReadWrite), AutoNetworkedField]
+        [DataField, AutoNetworkedField]
         public bool PlayLandSound;
 
         /// <summary>

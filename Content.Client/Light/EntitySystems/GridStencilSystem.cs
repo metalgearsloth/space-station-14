@@ -2,6 +2,7 @@ using System.Numerics;
 using System.Runtime.InteropServices;
 using Content.Client.Graphics;
 using Content.Shared.Maps;
+using Robust.Client.GameObjects;
 using Robust.Client.Graphics;
 using Robust.Shared.Enums;
 using Robust.Shared.Map;
@@ -21,7 +22,7 @@ public sealed partial class GridStencilSystem : EntitySystem
     [Dependency] private IGameTiming _timing = default!;
     [Dependency] private EntityLookupSystem _lookup = default!;
     [Dependency] private SharedMapSystem _map = default!;
-    [Dependency] private SharedTransformSystem _xform = default!;
+    [Dependency] private TransformSystem _xform = default!;
     [Dependency] private TurfSystem _turf = default!;
 
     private readonly OverlayResourceCache<CachedResources> _resources = new();
@@ -84,7 +85,7 @@ public sealed partial class GridStencilSystem : EntitySystem
 
                 foreach (var grid in _grids)
                 {
-                    var worldToTextureMatrix = Matrix3x2.Multiply(_xform.GetWorldMatrix(grid.Owner), invMatrix);
+                    var worldToTextureMatrix = Matrix3x2.Multiply(_xform.GetRenderWorldMatrix(grid.Owner), invMatrix);
                     var tiles = _map.GetTilesIntersecting(grid.Owner, grid, worldBounds);
                     worldHandle.SetTransform(worldToTextureMatrix);
                     _rects.Clear();
@@ -153,7 +154,7 @@ public sealed partial class GridStencilSystem : EntitySystem
 
                 foreach (var grid in _grids)
                 {
-                    var transform = _xform.GetWorldMatrix(grid.Owner);
+                    var transform = _xform.GetRenderWorldMatrix(grid.Owner);
                     var worldToTextureMatrix = Matrix3x2.Multiply(transform, invMatrix);
                     var tiles = _map.GetTilesIntersecting(grid.Owner, grid, worldBounds);
                     worldHandle.SetTransform(worldToTextureMatrix);

@@ -13,7 +13,7 @@ namespace Content.Client.Clickable;
 public sealed partial class ClickableSystem : EntitySystem
 {
     [Dependency] private IClickMapManager _clickMapManager = default!;
-    [Dependency] private SharedTransformSystem _transforms = default!;
+    [Dependency] private TransformSystem _transforms = default!;
     [Dependency] private SpriteSystem _sprites = default!;
 
     [Dependency] private EntityQuery<ClickableComponent> _clickableQuery = default!;
@@ -30,6 +30,20 @@ public sealed partial class ClickableSystem : EntitySystem
     /// </param>
     /// <returns>True if the click worked, false otherwise.</returns>
     public bool CheckClick(Entity<ClickableComponent?, SpriteComponent, TransformComponent?, FadingSpriteComponent?> entity, Vector2 worldPos, IEye eye, bool excludeFaded, out int drawDepth, out uint renderOrder, out float bottom)
+        => CheckClick(entity, worldPos, eye, null, excludeFaded, out drawDepth, out renderOrder, out bottom);
+
+    /// <summary>
+    /// Checks a sprite using its transform in <paramref name="viewedMap"/>.
+    /// </summary>
+    public bool CheckClick(
+        Entity<ClickableComponent?, SpriteComponent, TransformComponent?, FadingSpriteComponent?> entity,
+        Vector2 worldPos,
+        IEye eye,
+        EntityUid? viewedMap,
+        bool excludeFaded,
+        out int drawDepth,
+        out uint renderOrder,
+        out float bottom)
     {
         if (!_clickableQuery.Resolve(entity.Owner, ref entity.Comp1, false))
         {
@@ -68,7 +82,24 @@ public sealed partial class ClickableSystem : EntitySystem
 
         drawDepth = sprite.DrawDepth;
         renderOrder = sprite.RenderOrder;
-        var (spritePos, spriteRot) = _transforms.GetWorldPositionRotation(transform);
+        RenderTransform pose;
+        if (viewedMap is { } map)
+        {
+            if (!_transforms.TryGetRenderWorldTransformForLayer(entity.Owner, map, out pose, transform))
+            {
+                drawDepth = default;
+                renderOrder = default;
+                bottom = default;
+                return false;
+            }
+        }
+        else
+        {
+            pose = _transforms.GetRenderWorldTransform(entity.Owner, transform);
+        }
+
+        var spritePos = pose.Position;
+        var spriteRot = pose.Rotation;
         var spriteBB = _sprites.CalculateBounds((entity.Owner, sprite), spritePos, spriteRot, eye.Rotation);
         bottom = Matrix3Helpers.CreateRotation(eye.Rotation).TransformBox(spriteBB).Bottom;
 

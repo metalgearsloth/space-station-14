@@ -3,6 +3,7 @@ using Content.Client.Chat.Managers;
 using Content.Shared.CCVar;
 using Content.Shared.Chat;
 using Content.Shared.Speech;
+using Robust.Client.GameObjects;
 using Robust.Client.Graphics;
 using Robust.Client.GameObjects;
 using Robust.Client.UserInterface;

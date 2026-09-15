@@ -10,7 +10,7 @@ public sealed partial class NoirOverlay : Overlay
 
     [Dependency] private IPrototypeManager _prototypeManager = default!;
 
-    public override OverlaySpace Space => OverlaySpace.WorldSpace;
+    public override OverlaySpace Space => OverlaySpace.PostZLevel;
     public override bool RequestScreenTexture => true;
     private readonly ShaderInstance _noirShader;
 

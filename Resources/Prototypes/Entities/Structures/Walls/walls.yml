@@ -24,6 +24,8 @@
           MetalLaserImpact
   - type: Wall
   - type: IsRoof
+  - type: ZLevelHighGround
+    surfaceFixture: fix1
   - type: Sprite
     drawdepth: Walls
   - type: Icon

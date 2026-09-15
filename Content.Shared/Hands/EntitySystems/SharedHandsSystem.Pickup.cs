@@ -194,6 +194,9 @@ public abstract partial class SharedHandsSystem
         if (!Resolve(entity, ref item, false))
             return false;
 
+        if (Transform(uid).MapID != Transform(entity).MapID)
+            return false;
+
         if (TryComp(entity, out PhysicsComponent? physics) && physics.BodyType == BodyType.Static)
             return false;
 

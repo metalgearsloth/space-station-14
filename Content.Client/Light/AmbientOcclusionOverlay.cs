@@ -4,6 +4,7 @@ using Content.Client.Graphics;
 using Content.Client.Light.EntitySystems;
 using Content.Shared.CCVar;
 using Content.Shared.Light.Components;
+using Robust.Client.GameObjects;
 using Robust.Shared.ComponentTrees;
 using Robust.Client.Graphics;
 using Robust.Shared.Configuration;
@@ -37,7 +38,7 @@ public sealed partial class AmbientOcclusionOverlay : Overlay
     private readonly OverlayResourceCache<CachedResources> _resources = new ();
     private readonly OccluderSystem _occluders;
     private readonly GridStencilSystem _gridStencil;
-    private readonly SharedTransformSystem _xformSystem;
+    private readonly TransformSystem _xformSystem;
 
     private Color _color;
 
@@ -48,7 +49,7 @@ public sealed partial class AmbientOcclusionOverlay : Overlay
 
         _occluders = _entManager.System<OccluderSystem>();
         _gridStencil = _entManager.System<GridStencilSystem>();
-        _xformSystem = _entManager.System<SharedTransformSystem>();
+        _xformSystem = _entManager.System<TransformSystem>();
 
         _cfgManager.OnValueChanged(CCVars.AmbientOcclusionColor, OnColorChanged, true);
     }
@@ -183,14 +184,16 @@ public sealed partial class AmbientOcclusionOverlay : Overlay
             {
                 state.TreeUid = entry.Transform.ParentUid;
                 state.TreeToTargetMatrix = Matrix3x2.Multiply(
-                    _xformSystem.GetWorldMatrix(entry.Transform.ParentUid),
+                    _xformSystem.GetRenderWorldMatrix(entry.Transform.ParentUid),
                     state.WorldToTargetMatrix);
             }
 
             return Matrix3x2.Multiply(entry.Transform.LocalMatrix, state.TreeToTargetMatrix);
         }
 
-        return Matrix3x2.Multiply(_xformSystem.GetWorldMatrix(entry.Transform), state.WorldToTargetMatrix);
+        return Matrix3x2.Multiply(
+            _xformSystem.GetRenderWorldMatrix((entry.Uid, entry.Transform)),
+            state.WorldToTargetMatrix);
     }
 
     private void AppendAmbientOcclusionPolygon(

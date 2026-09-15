@@ -49,9 +49,15 @@ public sealed partial class GunSystem : SharedGunSystem
     [Dependency] private MobStateSystem _mobState = default!;
     [Dependency] private SharedCameraRecoilSystem _recoil = default!;
     [Dependency] private SharedMapSystem _maps = default!;
-    [Dependency] private SharedTransformSystem _xform = default!;
+    [Dependency] private TransformSystem _xform = default!;
     [Dependency] private SpriteSystem _sprite = default!;
     [Dependency] private SpriteTreeSystem _spriteTree = default!;
+
+    [Dependency] private EntityQuery<CombatModeComponent> _combatQuery = default!;
+    [Dependency] private EntityQuery<MapGridComponent> _gridQuery = default!;
+    [Dependency] private EntityQuery<PointLightComponent> _pointLightQuery = default!;
+    [Dependency] private EntityQuery<TimedDespawnComponent> _timedDespawnQuery = default!;
+    [Dependency] private EntityQuery<TransformComponent> _xformQuery = default!;
 
     public static readonly EntProtoId HitscanProto = "HitscanEffect";
     private GunTargetEntityComparer _comparer = default!;
@@ -75,7 +81,7 @@ public sealed partial class GunSystem : SharedGunSystem
                     _inputManager,
                     _player,
                     this,
-                    TransformSystem));
+                    _xform));
             }
             else
             {
@@ -127,7 +133,7 @@ public sealed partial class GunSystem : SharedGunSystem
 
             var coords = GetCoordinates(a.coordinates);
 
-            if (!TryComp(coords.EntityId, out TransformComponent? relativeXform))
+            if (!_xformQuery.TryComp(coords.EntityId, out var relativeXform))
                 continue;
 
             var ent = Spawn(HitscanProto, coords);
@@ -136,7 +142,7 @@ public sealed partial class GunSystem : SharedGunSystem
             var xform = Transform(ent);
             var targetWorldRot = a.angle + _xform.GetWorldRotation(relativeXform);
             var delta = targetWorldRot - _xform.GetWorldRotation(xform);
-            _xform.SetLocalRotationNoLerp(ent, xform.LocalRotation + delta, xform);
+            _xform.SetLocalRotation(ent, xform.LocalRotation + delta, xform);
 
             sprite[EffectLayers.Unshaded].AutoAnimated = false;
             _sprite.LayerSetSprite((ent, sprite), EffectLayers.Unshaded, rsi);
@@ -173,7 +179,7 @@ public sealed partial class GunSystem : SharedGunSystem
 
         var entityNull = _player.LocalEntity;
 
-        if (entityNull == null || !TryComp<CombatModeComponent>(entityNull, out var combat) || !combat.IsInCombatMode)
+        if (entityNull == null || !_combatQuery.TryComp(entityNull, out var combat) || !combat.IsInCombatMode)
         {
             return;
         }
@@ -313,7 +319,7 @@ public sealed partial class GunSystem : SharedGunSystem
         var gridUid = gunXform.GridUid;
         EntityCoordinates coordinates;
 
-        if (TryComp(gridUid, out MapGridComponent? mapGrid))
+        if (_gridQuery.TryComp(gridUid, out var mapGrid))
         {
             coordinates = new EntityCoordinates(gridUid.Value, _maps.LocalToGrid(gridUid.Value, mapGrid, gunXform.Coordinates));
         }
@@ -327,7 +333,7 @@ public sealed partial class GunSystem : SharedGunSystem
         }
 
         var ent = Spawn(message.Prototype, coordinates);
-        TransformSystem.SetWorldRotationNoLerp(ent, message.Angle);
+        _xform.SetWorldRotation(ent, message.Angle);
 
         if (tracked != null)
         {
@@ -338,7 +344,7 @@ public sealed partial class GunSystem : SharedGunSystem
 
         var lifetime = 0.4f;
 
-        if (TryComp<TimedDespawnComponent>(gunUid, out var despawn))
+        if (_timedDespawnQuery.TryComp(gunUid, out var despawn))
         {
             lifetime = despawn.Lifetime;
         }
@@ -363,7 +369,7 @@ public sealed partial class GunSystem : SharedGunSystem
         };
 
         _animPlayer.Play(ent, anim, "muzzle-flash");
-        if (!TryComp(gunUid, out PointLightComponent? light))
+        if (!_pointLightQuery.TryComp(gunUid, out var light))
         {
             light = Factory.GetComponent<PointLightComponent>();
             light.NetSyncEnabled = false;

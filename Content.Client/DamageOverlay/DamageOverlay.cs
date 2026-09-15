@@ -21,7 +21,7 @@ public sealed partial class DamageOverlay : Overlay
     [Dependency] private IEntityManager _entityManager = default!;
     [Dependency] private IPlayerManager _playerManager = default!;
 
-    public override OverlaySpace Space => OverlaySpace.WorldSpace;
+    public override OverlaySpace Space => OverlaySpace.PostZLevel;
 
     private readonly ShaderInstance _critShader;
     private readonly ShaderInstance _oxygenShader;

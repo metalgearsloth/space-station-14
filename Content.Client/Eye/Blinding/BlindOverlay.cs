@@ -21,7 +21,7 @@ namespace Content.Client.Eye.Blinding
         [Dependency] private ILightManager _lightManager = default!;
 
         public override bool RequestScreenTexture => true;
-        public override OverlaySpace Space => OverlaySpace.WorldSpace;
+        public override OverlaySpace Space => OverlaySpace.PostZLevel;
         private readonly ShaderInstance _greyscaleShader;
         private readonly ShaderInstance _circleMaskShader;
 

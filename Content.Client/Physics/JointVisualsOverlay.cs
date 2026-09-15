@@ -25,20 +25,19 @@ public sealed class JointVisualsOverlay : Overlay
         var worldHandle = args.WorldHandle;
 
         var spriteSystem = _entManager.System<SpriteSystem>();
-        var xformSystem = _entManager.System<SharedTransformSystem>();
+        var xformSystem = _entManager.System<TransformSystem>();
         var joints = _entManager.EntityQueryEnumerator<JointVisualsComponent, TransformComponent>();
         var xformQuery = _entManager.GetEntityQuery<TransformComponent>();
 
         args.DrawingHandle.SetTransform(Matrix3x2.Identity);
 
-        while (joints.MoveNext(out var visuals, out var xform))
+        while (joints.MoveNext(out var uid, out var visuals, out var xform))
         {
             if (xform.MapID != args.MapId)
                 continue;
 
-            var other = visuals.Target;
-
-            if (!xformQuery.TryGetComponent(other, out var otherXform))
+            if (visuals.Target is not { } other ||
+                !xformQuery.TryGetComponent(other, out var otherXform))
                 continue;
 
             if (xform.MapID != otherXform.MapID)
@@ -47,17 +46,10 @@ public sealed class JointVisualsOverlay : Overlay
             var texture = spriteSystem.Frame0(visuals.Sprite);
             var width = texture.Width / (float)EyeManager.PixelsPerMeter;
 
-            var coordsA = xform.Coordinates;
-            var coordsB = otherXform.Coordinates;
-
-            var rotA = xform.LocalRotation;
-            var rotB = otherXform.LocalRotation;
-
-            coordsA = coordsA.Offset(rotA.RotateVec(visuals.OffsetA));
-            coordsB = coordsB.Offset(rotB.RotateVec(visuals.OffsetB));
-
-            var posA = xformSystem.ToMapCoordinates(coordsA).Position;
-            var posB = xformSystem.ToMapCoordinates(coordsB).Position;
+            var poseA = xformSystem.GetRenderWorldTransform((uid, xform));
+            var poseB = xformSystem.GetRenderWorldTransform((other, otherXform));
+            var posA = poseA.Position + poseA.Rotation.RotateVec(visuals.OffsetA);
+            var posB = poseB.Position + poseB.Rotation.RotateVec(visuals.OffsetB);
             var diff = posB - posA;
             var length = diff.Length();
 

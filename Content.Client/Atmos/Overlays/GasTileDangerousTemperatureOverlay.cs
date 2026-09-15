@@ -3,6 +3,7 @@ using Content.Client.Graphics;
 using Content.Shared.Atmos;
 using Content.Shared.Atmos.Components;
 using Content.Shared.Atmos.EntitySystems;
+using Robust.Client.GameObjects;
 using Robust.Client.Graphics;
 using Robust.Shared.Enums;
 using Robust.Shared.Map;
@@ -23,7 +24,7 @@ public sealed partial class GasTileDangerousTemperatureOverlay : Overlay
 
     private GasTileOverlaySystem? _gasTileOverlay;
     private readonly SharedMapSystem _mapSys;
-    private readonly SharedTransformSystem _xformSys;
+    private readonly TransformSystem _xformSys;
     private EntityQuery<GasTileOverlayComponent> _overlayQuery;
 
     private readonly OverlayResourceCache<CachedResources> _resources = new();
@@ -38,7 +39,7 @@ public sealed partial class GasTileDangerousTemperatureOverlay : Overlay
     {
         IoCManager.InjectDependencies(this);
         _mapSys = _entManager.System<SharedMapSystem>();
-        _xformSys = _entManager.System<SharedTransformSystem>();
+        _xformSys = _entManager.System<TransformSystem>();
 
         _overlayQuery = _entManager.GetEntityQuery<GasTileOverlayComponent>();
 
@@ -184,12 +185,11 @@ public sealed partial class GasTileDangerousTemperatureOverlay : Overlay
 
                     var gridTileSizeVec = grid.Comp.TileSizeVector;
                     var gridTileCenterVec = grid.Comp.TileSizeHalfVector;
-                    var gridEntToWorld = _xformSys.GetWorldMatrix(grid.Owner);
+                    var (gridEntToWorld, worldToGridLocal) = _xformSys.GetRenderWorldMatrixWithInv(grid.Owner);
                     var gridEntToViewportLocal = gridEntToWorld * worldToViewportLocal;
 
                     drawHandle.SetTransform(gridEntToViewportLocal);
 
-                    var worldToGridLocal = _xformSys.GetInvWorldMatrix(grid.Owner);
                     var floatBounds = worldToGridLocal.TransformBox(worldBounds).Enlarged(grid.Comp.TileSize);
 
                     var localBounds = new Box2i(

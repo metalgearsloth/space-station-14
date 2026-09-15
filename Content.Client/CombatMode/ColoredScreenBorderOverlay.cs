@@ -12,7 +12,7 @@ namespace Content.Client.CombatMode
 
         [Dependency] private IPrototypeManager _prototypeManager = default!;
 
-        public override OverlaySpace Space => OverlaySpace.WorldSpace;
+        public override OverlaySpace Space => OverlaySpace.PostZLevel;
         private readonly ShaderInstance _shader;
 
         public ColoredScreenBorderOverlay()

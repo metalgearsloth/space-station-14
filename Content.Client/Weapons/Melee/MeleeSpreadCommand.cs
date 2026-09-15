@@ -1,4 +1,5 @@
 using Content.Shared.CombatMode;
+using Robust.Client.GameObjects;
 using Robust.Client.Graphics;
 using Robust.Client.Input;
 using Robust.Client.Player;
@@ -14,7 +15,7 @@ public sealed partial class MeleeSpreadCommand : LocalizedEntityCommands
     [Dependency] private IPlayerManager _playerManager = default!;
     [Dependency] private MeleeWeaponSystem _meleeSystem = default!;
     [Dependency] private SharedCombatModeSystem _combatSystem = default!;
-    [Dependency] private SharedTransformSystem _transformSystem = default!;
+    [Dependency] private TransformSystem _transformSystem = default!;
 
     public override string Command => "showmeleespread";
 

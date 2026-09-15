@@ -46,6 +46,8 @@
   - type: DamageExaminable
   - type: Rotatable
     increment: 30
+  - type: ZLevelPosition
+  - type: ZLevelPhysics
 
 - type: entity
   abstract: true

@@ -391,6 +391,12 @@ namespace Content.Shared.Interaction
             bool checkAccess = true,
             bool checkCanUse = true)
         {
+            if (_transform.GetMapId(coordinates) != Transform(user).MapID)
+                return;
+
+            if (target is { } targetUid && (Deleted(targetUid) || !OnSameMap(user, targetUid)))
+                return;
+
             if (_relayQuery.TryComp(user, out var relay) && relay.RelayEntity is not null)
             {
                 // TODO this needs to be handled better. This probably bypasses many complex can-interact checks in weird roundabout ways.
@@ -406,9 +412,6 @@ namespace Content.Shared.Interaction
                     return;
                 }
             }
-
-            if (target != null && Deleted(target.Value))
-                return;
 
             if (!altInteract && _combatQuery.TryComp(user, out var combatMode) && combatMode.IsInCombatMode)
             {
@@ -490,7 +493,7 @@ namespace Content.Shared.Interaction
 
         public void InteractHand(EntityUid user, EntityUid target)
         {
-            if (IsDeleted(user) || IsDeleted(target))
+            if (IsDeleted(user) || IsDeleted(target) || !OnSameMap(user, target))
                 return;
 
             var complexInteractions = _actionBlockerSystem.CanComplexInteract(user);
@@ -542,7 +545,9 @@ namespace Content.Shared.Interaction
         public void InteractUsingRanged(EntityUid user, EntityUid used, EntityUid? target,
             EntityCoordinates clickLocation, bool inRangeUnobstructed)
         {
-            if (IsDeleted(user) || IsDeleted(used) || IsDeleted(target))
+            if (IsDeleted(user) || IsDeleted(used) || IsDeleted(target) ||
+                !OnSameMap(user, used) ||
+                target is { } targetUid && !OnSameMap(user, targetUid))
                 return;
 
             if (target != null)
@@ -581,7 +586,6 @@ namespace Content.Shared.Interaction
 
         protected bool ValidateInteractAndFace(EntityUid user, EntityCoordinates coordinates)
         {
-            // Verify user is on the same map as the entity they clicked on
             if (_transform.GetMapId(coordinates) != Transform(user).MapID)
                 return false;
 
@@ -699,7 +703,9 @@ namespace Content.Shared.Interaction
             bool popup = false,
             bool overlapCheck = true)
         {
-            if (!Resolve(other, ref other.Comp))
+            if (!Resolve(origin, ref origin.Comp, false) ||
+                !Resolve(other, ref other.Comp, false) ||
+                origin.Comp.MapID != other.Comp.MapID)
                 return false;
 
             var ev = new InRangeOverrideEvent(origin, other);
@@ -760,10 +766,16 @@ namespace Content.Shared.Interaction
             bool popup = false,
             bool overlapCheck = true)
         {
+            if (!Resolve(origin, ref origin.Comp, false) || !Resolve(other, ref other.Comp, false))
+                return false;
+
+            var targetPos = _transform.ToMapCoordinates(otherCoordinates);
+            if (origin.Comp.MapID != targetPos.MapId)
+                return false;
+
             Ignored combinedPredicate = e => e == origin.Owner || (predicate?.Invoke(e) ?? false);
             var inRange = true;
             MapCoordinates originPos = default;
-            var targetPos = _transform.ToMapCoordinates(otherCoordinates);
             Angle targetRot = _transform.GetWorldRotation(otherCoordinates.EntityId) + otherAngle;
 
             // So essentially:
@@ -1040,7 +1052,9 @@ namespace Content.Shared.Interaction
             bool checkCanInteract = true,
             bool checkCanUse = true)
         {
-            if (IsDeleted(user) || IsDeleted(used) || IsDeleted(target))
+            if (IsDeleted(user) || IsDeleted(used) || IsDeleted(target) ||
+                !OnSameMap(user, used) ||
+                !OnSameMap(user, target))
                 return false;
 
             if (checkCanInteract && !_actionBlockerSystem.CanInteract(user, target))
@@ -1161,6 +1175,9 @@ namespace Content.Shared.Interaction
                 return false;
 
             DebugTools.Assert(!IsDeleted(user) && !IsDeleted(used));
+            if (!OnSameMap(user, used))
+                return false;
+
             _delayQuery.TryComp(used, out var delayComponent);
             if (checkUseDelay && delayComponent != null && _useDelay.IsDelayed((used, delayComponent)))
                 return false;
@@ -1220,7 +1237,7 @@ namespace Content.Shared.Interaction
             bool checkCanInteract = true,
             bool checkUseDelay = true)
         {
-            if (IsDeleted(user) || IsDeleted(used))
+            if (IsDeleted(user) || IsDeleted(used) || !OnSameMap(user, used))
                 return false;
 
             _delayQuery.TryComp(used, out var delayComponent);
@@ -1444,6 +1461,9 @@ namespace Content.Shared.Interaction
             ev.Other = uidA;
             RaiseLocalEvent(uidB.Value, ev);
         }
+
+        private bool OnSameMap(EntityUid first, EntityUid second)
+            => Transform(first).MapID == Transform(second).MapID;
 
 
         private void HandleUserInterfaceRangeCheck(ref BoundUserInterfaceCheckRangeEvent ev)

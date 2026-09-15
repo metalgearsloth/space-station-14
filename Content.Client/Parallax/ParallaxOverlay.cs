@@ -7,6 +7,7 @@ using Robust.Client.Graphics;
 using Robust.Shared.Configuration;
 using Robust.Shared.Enums;
 using Robust.Shared.Map;
+using Robust.Shared.Map.Components;
 using Robust.Shared.Prototypes;
 using Robust.Shared.Timing;
 
@@ -19,8 +20,9 @@ public sealed partial class ParallaxOverlay : Overlay
     [Dependency] private IPrototypeManager _prototypeManager = default!;
     [Dependency] private IConfigurationManager _configurationManager = default!;
     [Dependency] private IParallaxManager _manager = default!;
-    private readonly SharedMapSystem _mapSystem;
     private readonly ParallaxSystem _parallax;
+    private readonly ClientZLevelSystem _clientZLevels;
+    private readonly ZLevelSystem _zLevels;
 
     public override OverlaySpace Space => OverlaySpace.WorldSpaceBelowWorld;
 
@@ -28,21 +30,23 @@ public sealed partial class ParallaxOverlay : Overlay
     {
         ZIndex = ParallaxSystem.ParallaxZIndex;
         IoCManager.InjectDependencies(this);
-        _mapSystem = _entManager.System<SharedMapSystem>();
         _parallax = _entManager.System<ParallaxSystem>();
+        _clientZLevels = _entManager.System<ClientZLevelSystem>();
+        _zLevels = _entManager.System<ZLevelSystem>();
     }
 
     protected override bool BeforeDraw(in OverlayDrawArgs args)
     {
-        if (args.MapId == MapId.Nullspace || _entManager.HasComponent<BiomeComponent>(_mapSystem.GetMapOrInvalid(args.MapId)))
+        if (!TryGetViewedMap(args, out var mapUid, out _, out _) ||
+            _entManager.HasComponent<BiomeComponent>(mapUid))
             return false;
 
-        return true;
+        return IsBackgroundLayer(args);
     }
 
     protected override void Draw(in OverlayDrawArgs args)
     {
-        if (args.MapId == MapId.Nullspace)
+        if (!TryGetViewedMap(args, out _, out var mapId, out var backgroundOffset))
             return;
 
         if (!_configurationManager.GetCVar(CCVars.ParallaxEnabled))
@@ -50,8 +54,10 @@ public sealed partial class ParallaxOverlay : Overlay
 
         var position = args.Viewport.Eye?.Position.Position ?? Vector2.Zero;
         var worldHandle = args.WorldHandle;
+        var viewBounds = args.WorldAABB.Translated(-backgroundOffset);
+        worldHandle.SetTransform(Matrix3x2.CreateTranslation(backgroundOffset));
 
-        var layers = _parallax.GetParallaxLayers(args.MapId);
+        var layers = _parallax.GetParallaxLayers(mapId);
         var realTime = (float) _timing.RealTime.TotalSeconds;
 
         foreach (var layer in layers)
@@ -92,7 +98,7 @@ public sealed partial class ParallaxOverlay : Overlay
             if (layer.Config.Tiled)
             {
                 // Remove offset so we can floor.
-                var flooredBL = args.WorldAABB.BottomLeft - originBL;
+                var flooredBL = viewBounds.BottomLeft - originBL;
 
                 // Floor to background size.
                 flooredBL = (flooredBL / size).Floored() * size;
@@ -100,9 +106,9 @@ public sealed partial class ParallaxOverlay : Overlay
                 // Re-offset.
                 flooredBL += originBL;
 
-                for (var x = flooredBL.X; x < args.WorldAABB.Right; x += size.X)
+                for (var x = flooredBL.X; x < viewBounds.Right; x += size.X)
                 {
-                    for (var y = flooredBL.Y; y < args.WorldAABB.Top; y += size.Y)
+                    for (var y = flooredBL.Y; y < viewBounds.Top; y += size.Y)
                     {
                         worldHandle.DrawTextureRect(tex, Box2.FromDimensions(new Vector2(x, y), size));
                     }
@@ -115,6 +121,55 @@ public sealed partial class ParallaxOverlay : Overlay
         }
 
         worldHandle.UseShader(null);
+        worldHandle.SetTransform(Matrix3x2.Identity);
+    }
+
+    private bool TryGetViewedMap(
+        in OverlayDrawArgs args,
+        out EntityUid mapUid,
+        out MapId mapId,
+        out Vector2 backgroundOffset)
+    {
+        mapUid = args.MapUid;
+        mapId = args.MapId;
+        backgroundOffset = Vector2.Zero;
+        if (mapId == MapId.Nullspace)
+            return false;
+
+        if (args.ZLevelOffset == 0)
+            return true;
+
+        if (!_zLevels.TryGetMapData(args.MapUid, out var layer, out _) ||
+            !_zLevels.TryGetMapAtDepth(layer.Network, layer.Depth - args.ZLevelOffset, out var viewedMap) ||
+            !_entManager.TryGetComponent(viewedMap.Value, out MapComponent? map))
+        {
+            return false;
+        }
+
+        mapUid = viewedMap.Value;
+        mapId = map.MapId;
+        backgroundOffset = ZLevelProjection.GetLayerEyeOffset(
+            args.ZLevelOffset,
+            _clientZLevels.GetVisuals(layer.Network).ProjectionOffset);
+        return true;
+    }
+
+    private bool IsBackgroundLayer(in OverlayDrawArgs args)
+    {
+        if (!_zLevels.TryGetMapData(args.MapUid, out var current, out _))
+            return true;
+
+        foreach (var map in args.Viewport.VisibleZMaps)
+        {
+            if (_zLevels.TryGetMapData(map, out var visible, out _) &&
+                visible.Network == current.Network &&
+                visible.Depth < current.Depth)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 }
 
