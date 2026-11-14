@@ -23,7 +23,7 @@ namespace Content.Client.NPC
         [Dependency] private IResourceCache _cache = default!;
         [Dependency] private NPCSteeringSystem _steering = default!;
         [Dependency] private MapSystem _mapSystem = default!;
-        [Dependency] private SharedTransformSystem _transformSystem = default!;
+        [Dependency] private TransformSystem _transformSystem = default!;
 
         public PathfindingDebugMode Modes
         {
@@ -138,7 +138,7 @@ namespace Content.Client.NPC
         private readonly IInputManager _inputManager;
         private readonly PathfindingSystem _system;
         private readonly MapSystem _mapSystem;
-        private readonly SharedTransformSystem _transformSystem;
+        private readonly TransformSystem _transformSystem;
 
         public override OverlaySpace Space => OverlaySpace.ScreenSpace | OverlaySpace.WorldSpace;
 
@@ -159,7 +159,7 @@ namespace Content.Client.NPC
             _inputManager = inputManager;
             _system = system;
             _mapSystem = mapSystem;
-            _transformSystem = transformSystem;
+            _transformSystem = (TransformSystem) transformSystem;
             _font = new VectorFont(cache.GetResource<FontResource>("/Fonts/NotoSans/NotoSans-Regular.ttf"), 10);
         }
 
@@ -189,7 +189,7 @@ namespace Content.Client.NPC
                 var found = false;
 
                 _grids.Clear();
-                _mapSystem.FindGridsIntersecting(mouseWorldPos.MapId, aabb, ref _grids);
+                _mapSystem.FindGridsIntersecting(mouseWorldPos.MapId, _transformSystem.GetRenderCullingBounds(mouseWorldPos.MapId, aabb), ref _grids);
 
                 foreach (var grid in _grids)
                 {
@@ -198,7 +198,8 @@ namespace Content.Client.NPC
                     if (found || !_system.Breadcrumbs.TryGetValue(netGrid, out var crumbs) || !xformQuery.TryGetComponent(grid, out var gridXform))
                         continue;
 
-                    var (_, _, worldMatrix, invWorldMatrix) = _transformSystem.GetWorldPositionRotationMatrixWithInv(gridXform);
+                    var worldMatrix = _transformSystem.GetRenderWorldMatrix((gridXform.Owner, gridXform));
+                    var invWorldMatrix = _transformSystem.GetInvRenderWorldMatrix((gridXform.Owner, gridXform));
                     var localAABB = invWorldMatrix.TransformBox(aabb.Enlarged(float.Epsilon - SharedPathfindingSystem.ChunkSize));
 
                     foreach (var chunk in crumbs)
@@ -282,7 +283,7 @@ namespace Content.Client.NPC
                     return;
                 }
 
-                var invGridMatrix = _transformSystem.GetInvWorldMatrix(gridXform);
+                var invGridMatrix = _transformSystem.GetInvRenderWorldMatrix((gridXform.Owner, gridXform));
                 DebugPathPoly? nearest = null;
 
                 foreach (var poly in tile)
@@ -342,7 +343,7 @@ namespace Content.Client.NPC
                 mouseWorldPos.MapId == args.MapId)
             {
                 _grids.Clear();
-                _mapSystem.FindGridsIntersecting(mouseWorldPos.MapId, aabb, ref _grids);
+                _mapSystem.FindGridsIntersecting(mouseWorldPos.MapId, _transformSystem.GetRenderCullingBounds(mouseWorldPos.MapId, aabb), ref _grids);
 
                 foreach (var grid in _grids)
                 {
@@ -354,7 +355,8 @@ namespace Content.Client.NPC
                         continue;
                     }
 
-                    var (_, _, worldMatrix, invWorldMatrix) = _transformSystem.GetWorldPositionRotationMatrixWithInv(gridXform);
+                    var worldMatrix = _transformSystem.GetRenderWorldMatrix((gridXform.Owner, gridXform));
+                    var invWorldMatrix = _transformSystem.GetInvRenderWorldMatrix((gridXform.Owner, gridXform));
                     worldHandle.SetTransform(worldMatrix);
                     var localAABB = invWorldMatrix.TransformBox(aabb);
 
@@ -404,7 +406,7 @@ namespace Content.Client.NPC
                 mouseWorldPos.MapId == args.MapId)
             {
                 _grids.Clear();
-                _mapSystem.FindGridsIntersecting(args.MapId, aabb, ref _grids);
+                _mapSystem.FindGridsIntersecting(args.MapId, _transformSystem.GetRenderCullingBounds(args.MapId, aabb), ref _grids);
 
                 foreach (var grid in _grids)
                 {
@@ -414,7 +416,8 @@ namespace Content.Client.NPC
                         !xformQuery.TryGetComponent(grid, out var gridXform))
                         continue;
 
-                    var (_, _, worldMatrix, invWorldMatrix) = _transformSystem.GetWorldPositionRotationMatrixWithInv(gridXform);
+                    var worldMatrix = _transformSystem.GetRenderWorldMatrix((gridXform.Owner, gridXform));
+                    var invWorldMatrix = _transformSystem.GetInvRenderWorldMatrix((gridXform.Owner, gridXform));
                     worldHandle.SetTransform(worldMatrix);
                     var localAABB = invWorldMatrix.TransformBox(aabb);
 
@@ -443,7 +446,7 @@ namespace Content.Client.NPC
                 mouseWorldPos.MapId == args.MapId)
             {
                 _grids.Clear();
-                _mapSystem.FindGridsIntersecting(args.MapId, aabb, ref _grids);
+                _mapSystem.FindGridsIntersecting(args.MapId, _transformSystem.GetRenderCullingBounds(args.MapId, aabb), ref _grids);
 
                 foreach (var grid in _grids)
                 {
@@ -453,7 +456,8 @@ namespace Content.Client.NPC
                         !xformQuery.TryGetComponent(grid, out var gridXform))
                         continue;
 
-                    var (_, _, worldMatrix, invMatrix) = _transformSystem.GetWorldPositionRotationMatrixWithInv(gridXform);
+                    var worldMatrix = _transformSystem.GetRenderWorldMatrix((gridXform.Owner, gridXform));
+                    var invMatrix = _transformSystem.GetInvRenderWorldMatrix((gridXform.Owner, gridXform));
                     worldHandle.SetTransform(worldMatrix);
                     var localAABB = invMatrix.TransformBox(aabb);
 
@@ -478,12 +482,15 @@ namespace Content.Client.NPC
                                     if (neighborPoly.NetEntity != poly.GraphUid)
                                     {
                                         color = Color.Green;
-                                        var neighborMap = _transformSystem.ToMapCoordinates(_entManager.GetCoordinates(neighborPoly));
+                                        var neighborCoords = _entManager.GetCoordinates(neighborPoly);
+                                        var neighborMap = _transformSystem.GetRenderMapCoordinates(neighborCoords.EntityId);
+                                        var neighborWorld = Vector2.Transform(neighborCoords.Position,
+                                            _transformSystem.GetRenderWorldMatrix(neighborCoords.EntityId));
 
                                         if (neighborMap.MapId != args.MapId)
                                             continue;
 
-                                        neighborPos = Vector2.Transform(neighborMap.Position, invMatrix);
+                                        neighborPos = Vector2.Transform(neighborWorld, invMatrix);
                                     }
                                     else
                                     {
@@ -502,7 +509,7 @@ namespace Content.Client.NPC
             if ((_system.Modes & PathfindingDebugMode.Chunks) != 0x0)
             {
                 _grids.Clear();
-                _mapSystem.FindGridsIntersecting(args.MapId, args.WorldBounds, ref _grids);
+                _mapSystem.FindGridsIntersecting(args.MapId, _transformSystem.GetRenderCullingBounds(args.MapId, args.WorldBounds), ref _grids);
 
                 foreach (var grid in _grids)
                 {
@@ -512,7 +519,8 @@ namespace Content.Client.NPC
                         !xformQuery.TryGetComponent(grid, out var gridXform))
                         continue;
 
-                    var (_, _, worldMatrix, invWorldMatrix) = _transformSystem.GetWorldPositionRotationMatrixWithInv(gridXform);
+                    var worldMatrix = _transformSystem.GetRenderWorldMatrix((gridXform.Owner, gridXform));
+                    var invWorldMatrix = _transformSystem.GetInvRenderWorldMatrix((gridXform.Owner, gridXform));
                     worldHandle.SetTransform(worldMatrix);
                     var localAABB = invWorldMatrix.TransformBox(args.WorldBounds);
 
@@ -539,7 +547,7 @@ namespace Content.Client.NPC
                         if (!_entManager.TryGetComponent<TransformComponent>(_entManager.GetEntity(node.GraphUid), out var graphXform))
                             continue;
 
-                        worldHandle.SetTransform(_transformSystem.GetWorldMatrix(graphXform));
+                        worldHandle.SetTransform(_transformSystem.GetRenderWorldMatrix((graphXform.Owner, graphXform)));
                         worldHandle.DrawRect(node.Box, Color.Orange.WithAlpha(0.10f));
                     }
                 }
@@ -566,7 +574,7 @@ namespace Content.Client.NPC
                                 continue;
 
                             matrix = graph;
-                            worldHandle.SetTransform(_transformSystem.GetWorldMatrix(graphXform));
+                            worldHandle.SetTransform(_transformSystem.GetRenderWorldMatrix((graphXform.Owner, graphXform)));
                         }
 
                         worldHandle.DrawRect(node.Box, new Color(0f, cost / highestGScore, 1f - (cost / highestGScore), 0.10f));

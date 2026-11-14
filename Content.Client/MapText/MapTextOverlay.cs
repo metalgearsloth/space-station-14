@@ -1,5 +1,6 @@
 using System.Numerics;
 using Content.Shared.MapText;
+using Robust.Client.GameObjects;
 using Robust.Client.Graphics;
 using Robust.Client.ResourceManagement;
 using Robust.Client.UserInterface;
@@ -19,7 +20,7 @@ public sealed class MapTextOverlay : Overlay
     private readonly IConfigurationManager _configManager;
     private readonly IEntityManager _entManager;
     private readonly IUserInterfaceManager _uiManager;
-    private readonly SharedTransformSystem _transform;
+    private readonly TransformSystem _transform;
     public override OverlaySpace Space => OverlaySpace.ScreenSpace;
 
     public MapTextOverlay(
@@ -33,7 +34,7 @@ public sealed class MapTextOverlay : Overlay
         _configManager = configManager;
         _entManager = entManager;
         _uiManager = uiManager;
-        _transform = transform;
+        _transform = (TransformSystem) transform;
     }
 
     protected override void Draw(in OverlayDrawArgs args)
@@ -62,7 +63,7 @@ public sealed class MapTextOverlay : Overlay
 
         while(query.MoveNext(out var uid, out var mapText))
         {
-            var mapPos = _transform.GetMapCoordinates(uid);
+            var mapPos = _transform.GetRenderMapCoordinates(uid);
 
             if (mapPos.MapId != args.MapId)
                 continue;

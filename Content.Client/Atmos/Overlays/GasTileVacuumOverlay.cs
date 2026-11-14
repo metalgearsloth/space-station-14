@@ -4,6 +4,7 @@ using Content.Shared.Atmos;
 using Content.Shared.Atmos.Components;
 using Content.Shared.Atmos.EntitySystems;
 using Content.Shared.CCVar;
+using Robust.Client.GameObjects;
 using Robust.Client.Graphics;
 using Robust.Shared.Configuration;
 using Robust.Shared.Enums;
@@ -36,7 +37,7 @@ public sealed partial class GasTileVacuumOverlay : Overlay
     [Dependency] private IConfigurationManager _configManager = default!;
 
     private readonly SharedMapSystem _maps;
-    private readonly SharedTransformSystem _xformSys;
+    private readonly TransformSystem _xformSys;
     private readonly ShaderInstance _unshader;
     private readonly ShaderInstance _shader;
 
@@ -53,7 +54,7 @@ public sealed partial class GasTileVacuumOverlay : Overlay
         IoCManager.InjectDependencies(this);
         ZIndex = ContentZIndex;
         _maps = _entManager.System<SharedMapSystem>();
-        _xformSys = _entManager.System<SharedTransformSystem>();
+        _xformSys = _entManager.System<TransformSystem>();
 
         _unshader = _proto.Index(UnshadedShader).Instance();
         _shader = _proto.Index(VacuumOverlayShader).InstanceUnique();
@@ -103,13 +104,14 @@ public sealed partial class GasTileVacuumOverlay : Overlay
             () =>
             {
                 _intersectingGrids.Clear();
-                _maps.FindGridsIntersecting(mapId, worldAABB, ref _intersectingGrids);
+                _maps.FindGridsIntersecting(mapId, _xformSys.GetRenderCullingBounds(mapId, worldAABB), ref _intersectingGrids);
                 foreach (var grid in _intersectingGrids)
                 {
                     if (!overlayQuery.TryGetComponent(grid.Owner, out var comp))
                         continue;
 
-                    var (_, _, gridEntToWorld, worldToGridLocal) = _xformSys.GetWorldPositionRotationMatrixWithInv(grid.Owner);
+                    var gridEntToWorld = _xformSys.GetRenderWorldMatrix(grid.Owner);
+                    var worldToGridLocal = _xformSys.GetInvRenderWorldMatrix(grid.Owner);
                     var gridEntToViewportLocal = gridEntToWorld * worldToViewportLocal;
 
                     // Draw commands (like DrawRect) will be using grid coordinates from here

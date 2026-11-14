@@ -1,6 +1,7 @@
 using System.Numerics;
 using System.Text;
 using Content.Client.Resources;
+using Robust.Client.GameObjects;
 using Robust.Client.Graphics;
 using Robust.Client.Input;
 using Robust.Client.ResourceManagement;
@@ -19,7 +20,7 @@ namespace Content.Client.NodeContainer
         private readonly EntityLookupSystem _lookup;
         private readonly IInputManager _inputManager;
         private readonly IEntityManager _entityManager;
-        private readonly SharedTransformSystem _transformSystem;
+        private readonly TransformSystem _transformSystem;
         private readonly SharedMapSystem _mapSystem;
 
         private readonly Dictionary<(int, int), NodeRenderData> _nodeIndex = new();
@@ -45,7 +46,7 @@ namespace Content.Client.NodeContainer
             _lookup = lookup;
             _inputManager = inputManager;
             _entityManager = entityManager;
-            _transformSystem = _entityManager.System<SharedTransformSystem>();
+            _transformSystem = _entityManager.System<TransformSystem>();
             _mapSystem = _entityManager.System<SharedMapSystem>();
 
             _font = cache.GetFont("/Fonts/NotoSans/NotoSans-Regular.ttf", 12);
@@ -116,11 +117,11 @@ namespace Content.Client.NodeContainer
             var xformQuery = _entityManager.GetEntityQuery<TransformComponent>();
 
             _grids.Clear();
-            _mapSystem.FindGridsIntersecting(map, worldAABB, ref _grids);
+            _mapSystem.FindGridsIntersecting(map, _transformSystem.GetRenderCullingBounds(map, worldAABB), ref _grids);
 
             foreach (var grid in _grids)
             {
-                foreach (var entity in _lookup.GetEntitiesIntersecting(grid, worldAABB))
+                foreach (var entity in _lookup.GetEntitiesIntersecting(grid, _transformSystem.GetRenderCullingBounds(map, worldAABB)))
                 {
                     if (!_system.Entities.TryGetValue(entity, out var nodeData))
                         continue;
@@ -147,8 +148,8 @@ namespace Content.Client.NodeContainer
             foreach (var (gridId, gridDict) in _gridIndex)
             {
                 var grid = _entityManager.GetComponent<MapGridComponent>(gridId);
-                var (_, _, worldMatrix, invMatrix) = _transformSystem.GetWorldPositionRotationMatrixWithInv(gridId);
-
+                var worldMatrix = _transformSystem.GetRenderWorldMatrix(gridId);
+                var invMatrix = _transformSystem.GetInvRenderWorldMatrix(gridId);
                 var lCursorBox = invMatrix.TransformBox(cursorBox);
                 foreach (var (pos, list) in gridDict)
                 {
